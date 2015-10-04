@@ -434,13 +434,6 @@ static void cdpi_dump_stats(void)
     }
 
     json_object_object_add(json_main, "devices", json_devs);
-
-    json_obj = json_object_new_object();
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    cdpi_json_add_stats(json_obj, &totals);
-    json_object_object_add(json_stats, "total", json_obj);
-
     json_object_object_add(json_main, "stats", json_stats);
     json_object_object_add(json_main, "flows", json_flows);
 
