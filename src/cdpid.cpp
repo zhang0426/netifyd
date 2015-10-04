@@ -168,12 +168,12 @@ static void cdpi_json_write(json_object *json)
     if (flock(fd, LOCK_EX) < 0)
         throw runtime_error(strerror(errno));
 
-    lseek(fd, 0, SEEK_SET);
-    ftruncate(fd, 0);
-    write(fd, (const void *)json_string.c_str(), json_string.length());
-
-//    json_object_to_file_ext(cdpi_json_filename, json,
-//        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN);
+    if (lseek(fd, 0, SEEK_SET) < 0)
+        throw runtime_error(strerror(errno));
+    if (ftruncate(fd, 0) < 0)
+        throw runtime_error(strerror(errno));
+    if (write(fd, (const void *)json_string.c_str(), json_string.length()) < 0)
+        throw runtime_error(strerror(errno));
 
     flock(fd, LOCK_UN);
     close(fd);
@@ -373,6 +373,37 @@ static void cdpi_json_add_flows(
         if (json_obj == NULL)
             throw runtime_error(strerror(ENOMEM));
         json_object_object_add(json_flow, "bytes", json_obj);
+
+        if (i->second->host_server_name[0] != '\0') {
+            json_obj = json_object_new_string(i->second->host_server_name);
+            if (json_obj == NULL)
+                throw runtime_error(strerror(ENOMEM));
+            json_object_object_add(json_flow, "host_server_name", json_obj);
+        }
+
+        if((i->second->ssl.client_cert[0] != '\0') ||
+            (i->second->ssl.server_cert[0] != '\0')) {
+
+            json_object *ssl = json_object_new_object();
+            if (ssl == NULL)
+                throw runtime_error(strerror(ENOMEM));
+
+            if(i->second->ssl.client_cert[0] != '\0') {
+                json_obj = json_object_new_string(i->second->ssl.client_cert);
+                if (json_obj == NULL)
+                    throw runtime_error(strerror(ENOMEM));
+                json_object_object_add(ssl, "client", json_obj);
+            }
+
+            if(i->second->ssl.server_cert[0] != '\0') {
+                json_obj = json_object_new_string(i->second->ssl.server_cert);
+                if (json_obj == NULL)
+                    throw runtime_error(strerror(ENOMEM));
+                json_object_object_add(ssl, "server", json_obj);
+            }
+
+          json_object_object_add(json_flow, "ssl", ssl);
+        }
 
         json_object_array_add(json_parent, json_flow);
     }

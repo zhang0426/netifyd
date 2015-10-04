@@ -168,12 +168,15 @@ void cdpiFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         p = ndpi_get_proto_name(ndpi, detected_protocol.protocol);
 
     cdpi_printf(
-        "%s: %s%s: %s:%hu <-> %s:%hu\n", tag, p,
+        "%s: %s%s: %s:%hu <-> %s:%hu [Host: %s] [SSL/C: %s] [SSL/S: %s]\n", tag, p,
         (detection_guessed &&
             detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN) ? " [GUESSED]" : "",
-        lower_ip,
-        ntohs(lower_port), upper_ip,
-        ntohs(upper_port));
+        lower_ip, ntohs(lower_port),
+        upper_ip, ntohs(upper_port),
+        (host_server_name[0] != '\0') ? host_server_name : "N/A",
+        (ssl.client_cert[0] != '\0') ? ssl.client_cert : "N/A",
+        (ssl.server_cert[0] != '\0') ? ssl.server_cert : "N/A"
+    );
 }
 
 cdpiThread::cdpiThread(const string &tag, long cpu)
@@ -255,11 +258,11 @@ int cdpiThread::Join(void)
 
 cdpiDetectionThread::cdpiDetectionThread(const string &dev,
     cdpi_flow_map *flow_map, cdpiDetectionStats *stats, long cpu)
-    : cdpiThread(dev, cpu), flows(flow_map), stats(stats),
-    pcap(NULL), ndpi(NULL),
-    pcap_snaplen(CDPI_PCAP_SNAPLEN), pcap_datalink_type(0),
-    pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
-    ts_last_idle_scan(0)
+    : cdpiThread(dev, cpu),
+    pcap(NULL), pcap_snaplen(CDPI_PCAP_SNAPLEN), pcap_datalink_type(0),
+    pkt_header(NULL), pkt_data(NULL),
+    ts_pkt_last(0), ts_last_idle_scan(0),
+    ndpi(NULL), flows(flow_map), stats(stats)
 {
     memset(stats, 0, sizeof(struct cdpiDetectionStats));
 
@@ -758,6 +761,8 @@ void *cdpiControlThread::Entry(void)
         sleep(1);
     }
     while (terminate == false);
+
+    return NULL;
 }
 
 cdpiUploadThread::cdpiUploadThread()
@@ -849,6 +854,8 @@ void *cdpiUploadThread::Entry(void)
 
         if (terminate == false && pending.size() > 0) Upload();
     }
+
+    return NULL;
 }
 
 void cdpiUploadThread::QueuePush(const string &json)
