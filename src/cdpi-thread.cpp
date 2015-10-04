@@ -266,19 +266,6 @@ cdpiDetectionThread::cdpiDetectionThread(const string &dev,
 {
     memset(stats, 0, sizeof(struct cdpiDetectionStats));
 
-    pcap = pcap_open_live(
-        dev.c_str(),
-        pcap_snaplen,
-        1, // Promisc?
-        CDPI_PCAP_READ_TIMEOUT,
-        pcap_errbuf
-    );
-
-    if (pcap == NULL)
-        throw cdpiThreadException(pcap_errbuf);
-
-    pcap_datalink_type = pcap_datalink(pcap);
-
     ndpi = ndpi_init_detection_module(
         CDPI_DETECTION_TICKS,
         cdpi_mem_alloc,
@@ -303,10 +290,32 @@ cdpiDetectionThread::~cdpiDetectionThread()
 
 void *cdpiDetectionThread::Entry(void)
 {
-    cdpi_printf("%s: capture started on CPU: %lu\n",
-        tag.c_str(), cpu >= 0 ? cpu : 0);
-
     do {
+        if (pcap == NULL) {
+            memset(pcap_errbuf, 0, PCAP_ERRBUF_SIZE);
+            pcap = pcap_open_live(
+                tag.c_str(),
+                pcap_snaplen,
+                1, // Promisc?
+                CDPI_PCAP_READ_TIMEOUT,
+                pcap_errbuf
+            );
+
+            if (pcap == NULL) {
+                cdpi_printf("%s.\n", pcap_errbuf);
+                sleep(1);
+                continue;
+            }
+
+            if (strlen(pcap_errbuf))
+                cdpi_printf("%s.\n", pcap_errbuf);
+
+            pcap_datalink_type = pcap_datalink(pcap);
+
+            cdpi_printf("%s: capture started on CPU: %lu\n",
+                tag.c_str(), cpu >= 0 ? cpu : 0);
+        }
+
         switch (pcap_next_ex(pcap, &pkt_header, &pkt_data)) {
         case 0:
             break;
@@ -322,7 +331,10 @@ void *cdpiDetectionThread::Entry(void)
             }
             break;
         case -1:
-            throw cdpiThreadException(pcap_errbuf);
+            cdpi_printf("%s: %s.\n", tag.c_str(), pcap_geterr(pcap));
+            pcap_close(pcap);
+            pcap = NULL;
+            break;
         }
     }
     while (terminate == false);
