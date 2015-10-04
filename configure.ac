@@ -2,7 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([cdpid], [1.0], [http://www.clearfoundation.com/docs/developer/bug_tracker/])
+AC_INIT([cDPId], [1.0],
+	[http://www.clearfoundation.com/docs/developer/bug_tracker/],
+	[cdpid], [http://www.clearfoundation.com/])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/cdpid.cpp])
 AC_CONFIG_SUBDIRS([ndpi])
@@ -21,8 +23,12 @@ AC_CHECK_LIB([pthread], [pthread_create], [], [
 	AC_MSG_ERROR([libpthread not found.])])
 AC_CHECK_LIB([pcap], [pcap_open_live], [], [
 	AC_MSG_ERROR([libpcap not found.])])
-AC_CHECK_LIB([crypto], [SHA1_Init], [], [
-	AC_MSG_ERROR([libcrypto not found.])])
+AC_CHECK_LIB([z], [zlibVersion], [], [
+	AC_MSG_ERROR([libz not found.])])
+
+PKG_CHECK_MODULES([JSONC], [json-c])
+PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto])
+PKG_CHECK_MODULES([LIBCURL], [libcurl])
 
 # Checks for header files.
 #AC_CHECK_HEADERS([proc/readproc.h], [], [AC_MSG_ERROR([procps header files not found.])])

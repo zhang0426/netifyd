@@ -42,8 +42,8 @@ public:
 
     virtual void Terminate(void) { terminate = true; }
 
-    void Lock(void) { pthread_mutex_lock(lock); }
-    void Unlock(void) { pthread_mutex_unlock(lock); }
+    void Lock(void) { pthread_mutex_lock(&lock); }
+    void Unlock(void) { pthread_mutex_unlock(&lock); }
 
 protected:
     string tag;
@@ -51,7 +51,7 @@ protected:
     pthread_attr_t attr;
     long cpu;
     bool terminate;
-    pthread_mutex_t *lock;
+    pthread_mutex_t lock;
 
     int Join(void);
 };
@@ -83,6 +83,43 @@ protected:
     cdpiDetectionStats *stats;
 
     void ProcessPacket(void);
+};
+
+class cdpiControlThread : public cdpiThread
+{
+public:
+    cdpiControlThread();
+    virtual ~cdpiControlThread();
+
+    virtual void *Entry(void);
+
+protected:
+    CURL *ch;
+};
+
+class cdpiUploadThread : public cdpiThread
+{
+public:
+    cdpiUploadThread();
+    virtual ~cdpiUploadThread();
+
+    virtual void *Entry(void);
+
+    virtual void Terminate(void) { QueuePush("terminate"); }
+
+    void QueuePush(const string &json);
+
+protected:
+    CURL *ch;
+    struct curl_slist *headers;
+    struct curl_slist *headers_gz;
+    queue<string> uploads;
+    queue<string> pending;
+    pthread_cond_t uploads_cond;
+    pthread_mutex_t uploads_cond_mutex;
+
+    void Upload(void);
+    void Deflate(const string &data);
 };
 
 #endif // _CDPI_THREAD_H

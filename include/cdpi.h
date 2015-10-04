@@ -22,6 +22,8 @@
 #define CDPI_IDLE_SCAN_TIME     10      // Idle flow scan in milliseconds
 #define CDPI_IDLE_FLOW_TIME     30000   // Purge idle flows older than this (30s)
 
+#define CDPI_PID_FILE_NAME      "/var/run/cdpid/cdpid.pid"
+
 #define CDPI_JSON_FILE_NAME     "/var/lib/cdpid/cdpid.json"
 #define CDPI_JSON_FILE_USER     "root"
 #define CDPI_JSON_FILE_GROUP    "webconfig"
@@ -29,6 +31,13 @@
 
 #define CDPI_PCAP_SNAPLEN       1536    // Capture snap length
 #define CDPI_PCAP_READ_TIMEOUT  500     // Milliseconds
+
+#define CDPI_URL_CONTROL        "http://sokoloski.ca/cdpi/control.php"
+#define CDPI_URL_UPLOAD         "http://sokoloski.ca/cdpi/upload.php"
+
+// Compress data if it's over this size (bytes)
+#define CDPI_COMPRESS_SIZE      (1024 * 10)
+#define CDPI_ZLIB_CHUNK_SIZE    16384   // Compress this many bytes at a time
 
 struct cdpiDetectionStats
 {

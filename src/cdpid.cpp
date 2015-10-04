@@ -23,6 +23,7 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
+#include <queue>
 
 #include <unistd.h>
 #include <time.h>
@@ -38,7 +39,8 @@
 #include <linux/if_ether.h>
 
 #include <pcap/pcap.h>
-#include <json-c/json.h>
+#include <json.h>
+#include <curl/curl.h>
 
 #include "ndpi_main.h"
 
@@ -61,6 +63,8 @@ static cdpi_flows flows;
 static cdpi_stats stats;
 static cdpi_threads threads;
 static cdpiDetectionStats totals;
+static cdpiControlThread *thread_control = NULL;
+static cdpiUploadThread *thread_upload = NULL;
 
 static char *cdpi_json_filename = NULL;
 
@@ -135,6 +139,13 @@ static void cdpi_json_write(json_object *json)
 {
     int fd = open(cdpi_json_filename, O_WRONLY);
 
+    string json_string = json_object_to_json_string_ext(
+        json,
+        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
+    );
+
+    thread_upload->QueuePush(json_string);
+
     if (fd < 0) {
         if (errno != ENOENT)
             throw runtime_error(strerror(errno));
@@ -157,8 +168,12 @@ static void cdpi_json_write(json_object *json)
     if (flock(fd, LOCK_EX) < 0)
         throw runtime_error(strerror(errno));
 
-    json_object_to_file_ext(cdpi_json_filename, json,
-        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN);
+    lseek(fd, 0, SEEK_SET);
+    ftruncate(fd, 0);
+    write(fd, (const void *)json_string.c_str(), json_string.length());
+
+//    json_object_to_file_ext(cdpi_json_filename, json,
+//        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN);
 
     flock(fd, LOCK_UN);
     close(fd);
@@ -508,13 +523,29 @@ int main(int argc, char *argv[])
         cdpi_json_filename = strdup(CDPI_JSON_FILE_NAME);
 
     if (devices.size() == 0) {
-        cerr << "Required argument, (-i, --iterface) missing." << endl;
+        cerr << "Required argument, (-I, --iterface) missing." << endl;
+        return 1;
+    }
+
+    CURLcode cc;
+    if ((cc = curl_global_init(CURL_GLOBAL_ALL)) != 0) {
+        cerr << "Unable to initialize libCURL: " << cc << endl;
         return 1;
     }
 
     if (cdpi_debug == false) {
-        if (daemon(1, 0) != 0)
+        if (daemon(1, 0) != 0) {
             cdpi_printf("daemon: %s\n", strerror(errno));
+            return 1;
+        }
+        FILE *hpid = fopen(CDPI_PID_FILE_NAME, "w+");
+        if (hpid == NULL) {
+            cdpi_printf("Error opening PID file: %s: %s\n",
+                CDPI_PID_FILE_NAME, strerror(errno));
+            return 1;
+        }
+        fprintf(hpid, "%d\n", getpid());
+        fclose(hpid);
     }
         
     cdpi_output_mutex = new pthread_mutex_t;
@@ -533,6 +564,12 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGINT);
     sigaddset(&sigset, SIGTERM);
     sigaddset(&sigset, SIGRTMIN);
+
+    thread_control = new cdpiControlThread();
+    thread_control->Create();
+
+    thread_upload = new cdpiUploadThread();
+    thread_upload->Create();
 
     for (cdpi_devices::iterator i = devices.begin();
         i != devices.end(); i++) {
@@ -614,7 +651,14 @@ int main(int argc, char *argv[])
         delete stats[(*i)];
     }
 
+    thread_control->Terminate();
+    thread_upload->Terminate();
+    delete thread_control;
+    delete thread_upload;
+
     pthread_mutex_destroy(cdpi_output_mutex);
+
+    curl_global_cleanup();
 
     return 0;
 }

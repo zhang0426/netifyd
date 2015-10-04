@@ -24,6 +24,8 @@
 #include <stdexcept>
 #include <iostream>
 #include <unordered_map>
+#include <queue>
+#include <sstream>
 
 #include <unistd.h>
 #include <signal.h>
@@ -42,6 +44,9 @@
 #error "OpenSSL missing thread support"
 #endif
 #include <openssl/sha.h>
+
+#include <curl/curl.h>
+#include <zlib.h>
 
 extern "C" {
 #include "ndpi_api.h"
@@ -77,6 +82,45 @@ static void *cdpi_thread_entry(void *param)
     }
 
     return rv;
+}
+
+static int cdpi_curl_debug(CURL *ch, curl_infotype type, char *data, size_t size, void *param)
+{
+    string buffer;
+    if (cdpi_debug == false) return 0;
+
+    cdpiThread *thread = reinterpret_cast<cdpiThread *>(param);
+
+    switch (type) {
+    case CURLINFO_TEXT:
+        buffer.assign(data, size);
+        cdpi_printf("%s: %s", thread->GetTag().c_str(), buffer.c_str());
+        break;
+    case CURLINFO_HEADER_IN:
+        buffer.assign(data, size);
+        cdpi_printf("%s: <-- %s", thread->GetTag().c_str(), buffer.c_str());
+        break;
+    case CURLINFO_HEADER_OUT:
+        buffer.assign(data, size);
+        cdpi_printf("%s: --> %s", thread->GetTag().c_str(), buffer.c_str());
+        break;
+    case CURLINFO_DATA_IN:
+        cdpi_printf("%s: <-- %lu data bytes\n", thread->GetTag().c_str(), size);
+        break;
+    case CURLINFO_DATA_OUT:
+        cdpi_printf("%s: --> %lu data bytes\n", thread->GetTag().c_str(), size);
+        break;
+    case CURLINFO_SSL_DATA_IN:
+        cdpi_printf("%s: <-- %lu SSL bytes\n", thread->GetTag().c_str(), size);
+        break;
+    case CURLINFO_SSL_DATA_OUT:
+        cdpi_printf("%s: --> %lu SSL bytes\n", thread->GetTag().c_str(), size);
+        break;
+    default:
+        break;
+    }
+
+    return 0;
 }
 
 void cdpiFlow::hash(string &digest)
@@ -133,17 +177,14 @@ void cdpiFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 }
 
 cdpiThread::cdpiThread(const string &tag, long cpu)
-    : tag(tag), id(0), cpu(cpu), terminate(false), lock(NULL)
+    : tag(tag), id(0), cpu(cpu), terminate(false)
 {
     int rc;
 
     if ((rc = pthread_attr_init(&attr)) != 0)
         throw cdpiThreadException(strerror(rc));
 
-    lock = new pthread_mutex_t;
-    if (lock == NULL) throw cdpiThreadException(strerror(ENOMEM));
-
-    if ((rc = pthread_mutex_init(lock, NULL)) != 0)
+    if ((rc = pthread_mutex_init(&lock, NULL)) != 0)
         throw cdpiThreadException(strerror(rc));
 
     if (cpu == -1) return;
@@ -172,10 +213,7 @@ cdpiThread::cdpiThread(const string &tag, long cpu)
 cdpiThread::~cdpiThread(void)
 {
     pthread_attr_destroy(&attr);
-    if (lock != NULL) {
-        pthread_mutex_destroy(lock);
-        delete lock;
-    }
+    pthread_mutex_destroy(&lock);
 }
 
 void cdpiThread::SetProcName(void)
@@ -271,12 +309,12 @@ void *cdpiDetectionThread::Entry(void)
             break;
         case 1:
             try {
-                pthread_mutex_lock(lock);
+                pthread_mutex_lock(&lock);
                 ProcessPacket();
-                pthread_mutex_unlock(lock);
+                pthread_mutex_unlock(&lock);
             }
             catch (exception &e) {
-                pthread_mutex_unlock(lock);
+                pthread_mutex_unlock(&lock);
                 throw;
             }
             break;
@@ -688,6 +726,221 @@ void cdpiDetectionThread::ProcessPacket(void)
                 tag.c_str(), purged, flows->size());
         }
 */
+    }
+}
+
+cdpiControlThread::cdpiControlThread()
+    : cdpiThread("control", -1)
+{
+    ch = curl_easy_init();
+
+    if (ch == NULL)
+        throw cdpiThreadException("curl_easy_init");
+
+    curl_easy_setopt(ch, CURLOPT_URL, CDPI_URL_CONTROL);
+    curl_easy_setopt(ch, CURLOPT_POST, 1);
+    curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, cdpi_curl_debug);
+    curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
+}
+
+cdpiControlThread::~cdpiControlThread()
+{
+    Join();
+    if (ch != NULL) curl_easy_cleanup(ch);
+}
+
+void *cdpiControlThread::Entry(void)
+{
+    cdpi_printf("%s: thread started.\n", tag.c_str());
+
+    do {
+        sleep(1);
+    }
+    while (terminate == false);
+}
+
+cdpiUploadThread::cdpiUploadThread()
+    : cdpiThread("upload", -1), headers(NULL), headers_gz(NULL)
+{
+    int rc;
+
+    if ((ch = curl_easy_init()) == NULL)
+        throw cdpiThreadException("curl_easy_init");
+
+    curl_easy_setopt(ch, CURLOPT_URL, CDPI_URL_UPLOAD);
+    curl_easy_setopt(ch, CURLOPT_POST, 1);
+    curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
+    if (cdpi_debug) {
+        curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, cdpi_curl_debug);
+        curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
+        curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
+        curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
+    }
+
+    ostringstream user_agent;
+    user_agent << "User-Agent: " <<
+        PACKAGE_NAME << "/" << PACKAGE_VERSION <<
+        " (+" << PACKAGE_URL << ")";
+
+    headers = curl_slist_append(headers, user_agent.str().c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
+    headers_gz = curl_slist_append(headers_gz, "Content-Encoding: gzip");
+
+    pthread_condattr_t cond_attr;
+
+    pthread_condattr_init(&cond_attr);
+    pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+    if ((rc = pthread_cond_init(&uploads_cond, &cond_attr)) != 0)
+        throw cdpiThreadException(strerror(rc));
+    pthread_condattr_destroy(&cond_attr);
+
+    if ((rc = pthread_mutex_init(&uploads_cond_mutex, NULL)) != 0)
+        throw cdpiThreadException(strerror(rc));
+}
+
+cdpiUploadThread::~cdpiUploadThread()
+{
+    Join();
+    if (ch != NULL) curl_easy_cleanup(ch);
+    if (headers != NULL) curl_slist_free_all(headers);
+    if (headers_gz != NULL) curl_slist_free_all(headers_gz);
+}
+
+void *cdpiUploadThread::Entry(void)
+{
+    int rc;
+
+    cdpi_printf("%s: thread started.\n", tag.c_str());
+
+    while (terminate == false) {
+        if ((rc = pthread_mutex_lock(&lock)) != 0)
+            throw cdpiThreadException(strerror(rc));
+
+        if (uploads.size() == 0) {
+            if ((rc = pthread_mutex_unlock(&lock)) != 0)
+                throw cdpiThreadException(strerror(rc));
+
+            if ((rc = pthread_mutex_lock(&uploads_cond_mutex)) != 0)
+                throw cdpiThreadException(strerror(rc));
+            if ((rc = pthread_cond_wait(&uploads_cond, &uploads_cond_mutex)) != 0)
+                throw cdpiThreadException(strerror(rc));
+            if ((rc = pthread_mutex_unlock(&uploads_cond_mutex)) != 0)
+                throw cdpiThreadException(strerror(rc));
+
+            continue;
+        }
+
+        if (uploads.back() == "terminate")
+            terminate = true;
+        else {
+            do {
+                pending.push(uploads.front());
+                uploads.pop();
+            }
+            while (uploads.size() > 0);
+        }
+
+        if ((rc = pthread_mutex_unlock(&lock)) != 0)
+            throw cdpiThreadException(strerror(rc));
+
+        if (terminate == false && pending.size() > 0) Upload();
+    }
+}
+
+void cdpiUploadThread::QueuePush(const string &json)
+{
+    int rc;
+
+    if ((rc = pthread_mutex_lock(&lock)) != 0)
+        throw cdpiThreadException(strerror(rc));
+
+    uploads.push(json);
+
+    if ((rc = pthread_cond_broadcast(&uploads_cond)) != 0)
+        throw cdpiThreadException(strerror(rc));
+    if ((rc = pthread_mutex_unlock(&lock)) != 0)
+        throw cdpiThreadException(strerror(rc));
+}
+
+void cdpiUploadThread::Upload(void)
+{
+    CURLcode rc;
+    size_t xfer = 0, total = pending.size();
+
+    do {
+        if (cdpi_debug) cdpi_printf("%s: data %lu/%lu (%d bytes)...\n",
+            tag.c_str(), ++xfer, total, pending.front().size());
+
+        if (pending.front().size() <= CDPI_COMPRESS_SIZE) {
+            curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers);
+            curl_easy_setopt(ch, CURLOPT_POSTFIELDS, pending.front().c_str());
+        }
+        else {
+            curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers_gz);
+            Deflate(pending.front());
+        }
+
+        if ((rc = curl_easy_perform(ch)) != CURLE_OK)
+            break;
+
+        long http_rc = 0;
+        if ((rc = curl_easy_getinfo(ch,
+            CURLINFO_RESPONSE_CODE, &http_rc)) != CURLE_OK)
+            break;
+
+        if (http_rc != 200)
+            break;
+
+        pending.pop();
+    }
+    while (pending.size() > 0);
+}
+
+void cdpiUploadThread::Deflate(const string &data)
+{
+    int rc;
+    z_stream zs;
+    string buffer;
+    uint8_t chunk[CDPI_ZLIB_CHUNK_SIZE];
+
+    zs.zalloc = Z_NULL;
+    zs.zfree = Z_NULL;
+    zs.opaque = Z_NULL;
+
+    if (deflateInit2(
+        &zs,
+        Z_DEFAULT_COMPRESSION,
+        Z_DEFLATED, 15 /* window bits */ | 16 /* enable GZIP format */,
+        8,
+        Z_DEFAULT_STRATEGY
+    ) != Z_OK) throw cdpiThreadException("deflateInit2");
+
+    zs.next_in = (uint8_t *)data.data();
+    zs.avail_in = data.size();
+
+    do {
+        zs.avail_out = CDPI_ZLIB_CHUNK_SIZE;
+        zs.next_out = chunk;
+        if ((rc = deflate(&zs, Z_FINISH)) == Z_STREAM_ERROR)
+            throw cdpiThreadException("deflate");
+        buffer.append((const char *)chunk, CDPI_ZLIB_CHUNK_SIZE - zs.avail_out);
+    } while (zs.avail_out == 0);
+
+    deflateEnd(&zs);
+
+    if (rc != Z_STREAM_END)
+        throw cdpiThreadException("deflate");
+
+    curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, buffer.size());
+    curl_easy_setopt(ch, CURLOPT_COPYPOSTFIELDS, buffer.data());
+
+    if (cdpi_debug) {
+        cdpi_printf("%s: payload compressed: %lu -> %lu\n",
+            tag.c_str(), data.size(), buffer.size());
     }
 }
 
