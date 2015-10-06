@@ -329,6 +329,13 @@ static void cdpi_json_add_flows(
         if (json_flow == NULL)
             throw runtime_error(strerror(ENOMEM));
 
+        string digest;
+        cdpi_sha1_to_string((const uint8_t *)i->first.data(), digest);
+        json_obj = json_object_new_string(digest.c_str());
+        if (json_obj == NULL)
+            throw runtime_error(strerror(ENOMEM));
+        json_object_object_add(json_flow, "digest", json_obj);
+
         json_obj = json_object_new_int(i->second->version);
         if (json_obj == NULL)
             throw runtime_error(strerror(ENOMEM));
@@ -391,7 +398,7 @@ static void cdpi_json_add_flows(
             i->second->detected_protocol.master_protocol);
         if (json_obj == NULL)
             throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "detected_master_protocol", json_obj);
+        json_object_object_add(json_flow, "detected_protocol_master", json_obj);
 
         if (i->second->detected_protocol.master_protocol) {
             snprintf(buffer, sizeof(buffer), "%s.%s",

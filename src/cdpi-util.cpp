@@ -20,9 +20,16 @@
 
 #include <cstdlib>
 #include <cstdarg>
+#include <string>
 
 #include <syslog.h>
 
+#define OPENSSL_THREAD_DEFINES
+#include <openssl/opensslconf.h>
+#ifndef OPENSSL_THREADS
+#error "OpenSSL missing thread support"
+#endif
+#include <openssl/sha.h>
 #include "ndpi_main.h"
 
 using namespace std;
@@ -69,6 +76,17 @@ void cdpi_debug_printf(
         vfprintf(stderr, format, ap);
         va_end(ap);
     }
+}
+
+void cdpi_sha1_to_string(const uint8_t *digest_bin, string &digest_str)
+{
+    char _digest[SHA_DIGEST_LENGTH * 2 + 1];
+    char *p = _digest;
+
+    for (int i = 0; i < SHA_DIGEST_LENGTH; i++, p += 2)
+        sprintf(p, "%02x", digest_bin[i]);
+
+    digest_str.assign(_digest);
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

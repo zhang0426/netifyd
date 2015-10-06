@@ -26,5 +26,7 @@ void cdpi_printf(const char *format, ...);
 void cdpi_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...);
 
+void cdpi_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
+
 #endif // _CDPI_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
