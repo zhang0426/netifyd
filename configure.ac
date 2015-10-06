@@ -7,7 +7,7 @@ AC_INIT([cDPId], [1.0],
 	[cdpid], [http://www.clearfoundation.com/])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/cdpid.cpp])
-AC_CONFIG_SUBDIRS([ndpi])
+AC_CONFIG_SUBDIRS([inih ndpi])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 

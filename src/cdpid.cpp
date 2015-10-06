@@ -42,6 +42,8 @@
 #include <json.h>
 #include <curl/curl.h>
 
+#include "INIReader.h"
+
 #include "ndpi_main.h"
 
 using namespace std;
@@ -66,9 +68,14 @@ static cdpiDetectionStats totals;
 static cdpiControlThread *thread_control = NULL;
 static cdpiUploadThread *thread_upload = NULL;
 
+static char *cdpi_conf_filename = NULL;
 static char *cdpi_json_filename = NULL;
 
 static int cdpi_stats_interval = CDPI_STATS_INTERVAL;
+
+int cdpi_account_id = 0;
+char *cdpi_account_key = NULL;
+int cdpi_system_id = 0;
 
 static void usage(int rc = 0, bool version = false)
 {
@@ -103,18 +110,65 @@ static void usage(int rc = 0, bool version = false)
             "    Interface to capture traffic on.  Repeat for multiple interfaces.";
         cerr << endl;
         cerr <<
+            "  -c, --config <filename>" << endl;
+        cerr <<
+            "    Configuration file.  Default: " << CDPI_CONF_FILE_NAME << endl;;
+        cerr <<
             "  -j, --json <filename>" << endl;
         cerr <<
             "    JSON output file.  Default: " << CDPI_JSON_FILE_NAME << endl;;
         cerr <<
             "  -i, --interval <seconds>" << endl;
         cerr <<
-            "    JSON output interval (seconds).  ";
+            "    JSON update interval (seconds).  ";
         cerr <<
             "Default: " << CDPI_STATS_INTERVAL << endl;
     }
 
     exit(rc);
+}
+
+static int cdpi_conf_load(void)
+{
+    struct stat extern_config_stat;
+    if (stat(cdpi_conf_filename, &extern_config_stat) == 0) {
+        if (errno != ENOENT) {
+            cerr << "Can not stat configuration file: " << cdpi_conf_filename <<
+                strerror(errno) << endl;
+            return -1;
+        }
+    }
+            
+    INIReader reader(cdpi_conf_filename);
+
+    if (reader.ParseError() != 0) {
+        cerr << "Can not parse configuration file: " << cdpi_conf_filename << endl;
+        return -1;
+    }
+
+    cdpi_stats_interval = reader.GetInteger(
+        "cdpid", "update_interval", CDPI_STATS_INTERVAL);
+
+    cdpi_account_id = reader.GetInteger("account", "id", 0);
+    if (cdpi_account_id == 0) {
+        cerr << "Account ID not set in: " << cdpi_conf_filename << endl;
+        return 0;
+    }
+    string account_key = reader.Get("account", "key", "");
+    if (account_key.size() > 0)
+        cdpi_account_key = strdup(account_key.c_str());
+    else {
+        cerr << "Account Key not set in: " << cdpi_conf_filename << endl;
+        return -1;
+    }
+
+    cdpi_system_id = reader.GetInteger("system", "id", 0);
+    if (cdpi_system_id == 0) {
+        cerr << "System ID not set in: " << cdpi_conf_filename << endl;
+        return -1;
+    }
+
+    return 0;
 }
 
 void cdpiDetectionStats::print(const char *tag)
@@ -502,6 +556,7 @@ int main(int argc, char *argv[])
         { "interface", 1, 0, 'I' },
         { "json", 1, 0, 'j' },
         { "interval", 1, 0, 'i' },
+        { "config", 1, 0, 'c' },
 
         { NULL, 0, 0, 0 }
     };
@@ -509,7 +564,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdI:j:i:", options, &o)) == -1) break;
+            "?hVdI:j:i:c:", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -538,6 +593,9 @@ int main(int argc, char *argv[])
         case 'i':
             cdpi_stats_interval = atoi(optarg);
             break;
+        case 'c':
+            cdpi_conf_filename = strdup(optarg);
+            break;
         default:
             usage(1);
         }
@@ -545,6 +603,11 @@ int main(int argc, char *argv[])
 
     if (cdpi_json_filename == NULL)
         cdpi_json_filename = strdup(CDPI_JSON_FILE_NAME);
+    if (cdpi_conf_filename == NULL)
+        cdpi_conf_filename = strdup(CDPI_CONF_FILE_NAME);
+
+    if (cdpi_conf_load() < 0)
+        return 1;
 
     if (devices.size() == 0) {
         cerr << "Required argument, (-I, --iterface) missing." << endl;

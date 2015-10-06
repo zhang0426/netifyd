@@ -59,6 +59,9 @@ using namespace std;
 #include "cdpi-thread.h"
 
 extern bool cdpi_debug;
+extern int cdpi_account_id;
+extern char *cdpi_account_key;
+extern int cdpi_system_id;
 
 static void *cdpi_thread_entry(void *param)
 {
@@ -800,12 +803,27 @@ cdpiUploadThread::cdpiUploadThread()
         PACKAGE_NAME << "/" << PACKAGE_VERSION <<
         " (+" << PACKAGE_URL << ")";
 
+    ostringstream account_id;
+    account_id << "X-Account-ID: " << cdpi_account_id;
+
+    ostringstream account_key;
+    account_key << "X-Account-Key: " << cdpi_account_key;
+
+    stringstream system_id;
+    system_id << "X-System-ID: " << cdpi_system_id;
+
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, account_id.str().c_str());
+    headers = curl_slist_append(headers, account_key.str().c_str());
+    headers = curl_slist_append(headers, system_id.str().c_str());
 
     headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
     headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
     headers_gz = curl_slist_append(headers_gz, "Content-Encoding: gzip");
+    headers_gz = curl_slist_append(headers_gz, account_id.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, account_key.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, system_id.str().c_str());
 
     pthread_condattr_t cond_attr;
 

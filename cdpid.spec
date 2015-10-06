@@ -1,7 +1,7 @@
 # ClearSync Process Watch Plugin RPM spec
 Name: cdpid
 Version: 1.0
-Release: 11%{dist}
+Release: 14%{dist}
 Vendor: ClearFoundation
 License: GPL
 Group: System/Daemons
@@ -30,25 +30,27 @@ Report bugs to: http://www.clearfoundation.com/docs/developer/bug_tracker/
 %prep
 %setup -q
 ./autogen.sh
-%{configure}
+%{configure} --with-pic=inih --with-pic=ndpi
 
 %build
 make %{?_smp_mflags}
 
 # Install
 %install
-make install DESTDIR=$RPM_BUILD_ROOT
-rm -rf $RPM_BUILD_ROOT/%{_libdir}
-rm -rf $RPM_BUILD_ROOT/%{_includedir}
-rm -rf $RPM_BUILD_ROOT/%{_bindir}
-mkdir -vp ${RPM_BUILD_ROOT}/%{_sharedstatedir}/cdpid
+make install DESTDIR=%{buildroot}
+rm -rf %{buildroot}/%{_libdir}
+rm -rf %{buildroot}/%{_includedir}
+rm -rf %{buildroot}/%{_bindir}
+mkdir -vp %{buildroot}/%{_sharedstatedir}/cdpid
+mkdir -vp %{buildroot}/%{_sysconfdir}/clearos
 install -D -m 755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/cdpid/exec-pre.sh
 install -D -m 644 deploy/cdpid.service %{buildroot}/lib/systemd/system/cdpid.service
 install -D -m 644 deploy/cdpid.tmpf %{buildroot}/%{_tmpfilesdir}/cdpid.conf
+install -D -m 660 deploy/cdpid.conf %{buildroot}/%{_sysconfdir}/clearos/cdpid.conf
 
 # Clean-up
 %clean
-[ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
+[ "%{buildroot}" != "/" ] && rm -rf %{buildroot}
 
 # Post install
 %post
@@ -70,5 +72,7 @@ install -D -m 644 deploy/cdpid.tmpf %{buildroot}/%{_tmpfilesdir}/cdpid.conf
 %attr(755,root,root) %{_libexecdir}/cdpid/
 %attr(755,root,root) /lib/systemd/system
 %attr(755,root,root) %{_tmpfilesdir}
+%attr(755,root,root) %{_sysconfdir}
+%config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/clearos/cdpid.conf
 
 # vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

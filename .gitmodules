@@ -1,3 +1,6 @@
 [submodule "ndpi"]
 	path = ndpi
 	url = git@github.com:dsokoloski/nDPI.git
+[submodule "inih"]
+	path = inih
+	url = git@github.com:dsokoloski/inih.git

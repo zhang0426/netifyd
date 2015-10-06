@@ -24,6 +24,8 @@
 
 #define CDPI_PID_FILE_NAME      "/var/run/cdpid/cdpid.pid"
 
+#define CDPI_CONF_FILE_NAME     "/etc/clearos/cdpid.conf"
+
 #define CDPI_JSON_FILE_NAME     "/var/lib/cdpid/cdpid.json"
 #define CDPI_JSON_FILE_USER     "root"
 #define CDPI_JSON_FILE_GROUP    "webconfig"
@@ -32,8 +34,8 @@
 #define CDPI_PCAP_SNAPLEN       1536    // Capture snap length
 #define CDPI_PCAP_READ_TIMEOUT  500     // Milliseconds
 
-#define CDPI_URL_CONTROL        "http://sokoloski.ca/cdpi/control.php"
-#define CDPI_URL_UPLOAD         "http://sokoloski.ca/cdpi/upload.php"
+#define CDPI_URL_CONTROL        "https://sokoloski.ca/cdpi/control.php"
+#define CDPI_URL_UPLOAD         "https://sokoloski.ca/cdpi/upload.php"
 
 // Compress data if it's over this size (bytes)
 #define CDPI_COMPRESS_SIZE      (1024 * 10)
