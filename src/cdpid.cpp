@@ -466,6 +466,11 @@ static void cdpi_json_add_flows(
           json_object_object_add(json_flow, "ssl", ssl);
         }
 
+        json_obj = json_object_new_int64(i->second->ts_last_seen);
+        if (json_obj == NULL)
+            throw runtime_error(strerror(ENOMEM));
+        json_object_object_add(json_flow, "last_seen", json_obj);
+
         json_object_array_add(json_parent, json_flow);
     }
 }
