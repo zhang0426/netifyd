@@ -498,8 +498,6 @@ static void cdpi_dump_stats(void)
         throw runtime_error(strerror(ENOMEM));
     json_object_object_add(json_main, "date_time", json_obj);
 
-    memset(&totals, 0, sizeof(cdpiDetectionStats));
-
     for (cdpi_threads::iterator i = threads.begin();
         i != threads.end(); i++) {
 
@@ -518,6 +516,8 @@ static void cdpi_dump_stats(void)
             throw runtime_error(strerror(ENOMEM));
         cdpi_json_add_stats(json_obj, stats[i->first]);
         json_object_object_add(json_stats, i->first.c_str(), json_obj);
+
+        memset(stats[i->first], 0, sizeof(cdpiDetectionStats));
 
         json_obj = json_object_new_array();
         if (json_obj == NULL)
@@ -545,7 +545,7 @@ static void cdpi_dump_stats(void)
     json_object_put(json_main);
 
     if (cdpi_debug) {
-        cdpi_printf("\nCumulative Totals:\n", totals.pkt_raw);
+        cdpi_printf("\nCumulative Totals:\n");
         totals.print();
         cdpi_printf("        Flows: %lu\n\n", flow_count);
     }
