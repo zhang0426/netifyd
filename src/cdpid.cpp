@@ -51,6 +51,7 @@ using namespace std;
 #include "cdpi.h"
 #include "cdpi-util.h"
 #include "cdpi-thread.h"
+#include "cdpi-inotify.h"
 
 bool cdpi_debug = false;
 pthread_mutex_t *cdpi_output_mutex = NULL;
@@ -67,6 +68,7 @@ static cdpi_threads threads;
 static cdpiDetectionStats totals;
 static cdpiControlThread *thread_control = NULL;
 static cdpiUploadThread *thread_upload = NULL;
+static cdpiInotify *inotify_files = NULL;
 
 static char *cdpi_conf_filename = NULL;
 static char *cdpi_json_filename = NULL;
@@ -131,12 +133,13 @@ static void usage(int rc = 0, bool version = false)
 static int cdpi_conf_load(void)
 {
     struct stat extern_config_stat;
-    if (stat(cdpi_conf_filename, &extern_config_stat) == 0) {
+    if (stat(cdpi_conf_filename, &extern_config_stat) < 0) {
         if (errno != ENOENT) {
             cerr << "Can not stat configuration file: " << cdpi_conf_filename <<
                 strerror(errno) << endl;
             return -1;
         }
+        return 0;
     }
             
     INIReader reader(cdpi_conf_filename);
@@ -193,13 +196,6 @@ static void cdpi_json_write(json_object *json)
 {
     int fd = open(cdpi_json_filename, O_WRONLY);
 
-    string json_string = json_object_to_json_string_ext(
-        json,
-        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
-    );
-
-    thread_upload->QueuePush(json_string);
-
     if (fd < 0) {
         if (errno != ENOENT)
             throw runtime_error(strerror(errno));
@@ -226,11 +222,67 @@ static void cdpi_json_write(json_object *json)
         throw runtime_error(strerror(errno));
     if (ftruncate(fd, 0) < 0)
         throw runtime_error(strerror(errno));
+
+    string json_string = json_object_to_json_string_ext(
+        json,
+        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
+    );
+
     if (write(fd, (const void *)json_string.c_str(), json_string.length()) < 0)
         throw runtime_error(strerror(errno));
 
     flock(fd, LOCK_UN);
     close(fd);
+}
+
+static void cdpi_json_add_file(
+    json_object *json, const string &type, const string &filename)
+{
+    char *c, *p, buffer[CDPI_FILE_BUFSIZ];
+    FILE *hf = fopen(filename.c_str(), "r");
+
+    if (hf == NULL) {
+        cdpi_printf("Error opening file for upload: %s: %s\n",
+            filename.c_str(), strerror(errno));
+        return;
+    }
+
+    json_object *json_obj;
+    json_object *json_lines = json_object_new_array();
+        if (json_lines == NULL)
+            throw runtime_error(strerror(ENOMEM));
+
+    p = buffer;
+    while (fgets(buffer, CDPI_FILE_BUFSIZ, hf) != NULL) {
+        while (*p == ' ' || *p == '\t') p++;
+        if (*p == '#' || *p == '\n' || *p == '\r') continue;
+        c = (char *)memchr((void *)p, '\n', CDPI_FILE_BUFSIZ - (p - buffer));
+        if (c != NULL) *c = '\0';
+
+        json_obj = json_object_new_string(p);
+        if (json_obj == NULL)
+            throw runtime_error(strerror(ENOMEM));
+        json_object_array_add(json_lines, json_obj);
+    }
+
+    fclose(hf);
+
+    json_object_object_add(json, type.c_str(), json_lines);
+}
+
+static void cdpi_json_upload(json_object *json)
+{
+    if (inotify_files->EventOccured(CDPI_WATCH_HOSTS))
+        cdpi_json_add_file(json, "hosts", CDPI_WATCH_HOSTS);
+    if (inotify_files->EventOccured(CDPI_WATCH_ETHERS))
+        cdpi_json_add_file(json, "ethers", CDPI_WATCH_ETHERS);
+
+    string json_string = json_object_to_json_string_ext(
+        json,
+        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
+    );
+
+    thread_upload->QueuePush(json_string);
 }
 
 static void cdpi_json_add_stats(json_object *json_parent, const cdpiDetectionStats *stats)
@@ -536,6 +588,7 @@ static void cdpi_dump_stats(void)
 
     try {
         cdpi_json_write(json_main);
+        cdpi_json_upload(json_main);
     }
     catch (runtime_error &e) {
         cdpi_printf("Error writing JSON file: %s: %s\n",
@@ -663,6 +716,7 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGINT);
     sigaddset(&sigset, SIGTERM);
     sigaddset(&sigset, SIGRTMIN);
+    sigaddset(&sigset, SIGIO);
 
     thread_control = new cdpiControlThread();
     thread_control->Create();
@@ -674,6 +728,17 @@ int main(int argc, char *argv[])
         i != devices.end(); i++) {
         flows[(*i)] = new cdpi_flow_map;
         stats[(*i)] = new cdpiDetectionStats;
+    }
+
+    try {
+        inotify_files = new cdpiInotify();
+        inotify_files->AddWatch(CDPI_WATCH_HOSTS);
+        inotify_files->AddWatch(CDPI_WATCH_ETHERS);
+        inotify_files->RefreshWatches();
+    }
+    catch (exception &e) {
+        cdpi_printf("Error creating file watches: %s\n", e.what());
+        return 1;
     }
 
     try {
@@ -734,6 +799,12 @@ int main(int argc, char *argv[])
 
         if (sig == sigev.sigev_signo) {
             cdpi_dump_stats();
+            inotify_files->RefreshWatches();
+            continue;
+        }
+
+        if (sig == SIGIO) {
+            inotify_files->ProcessWatchEvent();
             continue;
         }
 

@@ -22,7 +22,9 @@
 #include <cstdarg>
 #include <string>
 
+#include <unistd.h>
 #include <syslog.h>
+#include <fcntl.h>
 
 #define OPENSSL_THREAD_DEFINES
 #include <openssl/opensslconf.h>
@@ -76,6 +78,50 @@ void cdpi_debug_printf(
         vfprintf(stderr, format, ap);
         va_end(ap);
     }
+}
+
+int cdpi_sha1_file(const string &filename, uint8_t *digest)
+{
+    SHA_CTX ctx;
+    int fd = open(filename.c_str(), O_RDONLY);
+    uint8_t buffer[CDPI_SHA1_BUFFER];
+    ssize_t bytes;
+
+    if (SHA1_Init(&ctx) != 1) {
+        cdpi_printf("Unable to hash file: %s\n", filename.c_str());
+        return -1;
+    }
+
+    if (fd < 0) {
+        cdpi_printf("Unable to hash file: %s: %s\n",
+            filename.c_str(), strerror(errno));
+        return -1;
+    }
+
+    do {
+        bytes = read(fd, buffer, CDPI_SHA1_BUFFER);
+
+        if (bytes > 0) {
+            if (SHA1_Update(&ctx, buffer, bytes) == 0) {
+                cdpi_printf("Unable to hash file: %s\n",
+                    filename.c_str(), strerror(errno));
+                close(fd);
+                return -1;
+            }
+        }
+        else if (bytes < 0) {
+            cdpi_printf("Unable to hash file: %s: %s\n",
+                filename.c_str(), strerror(errno));
+            close(fd);
+            return -1;
+        }
+    }
+    while (bytes != 0);
+
+    close(fd);
+    SHA1_Final(digest, &ctx);
+
+    return 0;
 }
 
 void cdpi_sha1_to_string(const uint8_t *digest_bin, string &digest_str)

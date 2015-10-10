@@ -6,7 +6,7 @@ AM_CXXFLAGS = $(CXXFLAGS) $(JSONC_CFLAGS) $(LIBCRYPTO_CFLAGS) $(LIBCURL_CFLAGS) 
 #EXTRA_DIST = 
 
 sbin_PROGRAMS = cdpid
-cdpid_SOURCES = cdpid.cpp cdpi-thread.cpp cdpi-util.cpp
+cdpid_SOURCES = cdpid.cpp cdpi-inotify.cpp cdpi-thread.cpp cdpi-util.cpp
 cdpid_LDFLAGS = $(JSONC_LIBS) $(LIBCRYPTO_LIBS) $(LIBCURL_LIBS)
 cdpid_LDADD = ../inih/libini.la ../ndpi/src/lib/libndpi.la
 

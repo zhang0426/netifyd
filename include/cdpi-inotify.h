@@ -14,23 +14,44 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _CDPI_UTIL_H
-#define _CDPI_UTIL_H
+#ifndef _CDPI_INOTIFY_H
+#define _CDPI_INOTIFY_H
 
-#define CDPI_SHA1_BUFFER    4096
+#define CDPI_INOTIFY_BUFSIZ     4096
 
-void *cdpi_mem_alloc(unsigned long size);
+class cdpiInotifyException : public runtime_error
+{
+public:
+    explicit cdpiInotifyException(const string &what_arg)
+        : runtime_error(what_arg) { }
+};
 
-void cdpi_mem_free(void *ptr);
+class cdpiInotify
+{
+public:
+    cdpiInotify();
+    virtual ~cdpiInotify();
 
-void cdpi_printf(const char *format, ...);
+    void AddWatch(const string &filename);
+    void RefreshWatches(void);
 
-void cdpi_debug_printf(
-    unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...);
+    void ProcessWatchEvent(void);
 
-int cdpi_sha1_file(const string &filename, uint8_t *digest);
+    bool EventOccured(const string &filename);
 
-void cdpi_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
+protected:
+    int fd;
 
-#endif // _CDPI_UTIL_H
+    struct cdpi_inotify_watch
+    {
+        int wd;
+        bool event_occured;
+        bool rehash;
+        uint8_t *digest;
+    };
+    typedef map<string, struct cdpi_inotify_watch *> cdpi_inotify_map;
+    cdpi_inotify_map inotify_watch;
+};
+
+#endif // _CDPI_INOTIFY_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

@@ -37,9 +37,14 @@
 #define CDPI_URL_CONTROL        "https://sokoloski.ca/cdpi/control.php"
 #define CDPI_URL_UPLOAD         "https://sokoloski.ca/cdpi/upload.php"
 
+#define CDPI_WATCH_HOSTS        "/etc/hosts"
+#define CDPI_WATCH_ETHERS       "/etc/ethers"
+
 // Compress data if it's over this size (bytes)
 #define CDPI_COMPRESS_SIZE      (1024 * 10)
 #define CDPI_ZLIB_CHUNK_SIZE    16384   // Compress this many bytes at a time
+
+#define CDPI_FILE_BUFSIZ        4096
 
 struct cdpiDetectionStats
 {
