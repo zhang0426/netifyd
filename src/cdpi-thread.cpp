@@ -929,8 +929,24 @@ void cdpiUploadThread::Upload(void)
             CURLINFO_RESPONSE_CODE, &http_rc)) != CURLE_OK)
             break;
 
-        if (http_rc != 200)
+        switch (http_rc) {
+        case 200:
             break;
+
+        case 400:
+            if (cdpi_debug) {
+                FILE *hf = fopen("/tmp/rejected.json", "w");
+                if (hf != NULL) {
+                    fwrite(pending.front().data(), 1, pending.front().size(), hf);
+                    fclose(hf);
+                    cdpi_printf("Wrote rejected payload to: /tmp/rejected.json\n");
+                }
+            }
+            break;
+
+        default:
+            return;
+        }
 
         pending.pop();
     }
