@@ -914,7 +914,8 @@ void cdpiUploadThread::Upload(void)
 
         if (pending.front().size() <= CDPI_COMPRESS_SIZE) {
             curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers);
-            curl_easy_setopt(ch, CURLOPT_POSTFIELDS, pending.front().c_str());
+            curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, pending.front().size());
+            curl_easy_setopt(ch, CURLOPT_POSTFIELDS, pending.front().data());
         }
         else {
             curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers_gz);
