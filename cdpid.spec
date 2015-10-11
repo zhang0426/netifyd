@@ -1,7 +1,7 @@
 # ClearSync Process Watch Plugin RPM spec
 Name: cdpid
 Version: 1.0
-Release: 20%{dist}
+Release: 21%{dist}
 Vendor: ClearFoundation
 License: GPL
 Group: System/Daemons
@@ -19,6 +19,7 @@ BuildRequires: libpcap-devel
 BuildRequires: json-c-devel
 BuildRequires: libcurl
 BuildRequires: zlib-devel
+BuildRequires: libmnl-devel
 Summary: ClearOS Deep Packet Inspection Daemon
 Requires(pre): /sbin/ldconfig
 
