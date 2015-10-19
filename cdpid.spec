@@ -1,7 +1,7 @@
 # ClearSync Process Watch Plugin RPM spec
 Name: cdpid
 Version: 1.0
-Release: 21%{dist}
+Release: 23%{dist}
 Vendor: ClearFoundation
 License: GPL
 Group: System/Daemons
@@ -9,6 +9,7 @@ Packager: ClearFoundation
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-%{version}
 Requires: /usr/bin/systemctl
+Requires: /usr/bin/uuidgen
 Requires: webconfig-httpd
 Requires: app-network-core
 BuildRequires: autoconf >= 2.63
@@ -21,7 +22,6 @@ BuildRequires: libcurl
 BuildRequires: zlib-devel
 BuildRequires: libmnl-devel
 Summary: ClearOS Deep Packet Inspection Daemon
-Requires(pre): /sbin/ldconfig
 
 %description
 Deep Packet Inspection Daemon (DPI) based off of nDPI (http://www.ntop.org/products/deep-packet-inspection/ndpi/).
@@ -55,13 +55,16 @@ install -D -m 660 deploy/cdpid.conf %{buildroot}/%{_sysconfdir}/clearos/cdpid.co
 
 # Post install
 %post
-/sbin/ldconfig
+if `egrep -q '^uuid[[:space:]]*=[[:space:]]*0$' /etc/clearos/cdpid.conf 2>/dev/null`; then
+    uuid=$(/usr/bin/uuidgen | tail -c 6)
+    sed -e "s/^uuid[[:space:]]*=[[:space:]]*0/uuid = $uuid/" -i /etc/clearos/cdpid.conf
+fi
+
 /usr/bin/systemctl enable cdpid.service -q
 /usr/bin/systemctl restart cdpid -q
 
 # Post uninstall
 %postun
-/sbin/ldconfig
 /usr/bin/systemctl stop cdpid -q
 /usr/bin/systemctl disable cdpid.service -q
 

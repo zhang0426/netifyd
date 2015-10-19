@@ -75,6 +75,7 @@ static char *cdpi_json_filename = NULL;
 
 static int cdpi_stats_interval = CDPI_STATS_INTERVAL;
 
+char *cdpi_uuid = NULL;
 int cdpi_account_id = 0;
 char *cdpi_account_key = NULL;
 int cdpi_system_id = 0;
@@ -134,18 +135,23 @@ static int cdpi_conf_load(void)
 {
     struct stat extern_config_stat;
     if (stat(cdpi_conf_filename, &extern_config_stat) < 0) {
-        if (errno != ENOENT) {
-            cerr << "Can not stat configuration file: " << cdpi_conf_filename <<
-                strerror(errno) << endl;
-            return -1;
-        }
-        return 0;
+        cerr << "Can not stat configuration file: " << cdpi_conf_filename <<
+            ": " << strerror(errno) << endl;
+        return -1;
     }
             
     INIReader reader(cdpi_conf_filename);
 
     if (reader.ParseError() != 0) {
         cerr << "Can not parse configuration file: " << cdpi_conf_filename << endl;
+        return -1;
+    }
+
+    string uuid = reader.Get("cdpid", "uuid", "");
+    if (uuid.size() > 0)
+        cdpi_uuid = strdup(uuid.c_str());
+    else {
+        cerr << "UUID not set in: " << cdpi_conf_filename << endl;
         return -1;
     }
 
@@ -588,11 +594,17 @@ static void cdpi_dump_stats(void)
 
     try {
         cdpi_json_write(json_main);
-        cdpi_json_upload(json_main);
     }
     catch (runtime_error &e) {
         cdpi_printf("Error writing JSON file: %s: %s\n",
             cdpi_json_filename, e.what());
+    }
+
+    try {
+        cdpi_json_upload(json_main);
+    }
+    catch (runtime_error &e) {
+        cdpi_printf("Error uploading JSON: %s\n", e.what());
     }
 
     json_object_put(json_main);
