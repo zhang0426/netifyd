@@ -66,7 +66,6 @@ static cdpi_flows flows;
 static cdpi_stats stats;
 static cdpi_threads threads;
 static cdpiDetectionStats totals;
-static cdpiControlThread *thread_control = NULL;
 static cdpiUploadThread *thread_upload = NULL;
 static cdpiInotify *inotify_files = NULL;
 
@@ -730,9 +729,6 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGRTMIN);
     sigaddset(&sigset, SIGIO);
 
-    thread_control = new cdpiControlThread();
-    thread_control->Create();
-
     thread_upload = new cdpiUploadThread();
     thread_upload->Create();
 
@@ -833,9 +829,7 @@ int main(int argc, char *argv[])
         delete stats[(*i)];
     }
 
-    thread_control->Terminate();
     thread_upload->Terminate();
-    delete thread_control;
     delete thread_upload;
 
     pthread_mutex_destroy(cdpi_output_mutex);

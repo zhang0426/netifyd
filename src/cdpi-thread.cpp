@@ -748,39 +748,6 @@ void cdpiDetectionThread::ProcessPacket(void)
     }
 }
 
-cdpiControlThread::cdpiControlThread()
-    : cdpiThread("control", -1)
-{
-    ch = curl_easy_init();
-
-    if (ch == NULL)
-        throw cdpiThreadException("curl_easy_init");
-
-    curl_easy_setopt(ch, CURLOPT_URL, CDPI_URL_CONTROL);
-    curl_easy_setopt(ch, CURLOPT_POST, 1);
-    curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, cdpi_curl_debug);
-    curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
-}
-
-cdpiControlThread::~cdpiControlThread()
-{
-    Join();
-    if (ch != NULL) curl_easy_cleanup(ch);
-}
-
-void *cdpiControlThread::Entry(void)
-{
-    cdpi_printf("%s: thread started.\n", tag.c_str());
-
-    do {
-        sleep(1);
-    }
-    while (terminate == false);
-
-    return NULL;
-}
-
 cdpiUploadThread::cdpiUploadThread()
     : cdpiThread("upload", -1), headers(NULL), headers_gz(NULL)
 {
@@ -792,11 +759,14 @@ cdpiUploadThread::cdpiUploadThread()
     curl_easy_setopt(ch, CURLOPT_URL, CDPI_URL_UPLOAD);
     curl_easy_setopt(ch, CURLOPT_POST, 1);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (cdpi_debug) ? CDPI_COOKIE_JAR : "");
+
     if (cdpi_debug) {
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, cdpi_curl_debug);
         curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
         curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
         curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_easy_setopt(ch, CURLOPT_COOKIEJAR, CDPI_COOKIE_JAR);
     }
 
     ostringstream user_agent;
@@ -892,6 +862,10 @@ void *cdpiUploadThread::Entry(void)
     }
 
     return NULL;
+}
+
+void cdpiUploadThread::Authenticate(void)
+{
 }
 
 void cdpiUploadThread::QueuePush(const string &json)

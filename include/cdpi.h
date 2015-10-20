@@ -34,8 +34,8 @@
 #define CDPI_PCAP_SNAPLEN       1536    // Capture snap length
 #define CDPI_PCAP_READ_TIMEOUT  500     // Milliseconds
 
-#define CDPI_URL_CONTROL        "https://sokoloski.ca/cdpi/control.php"
-#define CDPI_URL_UPLOAD         "https://sokoloski.ca/cdpi/upload.php"
+#define CDPI_URL_UPLOAD         "https://api.dpi.sokoloski.ca/upload/"
+#define CDPI_COOKIE_JAR         "/var/lib/cdpid/cdpid.cookies"
 
 #define CDPI_WATCH_HOSTS        "/etc/hosts"
 #define CDPI_WATCH_ETHERS       "/etc/ethers"

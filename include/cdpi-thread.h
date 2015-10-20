@@ -85,18 +85,6 @@ protected:
     void ProcessPacket(void);
 };
 
-class cdpiControlThread : public cdpiThread
-{
-public:
-    cdpiControlThread();
-    virtual ~cdpiControlThread();
-
-    virtual void *Entry(void);
-
-protected:
-    CURL *ch;
-};
-
 class cdpiUploadThread : public cdpiThread
 {
 public:
@@ -106,6 +94,8 @@ public:
     virtual void *Entry(void);
 
     virtual void Terminate(void) { QueuePush("terminate"); }
+
+    void Authenticate(void);
 
     void QueuePush(const string &json);
 
