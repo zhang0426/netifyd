@@ -52,6 +52,7 @@ using namespace std;
 #include "cdpi-util.h"
 #include "cdpi-thread.h"
 #include "cdpi-inotify.h"
+#include "cdpi-json.h"
 
 bool cdpi_debug = false;
 pthread_mutex_t *cdpi_output_mutex = NULL;
@@ -197,7 +198,7 @@ void cdpiDetectionStats::print(const char *tag)
     cdpi_printf("Discard bytes: %lu\n", pkt_discard_bytes);
 }
 
-static void cdpi_json_write(json_object *json)
+static void cdpi_json_write(cdpiJson *json)
 {
     int fd = open(cdpi_json_filename, O_WRONLY);
 
@@ -228,10 +229,8 @@ static void cdpi_json_write(json_object *json)
     if (ftruncate(fd, 0) < 0)
         throw runtime_error(strerror(errno));
 
-    string json_string = json_object_to_json_string_ext(
-        json,
-        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
-    );
+    string json_string;
+    json->ToString(json_string);
 
     if (write(fd, (const void *)json_string.c_str(), json_string.length()) < 0)
         throw runtime_error(strerror(errno));
@@ -241,7 +240,7 @@ static void cdpi_json_write(json_object *json)
 }
 
 static void cdpi_json_add_file(
-    json_object *json, const string &type, const string &filename)
+    json_object *parent, const string &type, const string &filename)
 {
     char *c, *p, buffer[CDPI_FILE_BUFSIZ];
     FILE *hf = fopen(filename.c_str(), "r");
@@ -252,10 +251,8 @@ static void cdpi_json_add_file(
         return;
     }
 
-    json_object *json_obj;
-    json_object *json_lines = json_object_new_array();
-        if (json_lines == NULL)
-            throw runtime_error(strerror(ENOMEM));
+    cdpiJson json(parent);
+    json_object *json_lines = json.CreateArray(NULL, type.c_str());
 
     p = buffer;
     while (fgets(buffer, CDPI_FILE_BUFSIZ, hf) != NULL) {
@@ -264,114 +261,51 @@ static void cdpi_json_add_file(
         c = (char *)memchr((void *)p, '\n', CDPI_FILE_BUFSIZ - (p - buffer));
         if (c != NULL) *c = '\0';
 
-        json_obj = json_object_new_string(p);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_array_add(json_lines, json_obj);
+        json.PushObject(json_lines, p);
     }
 
     fclose(hf);
-
-    json_object_object_add(json, type.c_str(), json_lines);
 }
 
-static void cdpi_json_upload(json_object *json)
+static void cdpi_json_upload(cdpiJson *json)
 {
     if (inotify_files->EventOccured(CDPI_WATCH_HOSTS))
-        cdpi_json_add_file(json, "hosts", CDPI_WATCH_HOSTS);
+        cdpi_json_add_file(json->GetRoot(), "hosts", CDPI_WATCH_HOSTS);
     if (inotify_files->EventOccured(CDPI_WATCH_ETHERS))
-        cdpi_json_add_file(json, "ethers", CDPI_WATCH_ETHERS);
+        cdpi_json_add_file(json->GetRoot(), "ethers", CDPI_WATCH_ETHERS);
 
-    string json_string = json_object_to_json_string_ext(
-        json,
-        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
-    );
+    string json_string;
+    json->ToString(json_string);
 
     thread_upload->QueuePush(json_string);
 }
 
-static void cdpi_json_add_stats(json_object *json_parent, const cdpiDetectionStats *stats)
+static void cdpi_json_add_stats(json_object *parent, const cdpiDetectionStats *stats)
 {
-    json_object *json_obj;
+    cdpiJson json(parent);
 
-    json_obj = json_object_new_int64(stats->pkt_raw);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "raw", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_eth);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "ethernet", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_mpls);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "mpls", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_pppoe);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "pppoe", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_vlan);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "vlan", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_frags);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "fragmented", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_discard);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "discarded", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_discard_bytes);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "discarded_bytes", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_maxlen);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "largest_bytes", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_ip);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "ip", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_tcp);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "tcp", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_udp);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "udp", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_ip_bytes);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "ip_bytes", json_obj);
-
-    json_obj = json_object_new_int64(stats->pkt_wire_bytes);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_parent, "wire_bytes", json_obj);
+    json.AddObject(NULL, string("raw"), stats->pkt_raw);
+    json.AddObject(NULL, "ethernet", stats->pkt_eth);
+    json.AddObject(NULL, "mpls", stats->pkt_mpls);
+    json.AddObject(NULL, "pppoe", stats->pkt_pppoe);
+    json.AddObject(NULL, "vlan", stats->pkt_vlan);
+    json.AddObject(NULL, "fragmented", stats->pkt_frags);
+    json.AddObject(NULL, "discarded", stats->pkt_discard);
+    json.AddObject(NULL, "discarded_bytes", stats->pkt_discard_bytes);
+    json.AddObject(NULL, "largest_bytes", stats->pkt_maxlen);
+    json.AddObject(NULL, "ip", stats->pkt_ip);
+    json.AddObject(NULL, "tcp", stats->pkt_tcp);
+    json.AddObject(NULL, "udp", stats->pkt_udp);
+    json.AddObject(NULL, "ip_bytes", stats->pkt_ip_bytes);
+    json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
 }
 
-static void cdpi_json_add_flows(
-    json_object *json_parent,
+static void cdpi_json_add_flows(json_object *parent,
     struct ndpi_detection_module_struct *ndpi,
     const cdpi_flow_map *flows, bool unknown = true)
 {
     char buffer[256];
-    json_object *json_flow = NULL, *json_obj = NULL;
+    cdpiJson json(parent);
 
     for (cdpi_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
@@ -382,80 +316,40 @@ static void cdpi_json_add_flows(
             i->second->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN)
             continue;
 
-        json_flow = json_object_new_object();
-        if (json_flow == NULL)
-            throw runtime_error(strerror(ENOMEM));
+        json_object *json_flow = json.CreateObject();
 
         string digest;
         cdpi_sha1_to_string((const uint8_t *)i->first.data(), digest);
-        json_obj = json_object_new_string(digest.c_str());
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "digest", json_obj);
+        json.AddObject(json_flow, "digest", digest);
 
-        json_obj = json_object_new_int(i->second->version);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "ip_version", json_obj);
+        json.AddObject(json_flow, "ip_version", (int32_t)i->second->version);
 
-        json_obj = json_object_new_int(i->second->protocol);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "ip_protocol", json_obj);
+        json.AddObject(json_flow, "ip_protocol", (int32_t)i->second->protocol);
 
-        json_obj = json_object_new_int(i->second->vlan_id);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "vlan_id", json_obj);
+        json.AddObject(json_flow, "vlan_id", (int32_t)i->second->vlan_id);
 
         snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
             i->second->lower_mac[0], i->second->lower_mac[1], i->second->lower_mac[2],
             i->second->lower_mac[3], i->second->lower_mac[4], i->second->lower_mac[5]
         );
-        json_obj = json_object_new_string(buffer);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "lower_mac", json_obj);
+        json.AddObject(json_flow, "lower_mac", buffer);
 
         snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
             i->second->upper_mac[0], i->second->upper_mac[1], i->second->upper_mac[2],
             i->second->upper_mac[3], i->second->upper_mac[4], i->second->upper_mac[5]
         );
-        json_obj = json_object_new_string(buffer);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "upper_mac", json_obj);
+        json.AddObject(json_flow, "upper_mac", buffer);
 
-        json_obj = json_object_new_string(i->second->lower_ip);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "lower_ip", json_obj);
+        json.AddObject(json_flow, "lower_ip", i->second->lower_ip);
+        json.AddObject(json_flow, "upper_ip", i->second->lower_ip);
 
-        json_obj = json_object_new_string(i->second->upper_ip);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "upper_ip", json_obj);
+        json.AddObject(json_flow, "lower_port", (int32_t)i->second->lower_port);
+        json.AddObject(json_flow, "upper_port", (int32_t)i->second->upper_port);
 
-        json_obj = json_object_new_int(ntohs(i->second->lower_port));
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "lower_port", json_obj);
-
-        json_obj = json_object_new_int(ntohs(i->second->upper_port));
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "upper_port", json_obj);
-
-        json_obj = json_object_new_int(i->second->detected_protocol.protocol);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "detected_protocol", json_obj);
-
-        json_obj = json_object_new_int(
-            i->second->detected_protocol.master_protocol);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "detected_protocol_master", json_obj);
+        json.AddObject(json_flow, "detected_protocol",
+            (int32_t)i->second->detected_protocol.protocol);
+        json.AddObject(json_flow, "detected_protocol_master",
+            (int32_t)i->second->detected_protocol.master_protocol);
 
         if (i->second->detected_protocol.master_protocol) {
             snprintf(buffer, sizeof(buffer), "%s.%s",
@@ -464,135 +358,80 @@ static void cdpi_json_add_flows(
                 ndpi_get_proto_name(ndpi,
                     i->second->detected_protocol.protocol));
 
-            json_obj = json_object_new_string(buffer);
-            if (json_obj == NULL)
-                throw runtime_error(strerror(ENOMEM));
-            json_object_object_add(json_flow, "detected_protocol_name", json_obj);
+            json.AddObject(json_flow, "detected_protocol_name", buffer);
         }
         else {
-            json_obj = json_object_new_string(
+            json.AddObject(json_flow, "detected_protocol_name",
                 ndpi_get_proto_name(ndpi, i->second->detected_protocol.protocol));
-            if (json_obj == NULL)
-                throw runtime_error(strerror(ENOMEM));
-            json_object_object_add(json_flow, "detected_protocol_name", json_obj);
         }
 
-        json_obj = json_object_new_boolean(i->second->detection_guessed);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "detection_guessed", json_obj);
+        json.AddObject(json_flow, "detection_guessed", i->second->detection_guessed);
 
-        json_obj = json_object_new_int(i->second->packets);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "packets", json_obj);
-
-        json_obj = json_object_new_int64(i->second->bytes);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "bytes", json_obj);
+        json.AddObject(json_flow, "packets", i->second->packets);
+        json.AddObject(json_flow, "bytes", i->second->bytes);
 
         if (i->second->host_server_name[0] != '\0') {
-            json_obj = json_object_new_string(i->second->host_server_name);
-            if (json_obj == NULL)
-                throw runtime_error(strerror(ENOMEM));
-            json_object_object_add(json_flow, "host_server_name", json_obj);
+            json.AddObject(json_flow,
+                "host_server_name", i->second->host_server_name);
         }
 
         if((i->second->ssl.client_cert[0] != '\0') ||
             (i->second->ssl.server_cert[0] != '\0')) {
 
-            json_object *ssl = json_object_new_object();
-            if (ssl == NULL)
-                throw runtime_error(strerror(ENOMEM));
+            json_object *ssl = json.CreateObject(json_flow, "ssl");
 
-            if(i->second->ssl.client_cert[0] != '\0') {
-                json_obj = json_object_new_string(i->second->ssl.client_cert);
-                if (json_obj == NULL)
-                    throw runtime_error(strerror(ENOMEM));
-                json_object_object_add(ssl, "client", json_obj);
-            }
+            if(i->second->ssl.client_cert[0] != '\0')
+                json.AddObject(ssl, "client", i->second->ssl.client_cert);
 
-            if(i->second->ssl.server_cert[0] != '\0') {
-                json_obj = json_object_new_string(i->second->ssl.server_cert);
-                if (json_obj == NULL)
-                    throw runtime_error(strerror(ENOMEM));
-                json_object_object_add(ssl, "server", json_obj);
-            }
-
-          json_object_object_add(json_flow, "ssl", ssl);
+            if(i->second->ssl.server_cert[0] != '\0')
+                json.AddObject(ssl, "server", i->second->ssl.server_cert);
         }
 
-        json_obj = json_object_new_int64(i->second->ts_last_seen);
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_object_add(json_flow, "last_seen", json_obj);
+        json.AddObject(json_flow, "last_seen", i->second->ts_last_seen);
 
-        json_object_array_add(json_parent, json_flow);
+        json.PushObject(NULL, json_flow);
     }
 }
 
 static void cdpi_dump_stats(void)
 {
     uint64_t flow_count = 0;
-    json_object *json_obj = NULL;
-    json_object *json_main = json_object_new_object();
-    json_object *json_devs = json_object_new_array();
-    json_object *json_stats = json_object_new_object();
-    json_object *json_flows = json_object_new_object();
 
-    if (json_main == NULL || json_devs == NULL ||
-        json_stats == NULL || json_flows == NULL)
-        throw runtime_error(strerror(ENOMEM));
+    cdpiJson json;
+    json_object *json_obj;
 
-    json_obj = json_object_new_string(PACKAGE_VERSION);
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_main, "version", json_obj);
+    json_object *json_devs = json.CreateArray(NULL, "interfaces");
+    json_object *json_stats = json.CreateObject(NULL, "stats");
+    json_object *json_flows = json.CreateObject(NULL, "flows");
 
-    json_obj = json_object_new_int64((int64_t)time(NULL));
-    if (json_obj == NULL)
-        throw runtime_error(strerror(ENOMEM));
-    json_object_object_add(json_main, "date_time", json_obj);
+    json.AddObject(NULL, "version", PACKAGE_VERSION);
+    json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
 
     for (cdpi_threads::iterator i = threads.begin();
         i != threads.end(); i++) {
 
-        json_obj = json_object_new_string(i->first.c_str());
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
-        json_object_array_add(json_devs, json_obj);
+        json.PushObject(json_devs, i->first.c_str());
 
         i->second->Lock();
 
         totals += *stats[i->first];
         flow_count += flows[i->first]->size();
 
-        json_obj = json_object_new_object();
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
+        json_obj = json.CreateObject();
         cdpi_json_add_stats(json_obj, stats[i->first]);
         json_object_object_add(json_stats, i->first.c_str(), json_obj);
 
         memset(stats[i->first], 0, sizeof(cdpiDetectionStats));
 
-        json_obj = json_object_new_array();
-        if (json_obj == NULL)
-            throw runtime_error(strerror(ENOMEM));
+        json_obj = json.CreateArray(json_flows, i->first);
         cdpi_json_add_flows(json_obj,
             i->second->GetDetectionModule(), flows[i->first]);
 
         i->second->Unlock();
-
-        json_object_object_add(json_flows, i->first.c_str(), json_obj);
     }
 
-    json_object_object_add(json_main, "devices", json_devs);
-    json_object_object_add(json_main, "stats", json_stats);
-    json_object_object_add(json_main, "flows", json_flows);
-
     try {
-        cdpi_json_write(json_main);
+        cdpi_json_write(&json);
     }
     catch (runtime_error &e) {
         cdpi_printf("Error writing JSON file: %s: %s\n",
@@ -600,13 +439,13 @@ static void cdpi_dump_stats(void)
     }
 
     try {
-        cdpi_json_upload(json_main);
+        cdpi_json_upload(&json);
     }
     catch (runtime_error &e) {
         cdpi_printf("Error uploading JSON: %s\n", e.what());
     }
 
-    json_object_put(json_main);
+    json.Destroy();
 
     if (cdpi_debug) {
         cdpi_printf("\nCumulative Totals:\n");
