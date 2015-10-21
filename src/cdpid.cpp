@@ -400,12 +400,12 @@ static void cdpi_dump_stats(void)
     cdpiJson json;
     json_object *json_obj;
 
+    json.AddObject(NULL, "version", PACKAGE_VERSION);
+    json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
+
     json_object *json_devs = json.CreateArray(NULL, "interfaces");
     json_object *json_stats = json.CreateObject(NULL, "stats");
     json_object *json_flows = json.CreateObject(NULL, "flows");
-
-    json.AddObject(NULL, "version", PACKAGE_VERSION);
-    json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
 
     for (cdpi_threads::iterator i = threads.begin();
         i != threads.end(); i++) {

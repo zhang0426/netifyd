@@ -230,7 +230,10 @@ void cdpiJson::PushObject(json_object *parent, bool value)
 
 void cdpiJson::PushObject(json_object *parent, json_object *object)
 {
-    json_object_array_add(parent, object);
+    if (parent == NULL)
+        json_object_array_add(root, object);
+    else
+        json_object_array_add(parent, object);
 }
 
 void cdpiJson::ToString(string &output)
