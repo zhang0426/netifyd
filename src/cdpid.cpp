@@ -341,7 +341,7 @@ static void cdpi_json_add_flows(json_object *parent,
         json.AddObject(json_flow, "upper_mac", buffer);
 
         json.AddObject(json_flow, "lower_ip", i->second->lower_ip);
-        json.AddObject(json_flow, "upper_ip", i->second->lower_ip);
+        json.AddObject(json_flow, "upper_ip", i->second->upper_ip);
 
         json.AddObject(json_flow, "lower_port", (int32_t)i->second->lower_port);
         json.AddObject(json_flow, "upper_port", (int32_t)i->second->upper_port);

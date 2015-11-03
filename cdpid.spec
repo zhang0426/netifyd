@@ -1,7 +1,7 @@
 # ClearSync Process Watch Plugin RPM spec
 Name: cdpid
 Version: 1.0
-Release: 24%{dist}
+Release: 25%{dist}
 Vendor: ClearFoundation
 License: GPL
 Group: System/Daemons
