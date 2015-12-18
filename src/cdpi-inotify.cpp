@@ -28,19 +28,13 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#define OPENSSL_THREAD_DEFINES
-#include <openssl/opensslconf.h>
-#ifndef OPENSSL_THREADS
-#error "OpenSSL missing thread support"
-#endif
-#include <openssl/sha.h>
-
 using namespace std;
 
 #include "ndpi_main.h"
 
 #include "cdpi-util.h"
 #include "cdpi-inotify.h"
+#include "cdpi-sha1.h"
 
 extern bool cdpi_debug;
 
@@ -149,18 +143,18 @@ void cdpiInotify::ProcessWatchEvent(void)
 
         if (i->second->rehash == false) continue;
 
-        uint8_t digest[SHA_DIGEST_LENGTH];
+        uint8_t digest[SHA1_DIGEST_LENGTH];
 
         if (cdpi_sha1_file(i->first, digest) < 0)
             continue;
 
         if (i->second->digest == NULL) {
-            i->second->digest = new uint8_t[SHA_DIGEST_LENGTH];
-            memcpy(i->second->digest, digest, SHA_DIGEST_LENGTH);
+            i->second->digest = new uint8_t[SHA1_DIGEST_LENGTH];
+            memcpy(i->second->digest, digest, SHA1_DIGEST_LENGTH);
         }
         else {
-            if (memcmp(i->second->digest, digest, SHA_DIGEST_LENGTH))
-                memcpy(i->second->digest, digest, SHA_DIGEST_LENGTH);
+            if (memcmp(i->second->digest, digest, SHA1_DIGEST_LENGTH))
+                memcpy(i->second->digest, digest, SHA1_DIGEST_LENGTH);
             else {
                 string hash1, hash2;
                 i->second->event_occured = false;

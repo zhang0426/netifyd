@@ -38,13 +38,6 @@
 #include <netinet/udp.h>
 #include <linux/if_ether.h>
 
-#define OPENSSL_THREAD_DEFINES
-#include <openssl/opensslconf.h>
-#ifndef OPENSSL_THREADS
-#error "OpenSSL missing thread support"
-#endif
-#include <openssl/sha.h>
-
 #include <curl/curl.h>
 #include <zlib.h>
 
@@ -56,6 +49,7 @@ using namespace std;
 
 #include "cdpi.h"
 #include "cdpi-util.h"
+#include "cdpi-sha1.h"
 #include "cdpi-thread.h"
 
 extern bool cdpi_debug;
@@ -129,35 +123,32 @@ static int cdpi_curl_debug(CURL *ch, curl_infotype type, char *data, size_t size
 
 void cdpiFlow::hash(string &digest)
 {
-    SHA_CTX ctx;
-    uint8_t _digest[SHA_DIGEST_LENGTH];
+    sha1 ctx;
+    uint8_t *_digest;
 
-    if (SHA1_Init(&ctx) != 1)
-        throw cdpiThreadException("SHA1_Init");
-
-    SHA1_Update(&ctx, &vlan_id, sizeof(vlan_id));
+    sha1_init(&ctx);
+    sha1_write(&ctx, (const char *)&vlan_id, sizeof(vlan_id));
 
     switch (version) {
     case 4:
-        SHA1_Update(&ctx, &lower_addr, sizeof(struct in_addr));
-        SHA1_Update(&ctx, &upper_addr, sizeof(struct in_addr));
+        sha1_write(&ctx, (const char *)&lower_addr, sizeof(struct in_addr));
+        sha1_write(&ctx, (const char *)&upper_addr, sizeof(struct in_addr));
         break;
     case 6:
-        SHA1_Update(&ctx, &lower_addr6, sizeof(struct in6_addr));
-        SHA1_Update(&ctx, &upper_addr6, sizeof(struct in6_addr));
+        sha1_write(&ctx, (const char *)&lower_addr6, sizeof(struct in6_addr));
+        sha1_write(&ctx, (const char *)&upper_addr6, sizeof(struct in6_addr));
         break;
     default:
         break;
     }
 
-    SHA1_Update(&ctx, &protocol, sizeof(protocol));
-    SHA1_Update(&ctx, &lower_port, sizeof(lower_port));
-    SHA1_Update(&ctx, &upper_port, sizeof(upper_port));
+    sha1_write(&ctx, (const char *)&protocol, sizeof(protocol));
+    sha1_write(&ctx, (const char *)&lower_port, sizeof(lower_port));
+    sha1_write(&ctx, (const char *)&upper_port, sizeof(upper_port));
 
-    SHA1_Final(_digest, &ctx);
-    digest.assign((const char *)_digest, SHA_DIGEST_LENGTH);
+    _digest = sha1_result(&ctx);
+    digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
 }
-
 
 void cdpiFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 {
