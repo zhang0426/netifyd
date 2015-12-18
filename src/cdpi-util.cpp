@@ -26,17 +26,12 @@
 #include <syslog.h>
 #include <fcntl.h>
 
-#define OPENSSL_THREAD_DEFINES
-#include <openssl/opensslconf.h>
-#ifndef OPENSSL_THREADS
-#error "OpenSSL missing thread support"
-#endif
-#include <openssl/sha.h>
 #include "ndpi_main.h"
 
 using namespace std;
 
 #include "cdpi-util.h"
+#include "cdpi-sha1.h"
 
 extern bool cdpi_debug;
 
@@ -82,15 +77,12 @@ void cdpi_debug_printf(
 
 int cdpi_sha1_file(const string &filename, uint8_t *digest)
 {
-    SHA_CTX ctx;
+    sha1 ctx;
     int fd = open(filename.c_str(), O_RDONLY);
     uint8_t buffer[CDPI_SHA1_BUFFER];
     ssize_t bytes;
 
-    if (SHA1_Init(&ctx) != 1) {
-        cdpi_printf("Unable to hash file: %s\n", filename.c_str());
-        return -1;
-    }
+    sha1_init(&ctx);
 
     if (fd < 0) {
         cdpi_printf("Unable to hash file: %s: %s\n",
@@ -101,14 +93,8 @@ int cdpi_sha1_file(const string &filename, uint8_t *digest)
     do {
         bytes = read(fd, buffer, CDPI_SHA1_BUFFER);
 
-        if (bytes > 0) {
-            if (SHA1_Update(&ctx, buffer, bytes) == 0) {
-                cdpi_printf("Unable to hash file: %s\n",
-                    filename.c_str(), strerror(errno));
-                close(fd);
-                return -1;
-            }
-        }
+        if (bytes > 0)
+            sha1_write(&ctx, (const char *)buffer, bytes);
         else if (bytes < 0) {
             cdpi_printf("Unable to hash file: %s: %s\n",
                 filename.c_str(), strerror(errno));
@@ -119,17 +105,17 @@ int cdpi_sha1_file(const string &filename, uint8_t *digest)
     while (bytes != 0);
 
     close(fd);
-    SHA1_Final(digest, &ctx);
+    memcpy(digest, sha1_result(&ctx), SHA1_DIGEST_LENGTH);
 
     return 0;
 }
 
 void cdpi_sha1_to_string(const uint8_t *digest_bin, string &digest_str)
 {
-    char _digest[SHA_DIGEST_LENGTH * 2 + 1];
+    char _digest[SHA1_DIGEST_LENGTH * 2 + 1];
     char *p = _digest;
 
-    for (int i = 0; i < SHA_DIGEST_LENGTH; i++, p += 2)
+    for (int i = 0; i < SHA1_DIGEST_LENGTH; i++, p += 2)
         sprintf(p, "%02x", digest_bin[i]);
 
     digest_str.assign(_digest);
