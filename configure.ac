@@ -36,7 +36,7 @@ PKG_CHECK_MODULES([ZLIB], [zlib])
 PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
-PKG_CHECK_MODULES([LIBMNL], [libmnl])
+#PKG_CHECK_MODULES([LIBMNL], [libmnl])
 
 # Checks for header files.
 #AC_CHECK_HEADERS([proc/readproc.h], [], [AC_MSG_ERROR([procps header files not found.])])
