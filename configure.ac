@@ -16,6 +16,14 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 
+# Check for optional parameters
+AC_ARG_ENABLE(cloud-sync,
+	AS_HELP_STRING([--enable-cloud-sync], [enable eGloo cloud synchronization])
+)
+AS_IF([test "x$enable_cloud_sync" = "xyes"], [
+    AC_DEFINE([USE_CLOUD_SYNC], [1], [Define to enable eGloo cloud synchronization.])
+])
+
 # Checks for libraries.
 AC_CHECK_LIB([rt], [timer_create], [], [
 	AC_MSG_ERROR([librt not found.])])

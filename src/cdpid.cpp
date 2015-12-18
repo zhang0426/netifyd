@@ -438,13 +438,14 @@ static void cdpi_dump_stats(void)
             cdpi_json_filename, e.what());
     }
 
+#ifdef USE_CLOUD_SYNC
     try {
         cdpi_json_upload(&json);
     }
     catch (runtime_error &e) {
         cdpi_printf("Error uploading JSON: %s\n", e.what());
     }
-
+#endif // USE_CLOUD_SYNC
     json.Destroy();
 
     if (cdpi_debug) {
