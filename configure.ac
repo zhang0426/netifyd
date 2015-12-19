@@ -31,6 +31,7 @@ AC_CHECK_LIB([pthread], [pthread_create], [], [
 	AC_MSG_ERROR([libpthread not found.])])
 AC_CHECK_LIB([pcap], [pcap_open_live], [], [
 	AC_MSG_ERROR([libpcap not found.])])
+#AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
 PKG_CHECK_MODULES([ZLIB], [zlib])
 PKG_CHECK_MODULES([JSONC], [json-c])
@@ -46,6 +47,12 @@ AC_HEADER_STDBOOL
 AC_TYPE_SIZE_T
 
 # Checks for library functions.
+AC_CHECK_FUNC([pthread_setname_np], [
+	AC_DEFINE([HAVE_PTHREAD_SETNAME_NP], [1], [Define if pthread_setname_np is available.])
+])
+AC_CHECK_FUNC([pthread_attr_setaffinity_np], [
+	AC_DEFINE([HAVE_PTHREAD_ATTR_SETAFFINITY_NP], [1], [Define if pthread_attr_setaffinity_np is available.])
+])
 
 # Compiler optimizations
 #CFLAGS+=" -fomit-frame-pointer -O3 -falign-functions=16 -falign-jumps=16 -falign-loops=16 -falign-labels=16"

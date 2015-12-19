@@ -186,7 +186,7 @@ cdpiThread::cdpiThread(const string &tag, long cpu)
         throw cdpiThreadException(strerror(rc));
 
     if (cpu == -1) return;
-
+#ifdef HAVE_PTHREAD_ATTR_SETAFFINITY_NP
     long cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
     if (cpu >= cpus) cpu = 0;
@@ -206,6 +206,7 @@ cdpiThread::cdpiThread(const string &tag, long cpu)
     );
 
     CPU_FREE(cpuset);
+#endif
 }
 
 cdpiThread::~cdpiThread(void)
@@ -216,6 +217,7 @@ cdpiThread::~cdpiThread(void)
 
 void cdpiThread::SetProcName(void)
 {
+#ifdef HAVE_PTHREAD_SETNAME_NP
     char name[CDPI_THREAD_MAX_PROCNAMELEN];
 
     snprintf(name, CDPI_THREAD_MAX_PROCNAMELEN, "%s", tag.c_str());
@@ -223,6 +225,7 @@ void cdpiThread::SetProcName(void)
         name[CDPI_THREAD_MAX_PROCNAMELEN - 2] = '+';
 
     pthread_setname_np(id, name);
+#endif
 }
 
 void cdpiThread::Create(void)
