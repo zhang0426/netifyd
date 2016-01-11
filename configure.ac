@@ -18,7 +18,7 @@ AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 
 # Check compiler flags (gnu++11)
-#AX_CXX_COMPILE_STDCXX([11], [ext], [mandatory])
+AX_CXX_COMPILE_STDCXX_11([ext], [mandatory])
 
 # Check for optional parameters
 AC_ARG_ENABLE(cloud-sync,
