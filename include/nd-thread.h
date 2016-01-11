@@ -1,5 +1,5 @@
-// ClearOS DPI Daemon
-// Copyright (C) 2015 ClearFoundation <http://www.clearfoundation.com>
+// Netify Daemon
+// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,23 +14,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _CDPI_THREAD_H
-#define _CDPI_THREAD_H
+#ifndef _ND_THREAD_H
+#define _ND_THREAD_H
 
-#define CDPI_THREAD_MAX_PROCNAMELEN 16
+#define ND_THREAD_MAX_PROCNAMELEN 16
 
-class cdpiThreadException : public runtime_error
+class ndThreadException : public runtime_error
 {
 public:
-    explicit cdpiThreadException(const string &what_arg)
+    explicit ndThreadException(const string &what_arg)
         : runtime_error(what_arg) { }
 };
 
-class cdpiThread
+class ndThread
 {
 public:
-    cdpiThread(const string &tag, long cpu = -1);
-    virtual ~cdpiThread();
+    ndThread(const string &tag, long cpu = -1);
+    virtual ~ndThread();
 
     string GetTag(void) { return tag; }
     pthread_t GetId(void) { return id; }
@@ -56,12 +56,12 @@ protected:
     int Join(void);
 };
 
-class cdpiDetectionThread : public cdpiThread
+class ndDetectionThread : public ndThread
 {
 public:
-    cdpiDetectionThread(const string &dev,
-        cdpi_flow_map *flow_map, cdpiDetectionStats *stats, long cpu = -1);
-    virtual ~cdpiDetectionThread();
+    ndDetectionThread(const string &dev,
+        nd_flow_map *flow_map, ndDetectionStats *stats, long cpu = -1);
+    virtual ~ndDetectionThread();
 
     struct ndpi_detection_module_struct *GetDetectionModule(void) {
         return ndpi;
@@ -79,17 +79,17 @@ protected:
     uint64_t ts_last_idle_scan;
     struct ndpi_detection_module_struct *ndpi;
 
-    cdpi_flow_map *flows;
-    cdpiDetectionStats *stats;
+    nd_flow_map *flows;
+    ndDetectionStats *stats;
 
     void ProcessPacket(void);
 };
 
-class cdpiUploadThread : public cdpiThread
+class ndUploadThread : public ndThread
 {
 public:
-    cdpiUploadThread();
-    virtual ~cdpiUploadThread();
+    ndUploadThread();
+    virtual ~ndUploadThread();
 
     virtual void *Entry(void);
 
@@ -112,5 +112,5 @@ protected:
     void Deflate(const string &data);
 };
 
-#endif // _CDPI_THREAD_H
+#endif // _ND_THREAD_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

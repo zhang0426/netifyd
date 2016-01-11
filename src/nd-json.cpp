@@ -1,5 +1,5 @@
-// ClearOS DPI Daemon
-// Copyright (C) 2015 ClearFoundation <http://www.clearfoundation.com>
+// Netify Daemon
+// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,11 +29,11 @@
 
 using namespace std;
 
-#include "cdpi-json.h"
+#include "nd-json.h"
 
-extern bool cdpi_debug;
+extern bool nd_debug;
 
-cdpiJson::cdpiJson()
+ndJson::ndJson()
     : root(NULL)
 {
     root = json_object_new_object();
@@ -41,12 +41,12 @@ cdpiJson::cdpiJson()
         throw runtime_error(strerror(ENOMEM));
 }
 
-cdpiJson::cdpiJson(json_object *root)
+ndJson::ndJson(json_object *root)
     : root(root)
 {
 }
 
-void cdpiJson::Destroy(void)
+void ndJson::Destroy(void)
 {
     if (root != NULL) {
         json_object_put(root);
@@ -54,7 +54,7 @@ void cdpiJson::Destroy(void)
     }
 }
 
-json_object *cdpiJson::CreateObject(void)
+json_object *ndJson::CreateObject(void)
 {
     json_object *object = json_object_new_object();
     if (object == NULL)
@@ -63,7 +63,7 @@ json_object *cdpiJson::CreateObject(void)
     return object;
 }
 
-json_object *cdpiJson::CreateObject(json_object *parent, const string &name)
+json_object *ndJson::CreateObject(json_object *parent, const string &name)
 {
     json_object *object = json_object_new_object();
     if (object == NULL)
@@ -77,7 +77,7 @@ json_object *cdpiJson::CreateObject(json_object *parent, const string &name)
     return object;
 }
 
-json_object *cdpiJson::CreateArray(json_object *parent, const string &name)
+json_object *ndJson::CreateArray(json_object *parent, const string &name)
 {
     json_object *object = json_object_new_array();
     if (object == NULL)
@@ -91,7 +91,7 @@ json_object *cdpiJson::CreateArray(json_object *parent, const string &name)
     return object;
 }
 
-void cdpiJson::AddObject(json_object *parent, const string &name, json_object *object)
+void ndJson::AddObject(json_object *parent, const string &name, json_object *object)
 {
     if (parent == NULL)
         json_object_object_add(root, name.c_str(), object);
@@ -99,7 +99,7 @@ void cdpiJson::AddObject(json_object *parent, const string &name, json_object *o
         json_object_object_add(parent, name.c_str(), object);
 }
 
-void cdpiJson::AddObject(json_object *parent, const string &name, const char *value)
+void ndJson::AddObject(json_object *parent, const string &name, const char *value)
 {
     json_object *object = json_object_new_string(value);
     if (object == NULL)
@@ -111,7 +111,7 @@ void cdpiJson::AddObject(json_object *parent, const string &name, const char *va
         json_object_object_add(parent, name.c_str(), object);
 }
 
-void cdpiJson::AddObject(json_object *parent, const string &name, const string &value)
+void ndJson::AddObject(json_object *parent, const string &name, const string &value)
 {
     json_object *object = json_object_new_string(value.c_str());
     if (object == NULL)
@@ -123,7 +123,7 @@ void cdpiJson::AddObject(json_object *parent, const string &name, const string &
         json_object_object_add(parent, name.c_str(), object);
 }
 
-void cdpiJson::AddObject(json_object *parent, const string &name, int32_t value)
+void ndJson::AddObject(json_object *parent, const string &name, int32_t value)
 {
     json_object *object = json_object_new_int(value);
     if (object == NULL)
@@ -135,7 +135,7 @@ void cdpiJson::AddObject(json_object *parent, const string &name, int32_t value)
         json_object_object_add(parent, name.c_str(), object);
 }
 
-void cdpiJson::AddObject(json_object *parent, const string &name, int64_t value)
+void ndJson::AddObject(json_object *parent, const string &name, int64_t value)
 {
     json_object *object = json_object_new_int64(value);
     if (object == NULL)
@@ -147,7 +147,7 @@ void cdpiJson::AddObject(json_object *parent, const string &name, int64_t value)
         json_object_object_add(parent, name.c_str(), object);
 }
 
-void cdpiJson::AddObject(json_object *parent, const string &name, uint32_t value)
+void ndJson::AddObject(json_object *parent, const string &name, uint32_t value)
 {
     json_object *object = json_object_new_int(value);
     if (object == NULL)
@@ -159,7 +159,7 @@ void cdpiJson::AddObject(json_object *parent, const string &name, uint32_t value
         json_object_object_add(parent, name.c_str(), object);
 }
 
-void cdpiJson::AddObject(json_object *parent, const string &name, uint64_t value)
+void ndJson::AddObject(json_object *parent, const string &name, uint64_t value)
 {
     json_object *object = json_object_new_int64(value);
     if (object == NULL)
@@ -171,7 +171,7 @@ void cdpiJson::AddObject(json_object *parent, const string &name, uint64_t value
         json_object_object_add(parent, name.c_str(), object);
 }
 
-void cdpiJson::AddObject(json_object *parent, const string &name, bool value)
+void ndJson::AddObject(json_object *parent, const string &name, bool value)
 {
     json_object *object = json_object_new_boolean(value);
     if (object == NULL)
@@ -183,7 +183,7 @@ void cdpiJson::AddObject(json_object *parent, const string &name, bool value)
         json_object_object_add(parent, name.c_str(), object);
 }
 
-void cdpiJson::PushObject(json_object *parent, const char *value)
+void ndJson::PushObject(json_object *parent, const char *value)
 {
     json_object *object = json_object_new_string(value);
     if (object == NULL)
@@ -192,7 +192,7 @@ void cdpiJson::PushObject(json_object *parent, const char *value)
     json_object_array_add(parent, object);
 }
 
-void cdpiJson::PushObject(json_object *parent, const string &value)
+void ndJson::PushObject(json_object *parent, const string &value)
 {
     json_object *object = json_object_new_string(value.c_str());
     if (object == NULL)
@@ -201,7 +201,7 @@ void cdpiJson::PushObject(json_object *parent, const string &value)
     json_object_array_add(parent, object);
 }
 
-void cdpiJson::PushObject(json_object *parent, int32_t value)
+void ndJson::PushObject(json_object *parent, int32_t value)
 {
     json_object *object = json_object_new_int(value);
     if (object == NULL)
@@ -210,7 +210,7 @@ void cdpiJson::PushObject(json_object *parent, int32_t value)
     json_object_array_add(parent, object);
 }
 
-void cdpiJson::PushObject(json_object *parent, int64_t value)
+void ndJson::PushObject(json_object *parent, int64_t value)
 {
     json_object *object = json_object_new_int64(value);
     if (object == NULL)
@@ -219,7 +219,7 @@ void cdpiJson::PushObject(json_object *parent, int64_t value)
     json_object_array_add(parent, object);
 }
 
-void cdpiJson::PushObject(json_object *parent, bool value)
+void ndJson::PushObject(json_object *parent, bool value)
 {
     json_object *object = json_object_new_boolean(value);
     if (object == NULL)
@@ -228,7 +228,7 @@ void cdpiJson::PushObject(json_object *parent, bool value)
     json_object_array_add(parent, object);
 }
 
-void cdpiJson::PushObject(json_object *parent, json_object *object)
+void ndJson::PushObject(json_object *parent, json_object *object)
 {
     if (parent == NULL)
         json_object_array_add(root, object);
@@ -236,11 +236,11 @@ void cdpiJson::PushObject(json_object *parent, json_object *object)
         json_object_array_add(parent, object);
 }
 
-void cdpiJson::ToString(string &output)
+void ndJson::ToString(string &output)
 {
     output = json_object_to_json_string_ext(
         root,
-        (cdpi_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
+        (nd_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
     );
 }
 

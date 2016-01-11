@@ -1,5 +1,5 @@
-// ClearOS DPI Daemon
-// Copyright (C) 2015 ClearFoundation <http://www.clearfoundation.com>
+// Netify Daemon
+// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,14 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _CDPI_JSON_H
-#define _CDPI_JSON_H
+#ifndef _ND_JSON_H
+#define _ND_JSON_H
 
-class cdpiJson
+class ndJson
 {
 public:
-    cdpiJson();
-    cdpiJson(json_object *root);
+    ndJson();
+    ndJson(json_object *root);
     void Destroy(void);
 
     json_object *CreateObject(void);
@@ -52,5 +52,5 @@ protected:
     json_object *root;
 };
 
-#endif // _CDPI_JSON_H
+#endif // _ND_JSON_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

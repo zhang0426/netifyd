@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "cdpi-sha1.h"
+#include "nd-sha1.h"
 
 const uint8_t sha1_init_state[] = {
     0x01, 0x23, 0x45, 0x67, // H0

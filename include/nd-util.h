@@ -1,5 +1,5 @@
-// ClearOS DPI Daemon
-// Copyright (C) 2015 ClearFoundation <http://www.clearfoundation.com>
+// Netify Daemon
+// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,23 +14,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _CDPI_UTIL_H
-#define _CDPI_UTIL_H
+#ifndef _ND_UTIL_H
+#define _ND_UTIL_H
 
-#define CDPI_SHA1_BUFFER    4096
+#define ND_SHA1_BUFFER    4096
 
-void *cdpi_mem_alloc(unsigned long size);
+void *nd_mem_alloc(unsigned long size);
 
-void cdpi_mem_free(void *ptr);
+void nd_mem_free(void *ptr);
 
-void cdpi_printf(const char *format, ...);
+void nd_printf(const char *format, ...);
 
-void cdpi_debug_printf(
+void nd_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...);
 
-int cdpi_sha1_file(const string &filename, uint8_t *digest);
+int nd_sha1_file(const string &filename, uint8_t *digest);
 
-void cdpi_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
+void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
 
-#endif // _CDPI_UTIL_H
+#endif // _ND_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

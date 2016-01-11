@@ -1,5 +1,5 @@
-// ClearOS DPI Daemon
-// Copyright (C) 2015 ClearFoundation <http://www.clearfoundation.com>
+// Netify Daemon
+// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,23 +14,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _CDPI_INOTIFY_H
-#define _CDPI_INOTIFY_H
+#ifndef _ND_INOTIFY_H
+#define _ND_INOTIFY_H
 
-#define CDPI_INOTIFY_BUFSIZ     4096
+#define ND_INOTIFY_BUFSIZ     4096
 
-class cdpiInotifyException : public runtime_error
+class ndInotifyException : public runtime_error
 {
 public:
-    explicit cdpiInotifyException(const string &what_arg)
+    explicit ndInotifyException(const string &what_arg)
         : runtime_error(what_arg) { }
 };
 
-class cdpiInotify
+class ndInotify
 {
 public:
-    cdpiInotify();
-    virtual ~cdpiInotify();
+    ndInotify();
+    virtual ~ndInotify();
 
     void AddWatch(const string &filename);
     void RefreshWatches(void);
@@ -42,16 +42,16 @@ public:
 protected:
     int fd;
 
-    struct cdpi_inotify_watch
+    struct nd_inotify_watch
     {
         int wd;
         bool event_occured;
         bool rehash;
         uint8_t *digest;
     };
-    typedef map<string, struct cdpi_inotify_watch *> cdpi_inotify_map;
-    cdpi_inotify_map inotify_watch;
+    typedef map<string, struct nd_inotify_watch *> nd_inotify_map;
+    nd_inotify_map inotify_watch;
 };
 
-#endif // _CDPI_INOTIFY_H
+#endif // _ND_INOTIFY_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

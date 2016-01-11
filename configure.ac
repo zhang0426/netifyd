@@ -1,20 +1,24 @@
-#                                               -*- Autoconf -*-
-# Process this file with autoconf to produce a configure script.
+# Netify DPI Daemon
+# GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([cDPId], [1.0],
-	[http://www.clearfoundation.com/docs/developer/bug_tracker/],
-	[cdpid], [http://www.clearfoundation.com/])
+AC_INIT([Netify DPI Daemon], [1.0],
+	[http://www.egloo.ca/bug_tracker],
+	[netifyd], [http://www.egloo.ca/])
 AM_INIT_AUTOMAKE
-AC_CONFIG_SRCDIR([src/cdpid.cpp])
+AC_CONFIG_SRCDIR([src/netifyd.cpp])
 AC_CONFIG_SUBDIRS([inih ndpi])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
+AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
+
+# Check compiler flags (gnu++11)
+#AX_CXX_COMPILE_STDCXX([11], [ext], [mandatory])
 
 # Check for optional parameters
 AC_ARG_ENABLE(cloud-sync,
@@ -59,5 +63,5 @@ AC_CHECK_FUNC([pthread_attr_setaffinity_np], [
 #CXXFLAGS+=" -fomit-frame-pointer -O3 -falign-functions=16 -falign-jumps=16 -falign-loops=16 -falign-labels=16"
 
 # Output files
-AC_CONFIG_FILES([Makefile src/Makefile cdpid.spec])
+AC_CONFIG_FILES([Makefile src/Makefile netifyd.spec])
 AC_OUTPUT

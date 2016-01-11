@@ -1,5 +1,5 @@
-// ClearOS DPI Daemon
-// Copyright (C) 2015 ClearFoundation <http://www.clearfoundation.com>
+// Netify Daemon
+// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,44 +30,44 @@
 
 using namespace std;
 
-#include "cdpi-util.h"
-#include "cdpi-sha1.h"
+#include "nd-util.h"
+#include "nd-sha1.h"
 
-extern bool cdpi_debug;
+extern bool nd_debug;
 
-void *cdpi_mem_alloc(unsigned long size)
+void *nd_mem_alloc(unsigned long size)
 {
     return malloc(size);
 }
 
-void cdpi_mem_free(void *ptr)
+void nd_mem_free(void *ptr)
 {
     free(ptr);
 }
 
-extern pthread_mutex_t *cdpi_output_mutex;
+extern pthread_mutex_t *nd_output_mutex;
 
-void cdpi_printf(const char *format, ...)
+void nd_printf(const char *format, ...)
 {
-    pthread_mutex_lock(cdpi_output_mutex);
+    pthread_mutex_lock(nd_output_mutex);
 
     va_list ap;
     va_start(ap, format);
 
-    if (cdpi_debug)
+    if (nd_debug)
         vfprintf(stdout, format, ap);
     else
         vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
 
     va_end(ap);
 
-    pthread_mutex_unlock(cdpi_output_mutex);
+    pthread_mutex_unlock(nd_output_mutex);
 }
 
-void cdpi_debug_printf(
+void nd_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...)
 {
-    if (cdpi_debug) {
+    if (nd_debug) {
         va_list ap;
         va_start(ap, format);
         vfprintf(stderr, format, ap);
@@ -75,28 +75,28 @@ void cdpi_debug_printf(
     }
 }
 
-int cdpi_sha1_file(const string &filename, uint8_t *digest)
+int nd_sha1_file(const string &filename, uint8_t *digest)
 {
     sha1 ctx;
     int fd = open(filename.c_str(), O_RDONLY);
-    uint8_t buffer[CDPI_SHA1_BUFFER];
+    uint8_t buffer[ND_SHA1_BUFFER];
     ssize_t bytes;
 
     sha1_init(&ctx);
 
     if (fd < 0) {
-        cdpi_printf("Unable to hash file: %s: %s\n",
+        nd_printf("Unable to hash file: %s: %s\n",
             filename.c_str(), strerror(errno));
         return -1;
     }
 
     do {
-        bytes = read(fd, buffer, CDPI_SHA1_BUFFER);
+        bytes = read(fd, buffer, ND_SHA1_BUFFER);
 
         if (bytes > 0)
             sha1_write(&ctx, (const char *)buffer, bytes);
         else if (bytes < 0) {
-            cdpi_printf("Unable to hash file: %s: %s\n",
+            nd_printf("Unable to hash file: %s: %s\n",
                 filename.c_str(), strerror(errno));
             close(fd);
             return -1;
@@ -110,7 +110,7 @@ int cdpi_sha1_file(const string &filename, uint8_t *digest)
     return 0;
 }
 
-void cdpi_sha1_to_string(const uint8_t *digest_bin, string &digest_str)
+void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str)
 {
     char _digest[SHA1_DIGEST_LENGTH * 2 + 1];
     char *p = _digest;

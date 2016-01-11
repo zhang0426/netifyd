@@ -1,0 +1,14 @@
+[Unit]
+Description=Netify DPI Daemon
+After=syslog.target network.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/netifyd/netifyd.pid
+User=root
+ExecStartPre=/usr/libexec/netifyd/exec-pre.sh
+ExecStart=/usr/sbin/netifyd $NETIFYD_OPTS
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target

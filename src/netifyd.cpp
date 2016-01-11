@@ -1,5 +1,5 @@
-// ClearOS DPI Daemon
-// Copyright (C) 2015 ClearFoundation <http://www.clearfoundation.com>
+// Netify Daemon
+// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -48,42 +48,42 @@
 
 using namespace std;
 
-#include "cdpi.h"
-#include "cdpi-util.h"
-#include "cdpi-thread.h"
-#include "cdpi-inotify.h"
-#include "cdpi-json.h"
+#include "netifyd.h"
+#include "nd-util.h"
+#include "nd-thread.h"
+#include "nd-inotify.h"
+#include "nd-json.h"
 
-bool cdpi_debug = false;
-pthread_mutex_t *cdpi_output_mutex = NULL;
+bool nd_debug = false;
+pthread_mutex_t *nd_output_mutex = NULL;
 
-typedef vector<string> cdpi_devices;
-typedef map<string, cdpi_flow_map *> cdpi_flows;
-typedef map<string, cdpiDetectionStats *> cdpi_stats;
-typedef map<string, cdpiDetectionThread *> cdpi_threads;
+typedef vector<string> nd_devices;
+typedef map<string, nd_flow_map *> nd_flows;
+typedef map<string, ndDetectionStats *> nd_stats;
+typedef map<string, ndDetectionThread *> nd_threads;
 
-static cdpi_devices devices;
-static cdpi_flows flows;
-static cdpi_stats stats;
-static cdpi_threads threads;
-static cdpiDetectionStats totals;
-static cdpiUploadThread *thread_upload = NULL;
-static cdpiInotify *inotify_files = NULL;
+static nd_devices devices;
+static nd_flows flows;
+static nd_stats stats;
+static nd_threads threads;
+static ndDetectionStats totals;
+static ndUploadThread *thread_upload = NULL;
+static ndInotify *inotify_files = NULL;
 
-static char *cdpi_conf_filename = NULL;
-static char *cdpi_json_filename = NULL;
+static char *nd_conf_filename = NULL;
+static char *nd_json_filename = NULL;
 
-static int cdpi_stats_interval = CDPI_STATS_INTERVAL;
+static int nd_stats_interval = ND_STATS_INTERVAL;
 
-char *cdpi_uuid = NULL;
-int cdpi_account_id = 0;
-char *cdpi_account_key = NULL;
-int cdpi_system_id = 0;
+char *nd_uuid = NULL;
+int nd_account_id = 0;
+char *nd_account_key = NULL;
+int nd_system_id = 0;
 
 static void usage(int rc = 0, bool version = false)
 {
-    cerr << "ClearOS DPI Daemon v" << PACKAGE_VERSION << endl;
-    cerr << "Copyright (C) 2015 ClearFoundation [" <<
+    cerr << "Netify Daemon v" << PACKAGE_VERSION << endl;
+    cerr << "Copyright (C) 2015-2016 eGloo Incorporated [" <<
         __DATE__ <<  " " << __TIME__ << "]" << endl;
     if (version) {
         cerr <<
@@ -115,105 +115,105 @@ static void usage(int rc = 0, bool version = false)
         cerr <<
             "  -c, --config <filename>" << endl;
         cerr <<
-            "    Configuration file.  Default: " << CDPI_CONF_FILE_NAME << endl;;
+            "    Configuration file.  Default: " << ND_CONF_FILE_NAME << endl;;
         cerr <<
             "  -j, --json <filename>" << endl;
         cerr <<
-            "    JSON output file.  Default: " << CDPI_JSON_FILE_NAME << endl;;
+            "    JSON output file.  Default: " << ND_JSON_FILE_NAME << endl;;
         cerr <<
             "  -i, --interval <seconds>" << endl;
         cerr <<
             "    JSON update interval (seconds).  ";
         cerr <<
-            "Default: " << CDPI_STATS_INTERVAL << endl;
+            "Default: " << ND_STATS_INTERVAL << endl;
     }
 
     exit(rc);
 }
 
-static int cdpi_conf_load(void)
+static int nd_conf_load(void)
 {
     struct stat extern_config_stat;
-    if (stat(cdpi_conf_filename, &extern_config_stat) < 0) {
-        cerr << "Can not stat configuration file: " << cdpi_conf_filename <<
+    if (stat(nd_conf_filename, &extern_config_stat) < 0) {
+        cerr << "Can not stat configuration file: " << nd_conf_filename <<
             ": " << strerror(errno) << endl;
         return -1;
     }
             
-    INIReader reader(cdpi_conf_filename);
+    INIReader reader(nd_conf_filename);
 
     if (reader.ParseError() != 0) {
-        cerr << "Can not parse configuration file: " << cdpi_conf_filename << endl;
+        cerr << "Can not parse configuration file: " << nd_conf_filename << endl;
         return -1;
     }
 
-    string uuid = reader.Get("cdpid", "uuid", "");
+    string uuid = reader.Get("ndd", "uuid", "");
     if (uuid.size() > 0)
-        cdpi_uuid = strdup(uuid.c_str());
+        nd_uuid = strdup(uuid.c_str());
     else {
-        cerr << "UUID not set in: " << cdpi_conf_filename << endl;
+        cerr << "UUID not set in: " << nd_conf_filename << endl;
         return -1;
     }
 
-    cdpi_stats_interval = reader.GetInteger(
-        "cdpid", "update_interval", CDPI_STATS_INTERVAL);
+    nd_stats_interval = reader.GetInteger(
+        "ndd", "update_interval", ND_STATS_INTERVAL);
 
-    cdpi_account_id = reader.GetInteger("account", "id", 0);
-    if (cdpi_account_id == 0) {
-        cerr << "Account ID not set in: " << cdpi_conf_filename << endl;
+    nd_account_id = reader.GetInteger("account", "id", 0);
+    if (nd_account_id == 0) {
+        cerr << "Account ID not set in: " << nd_conf_filename << endl;
         return 0;
     }
     string account_key = reader.Get("account", "key", "");
     if (account_key.size() > 0)
-        cdpi_account_key = strdup(account_key.c_str());
+        nd_account_key = strdup(account_key.c_str());
     else {
-        cerr << "Account Key not set in: " << cdpi_conf_filename << endl;
+        cerr << "Account Key not set in: " << nd_conf_filename << endl;
         return -1;
     }
 
-    cdpi_system_id = reader.GetInteger("system", "id", 0);
-    if (cdpi_system_id == 0) {
-        cerr << "System ID not set in: " << cdpi_conf_filename << endl;
+    nd_system_id = reader.GetInteger("system", "id", 0);
+    if (nd_system_id == 0) {
+        cerr << "System ID not set in: " << nd_conf_filename << endl;
         return -1;
     }
 
     return 0;
 }
 
-void cdpiDetectionStats::print(const char *tag)
+void ndDetectionStats::print(const char *tag)
 {
-    cdpi_printf("          RAW: %lu\n", pkt_raw);
-    cdpi_printf("          ETH: %lu\n", pkt_eth);
-    cdpi_printf("           IP: %lu\n", pkt_ip);
-    cdpi_printf("          TCP: %lu\n", pkt_tcp);
-    cdpi_printf("          UDP: %lu\n", pkt_udp);
-    cdpi_printf("         MPLS: %lu\n", pkt_mpls);
-    cdpi_printf("        PPPoE: %lu\n", pkt_pppoe);
-    cdpi_printf("         VLAN: %lu\n", pkt_vlan);
-    cdpi_printf("        Frags: %lu\n", pkt_frags);
-    cdpi_printf("      Largest: %u\n", pkt_maxlen);
-    cdpi_printf("     IP bytes: %u\n", pkt_ip_bytes);
-    cdpi_printf("   Wire bytes: %u\n", pkt_wire_bytes);
-    cdpi_printf("      Discard: %lu\n", pkt_discard);
-    cdpi_printf("Discard bytes: %lu\n", pkt_discard_bytes);
+    nd_printf("          RAW: %lu\n", pkt_raw);
+    nd_printf("          ETH: %lu\n", pkt_eth);
+    nd_printf("           IP: %lu\n", pkt_ip);
+    nd_printf("          TCP: %lu\n", pkt_tcp);
+    nd_printf("          UDP: %lu\n", pkt_udp);
+    nd_printf("         MPLS: %lu\n", pkt_mpls);
+    nd_printf("        PPPoE: %lu\n", pkt_pppoe);
+    nd_printf("         VLAN: %lu\n", pkt_vlan);
+    nd_printf("        Frags: %lu\n", pkt_frags);
+    nd_printf("      Largest: %u\n", pkt_maxlen);
+    nd_printf("     IP bytes: %u\n", pkt_ip_bytes);
+    nd_printf("   Wire bytes: %u\n", pkt_wire_bytes);
+    nd_printf("      Discard: %lu\n", pkt_discard);
+    nd_printf("Discard bytes: %lu\n", pkt_discard_bytes);
 }
 
-static void cdpi_json_write(cdpiJson *json)
+static void nd_json_write(ndJson *json)
 {
-    int fd = open(cdpi_json_filename, O_WRONLY);
+    int fd = open(nd_json_filename, O_WRONLY);
 
     if (fd < 0) {
         if (errno != ENOENT)
             throw runtime_error(strerror(errno));
-        fd = open(cdpi_json_filename, O_WRONLY | O_CREAT, CDPI_JSON_FILE_MODE);
+        fd = open(nd_json_filename, O_WRONLY | O_CREAT, ND_JSON_FILE_MODE);
         if (fd < 0)
             throw runtime_error(strerror(errno));
 
-        struct passwd *owner_user = getpwnam(CDPI_JSON_FILE_USER);
+        struct passwd *owner_user = getpwnam(ND_JSON_FILE_USER);
         if (owner_user == NULL)
             throw runtime_error(strerror(errno));
 
-        struct group *owner_group = getgrnam(CDPI_JSON_FILE_GROUP);
+        struct group *owner_group = getgrnam(ND_JSON_FILE_GROUP);
         if (owner_group == NULL)
             throw runtime_error(strerror(errno));
 
@@ -239,26 +239,26 @@ static void cdpi_json_write(cdpiJson *json)
     close(fd);
 }
 
-static void cdpi_json_add_file(
+static void nd_json_add_file(
     json_object *parent, const string &type, const string &filename)
 {
-    char *c, *p, buffer[CDPI_FILE_BUFSIZ];
+    char *c, *p, buffer[ND_FILE_BUFSIZ];
     FILE *hf = fopen(filename.c_str(), "r");
 
     if (hf == NULL) {
-        cdpi_printf("Error opening file for upload: %s: %s\n",
+        nd_printf("Error opening file for upload: %s: %s\n",
             filename.c_str(), strerror(errno));
         return;
     }
 
-    cdpiJson json(parent);
+    ndJson json(parent);
     json_object *json_lines = json.CreateArray(NULL, type.c_str());
 
     p = buffer;
-    while (fgets(buffer, CDPI_FILE_BUFSIZ, hf) != NULL) {
+    while (fgets(buffer, ND_FILE_BUFSIZ, hf) != NULL) {
         while (*p == ' ' || *p == '\t') p++;
         if (*p == '#' || *p == '\n' || *p == '\r') continue;
-        c = (char *)memchr((void *)p, '\n', CDPI_FILE_BUFSIZ - (p - buffer));
+        c = (char *)memchr((void *)p, '\n', ND_FILE_BUFSIZ - (p - buffer));
         if (c != NULL) *c = '\0';
 
         json.PushObject(json_lines, p);
@@ -267,12 +267,12 @@ static void cdpi_json_add_file(
     fclose(hf);
 }
 
-static void cdpi_json_upload(cdpiJson *json)
+static void nd_json_upload(ndJson *json)
 {
-    if (inotify_files->EventOccured(CDPI_WATCH_HOSTS))
-        cdpi_json_add_file(json->GetRoot(), "hosts", CDPI_WATCH_HOSTS);
-    if (inotify_files->EventOccured(CDPI_WATCH_ETHERS))
-        cdpi_json_add_file(json->GetRoot(), "ethers", CDPI_WATCH_ETHERS);
+    if (inotify_files->EventOccured(ND_WATCH_HOSTS))
+        nd_json_add_file(json->GetRoot(), "hosts", ND_WATCH_HOSTS);
+    if (inotify_files->EventOccured(ND_WATCH_ETHERS))
+        nd_json_add_file(json->GetRoot(), "ethers", ND_WATCH_ETHERS);
 
     string json_string;
     json->ToString(json_string);
@@ -280,9 +280,9 @@ static void cdpi_json_upload(cdpiJson *json)
     thread_upload->QueuePush(json_string);
 }
 
-static void cdpi_json_add_stats(json_object *parent, const cdpiDetectionStats *stats)
+static void nd_json_add_stats(json_object *parent, const ndDetectionStats *stats)
 {
-    cdpiJson json(parent);
+    ndJson json(parent);
 
     json.AddObject(NULL, string("raw"), stats->pkt_raw);
     json.AddObject(NULL, "ethernet", stats->pkt_eth);
@@ -300,14 +300,14 @@ static void cdpi_json_add_stats(json_object *parent, const cdpiDetectionStats *s
     json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
 }
 
-static void cdpi_json_add_flows(json_object *parent,
+static void nd_json_add_flows(json_object *parent,
     struct ndpi_detection_module_struct *ndpi,
-    const cdpi_flow_map *flows, bool unknown = true)
+    const nd_flow_map *flows, bool unknown = true)
 {
     char buffer[256];
-    cdpiJson json(parent);
+    ndJson json(parent);
 
-    for (cdpi_flow_map::const_iterator i = flows->begin();
+    for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
 
         if (i->second->detection_complete == false)
@@ -319,7 +319,7 @@ static void cdpi_json_add_flows(json_object *parent,
         json_object *json_flow = json.CreateObject();
 
         string digest;
-        cdpi_sha1_to_string((const uint8_t *)i->first.data(), digest);
+        nd_sha1_to_string((const uint8_t *)i->first.data(), digest);
         json.AddObject(json_flow, "digest", digest);
 
         json.AddObject(json_flow, "ip_version", (int32_t)i->second->version);
@@ -393,11 +393,11 @@ static void cdpi_json_add_flows(json_object *parent,
     }
 }
 
-static void cdpi_dump_stats(void)
+static void nd_dump_stats(void)
 {
     uint64_t flow_count = 0;
 
-    cdpiJson json;
+    ndJson json;
     json_object *json_obj;
 
     json.AddObject(NULL, "version", PACKAGE_VERSION);
@@ -407,7 +407,7 @@ static void cdpi_dump_stats(void)
     json_object *json_stats = json.CreateObject(NULL, "stats");
     json_object *json_flows = json.CreateObject(NULL, "flows");
 
-    for (cdpi_threads::iterator i = threads.begin();
+    for (nd_threads::iterator i = threads.begin();
         i != threads.end(); i++) {
 
         json.PushObject(json_devs, i->first.c_str());
@@ -418,40 +418,40 @@ static void cdpi_dump_stats(void)
         flow_count += flows[i->first]->size();
 
         json_obj = json.CreateObject();
-        cdpi_json_add_stats(json_obj, stats[i->first]);
+        nd_json_add_stats(json_obj, stats[i->first]);
         json_object_object_add(json_stats, i->first.c_str(), json_obj);
 
-        memset(stats[i->first], 0, sizeof(cdpiDetectionStats));
+        memset(stats[i->first], 0, sizeof(ndDetectionStats));
 
         json_obj = json.CreateArray(json_flows, i->first);
-        cdpi_json_add_flows(json_obj,
+        nd_json_add_flows(json_obj,
             i->second->GetDetectionModule(), flows[i->first]);
 
         i->second->Unlock();
     }
 
     try {
-        cdpi_json_write(&json);
+        nd_json_write(&json);
     }
     catch (runtime_error &e) {
-        cdpi_printf("Error writing JSON file: %s: %s\n",
-            cdpi_json_filename, e.what());
+        nd_printf("Error writing JSON file: %s: %s\n",
+            nd_json_filename, e.what());
     }
 
 #ifdef USE_CLOUD_SYNC
     try {
-        cdpi_json_upload(&json);
+        nd_json_upload(&json);
     }
     catch (runtime_error &e) {
-        cdpi_printf("Error uploading JSON: %s\n", e.what());
+        nd_printf("Error uploading JSON: %s\n", e.what());
     }
 #endif // USE_CLOUD_SYNC
     json.Destroy();
 
-    if (cdpi_debug) {
-        cdpi_printf("\nCumulative Totals:\n");
+    if (nd_debug) {
+        nd_printf("\nCumulative Totals:\n");
         totals.print();
-        cdpi_printf("        Flows: %lu\n\n", flow_count);
+        nd_printf("        Flows: %lu\n\n", flow_count);
     }
 }
 
@@ -491,10 +491,10 @@ int main(int argc, char *argv[])
         case 'V':
             usage(0, true);
         case 'd':
-            cdpi_debug = true;
+            nd_debug = true;
             break;
         case 'I':
-            for (cdpi_devices::iterator i = devices.begin();
+            for (nd_devices::iterator i = devices.begin();
                 i != devices.end(); i++) {
                 if (strcasecmp((*i).c_str(), optarg) == 0) {
                     cerr << "Duplicate interface specified: " << optarg << endl;
@@ -504,25 +504,25 @@ int main(int argc, char *argv[])
             devices.push_back(optarg);
             break;
         case 'j':
-            cdpi_json_filename = strdup(optarg);
+            nd_json_filename = strdup(optarg);
             break;
         case 'i':
-            cdpi_stats_interval = atoi(optarg);
+            nd_stats_interval = atoi(optarg);
             break;
         case 'c':
-            cdpi_conf_filename = strdup(optarg);
+            nd_conf_filename = strdup(optarg);
             break;
         default:
             usage(1);
         }
     }
 
-    if (cdpi_json_filename == NULL)
-        cdpi_json_filename = strdup(CDPI_JSON_FILE_NAME);
-    if (cdpi_conf_filename == NULL)
-        cdpi_conf_filename = strdup(CDPI_CONF_FILE_NAME);
+    if (nd_json_filename == NULL)
+        nd_json_filename = strdup(ND_JSON_FILE_NAME);
+    if (nd_conf_filename == NULL)
+        nd_conf_filename = strdup(ND_CONF_FILE_NAME);
 
-    if (cdpi_conf_load() < 0)
+    if (nd_conf_load() < 0)
         return 1;
 
     if (devices.size() == 0) {
@@ -536,27 +536,27 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (cdpi_debug == false) {
+    if (nd_debug == false) {
         if (daemon(1, 0) != 0) {
-            cdpi_printf("daemon: %s\n", strerror(errno));
+            nd_printf("daemon: %s\n", strerror(errno));
             return 1;
         }
-        FILE *hpid = fopen(CDPI_PID_FILE_NAME, "w+");
+        FILE *hpid = fopen(ND_PID_FILE_NAME, "w+");
         if (hpid == NULL) {
-            cdpi_printf("Error opening PID file: %s: %s\n",
-                CDPI_PID_FILE_NAME, strerror(errno));
+            nd_printf("Error opening PID file: %s: %s\n",
+                ND_PID_FILE_NAME, strerror(errno));
             return 1;
         }
         fprintf(hpid, "%d\n", getpid());
         fclose(hpid);
     }
         
-    cdpi_output_mutex = new pthread_mutex_t;
-    pthread_mutex_init(cdpi_output_mutex, NULL);
+    nd_output_mutex = new pthread_mutex_t;
+    pthread_mutex_init(nd_output_mutex, NULL);
 
-    cdpi_printf("ClearOS DPI Daemon v%s\n", PACKAGE_VERSION);
+    nd_printf("Netify Daemon v%s\n", PACKAGE_VERSION);
 
-    memset(&totals, 0, sizeof(cdpiDetectionStats));
+    memset(&totals, 0, sizeof(ndDetectionStats));
 
     sigfillset(&sigset);
     sigdelset(&sigset, SIGPROF);
@@ -569,23 +569,23 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGRTMIN);
     sigaddset(&sigset, SIGIO);
 
-    thread_upload = new cdpiUploadThread();
+    thread_upload = new ndUploadThread();
     thread_upload->Create();
 
-    for (cdpi_devices::iterator i = devices.begin();
+    for (nd_devices::iterator i = devices.begin();
         i != devices.end(); i++) {
-        flows[(*i)] = new cdpi_flow_map;
-        stats[(*i)] = new cdpiDetectionStats;
+        flows[(*i)] = new nd_flow_map;
+        stats[(*i)] = new ndDetectionStats;
     }
 
     try {
-        inotify_files = new cdpiInotify();
-        inotify_files->AddWatch(CDPI_WATCH_HOSTS);
-        inotify_files->AddWatch(CDPI_WATCH_ETHERS);
+        inotify_files = new ndInotify();
+        inotify_files->AddWatch(ND_WATCH_HOSTS);
+        inotify_files->AddWatch(ND_WATCH_ETHERS);
         inotify_files->RefreshWatches();
     }
     catch (exception &e) {
-        cdpi_printf("Error creating file watches: %s\n", e.what());
+        nd_printf("Error creating file watches: %s\n", e.what());
         return 1;
     }
 
@@ -593,9 +593,9 @@ int main(int argc, char *argv[])
         long cpu = 0;
         long cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
-        for (cdpi_devices::iterator i = devices.begin();
+        for (nd_devices::iterator i = devices.begin();
             i != devices.end(); i++) {
-            threads[(*i)] = new cdpiDetectionThread(
+            threads[(*i)] = new ndDetectionThread(
                 (*i),
                 flows[(*i)],
                 stats[(*i)],
@@ -606,7 +606,7 @@ int main(int argc, char *argv[])
         }
     }
     catch (exception &e) {
-        cdpi_printf("Runtime error: %s\n", e.what());
+        nd_printf("Runtime error: %s\n", e.what());
         return 1;
     }
 
@@ -615,13 +615,13 @@ int main(int argc, char *argv[])
     sigev.sigev_signo = SIGRTMIN;
 
     if (timer_create(CLOCK_REALTIME, &sigev, &timer_id) < 0) {
-        cdpi_printf("timer_create: %s\n", strerror(errno));
+        nd_printf("timer_create: %s\n", strerror(errno));
         return 1;
     }
 
-    it_spec.it_value.tv_sec = cdpi_stats_interval;
+    it_spec.it_value.tv_sec = nd_stats_interval;
     it_spec.it_value.tv_nsec = 0;
-    it_spec.it_interval.tv_sec = cdpi_stats_interval;
+    it_spec.it_interval.tv_sec = nd_stats_interval;
     it_spec.it_interval.tv_nsec = 0;
 
     timer_settime(timer_id, 0, &it_spec, NULL);
@@ -632,7 +632,7 @@ int main(int argc, char *argv[])
 
         sig = sigwaitinfo(&sigset, &si);
         if (sig < 0) {
-            cdpi_printf("sigwaitinfo: %s\n", strerror(errno));
+            nd_printf("sigwaitinfo: %s\n", strerror(errno));
             rc = -1;
             terminate = true;
             continue;
@@ -641,12 +641,12 @@ int main(int argc, char *argv[])
         if (sig == SIGINT || sig == SIGTERM) {
             rc = 0;
             terminate = true;
-            cdpi_printf("Exiting...\n");
+            nd_printf("Exiting...\n");
             continue;
         }
 
         if (sig == sigev.sigev_signo) {
-            cdpi_dump_stats();
+            nd_dump_stats();
             inotify_files->RefreshWatches();
             continue;
         }
@@ -656,12 +656,12 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        cdpi_printf("Unhandled signal: %s\n", strsignal(sig));
+        nd_printf("Unhandled signal: %s\n", strsignal(sig));
     }
 
     timer_delete(timer_id);
 
-    for (cdpi_devices::iterator i = devices.begin();
+    for (nd_devices::iterator i = devices.begin();
         i != devices.end(); i++) {
         threads[(*i)]->Terminate();
         delete threads[(*i)];
@@ -672,7 +672,7 @@ int main(int argc, char *argv[])
     thread_upload->Terminate();
     delete thread_upload;
 
-    pthread_mutex_destroy(cdpi_output_mutex);
+    pthread_mutex_destroy(nd_output_mutex);
 
     curl_global_cleanup();
 

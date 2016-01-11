@@ -1,5 +1,5 @@
-// ClearOS DPI Daemon
-// Copyright (C) 2015 ClearFoundation <http://www.clearfoundation.com>
+// Netify Daemon
+// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,39 +14,39 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _CDPI_H
-#define _CDPI_H
+#ifndef _ND_H
+#define _ND_H
 
-#define CDPI_STATS_INTERVAL     15      // Collect stats every N seconds
-#define CDPI_DETECTION_TICKS    1000    // Ticks-per-second (1000 = milliseconds)
-#define CDPI_IDLE_SCAN_TIME     10      // Idle flow scan in milliseconds
-#define CDPI_IDLE_FLOW_TIME     30000   // Purge idle flows older than this (30s)
+#define ND_STATS_INTERVAL     15      // Collect stats every N seconds
+#define ND_DETECTION_TICKS    1000    // Ticks-per-second (1000 = milliseconds)
+#define ND_IDLE_SCAN_TIME     10      // Idle flow scan in milliseconds
+#define ND_IDLE_FLOW_TIME     30000   // Purge idle flows older than this (30s)
 
-#define CDPI_PID_FILE_NAME      "/var/run/cdpid/cdpid.pid"
+#define ND_PID_FILE_NAME      "/var/run/ndd/ndd.pid"
 
-#define CDPI_CONF_FILE_NAME     "/etc/clearos/cdpid.conf"
+#define ND_CONF_FILE_NAME     "/etc/clearos/ndd.conf"
 
-#define CDPI_JSON_FILE_NAME     "/var/lib/cdpid/cdpid.json"
-#define CDPI_JSON_FILE_USER     "root"
-#define CDPI_JSON_FILE_GROUP    "webconfig"
-#define CDPI_JSON_FILE_MODE     0640
+#define ND_JSON_FILE_NAME     "/var/lib/ndd/ndd.json"
+#define ND_JSON_FILE_USER     "root"
+#define ND_JSON_FILE_GROUP    "webconfig"
+#define ND_JSON_FILE_MODE     0640
 
-#define CDPI_PCAP_SNAPLEN       1536    // Capture snap length
-#define CDPI_PCAP_READ_TIMEOUT  500     // Milliseconds
+#define ND_PCAP_SNAPLEN       1536    // Capture snap length
+#define ND_PCAP_READ_TIMEOUT  500     // Milliseconds
 
-#define CDPI_URL_UPLOAD         "https://api.dpi.sokoloski.ca/upload/"
-#define CDPI_COOKIE_JAR         "/var/lib/cdpid/cdpid.cookies"
+#define ND_URL_UPLOAD         "https://api.dpi.sokoloski.ca/upload/"
+#define ND_COOKIE_JAR         "/var/lib/ndd/ndd.cookies"
 
-#define CDPI_WATCH_HOSTS        "/etc/hosts"
-#define CDPI_WATCH_ETHERS       "/etc/ethers"
+#define ND_WATCH_HOSTS        "/etc/hosts"
+#define ND_WATCH_ETHERS       "/etc/ethers"
 
 // Compress data if it's over this size (bytes)
-#define CDPI_COMPRESS_SIZE      (1024 * 10)
-#define CDPI_ZLIB_CHUNK_SIZE    16384   // Compress this many bytes at a time
+#define ND_COMPRESS_SIZE      (1024 * 10)
+#define ND_ZLIB_CHUNK_SIZE    16384   // Compress this many bytes at a time
 
-#define CDPI_FILE_BUFSIZ        4096
+#define ND_FILE_BUFSIZ        4096
 
-struct cdpiDetectionStats
+struct ndDetectionStats
 {
     uint64_t pkt_raw;
     uint64_t pkt_eth;
@@ -63,7 +63,7 @@ struct cdpiDetectionStats
     uint64_t pkt_wire_bytes;
     uint64_t pkt_discard_bytes;
 
-    inline cdpiDetectionStats& operator+=(const cdpiDetectionStats &rhs) {
+    inline ndDetectionStats& operator+=(const ndDetectionStats &rhs) {
         pkt_raw += rhs.pkt_raw;
         pkt_eth += rhs.pkt_eth;
         pkt_mpls += rhs.pkt_mpls;
@@ -85,9 +85,9 @@ struct cdpiDetectionStats
     void print(const char *tag = "");
 };
 
-#define CDPI_SSL_CERTLEN        48      // SSL certificate length
+#define ND_SSL_CERTLEN        48      // SSL certificate length
 
-struct cdpiFlow
+struct ndFlow
 {
     uint8_t version;
 
@@ -127,13 +127,13 @@ struct cdpiFlow
 
     char host_server_name[HOST_NAME_MAX];
     struct {
-        char client_cert[CDPI_SSL_CERTLEN];
-        char server_cert[CDPI_SSL_CERTLEN];
+        char client_cert[ND_SSL_CERTLEN];
+        char server_cert[ND_SSL_CERTLEN];
     } ssl;
 
     void hash(string &digest);
 
-    inline bool operator==(const cdpiFlow &f) const {
+    inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;
         switch (version) {
         case 4:
@@ -159,9 +159,9 @@ struct cdpiFlow
     void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
 };
 
-typedef unordered_map<string, struct cdpiFlow *> cdpi_flow_map;
-typedef pair<string, struct cdpiFlow *> cdpi_flow_pair;
-typedef pair<cdpi_flow_map::iterator, bool> cdpi_flow_insert;
+typedef unordered_map<string, struct ndFlow *> nd_flow_map;
+typedef pair<string, struct ndFlow *> nd_flow_pair;
+typedef pair<nd_flow_map::iterator, bool> nd_flow_insert;
 
-#endif // _CDPI_H
+#endif // _ND_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
