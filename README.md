@@ -1,4 +1,6 @@
-Deep Packet Inspection Client
-=============================
+Netify DPI Daemon
+=================
 
-Think of a name...
+The Netify Daemon performs deep packet inspection on configured LAN interfaces.
+The resulting protcol detection is optionally uploaded to the Netify Cloud for
+further analysis.
