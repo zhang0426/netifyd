@@ -1,8 +1,5 @@
 # Netify DPI Daemon
 
-# Set OS distribution
-%define osdist "clearos"
-
 Name: netifyd
 Version: 1.0
 Release: 1%{dist}
@@ -14,7 +11,7 @@ Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-%{version}
 Requires: /usr/bin/systemctl
 Requires: /usr/bin/uuidgen
-%if "%{osdist}" == "clearos"
+%if "0%{dist}" == "0.v7"
 Requires: webconfig-httpd
 Requires: app-network-core
 %endif
@@ -38,7 +35,7 @@ Report bugs to: http://www.egloo.ca/bug_tracker
 %setup -q
 ./autogen.sh
 ac_flags="--with-pic=inih --with-pic=ndpi"
-%if "%{osdist}" == "clearos"
+%if "0%{dist}" == "0.v7"
 ac_flags="$ac_flags --enable-cloud-sync"
 %endif
 %{configure} $ac_flags
@@ -55,7 +52,7 @@ mkdir -vp %{buildroot}/%{_sharedstatedir}/%{name}
 mkdir -vp %{buildroot}/%{_sysconfdir}
 install -D -m 755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
 install -D -m 644 deploy/%{name}.service %{buildroot}/lib/systemd/system/%{name}.service
-%if "%{osdist}" == "clearos"
+%if "0%{dist}" == "0.v7"
 install -D -m 644 deploy/%{name}.tmpf-clearos %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 %else
 install -D -m 644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
