@@ -114,8 +114,8 @@ void ndInotify::ProcessEvent(void)
 
                 if (watch != inotify_watch.end()) {
                     if (watch->second->event_occured == false &&
-                        (iev->mask & IN_DELETE_SELF) ||
-                        (iev->mask & IN_MODIFY) || (iev->mask & IN_CLOSE_WRITE))
+                        ((iev->mask & IN_DELETE_SELF) ||
+                        (iev->mask & IN_MODIFY) || (iev->mask & IN_CLOSE_WRITE)))
 
                         if (nd_debug) nd_printf("File event occured: %s [%s]\n", watch->first.c_str(),
                             (iev->mask & IN_DELETE_SELF) ? "DELETE_SELF" :
