@@ -36,8 +36,12 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <linux/if_ether.h>
+#include <arpa/inet.h>
 
+#include <linux/if_ether.h>
+#include <linux/netlink.h>
+
+#include <pthread.h>
 #include <pcap/pcap.h>
 #include <json.h>
 #include <curl/curl.h>
@@ -52,6 +56,7 @@ using namespace std;
 #include "nd-util.h"
 #include "nd-thread.h"
 #include "nd-inotify.h"
+#include "nd-netlink.h"
 #include "nd-json.h"
 
 bool nd_debug = false;
@@ -69,6 +74,7 @@ static nd_threads threads;
 static ndDetectionStats totals;
 static ndUploadThread *thread_upload = NULL;
 static ndInotify *inotify_files = NULL;
+static ndNetlink *netlink_routes = NULL;
 
 static char *nd_conf_filename = NULL;
 static char *nd_json_filename = NULL;
@@ -76,6 +82,7 @@ static char *nd_json_filename = NULL;
 static int nd_stats_interval = ND_STATS_INTERVAL;
 
 char *nd_uuid = NULL;
+char *nd_url_upload = NULL;
 int nd_account_id = 0;
 char *nd_account_key = NULL;
 int nd_system_id = 0;
@@ -147,7 +154,7 @@ static int nd_conf_load(void)
         return -1;
     }
 
-    string uuid = reader.Get("ndd", "uuid", "");
+    string uuid = reader.Get("netifyd", "uuid", "");
     if (uuid.size() > 0)
         nd_uuid = strdup(uuid.c_str());
     else {
@@ -155,8 +162,12 @@ static int nd_conf_load(void)
         return -1;
     }
 
+    string url_upload = reader.Get("netifyd", "url_upload", "");
+    if (url_upload.size() > 0)
+        nd_url_upload = strdup(url_upload.c_str());
+
     nd_stats_interval = reader.GetInteger(
-        "ndd", "update_interval", ND_STATS_INTERVAL);
+        "netifyd", "update_interval", ND_STATS_INTERVAL);
 
     nd_account_id = reader.GetInteger("account", "id", 0);
     if (nd_account_id == 0) {
@@ -525,6 +536,9 @@ int main(int argc, char *argv[])
     if (nd_conf_load() < 0)
         return 1;
 
+    if (nd_url_upload == NULL)
+        nd_url_upload = strdup(ND_URL_UPLOAD);
+
     if (devices.size() == 0) {
         cerr << "Required argument, (-I, --iterface) missing." << endl;
         return 1;
@@ -590,6 +604,14 @@ int main(int argc, char *argv[])
     }
 
     try {
+        netlink_routes = new ndNetlink();
+    }
+    catch (exception &e) {
+        nd_printf("Error creating netlink watch: %s\n", e.what());
+        return 1;
+    }
+
+    try {
         long cpu = 0;
         long cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
@@ -626,6 +648,8 @@ int main(int argc, char *argv[])
 
     timer_settime(timer_id, 0, &it_spec, NULL);
 
+    netlink_routes->Refresh();
+
     while (!terminate) {
         int sig;
         siginfo_t si;
@@ -652,8 +676,14 @@ int main(int argc, char *argv[])
         }
 
         if (sig == SIGIO) {
-            inotify_files->ProcessWatchEvent();
-            continue;
+            if (inotify_files->GetDescriptor() == si.si_fd) {
+                inotify_files->ProcessEvent();
+                continue;
+            }
+            else if (netlink_routes->GetDescriptor() == si.si_fd) {
+                netlink_routes->ProcessEvent();
+                continue;
+            }
         }
 
         nd_printf("Unhandled signal: %s\n", strsignal(sig));

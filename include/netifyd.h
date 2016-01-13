@@ -22,11 +22,11 @@
 #define ND_IDLE_SCAN_TIME     10      // Idle flow scan in milliseconds
 #define ND_IDLE_FLOW_TIME     30000   // Purge idle flows older than this (30s)
 
-#define ND_PID_FILE_NAME      "/var/run/ndd/ndd.pid"
+#define ND_PID_FILE_NAME      "/var/run/netifyd/netifyd.pid"
 
-#define ND_CONF_FILE_NAME     "/etc/clearos/ndd.conf"
+#define ND_CONF_FILE_NAME     "/etc/netifyd.conf"
 
-#define ND_JSON_FILE_NAME     "/var/lib/ndd/ndd.json"
+#define ND_JSON_FILE_NAME     "/var/lib/netifyd/netifyd.json"
 #define ND_JSON_FILE_USER     "root"
 #define ND_JSON_FILE_GROUP    "webconfig"
 #define ND_JSON_FILE_MODE     0640
@@ -34,8 +34,8 @@
 #define ND_PCAP_SNAPLEN       1536    // Capture snap length
 #define ND_PCAP_READ_TIMEOUT  500     // Milliseconds
 
-#define ND_URL_UPLOAD         "https://api.dpi.sokoloski.ca/upload/"
-#define ND_COOKIE_JAR         "/var/lib/ndd/ndd.cookies"
+#define ND_URL_UPLOAD         "https://v1-netify-sink.egloo.ca/"
+#define ND_COOKIE_JAR         "/var/lib/netifyd/netifyd.cookies"
 
 #define ND_WATCH_HOSTS        "/etc/hosts"
 #define ND_WATCH_ETHERS       "/etc/ethers"

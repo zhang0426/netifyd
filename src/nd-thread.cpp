@@ -54,6 +54,7 @@ using namespace std;
 
 extern bool nd_debug;
 extern char *nd_uuid;
+extern char *nd_url_upload;
 extern int nd_account_id;
 extern char *nd_account_key;
 extern int nd_system_id;
@@ -750,7 +751,7 @@ ndUploadThread::ndUploadThread()
     if ((ch = curl_easy_init()) == NULL)
         throw ndThreadException("curl_easy_init");
 
-    curl_easy_setopt(ch, CURLOPT_URL, ND_URL_UPLOAD);
+    curl_easy_setopt(ch, CURLOPT_URL, nd_url_upload);
     curl_easy_setopt(ch, CURLOPT_POST, 1);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (nd_debug) ? ND_COOKIE_JAR : "");

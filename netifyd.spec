@@ -23,7 +23,7 @@ BuildRequires: libpcap-devel
 BuildRequires: json-c-devel
 BuildRequires: libcurl
 BuildRequires: zlib-devel
-BuildRequires: libmnl-devel
+#BuildRequires: libmnl-devel
 Summary: Netify DPI Daemon
 
 %description

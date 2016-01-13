@@ -35,9 +35,11 @@ public:
     void AddWatch(const string &filename);
     void RefreshWatches(void);
 
-    void ProcessWatchEvent(void);
+    void ProcessEvent(void);
 
     bool EventOccured(const string &filename);
+
+    int GetDescriptor(void) { return fd; }
 
 protected:
     int fd;

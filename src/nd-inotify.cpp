@@ -46,6 +46,8 @@ ndInotify::ndInotify()
         throw ndInotifyException(strerror(errno));
     if (fcntl(fd, F_SETOWN, getpid()) < 0)
         throw ndInotifyException(strerror(errno));
+    if (fcntl(fd, F_SETSIG, SIGIO) < 0)
+        throw ndInotifyException(strerror(errno));
 
     flags = fcntl(fd, F_GETFL);
     if (fcntl(fd, F_SETFL, flags | O_ASYNC | O_NONBLOCK) < 0)
@@ -90,7 +92,7 @@ void ndInotify::RefreshWatches(void)
     }
 }
 
-void ndInotify::ProcessWatchEvent(void)
+void ndInotify::ProcessEvent(void)
 {
     ssize_t bytes;
     uint8_t buffer[ND_INOTIFY_BUFSIZ];
