@@ -84,10 +84,8 @@ static char *nd_json_filename = NULL;
 static int nd_stats_interval = ND_STATS_INTERVAL;
 
 char *nd_uuid = NULL;
+char *nd_zone_uuid = NULL;
 char *nd_url_upload = NULL;
-int nd_account_id = 0;
-char *nd_account_key = NULL;
-int nd_system_id = 0;
 
 static void usage(int rc = 0, bool version = false)
 {
@@ -171,6 +169,10 @@ static int nd_conf_load(void)
     nd_stats_interval = reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);
 
+    string zone_uuid = reader.Get("netifyd", "zone_uuid", "-");
+    nd_zone_uuid = strdup(zone_uuid.c_str());
+
+#if 0
     nd_account_id = reader.GetInteger("account", "id", 0);
     if (nd_account_id == 0) {
         cerr << "Account ID not set in: " << nd_conf_filename << endl;
@@ -189,7 +191,7 @@ static int nd_conf_load(void)
         cerr << "System ID not set in: " << nd_conf_filename << endl;
         return -1;
     }
-
+#endif
     return 0;
 }
 

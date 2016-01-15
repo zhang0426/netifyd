@@ -44,8 +44,10 @@ ndInotify::ndInotify()
 
     if ((fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC)) < 0)
         throw ndInotifyException(strerror(errno));
+
     if (fcntl(fd, F_SETOWN, getpid()) < 0)
         throw ndInotifyException(strerror(errno));
+
     if (fcntl(fd, F_SETSIG, SIGIO) < 0)
         throw ndInotifyException(strerror(errno));
 

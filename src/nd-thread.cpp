@@ -774,29 +774,19 @@ ndUploadThread::ndUploadThread()
     ostringstream uuid;
     uuid << "X-UUID: " << nd_uuid;
 
-    ostringstream account_id;
-    account_id << "X-Account-ID: " << nd_account_id;
-
-    ostringstream account_key;
-    account_key << "X-Account-Key: " << nd_account_key;
-
-    stringstream system_id;
-    system_id << "X-System-ID: " << nd_system_id;
+    ostringstream zone_uuid;
+    account_id << "X-Zone-UUID: " << nd_zone_uuid;
 
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, uuid.str().c_str());
-    headers = curl_slist_append(headers, account_id.str().c_str());
-    headers = curl_slist_append(headers, account_key.str().c_str());
-    headers = curl_slist_append(headers, system_id.str().c_str());
+    headers = curl_slist_append(headers, zone_uuid.str().c_str());
 
     headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
     headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
     headers_gz = curl_slist_append(headers_gz, "Content-Encoding: gzip");
     headers_gz = curl_slist_append(headers_gz, uuid.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, account_id.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, account_key.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, system_id.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, zone_uuid.str().c_str());
 
     pthread_condattr_t cond_attr;
 
