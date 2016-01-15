@@ -27,9 +27,13 @@
 
 #include <json.h>
 
+#include "ndpi_main.h"
+
 using namespace std;
 
+#include "netifyd.h"
 #include "nd-json.h"
+#include "nd-util.h"
 
 extern bool nd_debug;
 
@@ -171,6 +175,18 @@ void ndJson::AddObject(json_object *parent, const string &name, uint64_t value)
         json_object_object_add(parent, name.c_str(), object);
 }
 
+void ndJson::AddObject(json_object *parent, const string &name, double value)
+{
+    json_object *object = json_object_new_double(value);
+    if (object == NULL)
+        throw runtime_error(strerror(ENOMEM));
+
+    if (parent == NULL)
+        json_object_object_add(root, name.c_str(), object);
+    else
+        json_object_object_add(parent, name.c_str(), object);
+}
+
 void ndJson::AddObject(json_object *parent, const string &name, bool value)
 {
     json_object *object = json_object_new_boolean(value);
@@ -219,6 +235,15 @@ void ndJson::PushObject(json_object *parent, int64_t value)
     json_object_array_add(parent, object);
 }
 
+void ndJson::PushObject(json_object *parent, double value)
+{
+    json_object *object = json_object_new_double(value);
+    if (object == NULL)
+        throw runtime_error(strerror(ENOMEM));
+
+    json_object_array_add(parent, object);
+}
+
 void ndJson::PushObject(json_object *parent, bool value)
 {
     json_object *object = json_object_new_boolean(value);
@@ -242,6 +267,83 @@ void ndJson::ToString(string &output)
         root,
         (nd_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
     );
+}
+
+ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject **result)
+{
+	json_object *jver, *jtype, *jdata;
+
+    json_tokener_reset(jtok);
+
+    json_object *jobj = json_tokener_parse_ex(
+        jtok, jstring.c_str(), jstring.length()
+    );
+
+    enum json_tokener_error jterr;
+    if ((jterr = json_tokener_get_error(jtok)) != json_tokener_success)
+        throw ndJsonParseException(json_tokener_error_desc(jterr));
+
+    if (!json_object_is_type(jobj, json_type_object))
+        throw ndJsonParseException("Unexpected JSON type");
+
+    if (!json_object_object_get_ex(jobj, "version", &jver))
+        throw ndJsonParseException("Missing version field");
+
+    if (json_object_get_type(jver) != json_type_double)
+        throw ndJsonParseException("Version field type mismatch");
+
+    double version = json_object_get_double(jver);
+    nd_printf("version: %.02f\n", version);
+
+    if (!json_object_object_get_ex(jobj, "type", &jtype))
+        throw ndJsonParseException("Missing type field");
+
+    if (json_object_get_type(jtype) != json_type_int)
+        throw ndJsonParseException("Type field type mismatch");
+
+    int type = json_object_get_int(jtype);
+    nd_printf("type: %d\n", type);
+
+    switch (type) {
+    case ndJSON_OBJ_TYPE_OK:
+        break;
+    case ndJSON_OBJ_TYPE_ERROR:
+        if (!json_object_object_get_ex(jobj, "data", &jdata))
+            throw ndJsonParseException("Missing data field");
+        if (!json_object_is_type(jdata, json_type_object))
+            throw ndJsonParseException("Unexpected data type");
+        *result = reinterpret_cast<ndJsonObject *>(new ndJsonObjectError(jdata));
+        return ndJSON_OBJ_TYPE_ERROR;
+    default:
+        throw ndJsonParseException("Invalid type");
+    }
+
+    return ndJSON_OBJ_TYPE_OK;
+}
+
+ndJsonObjectError::ndJsonObjectError(json_object *jdata)
+    : ndJsonObject(ndJSON_OBJ_TYPE_ERROR),
+    code(-1)
+{
+    json_object *jcode, *jmessage;
+
+    if (!json_object_object_get_ex(jdata, "code", &jcode))
+        throw ndJsonParseException("Missing code field");
+
+    if (json_object_get_type(jcode) != json_type_int)
+        throw ndJsonParseException("Code field type mismatch");
+
+    code = json_object_get_int(jcode);
+    nd_printf("code: %d\n", code);
+
+    if (!json_object_object_get_ex(jdata, "message", &jmessage))
+        throw ndJsonParseException("Missing message field");
+
+    if (json_object_get_type(jmessage) != json_type_string)
+        throw ndJsonParseException("Message field type mismatch");
+
+    message = json_object_get_string(jmessage);
+    nd_printf("message: %s\n", message.c_str());
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

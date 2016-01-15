@@ -47,6 +47,8 @@ extern "C" {
 
 using namespace std;
 
+#define _ND_INTERNAL    1
+
 #include "netifyd.h"
 #include "nd-util.h"
 #include "nd-sha1.h"

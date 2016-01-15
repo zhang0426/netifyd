@@ -26,6 +26,7 @@
 
 #define ND_CONF_FILE_NAME     "/etc/netifyd.conf"
 
+#define ND_JSON_VERSION       1.0     // JSON format version
 #define ND_JSON_FILE_NAME     "/var/lib/netifyd/netifyd.json"
 #define ND_JSON_FILE_USER     "root"
 #define ND_JSON_FILE_GROUP    "webconfig"
@@ -45,6 +46,8 @@
 #define ND_ZLIB_CHUNK_SIZE    16384   // Compress this many bytes at a time
 
 #define ND_FILE_BUFSIZ        4096
+
+#ifdef _ND_INTERNAL
 
 struct ndDetectionStats
 {
@@ -162,6 +165,8 @@ struct ndFlow
 typedef unordered_map<string, struct ndFlow *> nd_flow_map;
 typedef pair<string, struct ndFlow *> nd_flow_pair;
 typedef pair<nd_flow_map::iterator, bool> nd_flow_insert;
+
+#endif // _ND_INTERNAL
 
 #endif // _ND_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

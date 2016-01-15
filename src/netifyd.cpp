@@ -52,6 +52,8 @@
 
 using namespace std;
 
+#define _ND_INTERNAL    1
+
 #include "netifyd.h"
 #include "nd-util.h"
 #include "nd-thread.h"
@@ -411,7 +413,7 @@ static void nd_dump_stats(void)
     ndJson json;
     json_object *json_obj;
 
-    json.AddObject(NULL, "version", PACKAGE_VERSION);
+    json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
     json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
 
     json_object *json_devs = json.CreateArray(NULL, "interfaces");
@@ -466,6 +468,24 @@ static void nd_dump_stats(void)
     }
 }
 
+void debug_test(void)
+{
+    nd_debug = true;
+
+    ndJsonObject *json_obj = NULL;
+    ndJsonObjectType json_type;
+    ndJsonObjectFactory json_factory;
+
+    json_type = json_factory.Parse(
+        "{\"version\":1.0,\"type\":500,\"data\":{\"code\":100,\"message\":\"unknown error\"}}",
+        &json_obj
+    );
+
+    if (json_obj != NULL) delete json_obj;
+
+    exit(0);
+}
+
 int main(int argc, char *argv[])
 {
     int rc = 0;
@@ -474,6 +494,11 @@ int main(int argc, char *argv[])
     struct sigevent sigev;
     timer_t timer_id;
     struct itimerspec it_spec;
+
+    nd_output_mutex = new pthread_mutex_t;
+    pthread_mutex_init(nd_output_mutex, NULL);
+
+    debug_test();
 
     static struct option options[] =
     {
@@ -565,9 +590,6 @@ int main(int argc, char *argv[])
         fclose(hpid);
     }
         
-    nd_output_mutex = new pthread_mutex_t;
-    pthread_mutex_init(nd_output_mutex, NULL);
-
     nd_printf("Netify Daemon v%s\n", PACKAGE_VERSION);
 
     memset(&totals, 0, sizeof(ndDetectionStats));

@@ -17,6 +17,22 @@
 #ifndef _ND_JSON_H
 #define _ND_JSON_H
 
+#define ND_JSON_TOKENER_DEPTH   16
+
+class ndJsonInitException : public runtime_error
+{
+public:
+    explicit ndJsonInitException(const string &what_arg)
+        : runtime_error(what_arg) { }
+};
+
+class ndJsonParseException : public runtime_error
+{
+public:
+    explicit ndJsonParseException(const string &what_arg)
+        : runtime_error(what_arg) { }
+};
+
 class ndJson
 {
 public:
@@ -35,12 +51,14 @@ public:
     void AddObject(json_object *parent, const string &name, int64_t value);
     void AddObject(json_object *parent, const string &name, uint32_t value);
     void AddObject(json_object *parent, const string &name, uint64_t value);
+    void AddObject(json_object *parent, const string &name, double value);
     void AddObject(json_object *parent, const string &name, bool value);
 
     void PushObject(json_object *parent, const char *value);
     void PushObject(json_object *parent, const string &value);
     void PushObject(json_object *parent, int32_t value);
     void PushObject(json_object *parent, int64_t value);
+    void PushObject(json_object *parent, double value);
     void PushObject(json_object *parent, bool value);
     void PushObject(json_object *parent, json_object *object);
 
@@ -50,6 +68,55 @@ public:
 
 protected:
     json_object *root;
+};
+
+enum ndJsonObjectType
+{
+    ndJSON_OBJ_TYPE_OK = 0,
+    ndJSON_OBJ_TYPE_ERROR = 500,
+};
+
+class ndJsonObject
+{
+public:
+    ndJsonObject(ndJsonObjectType type)
+        : type(type) { }
+    virtual ~ndJsonObject() { }
+
+    ndJsonObjectType GetType(void) { return type; }
+
+protected:
+    ndJsonObjectType type;
+};
+
+class ndJsonObjectFactory
+{
+public:
+    ndJsonObjectFactory()
+    {
+        jtok = json_tokener_new_ex(ND_JSON_TOKENER_DEPTH);
+        if (jtok == NULL)
+            throw ndJsonInitException(strerror(ENOMEM));
+    }
+    virtual ~ndJsonObjectFactory()
+    {
+        if (jtok != NULL) json_tokener_free(jtok);
+    }
+
+    ndJsonObjectType Parse(const string &jstring, ndJsonObject **result);
+
+protected:
+    json_tokener *jtok;
+};
+
+class ndJsonObjectError : public ndJsonObject
+{
+public:
+    ndJsonObjectError(json_object *jdata);
+
+protected:
+    int code;
+    string message;
 };
 
 #endif // _ND_JSON_H
