@@ -56,10 +56,8 @@ using namespace std;
 
 extern bool nd_debug;
 extern char *nd_uuid;
+extern char *nd_uuid_zone;
 extern char *nd_url_upload;
-extern int nd_account_id;
-extern char *nd_account_key;
-extern int nd_system_id;
 
 static void *nd_thread_entry(void *param)
 {
@@ -775,7 +773,7 @@ ndUploadThread::ndUploadThread()
     uuid << "X-UUID: " << nd_uuid;
 
     ostringstream zone_uuid;
-    account_id << "X-Zone-UUID: " << nd_zone_uuid;
+    zone_uuid << "X-Zone-UUID: " << nd_uuid_zone;
 
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");

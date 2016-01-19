@@ -302,28 +302,31 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
         throw ndJsonParseException("Type field type mismatch");
 
     int type = json_object_get_int(jtype);
+    if (type <= ndJSON_OBJ_TYPE_NULL || type >= ndJSON_OBJ_TYPE_MAX)
+        throw ndJsonParseException("Type field invalid value");
     nd_printf("type: %d\n", type);
 
     switch (type) {
     case ndJSON_OBJ_TYPE_OK:
-        break;
-    case ndJSON_OBJ_TYPE_ERROR:
+        *result = NULL;
+        return ndJSON_OBJ_TYPE_OK;
+    case ndJSON_OBJ_TYPE_RESULT:
         if (!json_object_object_get_ex(jobj, "data", &jdata))
             throw ndJsonParseException("Missing data field");
         if (!json_object_is_type(jdata, json_type_object))
             throw ndJsonParseException("Unexpected data type");
-        *result = reinterpret_cast<ndJsonObject *>(new ndJsonObjectError(jdata));
-        return ndJSON_OBJ_TYPE_ERROR;
+        *result = reinterpret_cast<ndJsonObject *>(new ndJsonObjectResult(jdata));
+        return ndJSON_OBJ_TYPE_RESULT;
     default:
         throw ndJsonParseException("Invalid type");
     }
 
-    return ndJSON_OBJ_TYPE_OK;
+    return ndJSON_OBJ_TYPE_NULL;
 }
 
-ndJsonObjectError::ndJsonObjectError(json_object *jdata)
-    : ndJsonObject(ndJSON_OBJ_TYPE_ERROR),
-    code(-1)
+ndJsonObjectResult::ndJsonObjectResult(json_object *jdata)
+    : ndJsonObject(ndJSON_OBJ_TYPE_RESULT),
+    code(ndJSON_RES_NULL)
 {
     json_object *jcode, *jmessage;
 
@@ -333,7 +336,11 @@ ndJsonObjectError::ndJsonObjectError(json_object *jdata)
     if (json_object_get_type(jcode) != json_type_int)
         throw ndJsonParseException("Code field type mismatch");
 
-    code = json_object_get_int(jcode);
+    int icode = json_object_get_int(jcode);
+    if (icode <= ndJSON_RES_NULL || icode >= ndJSON_RES_MAX)
+        throw ndJsonParseException("Code field invalid value");
+
+    code = (ndJsonObjectResultCode)icode;
     nd_printf("code: %d\n", code);
 
     if (!json_object_object_get_ex(jdata, "message", &jmessage))

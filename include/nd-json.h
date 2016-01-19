@@ -70,11 +70,7 @@ protected:
     json_object *root;
 };
 
-enum ndJsonObjectType
-{
-    ndJSON_OBJ_TYPE_OK = 0,
-    ndJSON_OBJ_TYPE_ERROR = 500,
-};
+#include "nd-json-object-type.h"
 
 class ndJsonObject
 {
@@ -109,13 +105,15 @@ protected:
     json_tokener *jtok;
 };
 
-class ndJsonObjectError : public ndJsonObject
+#include "nd-json-result-code.h"
+
+class ndJsonObjectResult : public ndJsonObject
 {
 public:
-    ndJsonObjectError(json_object *jdata);
+    ndJsonObjectResult(json_object *jdata);
 
 protected:
-    int code;
+    ndJsonObjectResultCode code;
     string message;
 };
 

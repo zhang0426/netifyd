@@ -11,4 +11,13 @@ netifyd_SOURCES = netifyd.cpp nd-inotify.cpp nd-json.cpp nd-netlink.cpp nd-sha1.
 netifyd_LDFLAGS = $(JSONC_LIBS) $(LIBCURL_LIBS) $(ZLIB_LIBS)
 #netifyd_LDFLAGS = $(JSONC_LIBS) $(LIBCURL_LIBS) $(ZLIB_LIBS) /home/dsokoloski/openwrt/staging_dir/target-mips_34kc_musl-1.1.11/usr/lib/libmbedtls.so.9
 netifyd_LDADD = ../inih/libini.la ../ndpi/src/lib/libndpi.la
+nodist_netifyd_SOURCES = nd-json-object-type.h nd-json-result-code.h
+BUILT_SOURCES = nd-json-object-type.h nd-json-result-code.h
+CLEANFILES = nd-json-object-type.h nd-json-result-code.h
+
+nd-json-object-type.h: Makefile ../include/nd-json-object-type.txt.in
+	../util/generate-json-include.sh c-object-type >$@
+
+nd-json-result-code.h: Makefile ../include/nd-json-result-code.txt.in
+	../util/generate-json-include.sh c-result-code >$@
 

@@ -1,0 +1,6 @@
+.deps/
+Makefile
+nd-json-object-type.h
+nd-json-result-code.h
+netifyd
+*.o

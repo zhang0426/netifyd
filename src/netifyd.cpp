@@ -84,7 +84,7 @@ static char *nd_json_filename = NULL;
 static int nd_stats_interval = ND_STATS_INTERVAL;
 
 char *nd_uuid = NULL;
-char *nd_zone_uuid = NULL;
+char *nd_uuid_zone = NULL;
 char *nd_url_upload = NULL;
 
 static void usage(int rc = 0, bool version = false)
@@ -170,7 +170,7 @@ static int nd_conf_load(void)
         "netifyd", "update_interval", ND_STATS_INTERVAL);
 
     string zone_uuid = reader.Get("netifyd", "zone_uuid", "-");
-    nd_zone_uuid = strdup(zone_uuid.c_str());
+    nd_uuid_zone = strdup(zone_uuid.c_str());
 
 #if 0
     nd_account_id = reader.GetInteger("account", "id", 0);
@@ -479,7 +479,7 @@ void debug_test(void)
     ndJsonObjectFactory json_factory;
 
     json_type = json_factory.Parse(
-        "{\"version\":1.0,\"type\":500,\"data\":{\"code\":100,\"message\":\"unknown error\"}}",
+        "{\"version\":1.0,\"type\":2,\"data\":{\"code\":1,\"message\":\"unknown error\"}}",
         &json_obj
     );
 
