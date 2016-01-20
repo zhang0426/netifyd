@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "ndpi_main.h"
 

@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #include <linux/if_ether.h>
 #include <linux/netlink.h>

@@ -26,7 +26,8 @@
 #include <sys/inotify.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <assert.h>
+#include <signal.h>
+#include <errno.h>
 
 using namespace std;
 
