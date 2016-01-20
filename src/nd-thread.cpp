@@ -854,8 +854,8 @@ void *ndUploadThread::Entry(void)
                 uploads.pop();
 
                 while (pending_size > ND_MAX_BACKLOG) {
-                    pending_size -= pending.back().size();
-                    pending.pop_back();
+                    pending_size -= pending.front().size();
+                    pending.pop_front();
                 }
             }
             while (uploads.size() > 0);

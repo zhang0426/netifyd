@@ -171,7 +171,7 @@ static int nd_conf_load(void)
     nd_stats_interval = reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);
 
-    string zone_uuid = reader.Get("netifyd", "zone_uuid", "-");
+    string zone_uuid = reader.Get("netifyd", "zone_uuid", ND_UUID_NULL);
     nd_uuid_zone = strdup(zone_uuid.c_str());
 
 #if 0
