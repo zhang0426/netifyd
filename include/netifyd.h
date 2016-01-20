@@ -18,6 +18,8 @@
 #define _ND_H
 
 #define ND_STATS_INTERVAL     15      // Collect stats every N seconds
+                                      // Maximum upload queue size in bytes
+#define ND_MAX_BACKLOG        (1 * 1048576)
 #define ND_DETECTION_TICKS    1000    // Ticks-per-second (1000 = milliseconds)
 #define ND_IDLE_SCAN_TIME     10      // Idle flow scan in milliseconds
 #define ND_IDLE_FLOW_TIME     30000   // Purge idle flows older than this (30s)

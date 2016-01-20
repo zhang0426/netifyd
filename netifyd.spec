@@ -9,6 +9,7 @@ Group: System/Daemons
 Packager: eGloo Incorporated
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-%{version}
+Obsoletes: cdpid
 Requires: /usr/bin/systemctl
 Requires: /usr/bin/uuidgen
 %if "0%{dist}" == "0.v7"

@@ -24,6 +24,7 @@
 #include <unordered_map>
 #include <vector>
 #include <queue>
+#include <deque>
 
 #include <unistd.h>
 #include <time.h>
@@ -478,8 +479,10 @@ void debug_test(void)
     ndJsonObjectType json_type;
     ndJsonObjectFactory json_factory;
 
-    json_type = json_factory.Parse(
         "{\"version\":1.0,\"type\":2,\"data\":{\"code\":1,\"message\":\"unknown error\"}}",
+        "{\"version\":1,\"type\":2,\"data\":{\"code\":2,\"message\":\"Authorization failure\"}}",
+    json_type = json_factory.Parse(
+        "{\"version\":1,\"type\":2,\"data\":{\"code\":2,\"message\":\"Authorization failure\"}}",
         &json_obj
     );
 
@@ -500,7 +503,7 @@ int main(int argc, char *argv[])
     nd_output_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_output_mutex, NULL);
 
-    debug_test();
+    //debug_test();
 
     static struct option options[] =
     {

@@ -25,6 +25,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <queue>
+#include <deque>
 #include <sstream>
 
 #include <unistd.h>
@@ -39,6 +40,7 @@
 #include <linux/if_ether.h>
 
 #include <curl/curl.h>
+#include <json.h>
 #include <zlib.h>
 
 extern "C" {
@@ -52,6 +54,7 @@ using namespace std;
 #include "netifyd.h"
 #include "nd-util.h"
 #include "nd-sha1.h"
+#include "nd-json.h"
 #include "nd-thread.h"
 
 extern bool nd_debug;
@@ -743,8 +746,18 @@ void ndDetectionThread::ProcessPacket(void)
     }
 }
 
+static size_t ndUploadThread_read_data(char *data, size_t size, size_t nmemb, void *user)
+{
+    size_t length = size * nmemb;
+    ndUploadThread *thread_upload = reinterpret_cast<ndUploadThread *>(user);
+
+    thread_upload->AppendData((const char *)data, length);
+
+    return length;
+}
+
 ndUploadThread::ndUploadThread()
-    : ndThread("upload", -1), headers(NULL), headers_gz(NULL)
+    : ndThread("upload", -1), headers(NULL), headers_gz(NULL), pending_size(0)
 {
     int rc;
 
@@ -755,6 +768,8 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_POST, 1);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (nd_debug) ? ND_COOKIE_JAR : "");
+    curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndUploadThread_read_data);
+    curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
 
     if (nd_debug) {
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, nd_curl_debug);
@@ -773,7 +788,7 @@ ndUploadThread::ndUploadThread()
     uuid << "X-UUID: " << nd_uuid;
 
     ostringstream zone_uuid;
-    zone_uuid << "X-Zone-UUID: " << nd_uuid_zone;
+    zone_uuid << "X-UUID-Zone: " << nd_uuid_zone;
 
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -834,8 +849,14 @@ void *ndUploadThread::Entry(void)
             terminate = true;
         else {
             do {
-                pending.push(uploads.front());
+                pending.push_back(uploads.front());
+                pending_size += uploads.front().size();
                 uploads.pop();
+
+                while (pending_size > ND_MAX_BACKLOG) {
+                    pending_size -= pending.back().size();
+                    pending.pop_back();
+                }
             }
             while (uploads.size() > 0);
         }
@@ -874,8 +895,8 @@ void ndUploadThread::Upload(void)
     size_t xfer = 0, total = pending.size();
 
     do {
-        if (nd_debug) nd_printf("%s: data %lu/%lu (%d bytes)...\n",
-            tag.c_str(), ++xfer, total, pending.front().size());
+        if (nd_debug) nd_printf("%s: data %lu/%lu (%d of %d bytes)...\n",
+            tag.c_str(), ++xfer, total, pending.front().size(), pending_size);
 
         if (pending.front().size() <= ND_COMPRESS_SIZE) {
             curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers);
@@ -887,6 +908,8 @@ void ndUploadThread::Upload(void)
             Deflate(pending.front());
         }
 
+        body_data.clear();
+
         if ((rc = curl_easy_perform(ch)) != CURLE_OK)
             break;
 
@@ -894,6 +917,17 @@ void ndUploadThread::Upload(void)
         if ((rc = curl_easy_getinfo(ch,
             CURLINFO_RESPONSE_CODE, &http_rc)) != CURLE_OK)
             break;
+
+        char *content_type = NULL;
+        curl_easy_getinfo(ch, CURLINFO_CONTENT_TYPE, &content_type);
+
+        double content_length = 0;
+        curl_easy_getinfo(ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &content_length);
+
+        if (content_type != NULL && content_length > 0) {
+            if (strcasecmp("application/json", content_type) == 0)
+                ProcessResponse();
+        }
 
         switch (http_rc) {
         case 200:
@@ -914,7 +948,8 @@ void ndUploadThread::Upload(void)
             return;
         }
 
-        pending.pop();
+        pending_size -= pending.front().size();
+        pending.pop_front();
     }
     while (pending.size() > 0);
 }
@@ -961,6 +996,22 @@ void ndUploadThread::Deflate(const string &data)
         nd_printf("%s: payload compressed: %lu -> %lu\n",
             tag.c_str(), data.size(), buffer.size());
     }
+}
+
+void ndUploadThread::ProcessResponse(void)
+{
+    ndJsonObject *json_obj = NULL;
+    ndJsonObjectType json_type;
+    ndJsonObjectFactory json_factory;
+
+    try {
+        json_type = json_factory.Parse(body_data, &json_obj);
+    } catch (ndJsonParseException &e) {
+        nd_printf("JSON parse error: %s\n", e.what());
+        nd_printf("Payload:\n\"%s\"\n", body_data.c_str());
+    }
+
+    if (json_obj != NULL) delete json_obj;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

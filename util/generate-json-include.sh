@@ -7,6 +7,10 @@ generate_object_type()
 {
 	i=1
 
+	if [ "$1" == "php" ]; then
+		echo -e "<?php\n"
+	fi
+
 	cat << EOF
 // Auto-generated JSON object types.
 // WARNING: All modifications will be LOST!
@@ -47,6 +51,10 @@ EOF
 generate_result_code()
 {
 	i=1
+
+	if [ "$1" == "php" ]; then
+		echo -e "<?php\n"
+	fi
 
 	cat << EOF
 // Auto-generated JSON result codes 

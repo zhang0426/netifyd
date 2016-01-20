@@ -99,17 +99,22 @@ public:
 
     void QueuePush(const string &json);
 
+    void AppendData(const char *data, size_t length) { body_data.append(data, length); }
+
 protected:
     CURL *ch;
     struct curl_slist *headers;
     struct curl_slist *headers_gz;
     queue<string> uploads;
-    queue<string> pending;
+    deque<string> pending;
+    size_t pending_size;
     pthread_cond_t uploads_cond;
     pthread_mutex_t uploads_cond_mutex;
+    string body_data;
 
     void Upload(void);
     void Deflate(const string &data);
+    void ProcessResponse(void);
 };
 
 #endif // _ND_THREAD_H
