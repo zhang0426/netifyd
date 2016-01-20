@@ -18,6 +18,7 @@ AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 
 # Check compiler flags (gnu++11)
+m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
 AX_CXX_COMPILE_STDCXX_11([ext], [mandatory])
 
 # Check for optional parameters
