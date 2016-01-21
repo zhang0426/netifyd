@@ -70,7 +70,7 @@ if `egrep -q '^uuid[[:space:]]*=[[:space:]]*00-00-00$' %{_sysconfdir}/%{name}.co
     if [ -z "$uuid" ]; then
         echo "Error generating UUID."
     else
-        sed -e "s/^uuid[[:space:]]*=[[:space:]]*0/uuid = $uuid/" -i %{_sysconfdir}/%{name}.conf
+        sed -e "s/^uuid[[:space:]]*=[[:space:]]*00-00-00/uuid = $uuid/" -i %{_sysconfdir}/%{name}.conf
     fi
 fi
 
