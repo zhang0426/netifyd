@@ -11,7 +11,6 @@ Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-%{version}
 Obsoletes: cdpid
 Requires: /usr/bin/systemctl
-Requires: /usr/bin/uuidgen
 %if "0%{dist}" == "0.v7"
 Requires: webconfig-httpd
 Requires: app-network-core
@@ -66,9 +65,13 @@ install -D -m 660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
 
 # Post install
 %post
-if `egrep -q '^uuid[[:space:]]*=[[:space:]]*0$' %{_sysconfdir}/%{name}.conf 2>/dev/null`; then
-    uuid=$(/usr/bin/uuidgen | tail -c 6)
-    sed -e "s/^uuid[[:space:]]*=[[:space:]]*0/uuid = $uuid/" -i %{_sysconfdir}/%{name}.conf
+if `egrep -q '^uuid[[:space:]]*=[[:space:]]*00-00-00$' %{_sysconfdir}/%{name}.conf 2>/dev/null`; then
+    uuid=$(%{_sbindir}/%{name} -U 2>/dev/null)
+    if [ -z "$uuid" ]; then
+        echo "Error generating UUID."
+    else
+        sed -e "s/^uuid[[:space:]]*=[[:space:]]*0/uuid = $uuid/" -i %{_sysconfdir}/%{name}.conf
+    fi
 fi
 
 /usr/bin/systemctl enable %{name}.service -q
