@@ -58,9 +58,8 @@ using namespace std;
 #include "nd-thread.h"
 
 extern bool nd_debug;
-extern char *nd_uuid;
-extern char *nd_uuid_zone;
-extern char *nd_url_upload;
+
+extern ndGlobalConfig nd_config;
 
 static void *nd_thread_entry(void *param)
 {
@@ -764,7 +763,7 @@ ndUploadThread::ndUploadThread()
     if ((ch = curl_easy_init()) == NULL)
         throw ndThreadException("curl_easy_init");
 
-    curl_easy_setopt(ch, CURLOPT_URL, nd_url_upload);
+    curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_upload);
     curl_easy_setopt(ch, CURLOPT_POST, 1);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (nd_debug) ? ND_COOKIE_JAR : "");
@@ -785,10 +784,10 @@ ndUploadThread::ndUploadThread()
         " (+" << PACKAGE_URL << ")";
 
     ostringstream uuid;
-    uuid << "X-UUID: " << nd_uuid;
+    uuid << "X-UUID: " << nd_config.uuid;
 
     ostringstream zone_uuid;
-    zone_uuid << "X-UUID-Zone: " << nd_uuid_zone;
+    zone_uuid << "X-UUID-Zone: " << nd_config.uuid_zone;
 
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -853,7 +852,7 @@ void *ndUploadThread::Entry(void)
                 pending_size += uploads.front().size();
                 uploads.pop();
 
-                while (pending_size > ND_MAX_BACKLOG) {
+                while (pending_size > nd_config.max_backlog) {
                     pending_size -= pending.front().size();
                     pending.pop_front();
                 }

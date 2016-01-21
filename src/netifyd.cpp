@@ -39,6 +39,7 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <math.h>
 
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
@@ -85,9 +86,7 @@ static char *nd_json_filename = NULL;
 
 static int nd_stats_interval = ND_STATS_INTERVAL;
 
-char *nd_uuid = NULL;
-char *nd_uuid_zone = NULL;
-char *nd_url_upload = NULL;
+ndGlobalConfig nd_config;
 
 static void usage(int rc = 0, bool version = false)
 {
@@ -140,7 +139,7 @@ static void usage(int rc = 0, bool version = false)
     exit(rc);
 }
 
-static int nd_conf_load(void)
+static int nd_config_load(void)
 {
     struct stat extern_config_stat;
     if (stat(nd_conf_filename, &extern_config_stat) < 0) {
@@ -158,7 +157,7 @@ static int nd_conf_load(void)
 
     string uuid = reader.Get("netifyd", "uuid", "");
     if (uuid.size() > 0)
-        nd_uuid = strdup(uuid.c_str());
+        nd_config.uuid = strdup(uuid.c_str());
     else {
         cerr << "UUID not set in: " << nd_conf_filename << endl;
         return -1;
@@ -166,13 +165,16 @@ static int nd_conf_load(void)
 
     string url_upload = reader.Get("netifyd", "url_upload", "");
     if (url_upload.size() > 0)
-        nd_url_upload = strdup(url_upload.c_str());
+        nd_config.url_upload = strdup(url_upload.c_str());
 
     nd_stats_interval = reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);
 
+    nd_config.max_backlog = reader.GetInteger(
+        "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
+
     string zone_uuid = reader.Get("netifyd", "zone_uuid", ND_UUID_NULL);
-    nd_uuid_zone = strdup(zone_uuid.c_str());
+    nd_config.uuid_zone = strdup(zone_uuid.c_str());
 
 #if 0
     nd_account_id = reader.GetInteger("account", "id", 0);
@@ -472,6 +474,45 @@ static void nd_dump_stats(void)
     }
 }
 
+void generate_uuid(void)
+{
+    int digit = 0;
+    deque<char> result;
+    unsigned long input = 623714775;
+    unsigned int seed = (unsigned int)time(NULL);
+	const char *clist = { "0123456789abcdefghijklmnpqrstuvwxyz" };
+    unsigned long max_val = powl(strlen(clist), 6);
+    FILE *fh = fopen("/dev/urandom", "r");
+
+    if (fh == NULL)
+        fprintf(stderr, "WARNING: Error opening random device: %s\n", strerror(errno));
+    else {
+        fread((void *)&seed, 1, sizeof(unsigned int), fh);
+        fclose(fh);
+    }
+
+    srand(seed);
+    input = (unsigned int)rand() % (max_val - 1);
+
+	while (input != 0) {
+		result.push_front(toupper(clist[input % strlen(clist)]));
+		input /= strlen(clist);
+	}
+
+    for (size_t i = result.size(); i < 6; i++)
+        result.push_back('0');
+
+    while (result.size()) {
+        fprintf(stdout, "%c", result.front());
+        result.pop_front();
+        if (digit == 1) fprintf(stdout, "-");
+        if (digit == 3) fprintf(stdout, "-");
+        digit++;
+    }
+
+    fprintf(stdout, "\n");
+}
+
 void debug_test(void)
 {
     nd_debug = true;
@@ -501,6 +542,9 @@ int main(int argc, char *argv[])
     timer_t timer_id;
     struct itimerspec it_spec;
 
+    memset(&nd_config, 0, sizeof(ndGlobalConfig));
+    nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
+
     nd_output_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_output_mutex, NULL);
 
@@ -515,6 +559,7 @@ int main(int argc, char *argv[])
         { "json", 1, 0, 'j' },
         { "interval", 1, 0, 'i' },
         { "config", 1, 0, 'c' },
+        { "uuidgen", 0, 0, 'U' },
 
         { NULL, 0, 0, 0 }
     };
@@ -522,7 +567,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdI:j:i:c:", options, &o)) == -1) break;
+            "?hVdI:j:i:c:U", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -554,6 +599,9 @@ int main(int argc, char *argv[])
         case 'c':
             nd_conf_filename = strdup(optarg);
             break;
+        case 'U':
+            generate_uuid();
+            exit(0);
         default:
             usage(1);
         }
@@ -564,11 +612,11 @@ int main(int argc, char *argv[])
     if (nd_conf_filename == NULL)
         nd_conf_filename = strdup(ND_CONF_FILE_NAME);
 
-    if (nd_conf_load() < 0)
+    if (nd_config_load() < 0)
         return 1;
 
-    if (nd_url_upload == NULL)
-        nd_url_upload = strdup(ND_URL_UPLOAD);
+    if (nd_config.url_upload == NULL)
+        nd_config.url_upload = strdup(ND_URL_UPLOAD);
 
     if (devices.size() == 0) {
         cerr << "Required argument, (-I, --iterface) missing." << endl;
