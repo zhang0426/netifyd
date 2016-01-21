@@ -24,7 +24,7 @@
 #define ND_IDLE_SCAN_TIME     10      // Idle flow scan in milliseconds
 #define ND_IDLE_FLOW_TIME     30000   // Purge idle flows older than this (30s)
 
-#define ND_PID_FILE_NAME      "/var/run/netifyd/netifyd.pid"
+#define ND_PID_FILE_NAME      "/run/netifyd/netifyd.pid"
 
 #define ND_CONF_FILE_NAME     "/etc/netifyd.conf"
 

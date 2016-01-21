@@ -649,7 +649,7 @@ int main(int argc, char *argv[])
     memset(&totals, 0, sizeof(ndDetectionStats));
 
     sigfillset(&sigset);
-    sigdelset(&sigset, SIGPROF);
+    //sigdelset(&sigset, SIGPROF);
 
     sigprocmask(SIG_BLOCK, &sigset, NULL);
 
@@ -724,17 +724,22 @@ int main(int argc, char *argv[])
 
     timer_settime(timer_id, 0, &it_spec, NULL);
 
-    netlink_routes->Refresh();
+    //netlink_routes->Refresh();
 
     while (!terminate) {
         int sig;
         siginfo_t si;
 
-        sig = sigwaitinfo(&sigset, &si);
-        if (sig < 0) {
+        if ((sig = sigwaitinfo(&sigset, &si)) < 0) {
+            if (errno == EINTR) {
+                usleep(50000);
+                continue;
+            }
+
             nd_printf("sigwaitinfo: %s\n", strerror(errno));
             rc = -1;
             terminate = true;
+
             continue;
         }
 

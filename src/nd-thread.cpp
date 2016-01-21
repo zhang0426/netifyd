@@ -1007,7 +1007,8 @@ void ndUploadThread::ProcessResponse(void)
         json_type = json_factory.Parse(body_data, &json_obj);
     } catch (ndJsonParseException &e) {
         nd_printf("JSON parse error: %s\n", e.what());
-        nd_printf("Payload:\n\"%s\"\n", body_data.c_str());
+        if (nd_debug)
+            nd_printf("Payload:\n\"%s\"\n", body_data.c_str());
     }
 
     if (json_obj != NULL) delete json_obj;

@@ -10,18 +10,21 @@ Packager: eGloo Incorporated
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-%{version}
 Obsoletes: cdpid
-Requires: /usr/bin/systemctl
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
 %if "0%{dist}" == "0.v7"
 Requires: webconfig-httpd
 Requires: app-network-core
 %endif
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
-BuildRequires: pkgconfig
-BuildRequires: libtool
-BuildRequires: libpcap-devel
 BuildRequires: json-c-devel
 BuildRequires: libcurl
+BuildRequires: libpcap-devel
+BuildRequires: libtool
+BuildRequires: pkgconfig
+BuildRequires: systemd
 BuildRequires: zlib-devel
 #BuildRequires: libmnl-devel
 Summary: Netify DPI Daemon
@@ -48,16 +51,18 @@ make install DESTDIR=%{buildroot}
 rm -rf %{buildroot}/%{_libdir}
 rm -rf %{buildroot}/%{_includedir}
 rm -rf %{buildroot}/%{_bindir}
-mkdir -vp %{buildroot}/%{_sharedstatedir}/%{name}
-mkdir -vp %{buildroot}/%{_sysconfdir}
+mkdir -p %{buildroot}/%{_sharedstatedir}/%{name}
+mkdir -p %{buildroot}/%{_sysconfdir}
 install -D -m 755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
 install -D -m 644 deploy/%{name}.service %{buildroot}/lib/systemd/system/%{name}.service
 %if "0%{dist}" == "0.v7"
-install -D -m 644 deploy/%{name}.tmpf-clearos %{buildroot}/%{_tmpfilesdir}/%{name}.conf
+install -D -m 0644 deploy/%{name}.tmpf-clearos %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 %else
-install -D -m 644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
+install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 %endif
-install -D -m 660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
+install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
+mkdir -p %{buildroot}/run
+install -d -m 0755 %{buildroot}/run/%{name}
 
 # Clean-up
 %clean
@@ -65,6 +70,7 @@ install -D -m 660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
 
 # Post install
 %post
+%systemd_post %{name}.service
 if `egrep -q '^uuid[[:space:]]*=[[:space:]]*00-00-00$' %{_sysconfdir}/%{name}.conf 2>/dev/null`; then
     uuid=$(%{_sbindir}/%{name} -U 2>/dev/null)
     if [ -z "$uuid" ]; then
@@ -74,13 +80,13 @@ if `egrep -q '^uuid[[:space:]]*=[[:space:]]*00-00-00$' %{_sysconfdir}/%{name}.co
     fi
 fi
 
-/usr/bin/systemctl enable %{name}.service -q
-/usr/bin/systemctl restart %{name} -q
+# Pre uninstall
+%preun
+%systemd_preun %{name}.service
 
 # Post uninstall
 %postun
-/usr/bin/systemctl stop %{name} -q
-/usr/bin/systemctl disable %{name}.service -q
+%systemd_postun_with_restart %{name}.service
 
 # Files
 %files
@@ -89,6 +95,7 @@ fi
 %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
 %attr(755,root,root) %{_libexecdir}/%{name}/
 %attr(755,root,root) /lib/systemd/system
+%dir /run/%{name}
 %attr(755,root,root) %{_tmpfilesdir}
 %attr(755,root,root) %{_sysconfdir}
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
