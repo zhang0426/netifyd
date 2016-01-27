@@ -478,10 +478,9 @@ void generate_uuid(void)
 {
     int digit = 0;
     deque<char> result;
-    unsigned long input = 623714775;
+    uint64_t input = 623714775;
     unsigned int seed = (unsigned int)time(NULL);
 	const char *clist = { "0123456789abcdefghijklmnpqrstuvwxyz" };
-    unsigned long max_val = powl(strlen(clist), 6);
     FILE *fh = fopen("/dev/urandom", "r");
 
     if (fh == NULL)
@@ -492,21 +491,23 @@ void generate_uuid(void)
     }
 
     srand(seed);
-    input = (unsigned int)rand() % (max_val - 1);
+    input = (uint64_t)rand();
+    input += (uint64_t)rand() << 32;
 
 	while (input != 0) {
 		result.push_front(toupper(clist[input % strlen(clist)]));
 		input /= strlen(clist);
 	}
 
-    for (size_t i = result.size(); i < 6; i++)
+    for (size_t i = result.size(); i < 8; i++)
         result.push_back('0');
 
-    while (result.size()) {
+    while (result.size() && digit < 8) {
         fprintf(stdout, "%c", result.front());
         result.pop_front();
         if (digit == 1) fprintf(stdout, "-");
         if (digit == 3) fprintf(stdout, "-");
+        if (digit == 5) fprintf(stdout, "-");
         digit++;
     }
 
