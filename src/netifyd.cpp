@@ -39,7 +39,6 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#include <math.h>
 
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
@@ -319,12 +318,17 @@ static void nd_json_add_stats(json_object *parent, const ndDetectionStats *stats
     json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
 }
 
-static void nd_json_add_flows(json_object *parent,
+static void nd_json_add_flows(
+    const string &device, json_object *parent,
     struct ndpi_detection_module_struct *ndpi,
     const nd_flow_map *flows, bool unknown = true)
 {
     char buffer[256];
     ndJson json(parent);
+    string which_is_local = "neither";
+    struct sockaddr_in lower, upper;
+    struct sockaddr_in6 lower6, upper6;
+    struct sockaddr_storage *lower_addr, *upper_addr;
 
     for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
@@ -361,6 +365,63 @@ static void nd_json_add_flows(json_object *parent,
 
         json.AddObject(json_flow, "lower_ip", i->second->lower_ip);
         json.AddObject(json_flow, "upper_ip", i->second->upper_ip);
+
+        if (i->second->version == 4) {
+            lower.sin_family = AF_INET;
+            memcpy(&lower.sin_addr, &i->second->lower_addr, sizeof(struct in_addr));
+            upper.sin_family = AF_INET;
+            memcpy(&upper.sin_addr, &i->second->upper_addr, sizeof(struct in_addr));
+            lower_addr = reinterpret_cast<struct sockaddr_storage *>(&lower);
+            upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper);
+        }
+        else {
+            lower6.sin6_family = AF_INET6;
+            memcpy(
+                &lower6.sin6_addr, &i->second->lower_addr6, sizeof(struct in6_addr));
+            upper6.sin6_family = AF_INET6;
+            memcpy(
+                &upper6.sin6_addr, &i->second->upper_addr6, sizeof(struct in6_addr));
+            lower_addr = reinterpret_cast<struct sockaddr_storage *>(&lower6);
+            upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
+        }
+
+        switch (netlink_routes->WhichIsLocal(device, lower_addr, upper_addr)) {
+        case ndNETLINK_ISLOCAL_NEITHER:
+            break;
+        case ndNETLINK_ISLOCAL_BOTH:
+            which_is_local = "both";
+            break;
+        case ndNETLINK_ISLOCAL_A:
+            which_is_local = "lower";
+            break;
+        case ndNETLINK_ISLOCAL_B:
+            which_is_local = "upper";
+            break;
+        case ndNETLINK_ISLOCAL_ERROR:
+            which_is_local = "error";
+            break;
+        }
+
+        if (which_is_local == "neither") {
+            switch (netlink_routes->GuessWhichIsLocal(lower_addr, upper_addr)) {
+            case ndNETLINK_ISLOCAL_NEITHER:
+                break;
+            case ndNETLINK_ISLOCAL_BOTH:
+                which_is_local = "both_guessed";
+                break;
+            case ndNETLINK_ISLOCAL_A:
+                which_is_local = "lower_guessed";
+                break;
+            case ndNETLINK_ISLOCAL_B:
+                which_is_local = "upper_guessed";
+                break;
+            case ndNETLINK_ISLOCAL_ERROR:
+                which_is_local = "error";
+                break;
+            }
+        }
+
+        json.AddObject(json_flow, "which_is_local", which_is_local);
 
         json.AddObject(json_flow, "lower_port", (int32_t)i->second->lower_port);
         json.AddObject(json_flow, "upper_port", (int32_t)i->second->upper_port);
@@ -443,7 +504,7 @@ static void nd_dump_stats(void)
         memset(stats[i->first], 0, sizeof(ndDetectionStats));
 
         json_obj = json.CreateArray(json_flows, i->first);
-        nd_json_add_flows(json_obj,
+        nd_json_add_flows(i->first, json_obj,
             i->second->GetDetectionModule(), flows[i->first]);
 
         i->second->Unlock();
@@ -681,7 +742,7 @@ int main(int argc, char *argv[])
     }
 
     try {
-        netlink_routes = new ndNetlink();
+        netlink_routes = new ndNetlink(&devices);
     }
     catch (exception &e) {
         nd_printf("Error creating netlink watch: %s\n", e.what());
@@ -725,7 +786,7 @@ int main(int argc, char *argv[])
 
     timer_settime(timer_id, 0, &it_spec, NULL);
 
-    //netlink_routes->Refresh();
+    netlink_routes->Refresh();
 
     while (!terminate) {
         int sig;

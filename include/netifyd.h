@@ -108,6 +108,9 @@ struct ndFlow
     uint8_t lower_mac[ETH_ALEN];
     uint8_t upper_mac[ETH_ALEN];
 
+//    struct sockaddr_storage lower_addr;
+//    struct sockaddr_storage upper_addr;
+
     struct in_addr lower_addr;
     struct in_addr upper_addr;
 

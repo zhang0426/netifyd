@@ -17,7 +17,11 @@
 #ifndef _ND_NETLINK_H
 #define _ND_NETLINK_H
 
-#define ND_NETLINK_BUFSIZ   4096
+#define ND_NETLINK_BUFSIZ       4096
+
+#define ND_NETLINK_ALLOC(e, a)  { \
+    e = new ndNetlinkNetworkAddr(a); \
+    if (e == NULL) throw ndNetlinkException(strerror(ENOMEM)); }
 
 class ndNetlinkException : public runtime_error
 {
@@ -26,22 +30,31 @@ public:
         : runtime_error(what_arg) { }
 };
 
-typedef struct {
+typedef struct ndNetlinkNetworkAddr {
+    uint8_t length;
     struct sockaddr_storage network;
-    struct sockaddr_storage netmask;
+
+    inline bool operator==(const ndNetlinkNetworkAddr &n) const {
+        return (memcmp(this, &n, sizeof(struct ndNetlinkNetworkAddr)) == 0);
+    }
 } ndNetlinkNetworkAddr;
 
-typedef struct {
-    pthread_mutex_t lock;
-    vector<ndNetlinkNetworkAddr *> netaddr;
-} ndNetlinkNetworks;
+typedef map<string, vector<ndNetlinkNetworkAddr *> > ndNetlinkNetworks;
 
-typedef map<string, ndNetlinkNetworks *> ndNetlinkDeviceNetwork;
+enum ndLocalResult
+{
+    ndNETLINK_ISLOCAL_NEITHER,
+    ndNETLINK_ISLOCAL_BOTH,
+    ndNETLINK_ISLOCAL_A,
+    ndNETLINK_ISLOCAL_B,
+
+    ndNETLINK_ISLOCAL_ERROR,
+};
 
 class ndNetlink
 {
 public:
-    ndNetlink();
+    ndNetlink(vector<string> *devices);
     virtual ~ndNetlink();
 
     int GetDescriptor(void) { return nd; }
@@ -49,21 +62,35 @@ public:
     void Refresh(void);
     void ProcessEvent(void);
 
-    int WhichIsLocal(const string &dev,
+    ndLocalResult WhichIsLocal(const string &device,
         struct sockaddr_storage *a, struct sockaddr_storage *b);
+    inline ndLocalResult GuessWhichIsLocal(
+        struct sockaddr_storage *a, struct sockaddr_storage *b) {
+        return WhichIsLocal("__nd_private__", a, b);
+    }
+
+    void Dump(void);
 
 protected:
-    enum ndNetlinkAction {
-        ndNETLINK_ROUTE_ADD,
-        ndNETLINK_ROUTE_DEL
-    };
+    bool InNetwork(sa_family_t family, uint8_t length,
+        struct sockaddr_storage *addr_host, struct sockaddr_storage *addr_net);
 
-    void ParseRoute(enum ndNetlinkAction action);
+    bool CopyNetlinkAddress(
+        sa_family_t family, ndNetlinkNetworkAddr &dst, void *src);
+    bool ParseRouteMessage(struct rtmsg *rtm, size_t offset,
+        string &device, ndNetlinkNetworkAddr &addr);
+
+    bool AddNetwork(struct nlmsghdr *nlh);
+    bool AddPrivateNetwork(sa_family_t family, const string &saddr, uint8_t length);
+    bool RemoveNetwork(struct nlmsghdr *nlh);
 
     int nd;
     int seq;
     struct sockaddr_nl sa;
     uint8_t buffer[ND_NETLINK_BUFSIZ];
+    vector<string> *devices;
+
+    ndNetlinkNetworks networks;
 };
 
 #endif // _ND_NETLINK_H
