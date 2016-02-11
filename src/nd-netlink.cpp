@@ -44,17 +44,110 @@ using namespace std;
 
 extern bool nd_debug;
 
+#define _ND_NETLINK_PRIVATE     "__nd_private__"
+#define _ND_NETLINK_MULTICAST   "__nd_multicast__"
+
 static void print_binary(uint32_t byte)
 {
-	uint32_t i;
-	static char b[9];
+    uint32_t i;
+    static char b[9];
 
-	b[0] = '\0';
-	for (i = 0x80000000; i > 0; i >>= 1) {
-		strcat(b, ((byte & i) == i) ? "1" : "0");
-	}
+    b[0] = '\0';
+    for (i = 0x80000000; i > 0; i >>= 1) {
+        strcat(b, ((byte & i) == i) ? "1" : "0");
+    }
 
-	nd_printf(b);
+    nd_printf(b);
+}
+
+static void print_address(const struct sockaddr_storage *addr)
+{
+    int rc;
+    char _addr[NI_MAXHOST];
+
+    switch (addr->ss_family) {
+    case AF_INET:
+        rc = getnameinfo((const struct sockaddr *)addr, sizeof(struct sockaddr_in),
+            _addr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+        break;
+    case AF_INET6:
+        rc = getnameinfo((const struct sockaddr *)addr, sizeof(struct sockaddr_in6),
+            _addr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+        break;
+    default:
+        nd_printf("(unsupported AF:%x)", addr->ss_family);
+        return;
+    }
+
+    if (rc == 0)
+        nd_printf(_addr);
+    else
+        nd_printf("???");
+}
+
+inline bool ndNetlinkNetworkAddr::operator==(const ndNetlinkNetworkAddr &n) const
+{
+    int rc = -1;
+    const struct sockaddr_in *ipv4_addr1, *ipv4_addr2;
+    const struct sockaddr_in6 *ipv6_addr1, *ipv6_addr2;
+
+    if (this->length != n.length) {
+#if 0
+        if (nd_debug) {
+            print_address(&this->network);
+            nd_printf(" != ");
+            print_address(&n.network);
+            nd_printf(" [length mis-match]\n");
+        }
+#endif
+        return false;
+    }
+
+    if (this->network.ss_family != n.network.ss_family) {
+#if 0
+        if (nd_debug) {
+            print_address(&this->network);
+            nd_printf(" != ");
+            print_address(&n.network);
+            nd_printf(" [family mis-match]\n");
+        }
+#endif
+        return false;
+    }
+
+    switch (this->network.ss_family) {
+    case AF_INET:
+        ipv4_addr1 = reinterpret_cast<const struct sockaddr_in *>(&this->network);
+        ipv4_addr2 = reinterpret_cast<const struct sockaddr_in *>(&n.network);
+        rc = memcmp(
+            &ipv4_addr1->sin_addr, &ipv4_addr2->sin_addr, sizeof(struct in_addr));
+        break;
+    case AF_INET6:
+        ipv6_addr1 = reinterpret_cast<const struct sockaddr_in6 *>(&this->network);
+        ipv6_addr2 = reinterpret_cast<const struct sockaddr_in6 *>(&n.network);
+        rc = memcmp(
+            &ipv6_addr1->sin6_addr, &ipv6_addr2->sin6_addr, sizeof(struct in6_addr));
+        break;
+    default:
+#if 0
+        if (nd_debug) {
+            print_address(&this->network);
+            nd_printf(" != ");
+            print_address(&n.network);
+            nd_printf(" [unsupported family]\n");
+        }
+#endif
+        return false;
+    }
+#if 0
+    if (rc != 0 && nd_debug) {
+        print_address(&this->network);
+        nd_printf(" != ");
+        print_address(&n.network);
+        nd_printf(" [%d]\n", rc);
+    }
+#endif
+    return (rc == 0);
 }
 
 ndNetlink::ndNetlink(vector<string> *devices)
@@ -67,7 +160,9 @@ ndNetlink::ndNetlink(vector<string> *devices)
     memset(&sa, 0, sizeof(struct sockaddr_nl));
     sa.nl_family = AF_NETLINK;
     sa.nl_pid = getpid();
-    sa.nl_groups = RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE;
+    sa.nl_groups =
+        RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE |
+        RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR;
 
     nd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
     if (nd < 0) {
@@ -103,10 +198,14 @@ ndNetlink::ndNetlink(vector<string> *devices)
     }
 
     // Add private networks for when all else fails...
-    AddPrivateNetwork(AF_INET, "10.0.0.0", 8);
-    AddPrivateNetwork(AF_INET, "172.16.0.0", 12);
-    AddPrivateNetwork(AF_INET, "192.168.0.0", 16);
-    AddPrivateNetwork(AF_INET6, "fc00::", 7);
+    AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "10.0.0.0", 8);
+    AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "172.16.0.0", 12);
+    AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "192.168.0.0", 16);
+    AddNetwork(AF_INET6, _ND_NETLINK_PRIVATE, "fc00::", 7);
+
+    // Add multicast networks
+    AddNetwork(AF_INET, _ND_NETLINK_MULTICAST, "224.0.0.0", 4);
+    AddNetwork(AF_INET6, _ND_NETLINK_MULTICAST, "ff00::", 8);
 }
 
 ndNetlink::~ndNetlink()
@@ -119,6 +218,7 @@ void ndNetlink::Refresh(void)
     int rc;
     struct nlmsghdr *nlh;
     struct rtmsg *rtm;
+    struct ifaddrmsg *addrm;
 
     memset(buffer, 0, ND_NETLINK_BUFSIZ);
 
@@ -133,16 +233,40 @@ void ndNetlink::Refresh(void)
 
     if (send(nd, nlh, nlh->nlmsg_len, 0) < 0) {
         rc = errno;
-        nd_printf("Error sending netlink message: %s\n", strerror(rc));
+        nd_printf("Error refreshing interface routes: %s\n", strerror(rc));
         throw ndNetlinkException(strerror(rc));
     }
+
+    ProcessEvent();
+
+    memset(buffer, 0, ND_NETLINK_BUFSIZ);
+
+    nlh = (struct nlmsghdr *)buffer;
+    addrm = (struct ifaddrmsg *)NLMSG_DATA(nlh);
+
+    nlh->nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+    nlh->nlmsg_type = RTM_GETADDR;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    nlh->nlmsg_pid = 0;
+    nlh->nlmsg_seq = seq++;
+
+    if (send(nd, nlh, nlh->nlmsg_len, 0) < 0) {
+        rc = errno;
+        nd_printf("Error refreshing interface addresses: %s\n", strerror(rc));
+        throw ndNetlinkException(strerror(rc));
+    }
+
+    ProcessEvent();
+
+    if (nd_debug) Dump();
 }
 
-void ndNetlink::ProcessEvent(void)
+bool ndNetlink::ProcessEvent(void)
 {
     ssize_t bytes;
     struct nlmsghdr *nlh;
-    int added = 0, removed = 0;
+    struct nlmsgerr *nlerror;
+    unsigned added_net = 0, removed_net = 0, added_addr = 0, removed_addr = 0;
 
     while ((bytes = recv(nd, buffer, ND_NETLINK_BUFSIZ, 0)) > 0) {
 //        if (nd_debug) nd_printf("Read %ld netlink bytes.\n", bytes);
@@ -165,21 +289,33 @@ void ndNetlink::ProcessEvent(void)
             case RTM_NEWROUTE:
 //                if (nd_debug)
 //                    nd_printf("New route.\n");
-                if (AddNetwork(nlh)) added++;
+                if (AddNetwork(nlh)) added_net++;
                 break;
             case RTM_DELROUTE:
 //                if (nd_debug)
-//                    nd_printf("Deleted route.\n");
-                if (RemoveNetwork(nlh)) removed++;
+//                    nd_printf("Removed route.\n");
+                if (RemoveNetwork(nlh)) removed_net++;
+                break;
+            case RTM_NEWADDR:
+//                if (nd_debug)
+//                    nd_printf("New interface address.\n");
+                if (AddAddress(nlh)) added_addr++;
+                break;
+            case RTM_DELADDR:
+//                if (nd_debug)
+//                    nd_printf("Removed interface address.\n");
+                if (RemoveAddress(nlh)) removed_addr++;
                 break;
             case NLMSG_ERROR:
-                if (nd_debug)
-                    nd_printf("Netlink error.\n");
+                nlerror = static_cast<struct nlmsgerr *>(NLMSG_DATA(nlh));
+                if (nlerror->error != 0) {
+                    nd_printf("Netlink error: %d\n", -nlerror->error);
+                    return false;
+                }
                 break;
             case NLMSG_OVERRUN:
-                if (nd_debug)
-                    nd_printf("Netlink overrun.\n");
-                break;
+                nd_printf("Netlink overrun!\n");
+                return false;
             default:
                 if (nd_debug)
                     nd_printf("Ignored netlink message: %04x\n", nlh->nlmsg_type);
@@ -188,31 +324,72 @@ void ndNetlink::ProcessEvent(void)
     }
 
     if (nd_debug) {
-        if (added > 0 || removed > 0) {
-            nd_printf("Networks added: %d, removed: %d\n", added, removed);
-            Dump();
+        if (added_net > 0 || removed_net > 0) {
+            nd_printf("Networks added: %d, removed: %d\n", added_net, removed_net);
+        }
+        if (added_addr > 0 || removed_addr > 0) {
+            nd_printf("Addresses added: %d, removed: %d\n", added_addr, removed_addr);
         }
     }
+
+    return (added_net || removed_net || added_addr || removed_addr) ? true : false;
 }
 
-ndLocalResult ndNetlink::WhichIsLocal(const string &device,
-    struct sockaddr_storage *a, struct sockaddr_storage *b)
+ndNetlinkAddressType ndNetlink::ClassifyAddress(
+    const string &device, const struct sockaddr_storage *addr)
 {
-    bool islocal_a = false, islocal_b = false;
-
-    if (a->ss_family != AF_INET && a->ss_family != AF_INET6 &&
-        b->ss_family != AF_INET && a->ss_family != AF_INET6) {
-        nd_printf("WARNING: Which is local unknown family: A: %hhu, B: %hhu\n",
-            a->ss_family, b->ss_family);
-        return ndNETLINK_ISLOCAL_ERROR;
+    // Paranoid AF_* check...
+    if (addr->ss_family != AF_INET && addr->ss_family != AF_INET6) {
+        nd_printf("WARNING: Address in unknown family: %hhu\n", addr->ss_family);
+        return ndNETLINK_ATYPE_ERROR;
     }
 
-    if (a->ss_family != b->ss_family) {
-        nd_printf("WARNING: Which is local family mis-match: A: %hhu, B: %hhu\n",
-            a->ss_family, b->ss_family);
-        return ndNETLINK_ISLOCAL_ERROR;
+    if (addr->ss_family == AF_INET) {
+        const struct sockaddr_in *_addr;
+        _addr = reinterpret_cast<const struct sockaddr_in *>(addr);
+        if (_addr->sin_addr.s_addr == 0xffffffff) // 255.255.255.255
+            return ndNETLINK_ATYPE_BROADCAST;
     }
 
+    // Is addr a local address to this device?
+    for (ndNetlinkAddresses::iterator i = addresses.begin();
+        i != addresses.end(); i++) {
+
+        if (i->first != device) continue;
+
+        for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
+            j != i->second.end(); j++) {
+
+            if ((*j)->ss_family != addr->ss_family) continue;
+
+            ndNetlinkNetworkAddr _addr1(addr), _addr2((*j));
+            
+            if (_addr1 == _addr2) return ndNETLINK_ATYPE_LOCALIP;
+        }
+
+        break;
+    }
+
+    // Is addr a member of a multicast network?
+    for (ndNetlinkNetworks::iterator i = networks.begin();
+        i != networks.end(); i++) {
+
+        if (i->first != _ND_NETLINK_MULTICAST) continue;
+
+        for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
+            j != i->second.end(); j++) {
+
+            if ((*j)->network.ss_family != addr->ss_family) continue;
+
+            if (InNetwork(
+                (*j)->network.ss_family, (*j)->length, &(*j)->network, addr))
+                return ndNETLINK_ATYPE_MULTICAST;
+        }
+
+        break;
+    }
+
+    // Is addr a member of a local network to this device?
     for (ndNetlinkNetworks::iterator i = networks.begin();
         i != networks.end(); i++) {
 
@@ -221,55 +398,67 @@ ndLocalResult ndNetlink::WhichIsLocal(const string &device,
         for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
             j != i->second.end(); j++) {
 
-            if ((*j)->network.ss_family != a->ss_family) continue;
+            if ((*j)->network.ss_family != addr->ss_family) continue;
 
-            islocal_a = InNetwork(
-                (*j)->network.ss_family, (*j)->length, &(*j)->network, a);
-            islocal_b = InNetwork(
-                (*j)->network.ss_family, (*j)->length, &(*j)->network, b);
-
-            if (islocal_a == true && islocal_b == true)
-                return ndNETLINK_ISLOCAL_BOTH;
+            if (InNetwork(
+                (*j)->network.ss_family, (*j)->length, &(*j)->network, addr))
+                return ndNETLINK_ATYPE_LOCALNET;
         }
+
+        break;
     }
 
-    if (islocal_a == true && islocal_b == false)
-        return ndNETLINK_ISLOCAL_A;
-    if (islocal_a == false && islocal_b == true)
-        return ndNETLINK_ISLOCAL_B;
+    // Final guess: Is addr a member of a private (reserved/non-routable) network?
+    for (ndNetlinkNetworks::iterator i = networks.begin();
+        i != networks.end(); i++) {
 
-    return ndNETLINK_ISLOCAL_NEITHER;
+        if (i->first != _ND_NETLINK_PRIVATE) continue;
+
+        for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
+            j != i->second.end(); j++) {
+
+            if ((*j)->network.ss_family != addr->ss_family) continue;
+
+            if (InNetwork(
+                (*j)->network.ss_family, (*j)->length, &(*j)->network, addr))
+                return ndNETLINK_ATYPE_PRIVATE;
+        }
+
+        break;
+    }
+
+    return ndNETLINK_ATYPE_UNKNOWN;
 }
 
 bool ndNetlink::InNetwork(sa_family_t family, uint8_t length,
-    struct sockaddr_storage *addr_net, struct sockaddr_storage *addr_host)
+    const struct sockaddr_storage *addr_net, const struct sockaddr_storage *addr_host)
 {
-	struct sockaddr_in *ipv4_net, *ipv4_host;
-	struct sockaddr_in6 *ipv6_net, *ipv6_host;
-	int o, b = (int)length, octets = 1;
-	uint32_t i, octet_net[4], octet_host[4];
+    const struct sockaddr_in *ipv4_net, *ipv4_host;
+   const  struct sockaddr_in6 *ipv6_net, *ipv6_host;
+    int o, b = (int)length, octets = 1;
+    uint32_t i, octet_net[4], octet_host[4];
 
-	switch (family) {
-	case AF_INET:
-        ipv4_net = reinterpret_cast<struct sockaddr_in *>(addr_net);
-        ipv4_host = reinterpret_cast<struct sockaddr_in *>(addr_host);
-		octet_net[0] = ntohl(ipv4_net->sin_addr.s_addr);
-		octet_host[0] = ntohl(ipv4_host->sin_addr.s_addr);
-		break;
-	case AF_INET6:
-		octets = 4;
-        ipv6_net = reinterpret_cast<struct sockaddr_in6 *>(addr_net);
-        ipv6_host = reinterpret_cast<struct sockaddr_in6 *>(addr_host);
-		octet_net[0] = ntohl(ipv6_net->sin6_addr.s6_addr32[0]);
-		octet_net[1] = ntohl(ipv6_net->sin6_addr.s6_addr32[1]);
-		octet_net[2] = ntohl(ipv6_net->sin6_addr.s6_addr32[2]);
-		octet_net[3] = ntohl(ipv6_net->sin6_addr.s6_addr32[3]);
-		octet_host[0] = ntohl(ipv6_host->sin6_addr.s6_addr32[0]);
-		octet_host[1] = ntohl(ipv6_host->sin6_addr.s6_addr32[1]);
-		octet_host[2] = ntohl(ipv6_host->sin6_addr.s6_addr32[2]);
-		octet_host[3] = ntohl(ipv6_host->sin6_addr.s6_addr32[3]);
-		break;
-	}
+    switch (family) {
+    case AF_INET:
+        ipv4_net = reinterpret_cast<const struct sockaddr_in *>(addr_net);
+        ipv4_host = reinterpret_cast<const struct sockaddr_in *>(addr_host);
+        octet_net[0] = ntohl(ipv4_net->sin_addr.s_addr);
+        octet_host[0] = ntohl(ipv4_host->sin_addr.s_addr);
+        break;
+    case AF_INET6:
+        octets = 4;
+        ipv6_net = reinterpret_cast<const struct sockaddr_in6 *>(addr_net);
+        ipv6_host = reinterpret_cast<const struct sockaddr_in6 *>(addr_host);
+        octet_net[0] = ntohl(ipv6_net->sin6_addr.s6_addr32[0]);
+        octet_net[1] = ntohl(ipv6_net->sin6_addr.s6_addr32[1]);
+        octet_net[2] = ntohl(ipv6_net->sin6_addr.s6_addr32[2]);
+        octet_net[3] = ntohl(ipv6_net->sin6_addr.s6_addr32[3]);
+        octet_host[0] = ntohl(ipv6_host->sin6_addr.s6_addr32[0]);
+        octet_host[1] = ntohl(ipv6_host->sin6_addr.s6_addr32[1]);
+        octet_host[2] = ntohl(ipv6_host->sin6_addr.s6_addr32[2]);
+        octet_host[3] = ntohl(ipv6_host->sin6_addr.s6_addr32[3]);
+        break;
+    }
 #if 0
     char host[INET6_ADDRSTRLEN], net[INET6_ADDRSTRLEN];
     switch (addr_net->ss_family) {
@@ -288,35 +477,35 @@ bool ndNetlink::InNetwork(sa_family_t family, uint8_t length,
         break;
     }
 
-	nd_printf("Network: ");
-	for (o = 0; o < octets; o++) {
-		print_binary(octet_net[o]);
-		if (o + 1 < octets) nd_printf(".");
-	}
-	nd_printf(" (%s)\n", net);
-	nd_printf("   Host: ");
-	for (o = 0; o < octets; o++) {
-		print_binary(octet_host[o]);
-		if (o + 1 < octets) nd_printf(".");
-	}
-	nd_printf(" (%s)\n\n", host);
+    nd_printf("Network: ");
+    for (o = 0; o < octets; o++) {
+        print_binary(octet_net[o]);
+        if (o + 1 < octets) nd_printf(".");
+    }
+    nd_printf(" (%s)\n", net);
+    nd_printf("   Host: ");
+    for (o = 0; o < octets; o++) {
+        print_binary(octet_host[o]);
+        if (o + 1 < octets) nd_printf(".");
+    }
+    nd_printf(" (%s)\n\n", host);
 #endif
 
-	for (o = 0; o < octets && b > 0; o++) {
-		for (i = 0x80000000; i > 0 && b > 0; i >>= 1) {
+    for (o = 0; o < octets && b > 0; o++) {
+        for (i = 0x80000000; i > 0 && b > 0; i >>= 1) {
 #if 0
-			nd_printf("%3d: ", b);
-			print_binary(i);
-			nd_printf(": ");
-			print_binary((octet_host[o] & i));
-			nd_printf(" ?= ");
-			print_binary((octet_net[o] & i));
-			nd_printf("\n");
+            nd_printf("%3d: ", b);
+            print_binary(i);
+            nd_printf(": ");
+            print_binary((octet_host[o] & i));
+            nd_printf(" ?= ");
+            print_binary((octet_net[o] & i));
+            nd_printf("\n");
 #endif
             if ((octet_host[o] & i) != (octet_net[o] & i)) {
-				//nd_printf("Mis-match at prefix bit: %d\n", b);
-				//nd_printf("octet_host[%d] & %lu: %lu, octet_net[%d] & %lu: %lu\n",
-				//	o, i, octet_host[o] & i, o, i, octet_net[o] & i);
+                //nd_printf("Mis-match at prefix bit: %d\n", b);
+                //nd_printf("octet_host[%d] & %lu: %lu, octet_net[%d] & %lu: %lu\n",
+                //  o, i, octet_host[o] & i, o, i, octet_net[o] & i);
                 return false;
             }
             b--;
@@ -327,30 +516,28 @@ bool ndNetlink::InNetwork(sa_family_t family, uint8_t length,
 }
 
 bool ndNetlink::CopyNetlinkAddress(
-        sa_family_t family, ndNetlinkNetworkAddr &dst, void *src)
+        sa_family_t family, struct sockaddr_storage &dst, void *src)
 {
     struct sockaddr_in *saddr_ip4;
     struct sockaddr_in6 *saddr_ip6;
 
     switch (family) {
     case AF_INET:
-        saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&dst.network);
+        saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&dst);
         memcpy(&saddr_ip4->sin_addr, src, sizeof(struct in_addr));
-        dst.network.ss_family = family;
+        dst.ss_family = family;
         return true;
-        break;
     case AF_INET6:
-        saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&dst.network);
+        saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&dst);
         memcpy(&saddr_ip6->sin6_addr, src, sizeof(struct in6_addr));
-        dst.network.ss_family = family;
+        dst.ss_family = family;
         return true;
-        break;
     }
 
     return false;
 }
 
-bool ndNetlink::ParseRouteMessage(struct rtmsg *rtm, size_t offset,
+bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
     string &device, ndNetlinkNetworkAddr &addr)
 {
     char ifname[IFNAMSIZ];
@@ -363,7 +550,10 @@ bool ndNetlink::ParseRouteMessage(struct rtmsg *rtm, size_t offset,
     addr.length = 0;
     addr.network.ss_family = AF_UNSPEC;
 
-    if (rtm->rtm_type != RTN_UNICAST) return false;
+    if (rtm->rtm_type != RTN_UNICAST) {
+//        if (nd_debug) nd_printf("Ignorning non-unicast route.\n");
+        return false;
+    }
 
     switch (rtm->rtm_family) {
     case AF_INET:
@@ -373,8 +563,8 @@ bool ndNetlink::ParseRouteMessage(struct rtmsg *rtm, size_t offset,
         if (rtm->rtm_dst_len == 0 || rtm->rtm_dst_len == 128) return false;
         break;
     default:
-        if (nd_debug)
-            nd_printf("Ignorning non-IPv4/6 route message: %04hx\n", rtm->rtm_family);
+        if (nd_debug) nd_printf(
+            "WARNING: Ignorning non-IPv4/6 route message: %04hx\n", rtm->rtm_family);
         return false;
     }
         
@@ -448,7 +638,7 @@ bool ndNetlink::ParseRouteMessage(struct rtmsg *rtm, size_t offset,
             case RTA_UNSPEC:
                 break;
             case RTA_DST:
-                daddr_set = CopyNetlinkAddress(rtm->rtm_family, addr, RTA_DATA(rta));
+                daddr_set = CopyNetlinkAddress(rtm->rtm_family, addr.network, RTA_DATA(rta));
 #if 0
                 getnameinfo((struct sockaddr *)&addr.network,
                     (rtm->rtm_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
@@ -458,7 +648,7 @@ bool ndNetlink::ParseRouteMessage(struct rtmsg *rtm, size_t offset,
                 break;
             case RTA_SRC:
 #if 0
-                CopyNetlinkAddress(rtm->rtm_family, addr, RTA_DATA(rta));
+                CopyNetlinkAddress(rtm->rtm_family, addr.network, RTA_DATA(rta));
                 getnameinfo((struct sockaddr *)&addr.network,
                     (rtm->rtm_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
                     saddr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
@@ -483,7 +673,7 @@ bool ndNetlink::ParseRouteMessage(struct rtmsg *rtm, size_t offset,
                 break;
             case RTA_GATEWAY:
 #if 0
-                CopyNetlinkAddress(rtm->rtm_family, addr, RTA_DATA(rta));
+                CopyNetlinkAddress(rtm->rtm_family, addr.network, RTA_DATA(rta));
                 getnameinfo((struct sockaddr *)&addr.network,
                     (rtm->rtm_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
                     saddr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
@@ -498,10 +688,70 @@ bool ndNetlink::ParseRouteMessage(struct rtmsg *rtm, size_t offset,
         }
     }
 
-    if (daddr_set != true || device.size() == 0)
+    if (daddr_set != true || device.size() == 0) {
+//        if (nd_debug) nd_printf("Route message: %saddress set, %sdevice name set\n",
+//            (daddr_set != true) ? "No " : "", (device.size() == 0) ? "No" : "");
         return false;
+    }
 
     return true;
+}
+
+bool ndNetlink::ParseMessage(struct ifaddrmsg *addrm, size_t offset,
+    string &device, struct sockaddr_storage &addr)
+{
+    bool addr_set = false;
+    char ifname[IFNAMSIZ];
+
+    memset(&addr, 0, sizeof(struct sockaddr_storage));
+    addr.ss_family = AF_UNSPEC;
+
+    if_indextoname(addrm->ifa_index, ifname);
+    device.assign(ifname);
+    for (vector<string>::const_iterator i = devices->begin();
+        i != devices->end(); i++)
+        if (strncasecmp(ifname, (*i).c_str(), IFNAMSIZ)) return false;
+
+    for (struct rtattr *rta = static_cast<struct rtattr *>(IFA_RTA(addrm));
+        RTA_OK(rta, offset); rta = RTA_NEXT(rta, offset)) {
+        switch (rta->rta_type) {
+//        case IFA_UNSPEC:
+//            nd_printf("%s: IFA_UNSPEC set\n", ifname);
+//            break;
+        case IFA_ADDRESS:
+//            nd_printf("%s: IFA_ADDRESS set\n", ifname);
+            addr_set = CopyNetlinkAddress(addrm->ifa_family, addr, RTA_DATA(rta));
+            break;
+        case IFA_LOCAL:
+//            nd_printf("%s: IFA_LOCAL set\n", ifname);
+            addr_set = CopyNetlinkAddress(addrm->ifa_family, addr, RTA_DATA(rta));
+            break;
+//        case IFA_LABEL:
+//            nd_printf("%s: IFA_LABEL set\n", ifname);
+//            break;
+//        case IFA_BROADCAST:
+//            nd_printf("%s: IFA_BROADCAST set\n", ifname);
+//            break;
+//        case IFA_ANYCAST:
+//            nd_printf("%s: IFA_ANYCAST set\n", ifname);
+//            break;
+//        case IFA_CACHEINFO:
+//            nd_printf("%s: IFA_CACHEINFO set\n", ifname);
+//            break;
+//        case IFA_MULTICAST:
+//            nd_printf("%s: IFA_MULTICAST set\n", ifname);
+//            break;
+//        case IFA_FLAGS:
+//            nd_printf("%s: IFA_FLAGS set\n", ifname);
+//            break;
+//        default:
+//            nd_printf("%s: WARNING: rta_type not handled: %2x\n", ifname, rta->rta_type);
+//            break;
+        }
+    }
+
+//    if (nd_debug) nd_printf("%s: %sddress set\n", ifname, (addr_set) ? "A" : "No a");
+    return addr_set;
 }
 
 bool ndNetlink::AddNetwork(struct nlmsghdr *nlh)
@@ -509,12 +759,13 @@ bool ndNetlink::AddNetwork(struct nlmsghdr *nlh)
     string device;
     ndNetlinkNetworkAddr addr;
 
-    if (ParseRouteMessage(
+    if (ParseMessage(
         static_cast<struct rtmsg *>(NLMSG_DATA(nlh)),
         RTM_PAYLOAD(nlh), device, addr) == false) return false;
 
     for (ndNetlinkNetworks::iterator i = networks.begin();
         i != networks.end(); i++) {
+
         if (device != i->first) continue;
 
         for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
@@ -524,14 +775,14 @@ bool ndNetlink::AddNetwork(struct nlmsghdr *nlh)
     }
 
     ndNetlinkNetworkAddr *entry;
-    ND_NETLINK_ALLOC(entry, addr);
+    ND_NETLINK_NETALLOC(entry, addr);
     networks[device].push_back(entry);
 
     return true;
 }
 
-bool ndNetlink::AddPrivateNetwork(
-    sa_family_t family, const string &saddr, uint8_t length)
+bool ndNetlink::AddNetwork(sa_family_t family,
+    const string &type, const string &saddr, uint8_t length)
 {
     ndNetlinkNetworkAddr *entry, addr;
     struct sockaddr_in *saddr_ip4;
@@ -557,8 +808,8 @@ bool ndNetlink::AddPrivateNetwork(
         return false;
     }
 
-    ND_NETLINK_ALLOC(entry, addr);
-    networks["__nd_private__"].push_back(entry);
+    ND_NETLINK_NETALLOC(entry, addr);
+    networks[type].push_back(entry);
 
     return true;
 }
@@ -568,9 +819,12 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
     string device;
     ndNetlinkNetworkAddr addr;
 
-    if (ParseRouteMessage(
+    if (ParseMessage(
         static_cast<struct rtmsg *>(NLMSG_DATA(nlh)),
-        RTM_PAYLOAD(nlh), device, addr) == false) return false;
+        RTM_PAYLOAD(nlh), device, addr) == false) {
+//        if (nd_debug) nd_printf("Remove network parse error\n");
+        return false;
+    }
 
     ndNetlinkNetworks::iterator i = networks.find(device);
     if (i == networks.end()) {
@@ -587,6 +841,70 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
         }
     }
 
+//    if (nd_debug) {
+//        nd_printf("WARNING: Couldn't find network address in map: %s, ",
+//            device.c_str());
+//        print_address(&addr.network);
+//        nd_printf("/%hhu\n", addr.length);
+//    }
+
+    return false;
+}
+
+bool ndNetlink::AddAddress(struct nlmsghdr *nlh)
+{
+    string device;
+    struct sockaddr_storage addr;
+
+    if (ParseMessage(
+        static_cast<struct ifaddrmsg *>(NLMSG_DATA(nlh)),
+        IFA_PAYLOAD(nlh), device, addr) == false) return false;
+
+    for (ndNetlinkAddresses::iterator i = addresses.begin();
+        i != addresses.end(); i++) {
+
+        if (device != i->first) continue;
+
+        for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
+            j != i->second.end(); j++) {
+            if (memcmp((*j), &addr, sizeof(struct sockaddr_storage)) == 0)
+                return false;
+        }
+    }
+
+    struct sockaddr_storage *entry;
+    ND_NETLINK_ADDRALLOC(entry, addr);
+    addresses[device].push_back(entry);
+
+    return true;
+}
+
+bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
+{
+    string device;
+    struct sockaddr_storage addr;
+
+    if (ParseMessage(
+        static_cast<struct ifaddrmsg *>(NLMSG_DATA(nlh)),
+        IFA_PAYLOAD(nlh), device, addr) == false) return false;
+
+    ndNetlinkAddresses::iterator i = addresses.find(device);
+    if (i == addresses.end()) {
+        if (nd_debug) {
+            nd_printf("WARNING: Couldn't find device in addresses map: %s\n",
+                device.c_str());
+        }
+        return false;
+    }
+
+    for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
+        j != i->second.end(); j++) {
+        if (memcmp((*j), &addr, sizeof(struct sockaddr_storage)) == 0) {
+            i->second.erase(j);
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -594,17 +912,23 @@ void ndNetlink::Dump(void)
 {
     char addr[NI_MAXHOST];
 
-    if (!nd_debug) return;
-
     for (ndNetlinkNetworks::iterator i = networks.begin();
         i != networks.end(); i++) {
         for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
             j != i->second.end(); j++) {
-            getnameinfo((struct sockaddr *)&(*j)->network,
-                ((*j)->network.ss_family == AF_INET) ?
-                    sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
-                addr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-            nd_printf("%s: %s/%hhu\n", i->first.c_str(), addr, (*j)->length);
+            nd_printf("%s: net ", i->first.c_str());
+            print_address(&(*j)->network);
+            nd_printf("/%hhu\n", (*j)->length);
+        }
+    }
+
+    for (ndNetlinkAddresses::iterator i = addresses.begin();
+        i != addresses.end(); i++) {
+        for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
+            j != i->second.end(); j++) {
+            nd_printf("%s: addr ", i->first.c_str());
+            print_address((*j));
+            nd_printf("\n");
         }
     }
 }

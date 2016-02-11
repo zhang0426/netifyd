@@ -634,6 +634,11 @@ void ndDetectionThread::ProcessPacket(void)
     new_flow->bytes += pkt_header->len;
     new_flow->ts_last_seen = ts_pkt;
 
+    if (addr_cmp < 0)
+        new_flow->lower_bytes += pkt_header->len;
+    else
+        new_flow->upper_bytes += pkt_header->len;
+
     if (new_flow->detection_complete) return;
 
     new_flow->detected_protocol = ndpi_detection_process_packet(

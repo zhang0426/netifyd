@@ -123,6 +123,9 @@ struct ndFlow
     uint16_t lower_port;
     uint16_t upper_port;
 
+    uint64_t lower_bytes;
+    uint64_t upper_bytes;
+
     uint8_t protocol;
 
     uint16_t vlan_id;

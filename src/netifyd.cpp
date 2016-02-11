@@ -324,11 +324,16 @@ static void nd_json_add_flows(
     const nd_flow_map *flows, bool unknown = true)
 {
     char buffer[256];
-    ndJson json(parent);
-    string which_is_local = "neither";
     struct sockaddr_in lower, upper;
     struct sockaddr_in6 lower6, upper6;
     struct sockaddr_storage *lower_addr, *upper_addr;
+    string other_type = "unknown";
+    string lower_mac = "local_mac", upper_mac = "other_mac";
+    string lower_ip = "local_ip", upper_ip = "other_ip";
+    string lower_port = "local_port", upper_port = "other_port";
+    string lower_bytes = "local_bytes", upper_bytes = "other_bytes";
+
+    ndJson json(parent);
 
     for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
@@ -351,21 +356,6 @@ static void nd_json_add_flows(
 
         json.AddObject(json_flow, "vlan_id", (int32_t)i->second->vlan_id);
 
-        snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
-            i->second->lower_mac[0], i->second->lower_mac[1], i->second->lower_mac[2],
-            i->second->lower_mac[3], i->second->lower_mac[4], i->second->lower_mac[5]
-        );
-        json.AddObject(json_flow, "lower_mac", buffer);
-
-        snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
-            i->second->upper_mac[0], i->second->upper_mac[1], i->second->upper_mac[2],
-            i->second->upper_mac[3], i->second->upper_mac[4], i->second->upper_mac[5]
-        );
-        json.AddObject(json_flow, "upper_mac", buffer);
-
-        json.AddObject(json_flow, "lower_ip", i->second->lower_ip);
-        json.AddObject(json_flow, "upper_ip", i->second->upper_ip);
-
         if (i->second->version == 4) {
             lower.sin_family = AF_INET;
             memcpy(&lower.sin_addr, &i->second->lower_addr, sizeof(struct in_addr));
@@ -385,46 +375,181 @@ static void nd_json_add_flows(
             upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
         }
 
-        switch (netlink_routes->WhichIsLocal(device, lower_addr, upper_addr)) {
-        case ndNETLINK_ISLOCAL_NEITHER:
+        ndNetlinkAddressType lower_type, upper_type;
+        lower_type = netlink_routes->ClassifyAddress(device, lower_addr);
+        upper_type = netlink_routes->ClassifyAddress(device, upper_addr);
+#if 0
+        switch (lower_type) {
+        case ndNETLINK_ATYPE_UNKNOWN:
+            nd_printf("%s: Lower address is: UNKNOWN\n", i->second->lower_ip);
             break;
-        case ndNETLINK_ISLOCAL_BOTH:
-            which_is_local = "both";
+        case ndNETLINK_ATYPE_LOCALIP:
+            nd_printf("%s: Lower address is: LOCALIP\n", i->second->lower_ip);
             break;
-        case ndNETLINK_ISLOCAL_A:
-            which_is_local = "lower";
+        case ndNETLINK_ATYPE_LOCALNET:
+            nd_printf("%s: Lower address is: LOCALNET\n", i->second->lower_ip);
             break;
-        case ndNETLINK_ISLOCAL_B:
-            which_is_local = "upper";
+        case ndNETLINK_ATYPE_PRIVATE:
+            nd_printf("%s: Lower address is: PRIVATE\n", i->second->lower_ip);
             break;
-        case ndNETLINK_ISLOCAL_ERROR:
-            which_is_local = "error";
+        case ndNETLINK_ATYPE_MULTICAST:
+            nd_printf("%s: Lower address is: MULTICAST\n", i->second->lower_ip);
+            break;
+        case ndNETLINK_ATYPE_BROADCAST:
+            nd_printf("%s: Lower address is: BROADCAST\n", i->second->lower_ip);
+            break;
+        case ndNETLINK_ATYPE_ERROR:
+            nd_printf("%s: Lower address is: ERROR!\n", i->second->lower_ip);
+            break;
+        default:
+            nd_printf("%s: Lower address is: Unhandled!\n", i->second->lower_ip);
             break;
         }
 
-        if (which_is_local == "neither") {
-            switch (netlink_routes->GuessWhichIsLocal(lower_addr, upper_addr)) {
-            case ndNETLINK_ISLOCAL_NEITHER:
-                break;
-            case ndNETLINK_ISLOCAL_BOTH:
-                which_is_local = "both_guessed";
-                break;
-            case ndNETLINK_ISLOCAL_A:
-                which_is_local = "lower_guessed";
-                break;
-            case ndNETLINK_ISLOCAL_B:
-                which_is_local = "upper_guessed";
-                break;
-            case ndNETLINK_ISLOCAL_ERROR:
-                which_is_local = "error";
-                break;
-            }
+        switch (upper_type) {
+        case ndNETLINK_ATYPE_UNKNOWN:
+            nd_printf("%s: Upper address is: UNKNOWN\n", i->second->upper_ip);
+            break;
+        case ndNETLINK_ATYPE_LOCALIP:
+            nd_printf("%s: Upper address is: LOCALIP\n", i->second->upper_ip);
+            break;
+        case ndNETLINK_ATYPE_LOCALNET:
+            nd_printf("%s: Upper address is: LOCALNET\n", i->second->upper_ip);
+            break;
+        case ndNETLINK_ATYPE_PRIVATE:
+            nd_printf("%s: Upper address is: PRIVATE\n", i->second->upper_ip);
+            break;
+        case ndNETLINK_ATYPE_MULTICAST:
+            nd_printf("%s: Upper address is: MULTICAST\n", i->second->upper_ip);
+            break;
+        case ndNETLINK_ATYPE_BROADCAST:
+            nd_printf("%s: Upper address is: BROADCAST\n", i->second->upper_ip);
+            break;
+        case ndNETLINK_ATYPE_ERROR:
+            nd_printf("%s: Upper address is: ERROR!\n", i->second->upper_ip);
+            break;
+        default:
+            nd_printf("%s: Upper address is: Unhandled!\n", i->second->upper_ip);
+            break;
+        }
+#endif
+        if (lower_type == ndNETLINK_ATYPE_ERROR ||
+            upper_type == ndNETLINK_ATYPE_ERROR) {
+            other_type = "error";
+        }
+        else if (lower_type == ndNETLINK_ATYPE_LOCALIP &&
+            upper_type == ndNETLINK_ATYPE_LOCALNET) {
+            other_type = "local";
+            lower_mac = "other_mac";
+            lower_ip = "other_ip";
+            lower_port = "other_port";
+            lower_bytes = "other_bytes";
+            upper_mac = "local_mac";
+            upper_ip = "local_ip";
+            upper_port = "local_port";
+            upper_bytes = "local_bytes";
+        }
+        else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
+            upper_type == ndNETLINK_ATYPE_LOCALIP) {
+            other_type = "local";
+            lower_mac = "local_mac";
+            lower_ip = "local_ip";
+            lower_port = "local_port";
+            lower_bytes = "local_bytes";
+            upper_mac = "other_mac";
+            upper_ip = "other_ip";
+            upper_port = "other_port";
+            upper_bytes = "other_bytes";
+        }
+        else if (lower_type == ndNETLINK_ATYPE_MULTICAST) {
+            other_type = "multicast";
+            lower_mac = "other_mac";
+            lower_ip = "other_ip";
+            lower_port = "other_port";
+            lower_bytes = "other_bytes";
+            upper_mac = "local_mac";
+            upper_ip = "local_ip";
+            upper_port = "local_port";
+            upper_bytes = "local_bytes";
+        }
+        else if (upper_type == ndNETLINK_ATYPE_MULTICAST) {
+            other_type = "multicast";
+            lower_mac = "local_mac";
+            lower_ip = "local_ip";
+            lower_port = "local_port";
+            lower_bytes = "local_bytes";
+            upper_mac = "other_mac";
+            upper_ip = "other_ip";
+            upper_port = "other_port";
+            upper_bytes = "other_bytes";
+        }
+        else if (lower_type == ndNETLINK_ATYPE_BROADCAST) {
+            other_type = "broadcast";
+            lower_mac = "other_mac";
+            lower_ip = "other_ip";
+            lower_port = "other_port";
+            lower_bytes = "other_bytes";
+            upper_mac = "local_mac";
+            upper_ip = "local_ip";
+            upper_port = "local_port";
+            upper_bytes = "local_bytes";
+        }
+        else if (upper_type == ndNETLINK_ATYPE_BROADCAST) {
+            other_type = "broadcast";
+            lower_mac = "local_mac";
+            lower_ip = "local_ip";
+            lower_port = "local_port";
+            lower_bytes = "local_bytes";
+            upper_mac = "other_mac";
+            upper_ip = "other_ip";
+            upper_port = "other_port";
+            upper_bytes = "other_bytes";
+        }
+        else if (lower_type == ndNETLINK_ATYPE_UNKNOWN) {
+            other_type = "remote";
+            lower_mac = "other_mac";
+            lower_ip = "other_ip";
+            lower_port = "other_port";
+            lower_bytes = "other_bytes";
+            upper_mac = "local_mac";
+            upper_ip = "local_ip";
+            upper_port = "local_port";
+            upper_bytes = "local_bytes";
+        }
+        else if (upper_type == ndNETLINK_ATYPE_UNKNOWN) {
+            other_type = "remote";
+            lower_mac = "local_mac";
+            lower_ip = "local_ip";
+            lower_port = "local_port";
+            lower_bytes = "local_bytes";
+            upper_mac = "other_mac";
+            upper_ip = "other_ip";
+            upper_port = "other_port";
+            upper_bytes = "other_bytes";
         }
 
-        json.AddObject(json_flow, "which_is_local", which_is_local);
+        json.AddObject(json_flow, "other_type", other_type);
 
-        json.AddObject(json_flow, "lower_port", (int32_t)i->second->lower_port);
-        json.AddObject(json_flow, "upper_port", (int32_t)i->second->upper_port);
+        snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
+            i->second->lower_mac[0], i->second->lower_mac[1], i->second->lower_mac[2],
+            i->second->lower_mac[3], i->second->lower_mac[4], i->second->lower_mac[5]
+        );
+        json.AddObject(json_flow, lower_mac, buffer);
+
+        snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
+            i->second->upper_mac[0], i->second->upper_mac[1], i->second->upper_mac[2],
+            i->second->upper_mac[3], i->second->upper_mac[4], i->second->upper_mac[5]
+        );
+        json.AddObject(json_flow, upper_mac, buffer);
+
+        json.AddObject(json_flow, lower_ip, i->second->lower_ip);
+        json.AddObject(json_flow, upper_ip, i->second->upper_ip);
+
+        json.AddObject(json_flow, lower_port, (int32_t)i->second->lower_port);
+        json.AddObject(json_flow, upper_port, (int32_t)i->second->upper_port);
+
+        json.AddObject(json_flow, lower_bytes, i->second->lower_bytes);
+        json.AddObject(json_flow, upper_bytes, i->second->upper_bytes);
 
         json.AddObject(json_flow, "detected_protocol",
             (int32_t)i->second->detected_protocol.protocol);
@@ -824,7 +949,9 @@ int main(int argc, char *argv[])
                 continue;
             }
             else if (netlink_routes->GetDescriptor() == si.si_fd) {
-                netlink_routes->ProcessEvent();
+                if (netlink_routes->ProcessEvent()) {
+                    if (nd_debug) netlink_routes->Dump();
+                }
                 continue;
             }
         }
