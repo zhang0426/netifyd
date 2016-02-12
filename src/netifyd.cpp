@@ -172,8 +172,11 @@ static int nd_config_load(void)
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
 
-    string zone_uuid = reader.Get("netifyd", "zone_uuid", ND_UUID_NULL);
-    nd_config.uuid_zone = strdup(zone_uuid.c_str());
+    nd_config.ssl_verify_peer = reader.GetBoolean(
+        "netifyd", "ssl_verify_peer", true);
+
+    string uuid_zone = reader.Get("netifyd", "uuid_zone", ND_UUID_NULL);
+    nd_config.uuid_zone = strdup(uuid_zone.c_str());
 
 #if 0
     nd_account_id = reader.GetInteger("account", "id", 0);
@@ -830,7 +833,7 @@ int main(int argc, char *argv[])
         fprintf(hpid, "%d\n", getpid());
         fclose(hpid);
     }
-        
+
     nd_printf("Netify Daemon v%s\n", PACKAGE_VERSION);
 
     memset(&totals, 0, sizeof(ndDetectionStats));

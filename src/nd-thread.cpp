@@ -779,9 +779,11 @@ ndUploadThread::ndUploadThread()
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, nd_curl_debug);
         curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
         curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
-        curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(ch, CURLOPT_COOKIEJAR, ND_COOKIE_JAR);
     }
+
+    if (nd_debug || nd_config.ssl_verify_peer == false)
+        curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
 
     ostringstream user_agent;
     user_agent << "User-Agent: " <<

@@ -2,7 +2,7 @@
 
 Name: @PACKAGE_TARNAME@
 Version: @PACKAGE_VERSION@
-Release: 1%{dist}
+Release: 3%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -71,12 +71,12 @@ install -d -m 0755 %{buildroot}/run/%{name}
 # Post install
 %post
 %systemd_post %{name}.service
-if `egrep -q '^uuid[[:space:]]*=[[:space:]]*00-00-00$' %{_sysconfdir}/%{name}.conf 2>/dev/null`; then
+if `egrep -q '^uuid[[:space:]]*=[[:space:]]*00-00-00-00$' %{_sysconfdir}/%{name}.conf 2>/dev/null`; then
     uuid=$(%{_sbindir}/%{name} -U 2>/dev/null)
     if [ -z "$uuid" ]; then
         echo "Error generating UUID."
     else
-        sed -e "s/^uuid[[:space:]]*=[[:space:]]*00-00-00/uuid = $uuid/" -i %{_sysconfdir}/%{name}.conf
+        sed -e "s/^uuid[[:space:]]*=[[:space:]]*00-00-00-00/uuid = $uuid/" -i %{_sysconfdir}/%{name}.conf
     fi
 fi
 

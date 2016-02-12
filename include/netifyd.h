@@ -56,6 +56,7 @@ typedef struct {
     char *uuid_zone;
     char *url_upload;
     size_t max_backlog;
+    bool ssl_verify_peer;
 } ndGlobalConfig;
 
 #ifdef _ND_INTERNAL
