@@ -3,7 +3,7 @@
 
 NETIFYD_OPTS=
 
-for ifn in "$(/usr/sbin/network --get-lan-interfaces 2>/dev/null)"; do
+for ifn in $(/usr/sbin/network --get-lan-interfaces 2>/dev/null); do
     [ -z "$ifn" ] && break
     NETIFYD_OPTS="$NETIFYD_OPTS -I $ifn"
 done

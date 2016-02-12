@@ -124,13 +124,13 @@ static int nd_curl_debug(CURL *ch, curl_infotype type, char *data, size_t size, 
     return 0;
 }
 
-void ndFlow::hash(string &digest)
+void ndFlow::hash(const string &device, string &digest, bool full_hash)
 {
     sha1 ctx;
     uint8_t *_digest;
 
     sha1_init(&ctx);
-    sha1_write(&ctx, (const char *)&vlan_id, sizeof(vlan_id));
+    sha1_write(&ctx, (const char *)device.c_str(), device.size());
 
     switch (version) {
     case 4:
@@ -145,9 +145,30 @@ void ndFlow::hash(string &digest)
         break;
     }
 
+    sha1_write(&ctx, (const char *)&version, sizeof(version));
     sha1_write(&ctx, (const char *)&protocol, sizeof(protocol));
+    sha1_write(&ctx, (const char *)&vlan_id, sizeof(vlan_id));
     sha1_write(&ctx, (const char *)&lower_port, sizeof(lower_port));
     sha1_write(&ctx, (const char *)&upper_port, sizeof(upper_port));
+
+    if (full_hash) {
+        sha1_write(&ctx,
+            (const char *)&detection_guessed, sizeof(detection_guessed));
+        sha1_write(&ctx,
+            (const char *)&detected_protocol, sizeof(ndpi_protocol));
+        if (strnlen(host_server_name, HOST_NAME_MAX)) {
+            sha1_write(&ctx,
+                host_server_name, strnlen(host_server_name, HOST_NAME_MAX));
+        }
+        if (strnlen(ssl.client_cert, ND_SSL_CERTLEN)) {
+            sha1_write(&ctx,
+                ssl.client_cert, strnlen(ssl.client_cert, ND_SSL_CERTLEN));
+        }
+        if (strnlen(ssl.server_cert, ND_SSL_CERTLEN)) {
+            sha1_write(&ctx,
+                ssl.server_cert, strnlen(ssl.server_cert, ND_SSL_CERTLEN));
+        }
+    }
 
     _digest = sha1_result(&ctx);
     digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
@@ -596,7 +617,7 @@ void ndDetectionThread::ProcessPacket(void)
         break;
     }
 
-    flow.hash(digest);
+    flow.hash(tag, digest);
 
     ndFlow *new_flow = new ndFlow(flow);
     if (new_flow == NULL) throw ndThreadException(strerror(ENOMEM));

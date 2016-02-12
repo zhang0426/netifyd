@@ -349,8 +349,9 @@ static void nd_json_add_flows(
 
         json_object *json_flow = json.CreateObject();
 
-        string digest;
-        nd_sha1_to_string((const uint8_t *)i->first.data(), digest);
+        string digest, digest_bin;
+        i->second->hash(device, digest_bin, true);
+        nd_sha1_to_string((const uint8_t *)digest_bin.c_str(), digest);
         json.AddObject(json_flow, "digest", digest);
 
         json.AddObject(json_flow, "ip_version", (int32_t)i->second->version);

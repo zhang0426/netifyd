@@ -152,7 +152,7 @@ struct ndFlow
         char server_cert[ND_SSL_CERTLEN];
     } ssl;
 
-    void hash(string &digest);
+    void hash(const string &device, string &digest, bool full_hash = false);
 
     inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;

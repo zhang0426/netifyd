@@ -86,12 +86,18 @@ void ndInotify::RefreshWatches(void)
 {
     for (nd_inotify_map::iterator i = inotify_watch.begin();
         i != inotify_watch.end(); i++) {
+
+        if (i->second->wd >= 0) continue;
+
         i->second->wd = inotify_add_watch(
             fd, i->first.c_str(), IN_DELETE_SELF | IN_CLOSE_WRITE | IN_MODIFY);
+
         if (i->second->wd < 0) {
-            nd_printf("Error creating inotify watch: %s: %s\n",
+            if (nd_debug) nd_printf("Error creating inotify watch: %s: %s\n",
                 i->first.c_str(), strerror(errno));
         }
+        else
+            i->second->event_occured = true;
     }
 }
 
@@ -120,10 +126,14 @@ void ndInotify::ProcessEvent(void)
                         ((iev->mask & IN_DELETE_SELF) ||
                         (iev->mask & IN_MODIFY) || (iev->mask & IN_CLOSE_WRITE)))
 
-                        if (nd_debug) nd_printf("File event occured: %s [%s]\n", watch->first.c_str(),
-                            (iev->mask & IN_DELETE_SELF) ? "DELETE_SELF" :
+                        if (nd_debug) {
+                            nd_printf("File event occured: %s [%s]\n",
+                                watch->first.c_str(),
+                                (iev->mask & IN_DELETE_SELF) ? "DELETE_SELF" :
                                 (iev->mask & IN_MODIFY) ? "MODIFY" : 
-                                    (iev->mask & IN_CLOSE_WRITE) ? "CLOSE_WRITE" : "IGNORE");
+                                (iev->mask & IN_CLOSE_WRITE) ?
+                                    "CLOSE_WRITE" : "IGNORE");
+                        }
 
                         watch->second->event_occured = true;
                         watch->second->rehash = true;
@@ -160,10 +170,8 @@ void ndInotify::ProcessEvent(void)
         else {
             if (memcmp(i->second->digest, digest, SHA1_DIGEST_LENGTH))
                 memcpy(i->second->digest, digest, SHA1_DIGEST_LENGTH);
-            else {
-                string hash1, hash2;
+            else
                 i->second->event_occured = false;
-            }
         }
 
         i->second->rehash = false;
