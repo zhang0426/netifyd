@@ -31,12 +31,14 @@
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sys/ioctl.h>
 #include <pcap/pcap.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <net/if.h>
 #include <linux/if_ether.h>
 
 #include <curl/curl.h>
@@ -312,8 +314,37 @@ ndDetectionThread::~ndDetectionThread()
 
 void *ndDetectionThread::Entry(void)
 {
+    int ifr_fd = -1;
+    struct ifreq ifr;
+
     do {
+        if (ifr_fd < 0 && (ifr_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+            nd_printf("%s: error creating ifr socket: %s\n",
+                tag.c_str(), strerror(errno));
+            sleep(1);
+            continue;
+        }
+
         if (pcap == NULL) {
+            memset(&ifr, '\0', sizeof(struct ifreq));
+            strncpy(ifr.ifr_name, tag.c_str(), IFNAMSIZ - 1);
+
+            if (ioctl(ifr_fd, SIOCGIFFLAGS, (char *)&ifr) == -1) {
+                nd_printf("%s: error getting interface flags: %s\n",
+                    tag.c_str(), strerror(errno));
+                close(ifr_fd);
+                ifr_fd = -1;
+                sleep(1);
+                continue;
+            }
+
+            if (!(ifr.ifr_flags & IFF_UP)) {
+                if (nd_debug) nd_printf("%s: WARNING: interface is down.\n",
+                    tag.c_str());
+                sleep(1);
+                continue;
+            }
+
             memset(pcap_errbuf, 0, PCAP_ERRBUF_SIZE);
             pcap = pcap_open_live(
                 tag.c_str(),
@@ -360,6 +391,8 @@ void *ndDetectionThread::Entry(void)
         }
     }
     while (terminate == false);
+
+    close(ifr_fd);
 
     return NULL;
 }
