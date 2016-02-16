@@ -106,14 +106,15 @@ protected:
     struct curl_slist *headers;
     struct curl_slist *headers_gz;
     queue<string> uploads;
-    deque<string> pending;
+    //deque<string> pending;
+    deque<pair<bool, string> > pending;
     size_t pending_size;
     pthread_cond_t uploads_cond;
     pthread_mutex_t uploads_cond_mutex;
     string body_data;
 
     void Upload(void);
-    void Deflate(const string &data);
+    string Deflate(const string &data);
     void ProcessResponse(void);
 };
 

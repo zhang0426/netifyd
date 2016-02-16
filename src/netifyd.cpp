@@ -647,14 +647,14 @@ static void nd_dump_stats(void)
             nd_json_filename, e.what());
     }
 
-#ifdef USE_CLOUD_SYNC
+#ifdef USE_NETIFY_SINK
     try {
         nd_json_upload(&json);
     }
     catch (runtime_error &e) {
         nd_printf("Error uploading JSON: %s\n", e.what());
     }
-#endif // USE_CLOUD_SYNC
+#endif // USE_NETIFY_SINK
     json.Destroy();
 
     if (nd_debug) {

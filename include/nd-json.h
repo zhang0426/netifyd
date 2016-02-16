@@ -112,6 +112,9 @@ class ndJsonObjectResult : public ndJsonObject
 public:
     ndJsonObjectResult(json_object *jdata);
 
+    ndJsonObjectResultCode GetCode(void) { return code; }
+    string GetMessage(void) { return message; }
+
 protected:
     ndJsonObjectResultCode code;
     string message;

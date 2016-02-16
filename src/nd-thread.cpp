@@ -815,7 +815,7 @@ static size_t ndUploadThread_read_data(char *data, size_t size, size_t nmemb, vo
 }
 
 ndUploadThread::ndUploadThread()
-    : ndThread("upload", -1), headers(NULL), headers_gz(NULL), pending_size(0)
+    : ndThread("Netify Sink", -1), headers(NULL), headers_gz(NULL), pending_size(0)
 {
     int rc;
 
@@ -909,12 +909,16 @@ void *ndUploadThread::Entry(void)
             terminate = true;
         else {
             do {
-                pending.push_back(uploads.front());
-                pending_size += uploads.front().size();
+                if (uploads.front().size() <= ND_COMPRESS_SIZE)
+                    pending.push_back(make_pair(false, uploads.front()));
+                else
+                    pending.push_back(make_pair(true, Deflate(uploads.front())));
+
+                pending_size += pending.back().second.size();
                 uploads.pop();
 
                 while (pending_size > nd_config.max_backlog) {
-                    pending_size -= pending.front().size();
+                    pending_size -= pending.front().second.size();
                     pending.pop_front();
                 }
             }
@@ -956,17 +960,15 @@ void ndUploadThread::Upload(void)
 
     do {
         if (nd_debug) nd_printf("%s: data %lu/%lu (%d of %d bytes)...\n",
-            tag.c_str(), ++xfer, total, pending.front().size(), pending_size);
+            tag.c_str(), ++xfer, total, pending.front().second.size(), pending_size);
 
-        if (pending.front().size() <= ND_COMPRESS_SIZE) {
+        if (!pending.front().first)
             curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers);
-            curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, pending.front().size());
-            curl_easy_setopt(ch, CURLOPT_POSTFIELDS, pending.front().data());
-        }
-        else {
+        else
             curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers_gz);
-            Deflate(pending.front());
-        }
+
+        curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, pending.front().second.size());
+        curl_easy_setopt(ch, CURLOPT_POSTFIELDS, pending.front().second.data());
 
         body_data.clear();
 
@@ -997,7 +999,8 @@ void ndUploadThread::Upload(void)
             if (nd_debug) {
                 FILE *hf = fopen("/tmp/rejected.json", "w");
                 if (hf != NULL) {
-                    fwrite(pending.front().data(), 1, pending.front().size(), hf);
+                    fwrite(pending.front().second.data(),
+                        1, pending.front().second.size(), hf);
                     fclose(hf);
                     nd_printf("Wrote rejected payload to: /tmp/rejected.json\n");
                 }
@@ -1008,13 +1011,13 @@ void ndUploadThread::Upload(void)
             return;
         }
 
-        pending_size -= pending.front().size();
+        pending_size -= pending.front().second.size();
         pending.pop_front();
     }
     while (pending.size() > 0);
 }
 
-void ndUploadThread::Deflate(const string &data)
+string ndUploadThread::Deflate(const string &data)
 {
     int rc;
     z_stream zs;
@@ -1049,19 +1052,19 @@ void ndUploadThread::Deflate(const string &data)
     if (rc != Z_STREAM_END)
         throw ndThreadException("deflate");
 
-    curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, buffer.size());
-    curl_easy_setopt(ch, CURLOPT_COPYPOSTFIELDS, buffer.data());
-
     if (nd_debug) {
         nd_printf("%s: payload compressed: %lu -> %lu\n",
             tag.c_str(), data.size(), buffer.size());
     }
+
+    return buffer;
 }
 
 void ndUploadThread::ProcessResponse(void)
 {
     ndJsonObject *json_obj = NULL;
     ndJsonObjectType json_type;
+    ndJsonObjectResult *json_result = NULL;
     ndJsonObjectFactory json_factory;
 
     try {
@@ -1070,6 +1073,18 @@ void ndUploadThread::ProcessResponse(void)
         nd_printf("JSON parse error: %s\n", e.what());
         if (nd_debug)
             nd_printf("Payload:\n\"%s\"\n", body_data.c_str());
+    }
+
+    switch (json_type) {
+    case ndJSON_OBJ_TYPE_OK:
+        break;
+    case ndJSON_OBJ_TYPE_RESULT:
+        if (nd_debug) break;
+        json_result = reinterpret_cast<ndJsonObjectResult *>(json_obj);
+        nd_printf("%s: [%d] %s\n", tag.c_str(),
+            json_result->GetCode(),
+            json_result->GetMessage().c_str());
+        break;
     }
 
     if (json_obj != NULL) delete json_obj;

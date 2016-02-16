@@ -304,7 +304,7 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
     int type = json_object_get_int(jtype);
     if (type <= ndJSON_OBJ_TYPE_NULL || type >= ndJSON_OBJ_TYPE_MAX)
         throw ndJsonParseException("Type field invalid value");
-    nd_printf("type: %d\n", type);
+    if (nd_debug) nd_printf("type: %d\n", type);
 
     switch (type) {
     case ndJSON_OBJ_TYPE_OK:
