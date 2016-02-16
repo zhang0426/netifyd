@@ -341,7 +341,8 @@ ndJsonObjectResult::ndJsonObjectResult(json_object *jdata)
         throw ndJsonParseException("Code field invalid value");
 
     code = (ndJsonObjectResultCode)icode;
-    nd_printf("code: %d\n", code);
+    if (nd_debug)
+        nd_printf("code: %d\n", code);
 
     if (!json_object_object_get_ex(jdata, "message", &jmessage))
         throw ndJsonParseException("Missing message field");
@@ -350,7 +351,9 @@ ndJsonObjectResult::ndJsonObjectResult(json_object *jdata)
         throw ndJsonParseException("Message field type mismatch");
 
     message = json_object_get_string(jmessage);
-    nd_printf("message: %s\n", message.c_str());
+
+    if (nd_debug)
+        nd_printf("message: %s\n", message.c_str());
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
