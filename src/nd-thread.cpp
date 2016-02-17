@@ -134,6 +134,13 @@ void ndFlow::hash(const string &device, string &digest, bool full_hash)
     sha1_init(&ctx);
     sha1_write(&ctx, (const char *)device.c_str(), device.size());
 
+    sha1_write(&ctx, (const char *)&version, sizeof(version));
+    sha1_write(&ctx, (const char *)&protocol, sizeof(protocol));
+    sha1_write(&ctx, (const char *)&vlan_id, sizeof(vlan_id));
+
+    sha1_write(&ctx, (const char *)&lower_mac, ETH_ALEN);
+    sha1_write(&ctx, (const char *)&upper_mac, ETH_ALEN);
+
     switch (version) {
     case 4:
         sha1_write(&ctx, (const char *)&lower_addr, sizeof(struct in_addr));
@@ -147,9 +154,6 @@ void ndFlow::hash(const string &device, string &digest, bool full_hash)
         break;
     }
 
-    sha1_write(&ctx, (const char *)&version, sizeof(version));
-    sha1_write(&ctx, (const char *)&protocol, sizeof(protocol));
-    sha1_write(&ctx, (const char *)&vlan_id, sizeof(vlan_id));
     sha1_write(&ctx, (const char *)&lower_port, sizeof(lower_port));
     sha1_write(&ctx, (const char *)&upper_port, sizeof(upper_port));
 
@@ -158,15 +162,16 @@ void ndFlow::hash(const string &device, string &digest, bool full_hash)
             (const char *)&detection_guessed, sizeof(detection_guessed));
         sha1_write(&ctx,
             (const char *)&detected_protocol, sizeof(ndpi_protocol));
-        if (strnlen(host_server_name, HOST_NAME_MAX)) {
+
+        if (host_server_name[0] != '\0') {
             sha1_write(&ctx,
                 host_server_name, strnlen(host_server_name, HOST_NAME_MAX));
         }
-        if (strnlen(ssl.client_cert, ND_SSL_CERTLEN)) {
+        if (ssl.client_cert[0] != '\0') {
             sha1_write(&ctx,
                 ssl.client_cert, strnlen(ssl.client_cert, ND_SSL_CERTLEN));
         }
-        if (strnlen(ssl.server_cert, ND_SSL_CERTLEN)) {
+        if (ssl.server_cert[0] != '\0') {
             sha1_write(&ctx,
                 ssl.server_cert, strnlen(ssl.server_cert, ND_SSL_CERTLEN));
         }
@@ -815,7 +820,7 @@ static size_t ndUploadThread_read_data(char *data, size_t size, size_t nmemb, vo
 }
 
 ndUploadThread::ndUploadThread()
-    : ndThread("Netify Sink", -1), headers(NULL), headers_gz(NULL), pending_size(0)
+    : ndThread("netify-sink", -1), headers(NULL), headers_gz(NULL), pending_size(0)
 {
     int rc;
 
@@ -830,13 +835,13 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
 
     if (nd_debug) {
+        curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, nd_curl_debug);
         curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
-        curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
         curl_easy_setopt(ch, CURLOPT_COOKIEJAR, ND_COOKIE_JAR);
     }
 
-    if (nd_debug || nd_config.ssl_verify_peer == false)
+    if (nd_config.ssl_verify_peer == false)
         curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
 
     ostringstream user_agent;

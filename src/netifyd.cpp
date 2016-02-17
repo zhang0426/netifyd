@@ -382,7 +382,7 @@ static void nd_json_add_flows(
         ndNetlinkAddressType lower_type, upper_type;
         lower_type = netlink_routes->ClassifyAddress(device, lower_addr);
         upper_type = netlink_routes->ClassifyAddress(device, upper_addr);
-#if 0
+#if 1
         switch (lower_type) {
         case ndNETLINK_ATYPE_UNKNOWN:
             nd_printf("%s: Lower address is: UNKNOWN\n", i->second->lower_ip);
