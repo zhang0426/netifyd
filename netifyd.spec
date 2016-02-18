@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.0
-Release: 7%{dist}
+Release: 9%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -39,7 +39,7 @@ Report bugs to: http://www.egloo.ca/bug_tracker
 ./autogen.sh
 ac_flags="--with-pic=inih --with-pic=ndpi"
 %if "0%{dist}" == "0.v7"
-ac_flags="$ac_flags --enable-cloud-sync"
+ac_flags="$ac_flags --enable-netify-sink"
 %endif
 %{configure} $ac_flags
 %build
