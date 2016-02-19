@@ -31,8 +31,8 @@
 #include <signal.h>
 #include <getopt.h>
 #include <sys/stat.h>
-#include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <errno.h>
 
@@ -50,14 +50,13 @@
 
 using namespace std;
 
-#define _ND_INTERNAL    1
-
 #include "netifyd.h"
 #include "nd-util.h"
-#include "nd-thread.h"
 #include "nd-inotify.h"
 #include "nd-netlink.h"
 #include "nd-json.h"
+#include "nd-flow.h"
+#include "nd-thread.h"
 
 bool nd_debug = false;
 pthread_mutex_t *nd_output_mutex = NULL;

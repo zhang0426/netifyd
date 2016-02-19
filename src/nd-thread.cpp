@@ -23,6 +23,8 @@
 #include <cerrno>
 #include <stdexcept>
 #include <iostream>
+#include <map>
+#include <vector>
 #include <unordered_map>
 #include <queue>
 #include <deque>
@@ -40,6 +42,7 @@
 #include <netinet/udp.h>
 #include <net/if.h>
 #include <linux/if_ether.h>
+#include <linux/netlink.h>
 
 #include <curl/curl.h>
 #include <json.h>
@@ -51,10 +54,10 @@ extern "C" {
 
 using namespace std;
 
-#define _ND_INTERNAL    1
-
 #include "netifyd.h"
 #include "nd-util.h"
+#include "nd-netlink.h"
+#include "nd-flow.h"
 #include "nd-sha1.h"
 #include "nd-json.h"
 #include "nd-thread.h"
@@ -124,85 +127,6 @@ static int nd_curl_debug(CURL *ch, curl_infotype type, char *data, size_t size, 
     }
 
     return 0;
-}
-
-void ndFlow::hash(const string &device, string &digest, bool full_hash)
-{
-    sha1 ctx;
-    uint8_t *_digest;
-
-    sha1_init(&ctx);
-    sha1_write(&ctx, (const char *)device.c_str(), device.size());
-
-    sha1_write(&ctx, (const char *)&version, sizeof(version));
-    sha1_write(&ctx, (const char *)&protocol, sizeof(protocol));
-    sha1_write(&ctx, (const char *)&vlan_id, sizeof(vlan_id));
-
-    sha1_write(&ctx, (const char *)&lower_mac, ETH_ALEN);
-    sha1_write(&ctx, (const char *)&upper_mac, ETH_ALEN);
-
-    switch (version) {
-    case 4:
-        sha1_write(&ctx, (const char *)&lower_addr, sizeof(struct in_addr));
-        sha1_write(&ctx, (const char *)&upper_addr, sizeof(struct in_addr));
-        break;
-    case 6:
-        sha1_write(&ctx, (const char *)&lower_addr6, sizeof(struct in6_addr));
-        sha1_write(&ctx, (const char *)&upper_addr6, sizeof(struct in6_addr));
-        break;
-    default:
-        break;
-    }
-
-    sha1_write(&ctx, (const char *)&lower_port, sizeof(lower_port));
-    sha1_write(&ctx, (const char *)&upper_port, sizeof(upper_port));
-
-    if (full_hash) {
-        sha1_write(&ctx,
-            (const char *)&detection_guessed, sizeof(detection_guessed));
-        sha1_write(&ctx,
-            (const char *)&detected_protocol, sizeof(ndpi_protocol));
-
-        if (host_server_name[0] != '\0') {
-            sha1_write(&ctx,
-                host_server_name, strnlen(host_server_name, HOST_NAME_MAX));
-        }
-        if (ssl.client_cert[0] != '\0') {
-            sha1_write(&ctx,
-                ssl.client_cert, strnlen(ssl.client_cert, ND_SSL_CERTLEN));
-        }
-        if (ssl.server_cert[0] != '\0') {
-            sha1_write(&ctx,
-                ssl.server_cert, strnlen(ssl.server_cert, ND_SSL_CERTLEN));
-        }
-    }
-
-    _digest = sha1_result(&ctx);
-    digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
-}
-
-void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
-{
-    char *p = NULL, buffer[64];
-
-    if (detected_protocol.master_protocol) {
-        ndpi_protocol2name(ndpi,
-            detected_protocol, buffer, sizeof(buffer));
-        p = buffer;
-    }
-    else
-        p = ndpi_get_proto_name(ndpi, detected_protocol.protocol);
-
-    nd_printf(
-        "%s: %s%s: %s:%hu <-> %s:%hu [Host: %s] [SSL/C: %s] [SSL/S: %s]\n", tag, p,
-        (detection_guessed &&
-            detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN) ? " [GUESSED]" : "",
-        lower_ip, ntohs(lower_port),
-        upper_ip, ntohs(upper_port),
-        (host_server_name[0] != '\0') ? host_server_name : "N/A",
-        (ssl.client_cert[0] != '\0') ? ssl.client_cert : "N/A",
-        (ssl.server_cert[0] != '\0') ? ssl.server_cert : "N/A"
-    );
 }
 
 ndThread::ndThread(const string &tag, long cpu)
@@ -757,9 +681,9 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (new_flow->protocol == IPPROTO_TCP
             && new_flow->detected_protocol.protocol != NDPI_PROTOCOL_DNS) {
-            snprintf(new_flow->ssl.client_cert, ND_SSL_CERTLEN,
+            snprintf(new_flow->ssl.client_cert, ND_FLOW_SSL_CERTLEN,
                 "%s", new_flow->ndpi_flow->protos.ssl.client_certificate);
-            snprintf(new_flow->ssl.server_cert, ND_SSL_CERTLEN,
+            snprintf(new_flow->ssl.server_cert, ND_FLOW_SSL_CERTLEN,
                 "%s", new_flow->ndpi_flow->protos.ssl.server_certificate);
         }
 
