@@ -24,6 +24,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/file.h>
+#include <fcntl.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include <json.h>
 
@@ -267,6 +272,47 @@ void ndJson::ToString(string &output)
         root,
         (nd_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
     );
+}
+
+void ndJson::SaveToFile(const string &filename)
+{
+    int fd = open(filename.c_str(), O_WRONLY);
+
+    if (fd < 0) {
+        if (errno != ENOENT)
+            throw runtime_error(strerror(errno));
+        fd = open(filename.c_str(), O_WRONLY | O_CREAT, ND_JSON_FILE_MODE);
+        if (fd < 0)
+            throw runtime_error(strerror(errno));
+
+        struct passwd *owner_user = getpwnam(ND_JSON_FILE_USER);
+        if (owner_user == NULL)
+            throw runtime_error(strerror(errno));
+
+        struct group *owner_group = getgrnam(ND_JSON_FILE_GROUP);
+        if (owner_group == NULL)
+            throw runtime_error(strerror(errno));
+
+        if (fchown(fd, owner_user->pw_uid, owner_group->gr_gid) < 0)
+            throw runtime_error(strerror(errno));
+    }
+
+    if (flock(fd, LOCK_EX) < 0)
+        throw runtime_error(strerror(errno));
+
+    if (lseek(fd, 0, SEEK_SET) < 0)
+        throw runtime_error(strerror(errno));
+    if (ftruncate(fd, 0) < 0)
+        throw runtime_error(strerror(errno));
+
+    string output;
+    ToString(output);
+
+    if (write(fd, (const void *)output.c_str(), output.length()) < 0)
+        throw runtime_error(strerror(errno));
+
+    flock(fd, LOCK_UN);
+    close(fd);
 }
 
 ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject **result)

@@ -30,13 +30,9 @@
 #include <time.h>
 #include <signal.h>
 #include <getopt.h>
-#include <fcntl.h>
-#include <pwd.h>
-#include <grp.h>
-#include <sys/file.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <errno.h>
 
@@ -77,13 +73,10 @@ static nd_stats stats;
 static nd_threads threads;
 static ndDetectionStats totals;
 static ndUploadThread *thread_upload = NULL;
-static ndInotify *inotify_files = NULL;
-static ndNetlink *netlink_routes = NULL;
+static ndInotify *inotify = NULL;
+static ndNetlink *netlink = NULL;
 
 static char *nd_conf_filename = NULL;
-static char *nd_json_filename = NULL;
-
-static int nd_stats_interval = ND_STATS_INTERVAL;
 
 ndGlobalConfig nd_config;
 
@@ -166,7 +159,7 @@ static int nd_config_load(void)
     if (url_upload.size() > 0)
         nd_config.url_upload = strdup(url_upload.c_str());
 
-    nd_stats_interval = reader.GetInteger(
+    nd_config.update_interval = (unsigned)reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);
 
     nd_config.max_backlog = reader.GetInteger(
@@ -219,47 +212,6 @@ void ndDetectionStats::print(const char *tag)
     nd_printf("Discard bytes: %lu\n", pkt_discard_bytes);
 }
 
-static void nd_json_write(ndJson *json)
-{
-    int fd = open(nd_json_filename, O_WRONLY);
-
-    if (fd < 0) {
-        if (errno != ENOENT)
-            throw runtime_error(strerror(errno));
-        fd = open(nd_json_filename, O_WRONLY | O_CREAT, ND_JSON_FILE_MODE);
-        if (fd < 0)
-            throw runtime_error(strerror(errno));
-
-        struct passwd *owner_user = getpwnam(ND_JSON_FILE_USER);
-        if (owner_user == NULL)
-            throw runtime_error(strerror(errno));
-
-        struct group *owner_group = getgrnam(ND_JSON_FILE_GROUP);
-        if (owner_group == NULL)
-            throw runtime_error(strerror(errno));
-
-        if (fchown(fd, owner_user->pw_uid, owner_group->gr_gid) < 0)
-            throw runtime_error(strerror(errno));
-    }
-
-    if (flock(fd, LOCK_EX) < 0)
-        throw runtime_error(strerror(errno));
-
-    if (lseek(fd, 0, SEEK_SET) < 0)
-        throw runtime_error(strerror(errno));
-    if (ftruncate(fd, 0) < 0)
-        throw runtime_error(strerror(errno));
-
-    string json_string;
-    json->ToString(json_string);
-
-    if (write(fd, (const void *)json_string.c_str(), json_string.length()) < 0)
-        throw runtime_error(strerror(errno));
-
-    flock(fd, LOCK_UN);
-    close(fd);
-}
-
 static void nd_json_add_file(
     json_object *parent, const string &type, const string &filename)
 {
@@ -290,9 +242,9 @@ static void nd_json_add_file(
 
 static void nd_json_upload(ndJson *json)
 {
-    if (inotify_files->EventOccured(ND_WATCH_HOSTS))
+    if (inotify->EventOccured(ND_WATCH_HOSTS))
         nd_json_add_file(json->GetRoot(), "hosts", ND_WATCH_HOSTS);
-    if (inotify_files->EventOccured(ND_WATCH_ETHERS))
+    if (inotify->EventOccured(ND_WATCH_ETHERS))
         nd_json_add_file(json->GetRoot(), "ethers", ND_WATCH_ETHERS);
 
     string json_string;
@@ -380,8 +332,8 @@ static void nd_json_add_flows(
         }
 
         ndNetlinkAddressType lower_type, upper_type;
-        lower_type = netlink_routes->ClassifyAddress(device, lower_addr);
-        upper_type = netlink_routes->ClassifyAddress(device, upper_addr);
+        lower_type = netlink->ClassifyAddress(device, lower_addr);
+        upper_type = netlink->ClassifyAddress(device, upper_addr);
 #if 0
         switch (lower_type) {
         case ndNETLINK_ATYPE_UNKNOWN:
@@ -640,11 +592,11 @@ static void nd_dump_stats(void)
     }
 
     try {
-        nd_json_write(&json);
+        json.SaveToFile(nd_config.json_filename);
     }
     catch (runtime_error &e) {
         nd_printf("Error writing JSON file: %s: %s\n",
-            nd_json_filename, e.what());
+            nd_config.json_filename, e.what());
     }
 
 #ifdef USE_NETIFY_SINK
@@ -782,10 +734,10 @@ int main(int argc, char *argv[])
             devices.push_back(optarg);
             break;
         case 'j':
-            nd_json_filename = strdup(optarg);
+            nd_config.json_filename = strdup(optarg);
             break;
         case 'i':
-            nd_stats_interval = atoi(optarg);
+            nd_config.update_interval = atoi(optarg);
             break;
         case 'c':
             nd_conf_filename = strdup(optarg);
@@ -798,8 +750,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (nd_json_filename == NULL)
-        nd_json_filename = strdup(ND_JSON_FILE_NAME);
+    if (nd_config.json_filename == NULL)
+        nd_config.json_filename = strdup(ND_JSON_FILE_NAME);
     if (nd_conf_filename == NULL)
         nd_conf_filename = strdup(ND_CONF_FILE_NAME);
 
@@ -860,10 +812,10 @@ int main(int argc, char *argv[])
     }
 
     try {
-        inotify_files = new ndInotify();
-        inotify_files->AddWatch(ND_WATCH_HOSTS);
-        inotify_files->AddWatch(ND_WATCH_ETHERS);
-        inotify_files->RefreshWatches();
+        inotify = new ndInotify();
+        inotify->AddWatch(ND_WATCH_HOSTS);
+        inotify->AddWatch(ND_WATCH_ETHERS);
+        inotify->RefreshWatches();
     }
     catch (exception &e) {
         nd_printf("Error creating file watches: %s\n", e.what());
@@ -871,7 +823,7 @@ int main(int argc, char *argv[])
     }
 
     try {
-        netlink_routes = new ndNetlink(&devices);
+        netlink = new ndNetlink(&devices);
     }
     catch (exception &e) {
         nd_printf("Error creating netlink watch: %s\n", e.what());
@@ -908,14 +860,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    it_spec.it_value.tv_sec = nd_stats_interval;
+    it_spec.it_value.tv_sec = nd_config.update_interval;
     it_spec.it_value.tv_nsec = 0;
-    it_spec.it_interval.tv_sec = nd_stats_interval;
+    it_spec.it_interval.tv_sec = nd_config.update_interval;
     it_spec.it_interval.tv_nsec = 0;
 
     timer_settime(timer_id, 0, &it_spec, NULL);
 
-    netlink_routes->Refresh();
+    netlink->Refresh();
 
     while (!terminate) {
         int sig;
@@ -943,18 +895,18 @@ int main(int argc, char *argv[])
 
         if (sig == sigev.sigev_signo) {
             nd_dump_stats();
-            inotify_files->RefreshWatches();
+            inotify->RefreshWatches();
             continue;
         }
 
         if (sig == SIGIO) {
-            if (inotify_files->GetDescriptor() == si.si_fd) {
-                inotify_files->ProcessEvent();
+            if (inotify->GetDescriptor() == si.si_fd) {
+                inotify->ProcessEvent();
                 continue;
             }
-            else if (netlink_routes->GetDescriptor() == si.si_fd) {
-                if (netlink_routes->ProcessEvent()) {
-                    if (nd_debug) netlink_routes->Dump();
+            else if (netlink->GetDescriptor() == si.si_fd) {
+                if (netlink->ProcessEvent()) {
+                    if (nd_debug) netlink->Dump();
                 }
                 continue;
             }

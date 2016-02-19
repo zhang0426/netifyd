@@ -57,6 +57,8 @@ typedef struct {
     char *url_upload;
     size_t max_backlog;
     bool ssl_verify_peer;
+    char *json_filename;
+    unsigned update_interval;
 } ndGlobalConfig;
 
 #ifdef _ND_INTERNAL

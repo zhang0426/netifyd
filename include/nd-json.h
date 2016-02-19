@@ -64,6 +64,8 @@ public:
 
     void ToString(string &output);
 
+    void SaveToFile(const string &filename);
+
     json_object *GetRoot(void) { return root; }
 
 protected:
