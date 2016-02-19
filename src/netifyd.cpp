@@ -196,20 +196,20 @@ static int nd_config_load(void)
 
 void ndDetectionStats::print(const char *tag)
 {
-    nd_printf("          RAW: %lu\n", pkt_raw);
-    nd_printf("          ETH: %lu\n", pkt_eth);
-    nd_printf("           IP: %lu\n", pkt_ip);
-    nd_printf("          TCP: %lu\n", pkt_tcp);
-    nd_printf("          UDP: %lu\n", pkt_udp);
-    nd_printf("         MPLS: %lu\n", pkt_mpls);
-    nd_printf("        PPPoE: %lu\n", pkt_pppoe);
-    nd_printf("         VLAN: %lu\n", pkt_vlan);
-    nd_printf("        Frags: %lu\n", pkt_frags);
-    nd_printf("      Largest: %u\n", pkt_maxlen);
-    nd_printf("     IP bytes: %u\n", pkt_ip_bytes);
-    nd_printf("   Wire bytes: %u\n", pkt_wire_bytes);
-    nd_printf("      Discard: %lu\n", pkt_discard);
-    nd_printf("Discard bytes: %lu\n", pkt_discard_bytes);
+    nd_printf("          RAW: %llu\n", pkt_raw);
+    nd_printf("          ETH: %llu\n", pkt_eth);
+    nd_printf("           IP: %llu\n", pkt_ip);
+    nd_printf("          TCP: %llu\n", pkt_tcp);
+    nd_printf("          UDP: %llu\n", pkt_udp);
+    nd_printf("         MPLS: %llu\n", pkt_mpls);
+    nd_printf("        PPPoE: %llu\n", pkt_pppoe);
+    nd_printf("         VLAN: %llu\n", pkt_vlan);
+    nd_printf("        Frags: %llu\n", pkt_frags);
+    nd_printf("      Largest: %lu\n", pkt_maxlen);
+    nd_printf("     IP bytes: %llu\n", pkt_ip_bytes);
+    nd_printf("   Wire bytes: %llu\n", pkt_wire_bytes);
+    nd_printf("      Discard: %llu\n", pkt_discard);
+    nd_printf("Discard bytes: %llu\n", pkt_discard_bytes);
 }
 
 static void nd_json_add_file(
