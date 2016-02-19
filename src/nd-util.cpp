@@ -31,8 +31,8 @@
 
 using namespace std;
 
-#include "nd-util.h"
 #include "nd-sha1.h"
+#include "nd-util.h"
 
 extern bool nd_debug;
 

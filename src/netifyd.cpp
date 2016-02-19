@@ -51,12 +51,12 @@
 using namespace std;
 
 #include "netifyd.h"
-#include "nd-util.h"
 #include "nd-inotify.h"
 #include "nd-netlink.h"
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#include "nd-util.h"
 
 bool nd_debug = false;
 pthread_mutex_t *nd_output_mutex = NULL;
