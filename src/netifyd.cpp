@@ -556,7 +556,7 @@ static void nd_json_add_flows(
 
 static void nd_dump_stats(void)
 {
-    uint64_t flow_count = 0;
+    uint32_t flow_count = 0;
 
     ndJson json;
     json_object *json_obj;
@@ -612,7 +612,7 @@ static void nd_dump_stats(void)
     if (nd_debug) {
         nd_printf("\nCumulative Totals:\n");
         totals.print();
-        nd_printf("        Flows: %llu\n\n", flow_count);
+        nd_printf("        Flows: %lu\n\n", flow_count);
     }
 }
 
