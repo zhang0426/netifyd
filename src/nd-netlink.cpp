@@ -213,6 +213,7 @@ ndNetlink::ndNetlink(const vector<string> &devices)
 
     // Add broadcast addresses
     AddDevice(_ND_NETLINK_BROADCAST);
+    AddAddress(AF_INET, _ND_NETLINK_BROADCAST, "169.254.255.255");
     AddAddress(AF_INET, _ND_NETLINK_BROADCAST, "255.255.255.255");
 }
 
