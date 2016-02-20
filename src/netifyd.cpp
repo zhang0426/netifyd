@@ -475,8 +475,8 @@ static void nd_json_add_flows(
         json.AddObject(json_flow, lower_ip, i->second->lower_ip);
         json.AddObject(json_flow, upper_ip, i->second->upper_ip);
 
-        json.AddObject(json_flow, lower_port, (int32_t)i->second->lower_port);
-        json.AddObject(json_flow, upper_port, (int32_t)i->second->upper_port);
+        json.AddObject(json_flow, lower_port, (int32_t)ntohs(i->second->lower_port));
+        json.AddObject(json_flow, upper_port, (int32_t)ntohs(i->second->upper_port));
 
         json.AddObject(json_flow, lower_bytes, i->second->lower_bytes);
         json.AddObject(json_flow, upper_bytes, i->second->upper_bytes);
