@@ -47,6 +47,7 @@ extern bool nd_debug;
 
 #define _ND_NETLINK_PRIVATE     "__nd_private__"
 #define _ND_NETLINK_MULTICAST   "__nd_multicast__"
+#define _ND_NETLINK_BROADCAST   "__nd_broadcast__"
 
 static void print_binary(uint32_t byte)
 {
@@ -209,6 +210,10 @@ ndNetlink::ndNetlink(const vector<string> &devices)
     // Add multicast networks
     AddNetwork(AF_INET, _ND_NETLINK_MULTICAST, "224.0.0.0", 4);
     AddNetwork(AF_INET6, _ND_NETLINK_MULTICAST, "ff00::", 8);
+
+    // Add broadcast addresses
+    AddDevice(_ND_NETLINK_BROADCAST);
+    AddAddress(AF_INET, _ND_NETLINK_BROADCAST, "255.255.255.255");
 }
 
 ndNetlink::~ndNetlink()
@@ -216,8 +221,10 @@ ndNetlink::~ndNetlink()
     if (nd >= 0) close(nd);
     for (ndNetlinkDevices::const_iterator i = devices.begin();
         i != devices.end(); i++) {
-        if (i->second != NULL) pthread_mutex_destroy(i->second);
+        if (i->second != NULL) {
+            pthread_mutex_destroy(i->second);
             delete i->second;
+        }
     }
 }
 
@@ -357,17 +364,33 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
         return ndNETLINK_ATYPE_ERROR;
     }
 
-    if (addr->ss_family == AF_INET) {
-        const struct sockaddr_in *_addr;
-        _addr = reinterpret_cast<const struct sockaddr_in *>(addr);
-        if (_addr->sin_addr.s_addr == 0xffffffff) // 255.255.255.255
-            return ndNETLINK_ATYPE_BROADCAST;
+    vector<ndNetlinkNetworkAddr *>::const_iterator n;
+    ndNetlinkNetworks::const_iterator net_list;
+
+    vector<struct sockaddr_storage *>::const_iterator a;
+    ndNetlinkAddresses::const_iterator addr_list;
+
+    addr_list = addresses.find(_ND_NETLINK_BROADCAST);
+    if (addr_list == addresses.end()) return ndNETLINK_ATYPE_ERROR;
+
+    pthread_mutex_lock(lock->second);
+
+    // Is addr a broadcast address?
+    for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
+
+        if ((*a)->ss_family != addr->ss_family) continue;
+
+        ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
+        if (_addr1 != _addr2) continue;
+
+        type = ndNETLINK_ATYPE_BROADCAST;
+        break;
     }
 
-    vector<ndNetlinkNetworkAddr *>::const_iterator n;
-    vector<struct sockaddr_storage *>::const_iterator a;
+    pthread_mutex_unlock(lock->second);
+    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
-    ndNetlinkAddresses::const_iterator addr_list = addresses.find(device);
+    addr_list = addresses.find(device);
     if (addr_list == addresses.end()) return ndNETLINK_ATYPE_ERROR;
 
     pthread_mutex_lock(lock->second);
@@ -387,7 +410,7 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
     pthread_mutex_unlock(lock->second);
     if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
-    ndNetlinkNetworks::const_iterator net_list = networks.find(_ND_NETLINK_MULTICAST);
+    net_list = networks.find(_ND_NETLINK_MULTICAST);
     if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
 
     // Is addr a member of a multicast network?
@@ -724,6 +747,7 @@ bool ndNetlink::ParseMessage(struct ifaddrmsg *addrm, size_t offset,
 {
     bool addr_set = false;
     char ifname[IFNAMSIZ];
+    struct sockaddr_storage addr_bcast;
 
     memset(&addr, 0, sizeof(struct sockaddr_storage));
     addr.ss_family = AF_UNSPEC;
@@ -750,9 +774,11 @@ bool ndNetlink::ParseMessage(struct ifaddrmsg *addrm, size_t offset,
 //        case IFA_LABEL:
 //            nd_printf("%s: IFA_LABEL set\n", ifname);
 //            break;
-//        case IFA_BROADCAST:
+        case IFA_BROADCAST:
 //            nd_printf("%s: IFA_BROADCAST set\n", ifname);
-//            break;
+            if (CopyNetlinkAddress(addrm->ifa_family, addr_bcast, RTA_DATA(rta)))
+                AddAddress(_ND_NETLINK_BROADCAST, addr_bcast);
+            break;
 //        case IFA_ANYCAST:
 //            nd_printf("%s: IFA_ANYCAST set\n", ifname);
 //            break;
@@ -910,6 +936,53 @@ bool ndNetlink::AddAddress(struct nlmsghdr *nlh)
 
     pthread_mutex_lock(lock->second);
     addresses[device].push_back(entry);
+    pthread_mutex_unlock(lock->second);
+
+    return true;
+}
+
+bool ndNetlink::AddAddress(
+    sa_family_t family, const string &type, const string &saddr)
+{
+    struct sockaddr_storage *entry, addr;
+    struct sockaddr_in *saddr_ip4;
+    struct sockaddr_in6 *saddr_ip6;
+
+    memset(&addr, 0, sizeof(struct sockaddr_storage));
+
+    addr.ss_family = family;
+    saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&addr);;
+    saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&addr);;
+
+    switch (family) {
+    case AF_INET:
+        if (inet_pton(AF_INET, saddr.c_str(), &saddr_ip4->sin_addr) < 0)
+            return false;
+        break;
+    case AF_INET6:
+        if (inet_pton(AF_INET6, saddr.c_str(), &saddr_ip6->sin6_addr) < 0)
+            return false;
+        break;
+    default:
+        return false;
+    }
+
+    ND_NETLINK_ADDRALLOC(entry, addr);
+    addresses[type].push_back(entry);
+
+    return true;
+}
+
+bool ndNetlink::AddAddress(const string &type, const struct sockaddr_storage &addr)
+{
+    struct sockaddr_storage *entry;
+
+    ndNetlinkDevices::const_iterator lock = devices.find(type);
+    if (lock == devices.end()) return false;
+
+    pthread_mutex_lock(lock->second);
+    ND_NETLINK_ADDRALLOC(entry, addr);
+    addresses[type].push_back(entry);
     pthread_mutex_unlock(lock->second);
 
     return true;

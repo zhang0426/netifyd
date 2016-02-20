@@ -111,6 +111,8 @@ protected:
     bool RemoveNetwork(struct nlmsghdr *nlh);
 
     bool AddAddress(struct nlmsghdr *nlh);
+    bool AddAddress(sa_family_t family, const string &type, const string &saddr);
+    bool AddAddress(const string &type, const struct sockaddr_storage &addr);
     bool RemoveAddress(struct nlmsghdr *nlh);
 
     void PrintAddress(const struct sockaddr_storage *addr);
