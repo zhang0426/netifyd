@@ -535,15 +535,15 @@ static void nd_json_add_flows(
                 "host_server_name", i->second->host_server_name);
         }
 
-        if((i->second->ssl.client_cert[0] != '\0') ||
+        if ((i->second->ssl.client_cert[0] != '\0') ||
             (i->second->ssl.server_cert[0] != '\0')) {
 
             json_object *ssl = json.CreateObject(json_flow, "ssl");
 
-            if(i->second->ssl.client_cert[0] != '\0')
+            if (i->second->ssl.client_cert[0] != '\0')
                 json.AddObject(ssl, "client", i->second->ssl.client_cert);
 
-            if(i->second->ssl.server_cert[0] != '\0')
+            if (i->second->ssl.server_cert[0] != '\0')
                 json.AddObject(ssl, "server", i->second->ssl.server_cert);
         }
 
@@ -822,7 +822,7 @@ int main(int argc, char *argv[])
     }
 
     try {
-        netlink = new ndNetlink(&devices);
+        netlink = new ndNetlink(devices);
     }
     catch (exception &e) {
         nd_printf("Error creating netlink watch: %s\n", e.what());

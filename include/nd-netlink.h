@@ -19,11 +19,17 @@
 
 #define ND_NETLINK_BUFSIZ       4096
 
-#define ND_NETLINK_NETALLOC(e, a)  { \
+#define ND_NETLINK_DEVALLOC(m) { \
+    m = new pthread_mutex_t; \
+    if (m == NULL) throw ndNetlinkException(strerror(ENOMEM)); \
+    int rc = pthread_mutex_init(m, NULL); \
+    if (rc != 0) throw ndNetlinkException(strerror(rc)); }
+
+#define ND_NETLINK_NETALLOC(e, a) { \
     e = new ndNetlinkNetworkAddr(a); \
     if (e == NULL) throw ndNetlinkException(strerror(ENOMEM)); }
 
-#define ND_NETLINK_ADDRALLOC(e, a)  { \
+#define ND_NETLINK_ADDRALLOC(e, a) { \
     e = new struct sockaddr_storage(a); \
     if (e == NULL) throw ndNetlinkException(strerror(ENOMEM)); }
 
@@ -47,8 +53,10 @@ typedef struct ndNetlinkNetworkAddr {
     };
 
     inline bool operator==(const ndNetlinkNetworkAddr &n) const;
+    inline bool operator!=(const ndNetlinkNetworkAddr &n) const;
 } ndNetlinkNetworkAddr;
 
+typedef map<string, pthread_mutex_t *> ndNetlinkDevices;
 typedef map<string, vector<ndNetlinkNetworkAddr *> > ndNetlinkNetworks;
 typedef map<string, vector<struct sockaddr_storage *> > ndNetlinkAddresses;
 
@@ -68,7 +76,7 @@ enum ndNetlinkAddressType
 class ndNetlink
 {
 public:
-    ndNetlink(vector<string> *devices);
+    ndNetlink(const vector<string> &devices);
     virtual ~ndNetlink();
 
     int GetDescriptor(void) { return nd; }
@@ -95,6 +103,8 @@ protected:
     bool ParseMessage(struct ifaddrmsg *addrm, size_t offset,
         string &device, struct sockaddr_storage &addr);
 
+    bool AddDevice(const string &device);
+
     bool AddNetwork(struct nlmsghdr *nlh);
     bool AddNetwork(sa_family_t family,
         const string &type, const string &saddr, uint8_t length);
@@ -109,8 +119,8 @@ protected:
     unsigned seq;
     struct sockaddr_nl sa;
     uint8_t buffer[ND_NETLINK_BUFSIZ];
-    vector<string> *devices;
 
+    ndNetlinkDevices devices;
     ndNetlinkNetworks networks;
     ndNetlinkAddresses addresses;
 };

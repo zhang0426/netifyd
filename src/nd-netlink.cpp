@@ -31,6 +31,7 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <netdb.h>
+#include <pthread.h>
 
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -150,8 +151,73 @@ inline bool ndNetlinkNetworkAddr::operator==(const ndNetlinkNetworkAddr &n) cons
     return (rc == 0);
 }
 
-ndNetlink::ndNetlink(vector<string> *devices)
-    : nd(-1), seq(0), devices(devices)
+inline bool ndNetlinkNetworkAddr::operator!=(const ndNetlinkNetworkAddr &n) const
+{
+    int rc = -1;
+    const struct sockaddr_in *ipv4_addr1, *ipv4_addr2;
+    const struct sockaddr_in6 *ipv6_addr1, *ipv6_addr2;
+
+    if (this->length == n.length) {
+#if 0
+        if (nd_debug) {
+            print_address(&this->network);
+            nd_printf(" != ");
+            print_address(&n.network);
+            nd_printf(" [length mis-match]\n");
+        }
+#endif
+        return false;
+    }
+
+    if (this->network.ss_family == n.network.ss_family) {
+#if 0
+        if (nd_debug) {
+            print_address(&this->network);
+            nd_printf(" != ");
+            print_address(&n.network);
+            nd_printf(" [family mis-match]\n");
+        }
+#endif
+        return false;
+    }
+
+    switch (this->network.ss_family) {
+    case AF_INET:
+        ipv4_addr1 = reinterpret_cast<const struct sockaddr_in *>(&this->network);
+        ipv4_addr2 = reinterpret_cast<const struct sockaddr_in *>(&n.network);
+        rc = memcmp(
+            &ipv4_addr1->sin_addr, &ipv4_addr2->sin_addr, sizeof(struct in_addr));
+        break;
+    case AF_INET6:
+        ipv6_addr1 = reinterpret_cast<const struct sockaddr_in6 *>(&this->network);
+        ipv6_addr2 = reinterpret_cast<const struct sockaddr_in6 *>(&n.network);
+        rc = memcmp(
+            &ipv6_addr1->sin6_addr, &ipv6_addr2->sin6_addr, sizeof(struct in6_addr));
+        break;
+    default:
+#if 0
+        if (nd_debug) {
+            print_address(&this->network);
+            nd_printf(" != ");
+            print_address(&n.network);
+            nd_printf(" [unsupported family]\n");
+        }
+#endif
+        return true;
+    }
+#if 0
+    if (rc != 0 && nd_debug) {
+        print_address(&this->network);
+        nd_printf(" != ");
+        print_address(&n.network);
+        nd_printf(" [%d]\n", rc);
+    }
+#endif
+    return (rc != 0);
+}
+
+ndNetlink::ndNetlink(const vector<string> &devices)
+    : nd(-1), seq(0)
 {
     int rc;
 
@@ -197,6 +263,9 @@ ndNetlink::ndNetlink(vector<string> *devices)
         throw ndNetlinkException(strerror(rc));
     }
 
+    for (vector<string>::const_iterator i = devices.begin(); i != devices.end(); i++)
+        AddDevice((*i));
+
     // Add private networks for when all else fails...
     AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "10.0.0.0", 8);
     AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "172.16.0.0", 12);
@@ -211,6 +280,11 @@ ndNetlink::ndNetlink(vector<string> *devices)
 ndNetlink::~ndNetlink()
 {
     if (nd >= 0) close(nd);
+    for (ndNetlinkDevices::const_iterator i = devices.begin();
+        i != devices.end(); i++) {
+        if (i->second != NULL) pthread_mutex_destroy(i->second);
+            delete i->second;
+    }
 }
 
 void ndNetlink::Refresh(void)
@@ -338,6 +412,11 @@ bool ndNetlink::ProcessEvent(void)
 ndNetlinkAddressType ndNetlink::ClassifyAddress(
     const string &device, const struct sockaddr_storage *addr)
 {
+    ndNetlinkAddressType type = ndNETLINK_ATYPE_UNKNOWN;
+
+    ndNetlinkDevices::const_iterator lock = devices.find(device);
+    if (lock == devices.end()) return ndNETLINK_ATYPE_ERROR;
+
     // Paranoid AF_* check...
     if (addr->ss_family != AF_INET && addr->ss_family != AF_INET6) {
         nd_printf("WARNING: Address in unknown family: %hhu\n", addr->ss_family);
@@ -351,83 +430,82 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
             return ndNETLINK_ATYPE_BROADCAST;
     }
 
+    vector<ndNetlinkNetworkAddr *>::const_iterator n;
+    vector<struct sockaddr_storage *>::const_iterator a;
+
+    ndNetlinkAddresses::const_iterator addr_list = addresses.find(device);
+    if (addr_list == addresses.end()) return ndNETLINK_ATYPE_ERROR;
+
+    pthread_mutex_lock(lock->second);
+
     // Is addr a local address to this device?
-    for (ndNetlinkAddresses::iterator i = addresses.begin();
-        i != addresses.end(); i++) {
+    for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
 
-        if (i->first != device) continue;
+        if ((*a)->ss_family != addr->ss_family) continue;
 
-        for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
-            j != i->second.end(); j++) {
+        ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
+        if (_addr1 != _addr2) continue;
 
-            if ((*j)->ss_family != addr->ss_family) continue;
-
-            ndNetlinkNetworkAddr _addr1(addr), _addr2((*j));
-            
-            if (_addr1 == _addr2) return ndNETLINK_ATYPE_LOCALIP;
-        }
-
+        type = ndNETLINK_ATYPE_LOCALIP;
         break;
     }
+
+    pthread_mutex_unlock(lock->second);
+    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
+
+    ndNetlinkNetworks::const_iterator net_list = networks.find(_ND_NETLINK_MULTICAST);
+    if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
 
     // Is addr a member of a multicast network?
-    for (ndNetlinkNetworks::iterator i = networks.begin();
-        i != networks.end(); i++) {
+    for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
 
-        if (i->first != _ND_NETLINK_MULTICAST) continue;
+        if ((*n)->network.ss_family != addr->ss_family) continue;
 
-        for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
-            j != i->second.end(); j++) {
+        if (! InNetwork(
+            (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
 
-            if ((*j)->network.ss_family != addr->ss_family) continue;
-
-            if (InNetwork(
-                (*j)->network.ss_family, (*j)->length, &(*j)->network, addr))
-                return ndNETLINK_ATYPE_MULTICAST;
-        }
-
+        type = ndNETLINK_ATYPE_MULTICAST;
         break;
     }
+
+    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
+
+    net_list = networks.find(device);
+    if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
+
+    pthread_mutex_lock(lock->second);
 
     // Is addr a member of a local network to this device?
-    for (ndNetlinkNetworks::iterator i = networks.begin();
-        i != networks.end(); i++) {
+    for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
 
-        if (i->first != device) continue;
+        if ((*n)->network.ss_family != addr->ss_family) continue;
 
-        for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
-            j != i->second.end(); j++) {
+        if (! InNetwork(
+            (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
 
-            if ((*j)->network.ss_family != addr->ss_family) continue;
-
-            if (InNetwork(
-                (*j)->network.ss_family, (*j)->length, &(*j)->network, addr))
-                return ndNETLINK_ATYPE_LOCALNET;
-        }
-
+        type = ndNETLINK_ATYPE_LOCALNET;
         break;
     }
+
+    pthread_mutex_unlock(lock->second);
+    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
+
+    net_list = networks.find(_ND_NETLINK_PRIVATE);
+    if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
 
     // Final guess: Is addr a member of a private (reserved/non-routable) network?
-    for (ndNetlinkNetworks::iterator i = networks.begin();
-        i != networks.end(); i++) {
+    for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
 
-        if (i->first != _ND_NETLINK_PRIVATE) continue;
+        if ((*n)->network.ss_family != addr->ss_family) continue;
 
-        for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
-            j != i->second.end(); j++) {
+        if (! InNetwork(
+            (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
 
-            if ((*j)->network.ss_family != addr->ss_family) continue;
-
-            if (InNetwork(
-                (*j)->network.ss_family, (*j)->length, &(*j)->network, addr))
-                return ndNETLINK_ATYPE_PRIVATE;
-        }
-
+        type = ndNETLINK_ATYPE_PRIVATE;
         break;
     }
 
-    return ndNETLINK_ATYPE_UNKNOWN;
+    return type;
 }
 
 bool ndNetlink::InNetwork(sa_family_t family, uint8_t length,
@@ -535,6 +613,18 @@ bool ndNetlink::CopyNetlinkAddress(
     }
 
     return false;
+}
+
+bool ndNetlink::AddDevice(const string &device)
+{
+    ndNetlinkDevices::const_iterator i = devices.find(device);
+    if (i != devices.end()) return false;
+
+    pthread_mutex_t *mutex = NULL;
+    ND_NETLINK_DEVALLOC(mutex);
+    devices[device] = mutex;
+
+    return true;
 }
 
 bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
@@ -663,9 +753,7 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
                 break;
             case RTA_OIF:
                 if_indextoname(*(int *)RTA_DATA(rta), ifname);
-                for (vector<string>::const_iterator i = devices->begin();
-                    i != devices->end(); i++)
-                    if (strncasecmp(ifname, (*i).c_str(), IFNAMSIZ)) return false;
+                if (devices.find(ifname) == devices.end()) return false;
                 device.assign(ifname);
 #if 0
                 nd_printf("Has output interface: %s\n", ifname);
@@ -707,10 +795,9 @@ bool ndNetlink::ParseMessage(struct ifaddrmsg *addrm, size_t offset,
     addr.ss_family = AF_UNSPEC;
 
     if_indextoname(addrm->ifa_index, ifname);
+    if (devices.find(ifname) == devices.end()) return false;
+
     device.assign(ifname);
-    for (vector<string>::const_iterator i = devices->begin();
-        i != devices->end(); i++)
-        if (strncasecmp(ifname, (*i).c_str(), IFNAMSIZ)) return false;
 
     for (struct rtattr *rta = static_cast<struct rtattr *>(IFA_RTA(addrm));
         RTA_OK(rta, offset); rta = RTA_NEXT(rta, offset)) {
@@ -763,20 +850,23 @@ bool ndNetlink::AddNetwork(struct nlmsghdr *nlh)
         static_cast<struct rtmsg *>(NLMSG_DATA(nlh)),
         RTM_PAYLOAD(nlh), device, addr) == false) return false;
 
-    for (ndNetlinkNetworks::iterator i = networks.begin();
-        i != networks.end(); i++) {
-
-        if (device != i->first) continue;
-
-        for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
+    ndNetlinkNetworks::const_iterator i = networks.find(device);
+    if (i != networks.end()) {
+        for (vector<ndNetlinkNetworkAddr *>::const_iterator j = i->second.begin();
             j != i->second.end(); j++) {
             if (*(*j) == addr) return false;
         }
     }
 
+    ndNetlinkDevices::const_iterator lock = devices.find(device);
+    if (lock == devices.end()) return false;
+
     ndNetlinkNetworkAddr *entry;
     ND_NETLINK_NETALLOC(entry, addr);
+
+    pthread_mutex_lock(lock->second);
     networks[device].push_back(entry);
+    pthread_mutex_unlock(lock->second);
 
     return true;
 }
@@ -818,6 +908,7 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
 {
     string device;
     ndNetlinkNetworkAddr addr;
+    bool removed = false;
 
     if (ParseMessage(
         static_cast<struct rtmsg *>(NLMSG_DATA(nlh)),
@@ -833,13 +924,21 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
         return false;
     }
 
+    ndNetlinkDevices::const_iterator lock = devices.find(device);
+    if (lock == devices.end()) return false;
+
+    pthread_mutex_lock(lock->second);
+
     for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
         j != i->second.end(); j++) {
         if (*(*j) == addr) {
             i->second.erase(j);
-            return true;
+            removed = true;
+            break;
         }
     }
+
+    pthread_mutex_unlock(lock->second);
 
 //    if (nd_debug) {
 //        nd_printf("WARNING: Couldn't find network address in map: %s, ",
@@ -848,7 +947,7 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
 //        nd_printf("/%hhu\n", addr.length);
 //    }
 
-    return false;
+    return removed;
 }
 
 bool ndNetlink::AddAddress(struct nlmsghdr *nlh)
@@ -860,21 +959,24 @@ bool ndNetlink::AddAddress(struct nlmsghdr *nlh)
         static_cast<struct ifaddrmsg *>(NLMSG_DATA(nlh)),
         IFA_PAYLOAD(nlh), device, addr) == false) return false;
 
-    for (ndNetlinkAddresses::iterator i = addresses.begin();
-        i != addresses.end(); i++) {
-
-        if (device != i->first) continue;
-
-        for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
+    ndNetlinkAddresses::const_iterator i = addresses.find(device);
+    if (i != addresses.end()) {
+        for (vector<struct sockaddr_storage *>::const_iterator j = i->second.begin();
             j != i->second.end(); j++) {
             if (memcmp((*j), &addr, sizeof(struct sockaddr_storage)) == 0)
                 return false;
         }
     }
 
+    ndNetlinkDevices::const_iterator lock = devices.find(device);
+    if (lock == devices.end()) return false;
+
     struct sockaddr_storage *entry;
     ND_NETLINK_ADDRALLOC(entry, addr);
+
+    pthread_mutex_lock(lock->second);
     addresses[device].push_back(entry);
+    pthread_mutex_unlock(lock->second);
 
     return true;
 }
@@ -883,6 +985,7 @@ bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
 {
     string device;
     struct sockaddr_storage addr;
+    bool removed = false;
 
     if (ParseMessage(
         static_cast<struct ifaddrmsg *>(NLMSG_DATA(nlh)),
@@ -897,15 +1000,23 @@ bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
         return false;
     }
 
+    ndNetlinkDevices::const_iterator lock = devices.find(device);
+    if (lock == devices.end()) return false;
+
+    pthread_mutex_lock(lock->second);
+
     for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
         j != i->second.end(); j++) {
         if (memcmp((*j), &addr, sizeof(struct sockaddr_storage)) == 0) {
             i->second.erase(j);
-            return true;
+            removed = true;
+            break;
         }
     }
 
-    return false;
+    pthread_mutex_unlock(lock->second);
+
+    return removed;
 }
 
 void ndNetlink::Dump(void)
