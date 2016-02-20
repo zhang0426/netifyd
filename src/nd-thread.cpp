@@ -639,11 +639,11 @@ void ndDetectionThread::ProcessPacket(void)
         || (new_flow->protocol == IPPROTO_UDP && new_flow->packets > 8)
         || (new_flow->protocol == IPPROTO_TCP && new_flow->packets > 10)) {
 
+        new_flow->detection_complete = true;
+
         struct sockaddr_in lower, upper;
         struct sockaddr_in6 lower6, upper6;
         struct sockaddr_storage *lower_addr, *upper_addr;
-
-        new_flow->detection_complete = true;
 
         if (new_flow->version == 4) {
             lower.sin_family = AF_INET;
