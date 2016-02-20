@@ -228,6 +228,36 @@ ndNetlink::~ndNetlink()
     }
 }
 
+void ndNetlink::PrintType(const string &prefix, const ndNetlinkAddressType &type)
+{
+    switch (type) {
+    case ndNETLINK_ATYPE_UNKNOWN:
+        nd_printf("%s: address is: UNKNOWN\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_LOCALIP:
+        nd_printf("%s: address is: LOCALIP\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_LOCALNET:
+        nd_printf("%s: address is: LOCALNET\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_PRIVATE:
+        nd_printf("%s: address is: PRIVATE\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_MULTICAST:
+        nd_printf("%s: address is: MULTICAST\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_BROADCAST:
+        nd_printf("%s: address is: BROADCAST\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_ERROR:
+        nd_printf("%s: address is: ERROR!\n", prefix.c_str());
+        break;
+    default:
+        nd_printf("%s: address is: Unhandled!\n", prefix.c_str());
+        break;
+    }
+}
+
 void ndNetlink::Refresh(void)
 {
     int rc;
@@ -272,8 +302,6 @@ void ndNetlink::Refresh(void)
     }
 
     ProcessEvent();
-
-    if (nd_debug) Dump();
 }
 
 bool ndNetlink::ProcessEvent(void)
@@ -339,12 +367,14 @@ bool ndNetlink::ProcessEvent(void)
     }
 
     if (nd_debug) {
-        if (added_net > 0 || removed_net > 0) {
+        if (added_net || removed_net) {
             nd_printf("Networks added: %d, removed: %d\n", added_net, removed_net);
         }
-        if (added_addr > 0 || removed_addr > 0) {
+        if (added_addr || removed_addr) {
             nd_printf("Addresses added: %d, removed: %d\n", added_addr, removed_addr);
         }
+
+        if (added_net || removed_net || added_addr || removed_addr) Dump();
     }
 
     return (added_net || removed_net || added_addr || removed_addr) ? true : false;

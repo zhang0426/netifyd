@@ -308,61 +308,6 @@ static void nd_json_add_flows(
 
         json.AddObject(json_flow, "vlan_id", (int32_t)i->second->vlan_id);
 
-#if 0
-        switch (lower_type) {
-        case ndNETLINK_ATYPE_UNKNOWN:
-            nd_printf("%s: Lower address is: UNKNOWN\n", i->second->lower_ip);
-            break;
-        case ndNETLINK_ATYPE_LOCALIP:
-            nd_printf("%s: Lower address is: LOCALIP\n", i->second->lower_ip);
-            break;
-        case ndNETLINK_ATYPE_LOCALNET:
-            nd_printf("%s: Lower address is: LOCALNET\n", i->second->lower_ip);
-            break;
-        case ndNETLINK_ATYPE_PRIVATE:
-            nd_printf("%s: Lower address is: PRIVATE\n", i->second->lower_ip);
-            break;
-        case ndNETLINK_ATYPE_MULTICAST:
-            nd_printf("%s: Lower address is: MULTICAST\n", i->second->lower_ip);
-            break;
-        case ndNETLINK_ATYPE_BROADCAST:
-            nd_printf("%s: Lower address is: BROADCAST\n", i->second->lower_ip);
-            break;
-        case ndNETLINK_ATYPE_ERROR:
-            nd_printf("%s: Lower address is: ERROR!\n", i->second->lower_ip);
-            break;
-        default:
-            nd_printf("%s: Lower address is: Unhandled!\n", i->second->lower_ip);
-            break;
-        }
-
-        switch (upper_type) {
-        case ndNETLINK_ATYPE_UNKNOWN:
-            nd_printf("%s: Upper address is: UNKNOWN\n", i->second->upper_ip);
-            break;
-        case ndNETLINK_ATYPE_LOCALIP:
-            nd_printf("%s: Upper address is: LOCALIP\n", i->second->upper_ip);
-            break;
-        case ndNETLINK_ATYPE_LOCALNET:
-            nd_printf("%s: Upper address is: LOCALNET\n", i->second->upper_ip);
-            break;
-        case ndNETLINK_ATYPE_PRIVATE:
-            nd_printf("%s: Upper address is: PRIVATE\n", i->second->upper_ip);
-            break;
-        case ndNETLINK_ATYPE_MULTICAST:
-            nd_printf("%s: Upper address is: MULTICAST\n", i->second->upper_ip);
-            break;
-        case ndNETLINK_ATYPE_BROADCAST:
-            nd_printf("%s: Upper address is: BROADCAST\n", i->second->upper_ip);
-            break;
-        case ndNETLINK_ATYPE_ERROR:
-            nd_printf("%s: Upper address is: ERROR!\n", i->second->upper_ip);
-            break;
-        default:
-            nd_printf("%s: Upper address is: Unhandled!\n", i->second->upper_ip);
-            break;
-        }
-#endif
         if (i->second->lower_type == ndNETLINK_ATYPE_ERROR ||
             i->second->upper_type == ndNETLINK_ATYPE_ERROR) {
             other_type = "error";
