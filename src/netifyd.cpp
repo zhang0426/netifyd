@@ -278,9 +278,6 @@ static void nd_json_add_flows(
     const nd_flow_map *flows, bool unknown = true)
 {
     char buffer[256];
-    struct sockaddr_in lower, upper;
-    struct sockaddr_in6 lower6, upper6;
-    struct sockaddr_storage *lower_addr, *upper_addr;
     string other_type = "unknown";
     string lower_mac = "local_mac", upper_mac = "other_mac";
     string lower_ip = "local_ip", upper_ip = "other_ip";
@@ -311,28 +308,6 @@ static void nd_json_add_flows(
 
         json.AddObject(json_flow, "vlan_id", (int32_t)i->second->vlan_id);
 
-        if (i->second->version == 4) {
-            lower.sin_family = AF_INET;
-            memcpy(&lower.sin_addr, &i->second->lower_addr, sizeof(struct in_addr));
-            upper.sin_family = AF_INET;
-            memcpy(&upper.sin_addr, &i->second->upper_addr, sizeof(struct in_addr));
-            lower_addr = reinterpret_cast<struct sockaddr_storage *>(&lower);
-            upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper);
-        }
-        else {
-            lower6.sin6_family = AF_INET6;
-            memcpy(
-                &lower6.sin6_addr, &i->second->lower_addr6, sizeof(struct in6_addr));
-            upper6.sin6_family = AF_INET6;
-            memcpy(
-                &upper6.sin6_addr, &i->second->upper_addr6, sizeof(struct in6_addr));
-            lower_addr = reinterpret_cast<struct sockaddr_storage *>(&lower6);
-            upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
-        }
-
-        ndNetlinkAddressType lower_type, upper_type;
-        lower_type = netlink->ClassifyAddress(device, lower_addr);
-        upper_type = netlink->ClassifyAddress(device, upper_addr);
 #if 0
         switch (lower_type) {
         case ndNETLINK_ATYPE_UNKNOWN:
@@ -388,12 +363,12 @@ static void nd_json_add_flows(
             break;
         }
 #endif
-        if (lower_type == ndNETLINK_ATYPE_ERROR ||
-            upper_type == ndNETLINK_ATYPE_ERROR) {
+        if (i->second->lower_type == ndNETLINK_ATYPE_ERROR ||
+            i->second->upper_type == ndNETLINK_ATYPE_ERROR) {
             other_type = "error";
         }
-        else if (lower_type == ndNETLINK_ATYPE_LOCALIP &&
-            upper_type == ndNETLINK_ATYPE_LOCALNET) {
+        else if (i->second->lower_type == ndNETLINK_ATYPE_LOCALIP &&
+            i->second->upper_type == ndNETLINK_ATYPE_LOCALNET) {
             other_type = "local";
             lower_mac = "other_mac";
             lower_ip = "other_ip";
@@ -404,8 +379,8 @@ static void nd_json_add_flows(
             upper_port = "local_port";
             upper_bytes = "local_bytes";
         }
-        else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
-            upper_type == ndNETLINK_ATYPE_LOCALIP) {
+        else if (i->second->lower_type == ndNETLINK_ATYPE_LOCALNET &&
+            i->second->upper_type == ndNETLINK_ATYPE_LOCALIP) {
             other_type = "local";
             lower_mac = "local_mac";
             lower_ip = "local_ip";
@@ -416,7 +391,7 @@ static void nd_json_add_flows(
             upper_port = "other_port";
             upper_bytes = "other_bytes";
         }
-        else if (lower_type == ndNETLINK_ATYPE_MULTICAST) {
+        else if (i->second->lower_type == ndNETLINK_ATYPE_MULTICAST) {
             other_type = "multicast";
             lower_mac = "other_mac";
             lower_ip = "other_ip";
@@ -427,7 +402,7 @@ static void nd_json_add_flows(
             upper_port = "local_port";
             upper_bytes = "local_bytes";
         }
-        else if (upper_type == ndNETLINK_ATYPE_MULTICAST) {
+        else if (i->second->upper_type == ndNETLINK_ATYPE_MULTICAST) {
             other_type = "multicast";
             lower_mac = "local_mac";
             lower_ip = "local_ip";
@@ -438,7 +413,7 @@ static void nd_json_add_flows(
             upper_port = "other_port";
             upper_bytes = "other_bytes";
         }
-        else if (lower_type == ndNETLINK_ATYPE_BROADCAST) {
+        else if (i->second->lower_type == ndNETLINK_ATYPE_BROADCAST) {
             other_type = "broadcast";
             lower_mac = "other_mac";
             lower_ip = "other_ip";
@@ -449,7 +424,7 @@ static void nd_json_add_flows(
             upper_port = "local_port";
             upper_bytes = "local_bytes";
         }
-        else if (upper_type == ndNETLINK_ATYPE_BROADCAST) {
+        else if (i->second->upper_type == ndNETLINK_ATYPE_BROADCAST) {
             other_type = "broadcast";
             lower_mac = "local_mac";
             lower_ip = "local_ip";
@@ -460,7 +435,7 @@ static void nd_json_add_flows(
             upper_port = "other_port";
             upper_bytes = "other_bytes";
         }
-        else if (lower_type == ndNETLINK_ATYPE_UNKNOWN) {
+        else if (i->second->lower_type == ndNETLINK_ATYPE_UNKNOWN) {
             other_type = "remote";
             lower_mac = "other_mac";
             lower_ip = "other_ip";
@@ -471,7 +446,7 @@ static void nd_json_add_flows(
             upper_port = "local_port";
             upper_bytes = "local_bytes";
         }
-        else if (upper_type == ndNETLINK_ATYPE_UNKNOWN) {
+        else if (i->second->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
             other_type = "remote";
             lower_mac = "local_mac";
             lower_ip = "local_ip";
@@ -837,6 +812,7 @@ int main(int argc, char *argv[])
             i != devices.end(); i++) {
             threads[(*i)] = new ndDetectionThread(
                 (*i),
+                netlink,
                 flows[(*i)],
                 stats[(*i)],
                 (devices.size() > 1) ? cpu++ : -1

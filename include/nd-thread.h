@@ -59,7 +59,7 @@ protected:
 class ndDetectionThread : public ndThread
 {
 public:
-    ndDetectionThread(const string &dev,
+    ndDetectionThread(const string &dev, ndNetlink *netlink,
         nd_flow_map *flow_map, ndDetectionStats *stats, long cpu = -1);
     virtual ~ndDetectionThread();
 
@@ -69,6 +69,7 @@ public:
     virtual void *Entry(void);
 
 protected:
+    ndNetlink *netlink;
     pcap_t *pcap;
     char pcap_errbuf[PCAP_ERRBUF_SIZE];
     int pcap_snaplen;

@@ -209,9 +209,9 @@ int ndThread::Join(void)
     return rc;
 }
 
-ndDetectionThread::ndDetectionThread(const string &dev,
+ndDetectionThread::ndDetectionThread(const string &dev, ndNetlink *netlink,
     nd_flow_map *flow_map, ndDetectionStats *stats, long cpu)
-    : ndThread(dev, cpu),
+    : ndThread(dev, cpu), netlink(netlink),
     pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN), pcap_datalink_type(0),
     pkt_header(NULL), pkt_data(NULL),
     ts_pkt_last(0), ts_last_idle_scan(0),
@@ -639,7 +639,33 @@ void ndDetectionThread::ProcessPacket(void)
         || (new_flow->protocol == IPPROTO_UDP && new_flow->packets > 8)
         || (new_flow->protocol == IPPROTO_TCP && new_flow->packets > 10)) {
 
+        struct sockaddr_in lower, upper;
+        struct sockaddr_in6 lower6, upper6;
+        struct sockaddr_storage *lower_addr, *upper_addr;
+
         new_flow->detection_complete = true;
+
+        if (new_flow->version == 4) {
+            lower.sin_family = AF_INET;
+            memcpy(&lower.sin_addr, &new_flow->lower_addr, sizeof(struct in_addr));
+            upper.sin_family = AF_INET;
+            memcpy(&upper.sin_addr, &new_flow->upper_addr, sizeof(struct in_addr));
+            lower_addr = reinterpret_cast<struct sockaddr_storage *>(&lower);
+            upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper);
+        }
+        else {
+            lower6.sin6_family = AF_INET6;
+            memcpy(
+                &lower6.sin6_addr, &new_flow->lower_addr6, sizeof(struct in6_addr));
+            upper6.sin6_family = AF_INET6;
+            memcpy(
+                &upper6.sin6_addr, &new_flow->upper_addr6, sizeof(struct in6_addr));
+            lower_addr = reinterpret_cast<struct sockaddr_storage *>(&lower6);
+            upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
+        }
+
+        new_flow->lower_type = netlink->ClassifyAddress(tag, lower_addr);
+        new_flow->upper_type = netlink->ClassifyAddress(tag, upper_addr);
 
         if (new_flow->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
