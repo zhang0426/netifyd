@@ -92,29 +92,11 @@ inline bool ndNetlinkNetworkAddr::operator==(const ndNetlinkNetworkAddr &n) cons
     const struct sockaddr_in *ipv4_addr1, *ipv4_addr2;
     const struct sockaddr_in6 *ipv6_addr1, *ipv6_addr2;
 
-    if (this->length != n.length) {
-#if 0
-        if (nd_debug) {
-            print_address(&this->network);
-            nd_printf(" != ");
-            print_address(&n.network);
-            nd_printf(" [length mis-match]\n");
-        }
-#endif
+    if (this->length != n.length)
         return false;
-    }
 
-    if (this->network.ss_family != n.network.ss_family) {
-#if 0
-        if (nd_debug) {
-            print_address(&this->network);
-            nd_printf(" != ");
-            print_address(&n.network);
-            nd_printf(" [family mis-match]\n");
-        }
-#endif
+    if (this->network.ss_family != n.network.ss_family)
         return false;
-    }
 
     switch (this->network.ss_family) {
     case AF_INET:
@@ -130,24 +112,9 @@ inline bool ndNetlinkNetworkAddr::operator==(const ndNetlinkNetworkAddr &n) cons
             &ipv6_addr1->sin6_addr, &ipv6_addr2->sin6_addr, sizeof(struct in6_addr));
         break;
     default:
-#if 0
-        if (nd_debug) {
-            print_address(&this->network);
-            nd_printf(" != ");
-            print_address(&n.network);
-            nd_printf(" [unsupported family]\n");
-        }
-#endif
         return false;
     }
-#if 0
-    if (rc != 0 && nd_debug) {
-        print_address(&this->network);
-        nd_printf(" != ");
-        print_address(&n.network);
-        nd_printf(" [%d]\n", rc);
-    }
-#endif
+
     return (rc == 0);
 }
 
@@ -157,29 +124,11 @@ inline bool ndNetlinkNetworkAddr::operator!=(const ndNetlinkNetworkAddr &n) cons
     const struct sockaddr_in *ipv4_addr1, *ipv4_addr2;
     const struct sockaddr_in6 *ipv6_addr1, *ipv6_addr2;
 
-    if (this->length == n.length) {
-#if 0
-        if (nd_debug) {
-            print_address(&this->network);
-            nd_printf(" != ");
-            print_address(&n.network);
-            nd_printf(" [length mis-match]\n");
-        }
-#endif
-        return false;
-    }
+    if (this->length != n.length)
+        return true;
 
-    if (this->network.ss_family == n.network.ss_family) {
-#if 0
-        if (nd_debug) {
-            print_address(&this->network);
-            nd_printf(" != ");
-            print_address(&n.network);
-            nd_printf(" [family mis-match]\n");
-        }
-#endif
-        return false;
-    }
+    if (this->network.ss_family != n.network.ss_family)
+        return true;
 
     switch (this->network.ss_family) {
     case AF_INET:
@@ -195,24 +144,9 @@ inline bool ndNetlinkNetworkAddr::operator!=(const ndNetlinkNetworkAddr &n) cons
             &ipv6_addr1->sin6_addr, &ipv6_addr2->sin6_addr, sizeof(struct in6_addr));
         break;
     default:
-#if 0
-        if (nd_debug) {
-            print_address(&this->network);
-            nd_printf(" != ");
-            print_address(&n.network);
-            nd_printf(" [unsupported family]\n");
-        }
-#endif
         return true;
     }
-#if 0
-    if (rc != 0 && nd_debug) {
-        print_address(&this->network);
-        nd_printf(" != ");
-        print_address(&n.network);
-        nd_printf(" [%d]\n", rc);
-    }
-#endif
+
     return (rc != 0);
 }
 
