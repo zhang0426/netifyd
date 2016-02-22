@@ -574,7 +574,7 @@ void generate_uuid(void)
 
     fprintf(stdout, "\n");
 }
-
+#if 0
 void debug_test(void)
 {
     nd_debug = true;
@@ -582,9 +582,8 @@ void debug_test(void)
     ndJsonObject *json_obj = NULL;
     ndJsonObjectType json_type;
     ndJsonObjectFactory json_factory;
-
-        "{\"version\":1.0,\"type\":2,\"data\":{\"code\":1,\"message\":\"unknown error\"}}",
-        "{\"version\":1,\"type\":2,\"data\":{\"code\":2,\"message\":\"Authorization failure\"}}",
+//        "{\"version\":1.0,\"type\":2,\"data\":{\"code\":1,\"message\":\"unknown error\"}}",
+//        "{\"version\":1,\"type\":2,\"data\":{\"code\":2,\"message\":\"Authorization failure\"}}",
     json_type = json_factory.Parse(
         "{\"version\":1,\"type\":2,\"data\":{\"code\":2,\"message\":\"Authorization failure\"}}",
         &json_obj
@@ -594,7 +593,7 @@ void debug_test(void)
 
     exit(0);
 }
-
+#endif
 int main(int argc, char *argv[])
 {
     int rc = 0;

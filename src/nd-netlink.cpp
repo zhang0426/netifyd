@@ -49,6 +49,7 @@ extern bool nd_debug;
 #define _ND_NETLINK_MULTICAST   "__nd_multicast__"
 #define _ND_NETLINK_BROADCAST   "__nd_broadcast__"
 
+#if 0
 static void print_binary(uint32_t byte)
 {
     uint32_t i;
@@ -61,7 +62,7 @@ static void print_binary(uint32_t byte)
 
     nd_printf(b);
 }
-
+#endif
 static void print_address(const struct sockaddr_storage *addr)
 {
     int rc;
@@ -263,13 +264,11 @@ void ndNetlink::Refresh(void)
 {
     int rc;
     struct nlmsghdr *nlh;
-    struct rtmsg *rtm;
     struct ifaddrmsg *addrm;
 
     memset(buffer, 0, ND_NETLINK_BUFSIZ);
 
     nlh = (struct nlmsghdr *)buffer;
-    rtm = (struct rtmsg *)NLMSG_DATA(nlh);
 
     nlh->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
     nlh->nlmsg_type = RTM_GETROUTE;
@@ -1059,8 +1058,6 @@ bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
 
 void ndNetlink::Dump(void)
 {
-    char addr[NI_MAXHOST];
-
     for (ndNetlinkNetworks::iterator i = networks.begin();
         i != networks.end(); i++) {
         for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();

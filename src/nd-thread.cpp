@@ -1040,6 +1040,9 @@ void ndUploadThread::ProcessResponse(void)
             json_result->GetCode(),
             json_result->GetMessage().c_str());
         break;
+    case ndJSON_OBJ_TYPE_NULL:
+    default:
+        nd_printf("%s: Unexpected JSON result type.\n", tag.c_str());
     }
 
     if (json_obj != NULL) delete json_obj;
