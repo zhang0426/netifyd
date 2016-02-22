@@ -19,7 +19,7 @@
 
 #define ND_SHA1_BUFFER    4096
 
-void *nd_mem_alloc(unsigned long size);
+void *nd_mem_alloc(size_t size);
 
 void nd_mem_free(void *ptr);
 

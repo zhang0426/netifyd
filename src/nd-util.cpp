@@ -36,7 +36,7 @@ using namespace std;
 
 extern bool nd_debug;
 
-void *nd_mem_alloc(unsigned long size)
+void *nd_mem_alloc(size_t size)
 {
     return malloc(size);
 }
