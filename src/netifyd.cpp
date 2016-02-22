@@ -531,7 +531,7 @@ static void nd_dump_stats(void)
     if (nd_debug) {
         nd_printf("\nCumulative Totals:\n");
         totals.print();
-        nd_printf("        Flows: %lu\n\n", flow_count);
+        nd_printf(" Active flows: %lu\n\n", flow_count);
     }
 }
 
