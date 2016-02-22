@@ -40,7 +40,7 @@ public:
     ndJson(json_object *root);
     void Destroy(void);
 
-    json_object *CreateObject(void);
+    static json_object *CreateObject(void);
     json_object *CreateObject(json_object *parent, const string &name);
     json_object *CreateArray(json_object *parent, const string &name);
 

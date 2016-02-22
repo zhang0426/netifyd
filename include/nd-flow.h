@@ -99,7 +99,8 @@ struct ndFlow
 
     void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
 
-    void classify(const char *device);
+    json_object *json_encode(const string &device, ndJson &json,
+        struct ndpi_detection_module_struct *ndpi, bool counters = true);
 };
 
 typedef unordered_map<string, struct ndFlow *> nd_flow_map;

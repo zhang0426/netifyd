@@ -31,11 +31,14 @@
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
 
+#include <json.h>
+
 #include "ndpi_main.h"
 
 using namespace std;
 
 #include "nd-netlink.h"
+#include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-sha1.h"
 #include "nd-util.h"
@@ -117,6 +120,197 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         (ssl.client_cert[0] != '\0') ? ssl.client_cert : "N/A",
         (ssl.server_cert[0] != '\0') ? ssl.server_cert : "N/A"
     );
+}
+
+json_object *ndFlow::json_encode(const string &device,
+    ndJson &json, struct ndpi_detection_module_struct *ndpi, bool counters)
+{
+    char buffer[256];
+    string other_type = "unknown";
+    string _lower_mac = "local_mac", _upper_mac = "other_mac";
+    string _lower_ip = "local_ip", _upper_ip = "other_ip";
+    string _lower_port = "local_port", _upper_port = "other_port";
+    string _lower_bytes = "local_bytes", _upper_bytes = "other_bytes";
+
+    json_object *json_flow = json.CreateObject();
+
+    string digest, digest_bin;
+    hash(device, digest_bin, true);
+    nd_sha1_to_string((const uint8_t *)digest_bin.c_str(), digest);
+    json.AddObject(json_flow, "digest", digest);
+
+    json.AddObject(json_flow, "ip_version", (int32_t)version);
+
+    json.AddObject(json_flow, "ip_protocol", (int32_t)protocol);
+
+    json.AddObject(json_flow, "vlan_id", (int32_t)vlan_id);
+
+    if (lower_type == ndNETLINK_ATYPE_ERROR ||
+        upper_type == ndNETLINK_ATYPE_ERROR) {
+        other_type = "error";
+    }
+    else if (lower_type == ndNETLINK_ATYPE_LOCALIP &&
+        upper_type == ndNETLINK_ATYPE_LOCALNET) {
+        other_type = "local";
+        _lower_mac = "other_mac";
+        _lower_ip = "other_ip";
+        _lower_port = "other_port";
+        _lower_bytes = "other_bytes";
+        _upper_mac = "local_mac";
+        _upper_ip = "local_ip";
+        _upper_port = "local_port";
+        _upper_bytes = "local_bytes";
+    }
+    else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
+        upper_type == ndNETLINK_ATYPE_LOCALIP) {
+        other_type = "local";
+        _lower_mac = "local_mac";
+        _lower_ip = "local_ip";
+        _lower_port = "local_port";
+        _lower_bytes = "local_bytes";
+        _upper_mac = "other_mac";
+        _upper_ip = "other_ip";
+        _upper_port = "other_port";
+        _upper_bytes = "other_bytes";
+    }
+    else if (lower_type == ndNETLINK_ATYPE_MULTICAST) {
+        other_type = "multicast";
+        _lower_mac = "other_mac";
+        _lower_ip = "other_ip";
+        _lower_port = "other_port";
+        _lower_bytes = "other_bytes";
+        _upper_mac = "local_mac";
+        _upper_ip = "local_ip";
+        _upper_port = "local_port";
+        _upper_bytes = "local_bytes";
+    }
+    else if (upper_type == ndNETLINK_ATYPE_MULTICAST) {
+        other_type = "multicast";
+        _lower_mac = "local_mac";
+        _lower_ip = "local_ip";
+        _lower_port = "local_port";
+        _lower_bytes = "local_bytes";
+        _upper_mac = "other_mac";
+        _upper_ip = "other_ip";
+        _upper_port = "other_port";
+        _upper_bytes = "other_bytes";
+    }
+    else if (lower_type == ndNETLINK_ATYPE_BROADCAST) {
+        other_type = "broadcast";
+        _lower_mac = "other_mac";
+        _lower_ip = "other_ip";
+        _lower_port = "other_port";
+        _lower_bytes = "other_bytes";
+        _upper_mac = "local_mac";
+        _upper_ip = "local_ip";
+        _upper_port = "local_port";
+        _upper_bytes = "local_bytes";
+    }
+    else if (upper_type == ndNETLINK_ATYPE_BROADCAST) {
+        other_type = "broadcast";
+        _lower_mac = "local_mac";
+        _lower_ip = "local_ip";
+        _lower_port = "local_port";
+        _lower_bytes = "local_bytes";
+        _upper_mac = "other_mac";
+        _upper_ip = "other_ip";
+        _upper_port = "other_port";
+        _upper_bytes = "other_bytes";
+    }
+    else if (lower_type == ndNETLINK_ATYPE_UNKNOWN) {
+        other_type = "remote";
+        _lower_mac = "other_mac";
+        _lower_ip = "other_ip";
+        _lower_port = "other_port";
+        _lower_bytes = "other_bytes";
+        _upper_mac = "local_mac";
+        _upper_ip = "local_ip";
+        _upper_port = "local_port";
+        _upper_bytes = "local_bytes";
+    }
+    else if (upper_type == ndNETLINK_ATYPE_UNKNOWN) {
+        other_type = "remote";
+        _lower_mac = "local_mac";
+        _lower_ip = "local_ip";
+        _lower_port = "local_port";
+        _lower_bytes = "local_bytes";
+        _upper_mac = "other_mac";
+        _upper_ip = "other_ip";
+        _upper_port = "other_port";
+        _upper_bytes = "other_bytes";
+    }
+
+    json.AddObject(json_flow, "other_type", other_type);
+
+    snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
+        lower_mac[0], lower_mac[1], lower_mac[2],
+        lower_mac[3], lower_mac[4], lower_mac[5]
+    );
+    json.AddObject(json_flow, _lower_mac, buffer);
+
+    snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
+        upper_mac[0], upper_mac[1], upper_mac[2],
+        upper_mac[3], upper_mac[4], upper_mac[5]
+    );
+    json.AddObject(json_flow, _upper_mac, buffer);
+
+    json.AddObject(json_flow, _lower_ip, lower_ip);
+    json.AddObject(json_flow, _upper_ip, upper_ip);
+
+    json.AddObject(json_flow, _lower_port, (int32_t)ntohs(lower_port));
+    json.AddObject(json_flow, _upper_port, (int32_t)ntohs(upper_port));
+
+    if (counters) {
+        json.AddObject(json_flow, _lower_bytes, lower_bytes);
+        json.AddObject(json_flow, _upper_bytes, upper_bytes);
+    }
+
+    json.AddObject(json_flow, "detected_protocol",
+        (int32_t)detected_protocol.protocol);
+    json.AddObject(json_flow, "detected_protocol_master",
+        (int32_t)detected_protocol.master_protocol);
+
+    if (detected_protocol.master_protocol) {
+        snprintf(buffer, sizeof(buffer), "%s.%s",
+            ndpi_get_proto_name(ndpi,
+                detected_protocol.master_protocol),
+            ndpi_get_proto_name(ndpi,
+                detected_protocol.protocol));
+
+        json.AddObject(json_flow, "detected_protocol_name", buffer);
+    }
+    else {
+        json.AddObject(json_flow, "detected_protocol_name",
+            ndpi_get_proto_name(ndpi, detected_protocol.protocol));
+    }
+
+    json.AddObject(json_flow, "detection_guessed", detection_guessed);
+
+    if (counters) {
+        json.AddObject(json_flow, "packets", packets);
+        json.AddObject(json_flow, "bytes", bytes);
+    }
+
+    if (host_server_name[0] != '\0') {
+        json.AddObject(json_flow,
+            "host_server_name", host_server_name);
+    }
+
+    if ((ssl.client_cert[0] != '\0') ||
+        (ssl.server_cert[0] != '\0')) {
+
+        json_object *ssl = json.CreateObject(json_flow, "ssl");
+
+        if (this->ssl.client_cert[0] != '\0')
+            json.AddObject(ssl, "client", this->ssl.client_cert);
+
+        if (this->ssl.server_cert[0] != '\0')
+            json.AddObject(ssl, "server", this->ssl.server_cert);
+    }
+
+    json.AddObject(json_flow, "last_seen", ts_last_seen);
+
+    return json_flow;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
