@@ -14,47 +14,41 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _ND_THREAD_H
-#define _ND_THREAD_H
+#ifndef _ND_UPLOAD_THREAD_H
+#define _ND_UPLOAD_THREAD_H
 
-#define ND_THREAD_MAX_PROCNAMELEN 16
-
-class ndThreadException : public runtime_error
+class ndUploadThread : public ndThread
 {
 public:
-    explicit ndThreadException(const string &what_arg)
-        : runtime_error(what_arg) { }
-};
+    ndUploadThread();
+    virtual ~ndUploadThread();
 
-class ndThread
-{
-public:
-    ndThread(const string &tag, long cpu = -1);
-    virtual ~ndThread();
+    virtual void *Entry(void);
 
-    string GetTag(void) { return tag; }
-    pthread_t GetId(void) { return id; }
+    virtual void Terminate(void) { QueuePush("terminate"); }
 
-    void SetProcName(void);
+    void Authenticate(void);
 
-    virtual void Create(void);
-    virtual void *Entry(void) = 0;
+    void QueuePush(const string &json);
 
-    virtual void Terminate(void) { terminate = true; }
-
-    void Lock(void) { pthread_mutex_lock(&lock); }
-    void Unlock(void) { pthread_mutex_unlock(&lock); }
+    void AppendData(const char *data, size_t length) { body_data.append(data, length); }
 
 protected:
-    string tag;
-    pthread_t id;
-    pthread_attr_t attr;
-    long cpu;
-    bool terminate;
-    pthread_mutex_t lock;
+    CURL *ch;
+    struct curl_slist *headers;
+    struct curl_slist *headers_gz;
+    queue<string> uploads;
+    //deque<string> pending;
+    deque<pair<bool, string> > pending;
+    size_t pending_size;
+    pthread_cond_t uploads_cond;
+    pthread_mutex_t uploads_cond_mutex;
+    string body_data;
 
-    int Join(void);
+    void Upload(void);
+    string Deflate(const string &data);
+    void ProcessResponse(void);
 };
 
-#endif // _ND_THREAD_H
+#endif // _ND_UPLOAD_THREAD_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

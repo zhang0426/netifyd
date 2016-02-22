@@ -56,6 +56,8 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#include "nd-detection.h"
+#include "nd-upload.h"
 #include "nd-util.h"
 
 bool nd_debug = false;
