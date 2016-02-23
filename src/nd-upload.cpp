@@ -223,10 +223,6 @@ void *ndUploadThread::Entry(void)
     return NULL;
 }
 
-void ndUploadThread::Authenticate(void)
-{
-}
-
 void ndUploadThread::QueuePush(const string &json)
 {
     int rc;
