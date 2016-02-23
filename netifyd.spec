@@ -31,7 +31,7 @@ Summary: Netify DPI Daemon
 
 %description
 Netify DPI Daemon
-Report bugs to: http://www.egloo.ca/bug_tracker
+Report bugs to: http://www.egloo.ca/gnats
 
 # Build
 %prep

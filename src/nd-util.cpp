@@ -18,9 +18,11 @@
 #include "config.h"
 #endif
 
+#include <stdexcept>
 #include <cstdlib>
 #include <cstdarg>
 #include <string>
+#include <sstream>
 
 #include <unistd.h>
 #include <syslog.h>
@@ -120,6 +122,44 @@ void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str)
         sprintf(p, "%02x", digest_bin[i]);
 
     digest_str.assign(_digest);
+}
+
+ndException::ndException(const string &where_arg, const string &what_arg) throw()
+    : runtime_error(what_arg), where_arg(where_arg), what_arg(what_arg), message(NULL)
+{
+    ostringstream os;
+    os << where_arg << ": " << what_arg;
+    message = strdup(os.str().c_str());
+}
+
+ndException::~ndException() throw()
+{
+    if (message != NULL) free((void *)message);
+}
+
+const char *ndException::what() const throw()
+{
+    return message;
+}
+
+ndSystemException::ndSystemException(
+    const string &where_arg, const string &what_arg, int why_arg) throw()
+    : runtime_error(what_arg),
+    where_arg(where_arg), what_arg(what_arg), why_arg(why_arg), message(NULL)
+{
+    ostringstream os;
+    os << where_arg << ": " << what_arg << ": " << strerror(why_arg);
+    message = strdup(os.str().c_str());
+}
+
+ndSystemException::~ndSystemException() throw()
+{
+    if (message != NULL) free((void *)message);
+}
+
+const char *ndSystemException::what() const throw()
+{
+    return message;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

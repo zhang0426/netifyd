@@ -32,5 +32,34 @@ int nd_sha1_file(const string &filename, uint8_t *digest);
 
 void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
 
+class ndException : public runtime_error
+{
+public:
+    explicit ndException(
+        const string &where_arg, const string &what_arg) throw();
+    virtual ~ndException() throw();
+
+    virtual const char *what() const throw();
+
+    string where_arg;
+    string what_arg;
+    const char *message;
+};
+
+class ndSystemException : public runtime_error
+{
+public:
+    explicit ndSystemException(
+        const string &where_arg, const string &what_arg, int why_arg) throw();
+    virtual ~ndSystemException() throw();
+
+    virtual const char *what() const throw();
+
+    string where_arg;
+    string what_arg;
+    int why_arg;
+    const char *message;
+};
+
 #endif // _ND_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
