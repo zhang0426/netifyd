@@ -264,7 +264,6 @@ void ndNetlink::Refresh(void)
 {
     int rc;
     struct nlmsghdr *nlh;
-    struct ifaddrmsg *addrm;
 
     memset(buffer, 0, ND_NETLINK_BUFSIZ);
 
@@ -287,7 +286,6 @@ void ndNetlink::Refresh(void)
     memset(buffer, 0, ND_NETLINK_BUFSIZ);
 
     nlh = (struct nlmsghdr *)buffer;
-    addrm = (struct ifaddrmsg *)NLMSG_DATA(nlh);
 
     nlh->nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
     nlh->nlmsg_type = RTM_GETADDR;
