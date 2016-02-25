@@ -17,39 +17,44 @@
 #ifndef _ND_H
 #define _ND_H
 
-#define ND_STATS_INTERVAL     15      // Collect stats every N seconds
-                                      // Maximum upload queue size in kB
-#define ND_MAX_BACKLOG_KB     1024
-#define ND_DETECTION_TICKS    1000    // Ticks-per-second (1000 = milliseconds)
-#define ND_IDLE_SCAN_TIME     10      // Idle flow scan in milliseconds
-#define ND_IDLE_FLOW_TIME     30000   // Purge idle flows older than this (30s)
+#define ND_STATS_INTERVAL       15      // Collect stats every N seconds
+                                        // Maximum upload queue size in kB
+#define ND_MAX_BACKLOG_KB       1024
+#define ND_DETECTION_TICKS      1000    // Ticks-per-second (1000 = milliseconds)
+#define ND_IDLE_SCAN_TIME       10      // Idle flow scan in milliseconds
+#define ND_IDLE_FLOW_TIME       30000   // Purge idle flows older than this (30s)
 
-#define ND_PID_FILE_NAME      "/run/netifyd/netifyd.pid"
+#define ND_PID_FILE_NAME        "/run/netifyd/netifyd.pid"
 
-#define ND_CONF_FILE_NAME     "/etc/netifyd.conf"
+#define ND_CONF_FILE_NAME       "/etc/netifyd.conf"
 
-#define ND_JSON_VERSION       1.0     // JSON format version
-#define ND_JSON_FILE_NAME     "/var/lib/netifyd/netifyd.json"
-#define ND_JSON_FILE_USER     "root"
-#define ND_JSON_FILE_GROUP    "webconfig"
-#define ND_JSON_FILE_MODE     0640
+#define ND_JSON_VERSION         1.0     // JSON format version
+#define ND_JSON_FILE_NAME       "/var/lib/netifyd/netifyd.json"
+#define ND_JSON_FILE_USER       "root"
+#define ND_JSON_FILE_GROUP      "webconfig"
+#define ND_JSON_FILE_MODE       0640
 
-#define ND_PCAP_SNAPLEN       1536    // Capture snap length
-#define ND_PCAP_READ_TIMEOUT  500     // Milliseconds
+#define ND_PCAP_SNAPLEN         1536    // Capture snap length
+#define ND_PCAP_READ_TIMEOUT    500     // Milliseconds
 
-#define ND_URL_UPLOAD         "https://v1-netify-sink.egloo.ca/"
-#define ND_COOKIE_JAR         "/var/lib/netifyd/netifyd.cookies"
+#define ND_URL_UPLOAD           "https://v1-netify-sink.egloo.ca/"
+#define ND_COOKIE_JAR           "/var/lib/netifyd/netifyd.cookies"
 
-#define ND_UUID_NULL          "00000000-0000-0000-0000-000000000000"
+#define ND_UUID_NULL            "00000000-0000-0000-0000-000000000000"
 
-#define ND_WATCH_HOSTS        "/etc/hosts"
-#define ND_WATCH_ETHERS       "/etc/ethers"
+#define ND_WATCH_HOSTS          "/etc/hosts"
+#define ND_WATCH_ETHERS         "/etc/ethers"
 
 // Compress data if it's over this size (bytes)
-#define ND_COMPRESS_SIZE      (1024 * 10)
-#define ND_ZLIB_CHUNK_SIZE    16384   // Compress this many bytes at a time
+#define ND_COMPRESS_SIZE       (1024 * 10)
+#define ND_ZLIB_CHUNK_SIZE      16384   // Compress this many bytes at a time
 
-#define ND_FILE_BUFSIZ        4096
+#define ND_FILE_BUFSIZ          4096
+
+#define ND_SOCKET_PORT          "7150"
+#define ND_SOCKET_PATH_MODE     0640
+#define ND_SOCKET_PATH_USER     "root"
+#define ND_SOCKET_PATH_GROUP    "root"
 
 typedef struct {
     char *uuid;
@@ -59,6 +64,8 @@ typedef struct {
     bool ssl_verify_peer;
     char *json_filename;
     unsigned update_interval;
+    vector<pair<string, string> > socket_host;
+    vector<string> socket_path;
 } ndGlobalConfig;
 
 struct ndDetectionStats

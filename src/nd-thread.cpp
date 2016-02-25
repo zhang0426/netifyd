@@ -19,6 +19,7 @@
 #endif
 
 #include <stdexcept>
+#include <vector>
 
 #include <unistd.h>
 #include <pthread.h>

@@ -70,7 +70,9 @@ public:
     void SetBlockingMode(bool enable = false);
 
     ssize_t Read(uint8_t *buffer, ssize_t length);
-    ssize_t Write(uint8_t *buffer, ssize_t length);
+    ssize_t Write(const uint8_t *buffer, ssize_t length);
+
+    int GetDescriptor(void) { return sd; }
 
 protected:
     friend class ndSocketLocal;
@@ -175,13 +177,49 @@ public:
 protected:
 };
 
-class ndThreadSocket : public ndThread
+class ndSocketBuffer
 {
 public:
-    ndThreadSocket();
-    virtual ~ndThreadSocket();
+    ndSocketBuffer() : offset(0), length(0) { }
+
+    size_t GetLength(void);
+    const uint8_t *GetBuffer(ssize_t &length);
+
+    void Push(const string &data);
+    void Pop(ssize_t length);
 
 protected:
+    size_t offset;
+    size_t length;
+    deque<string> buffer;
+};
+
+typedef map<int, ndSocket *> ndSocketMap;
+typedef map<int, ndSocketServer *> ndSocketServerMap;
+typedef map<int, ndSocketBuffer *> ndSocketBufferMap;
+
+class ndSocketThread : public ndThread
+{
+public:
+    ndSocketThread();
+    virtual ~ndSocketThread();
+
+    virtual void Terminate(void) { terminate = true; }
+
+    void QueueWrite(const string &data);
+
+    virtual void *Entry(void);
+
+protected:
+    void ClientAccept(ndSocketServerMap::iterator &si);
+    ndSocketMap::iterator ClientHangup(ndSocketMap::iterator &ci);
+
+    bool terminate;
+    pthread_mutex_t lock;
+    vector<string> queue_write;
+    ndSocketMap clients;
+    ndSocketServerMap servers;
+    ndSocketBufferMap buffers;
 };
 
 #endif // _ND_SOCKET_H

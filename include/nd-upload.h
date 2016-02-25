@@ -36,7 +36,6 @@ protected:
     struct curl_slist *headers;
     struct curl_slist *headers_gz;
     queue<string> uploads;
-    //deque<string> pending;
     deque<pair<bool, string> > pending;
     size_t pending_size;
     pthread_cond_t uploads_cond;

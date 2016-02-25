@@ -18,8 +18,9 @@
 #include "config.h"
 #endif
 
-#include <iostream>
 #include <stdexcept>
+#include <iostream>
+#include <sstream>
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -56,6 +57,7 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#include "nd-socket.h"
 #include "nd-detection.h"
 #include "nd-upload.h"
 #include "nd-util.h"
@@ -74,6 +76,7 @@ static nd_stats stats;
 static nd_threads threads;
 static ndDetectionStats totals;
 static ndUploadThread *thread_upload = NULL;
+static ndSocketThread *thread_socket = NULL;
 static ndInotify *inotify = NULL;
 static ndNetlink *netlink = NULL;
 
@@ -171,6 +174,30 @@ static int nd_config_load(void)
 
     string uuid_zone = reader.Get("netifyd", "uuid_zone", ND_UUID_NULL);
     nd_config.uuid_zone = strdup(uuid_zone.c_str());
+
+    for (int i = 0; ; i++) {
+        ostringstream os;
+        os << "listen_address[" << i << "]";
+        string socket_node = reader.Get("socket", os.str(), "");
+        if (socket_node.size() > 0) {
+            os.str("");
+            os << "listen_port[" << i << "]";
+            string socket_port = reader.Get("socket", os.str(), ND_SOCKET_PORT);
+            nd_config.socket_host.push_back(make_pair(socket_node, socket_port));
+            continue;
+        }
+        else {
+            os.str("");
+            os << "listen_path[" << i << "]";
+            socket_node = reader.Get("socket", os.str(), "");
+            if (socket_node.size() > 0) {
+                nd_config.socket_path.push_back(socket_node);
+                continue;
+            }
+        }
+
+        break;
+    }
 
 #if 0
     nd_account_id = reader.GetInteger("account", "id", 0);
@@ -545,6 +572,9 @@ int main(int argc, char *argv[])
     thread_upload = new ndUploadThread();
     thread_upload->Create();
 
+    thread_socket = new ndSocketThread();
+    thread_socket->Create();
+
     for (nd_devices::iterator i = devices.begin();
         i != devices.end(); i++) {
         flows[(*i)] = new nd_flow_map;
@@ -579,6 +609,7 @@ int main(int argc, char *argv[])
             threads[(*i)] = new ndDetectionThread(
                 (*i),
                 netlink,
+                thread_socket,
                 flows[(*i)],
                 stats[(*i)],
                 (devices.size() > 1) ? cpu++ : -1
@@ -668,6 +699,9 @@ int main(int argc, char *argv[])
 
     thread_upload->Terminate();
     delete thread_upload;
+
+    thread_socket->Terminate();
+    delete thread_socket;
 
     pthread_mutex_destroy(nd_output_mutex);
 

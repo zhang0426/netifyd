@@ -62,7 +62,7 @@ public:
     void PushObject(json_object *parent, bool value);
     void PushObject(json_object *parent, json_object *object);
 
-    void ToString(string &output);
+    void ToString(string &output, bool pretty = true);
 
     void SaveToFile(const string &filename);
 

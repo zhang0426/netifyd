@@ -58,6 +58,7 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#include "nd-socket.h"
 #include "nd-detection.h"
 #include "nd-util.h"
 
@@ -65,9 +66,10 @@ extern bool nd_debug;
 
 extern ndGlobalConfig nd_config;
 
-ndDetectionThread::ndDetectionThread(const string &dev, ndNetlink *netlink,
+ndDetectionThread::ndDetectionThread(const string &dev,
+    ndNetlink *netlink, ndSocketThread *thread_socket,
     nd_flow_map *flow_map, ndDetectionStats *stats, long cpu)
-    : ndThread(dev, cpu), netlink(netlink),
+    : ndThread(dev, cpu), netlink(netlink), thread_socket(thread_socket),
     pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN), pcap_datalink_type(0),
     pkt_header(NULL), pkt_data(NULL),
     ts_pkt_last(0), ts_last_idle_scan(0),
@@ -589,6 +591,19 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (nd_debug)
             new_flow->print(tag.c_str(), ndpi);
+
+        if (thread_socket) {
+            ndJson json;
+            json.AddObject(NULL, "interface", tag);
+            json_object *json_flow = new_flow->json_encode(
+                tag.c_str(), json, ndpi, false);
+            json.AddObject(NULL, "flow", json_flow);
+
+            string json_string;
+            json.ToString(json_string, false);
+            json_string.append("\n");
+            thread_socket->QueueWrite(json_string);
+        }
     }
 
     if (ts_last_idle_scan + ND_IDLE_SCAN_TIME < ts_pkt_last) {

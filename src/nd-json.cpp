@@ -20,6 +20,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <vector>
 
 #include <unistd.h>
 #include <string.h>
@@ -266,11 +267,11 @@ void ndJson::PushObject(json_object *parent, json_object *object)
         json_object_array_add(parent, object);
 }
 
-void ndJson::ToString(string &output)
+void ndJson::ToString(string &output, bool pretty)
 {
     output = json_object_to_json_string_ext(
         root,
-        (nd_debug) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
+        (nd_debug && pretty) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
     );
 }
 
