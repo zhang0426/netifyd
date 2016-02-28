@@ -384,7 +384,7 @@ static void nd_dump_stats(void)
     }
 }
 
-void generate_uuid(void)
+void nd_generate_uuid(void)
 {
     int digit = 0;
     deque<char> result;
@@ -423,6 +423,33 @@ void generate_uuid(void)
 
     fprintf(stdout, "\n");
 }
+
+static void nd_dump_protocols(void)
+{
+    struct ndpi_detection_module_struct *ndpi;
+
+    ndpi = ndpi_init_detection_module(
+        ND_DETECTION_TICKS,
+        nd_mem_alloc,
+        nd_mem_free,
+        nd_debug_printf
+    );
+
+    nd_debug = true;
+
+    if (ndpi == NULL)
+        throw ndThreadException("Detection module initialization failure");
+
+    NDPI_PROTOCOL_BITMASK proto_all;
+    NDPI_BITMASK_SET_ALL(proto_all);
+
+    ndpi_set_protocol_detection_bitmask2(ndpi, &proto_all);
+
+    for (int i = 0; i < (int)ndpi->ndpi_num_supported_protocols; i++) {
+        nd_printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
+    }
+}
+
 #if 0
 void debug_test(void)
 {
@@ -470,6 +497,7 @@ int main(int argc, char *argv[])
         { "interval", 1, 0, 'i' },
         { "config", 1, 0, 'c' },
         { "uuidgen", 0, 0, 'U' },
+        { "protocols", 0, 0, 'P' },
 
         { NULL, 0, 0, 0 }
     };
@@ -477,7 +505,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdI:j:i:c:U", options, &o)) == -1) break;
+            "?hVdI:j:i:c:UP", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -510,7 +538,10 @@ int main(int argc, char *argv[])
             nd_conf_filename = strdup(optarg);
             break;
         case 'U':
-            generate_uuid();
+            nd_generate_uuid();
+            exit(0);
+        case 'P':
+            nd_dump_protocols();
             exit(0);
         default:
             usage(1);
