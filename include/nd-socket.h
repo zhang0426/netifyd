@@ -212,7 +212,7 @@ public:
 
 protected:
     void ClientAccept(ndSocketServerMap::iterator &si);
-    ndSocketMap::iterator ClientHangup(ndSocketMap::iterator &ci);
+    void ClientHangup(ndSocketMap::iterator &ci);
 
     bool terminate;
     pthread_mutex_t lock;

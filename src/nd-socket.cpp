@@ -663,7 +663,7 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     }
 }
 
-ndSocketMap::iterator ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
+void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
 {
     ndSocketBufferMap::iterator bi;
 
@@ -681,8 +681,6 @@ ndSocketMap::iterator ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
         delete bi->second;
         buffers.erase(bi);
     }
-
-    return ci;
 }
 
 void *ndSocketThread::Entry(void)
@@ -744,52 +742,58 @@ void *ndSocketThread::Entry(void)
                 __PRETTY_FUNCTION__, "select", errno);
         }
 
-        while (rc > 0) {
-            for (ci = clients.begin(); ci != clients.end(); ci++) {
+        if (rc == 0) continue;
 
-                if (FD_ISSET(ci->first, &fds_read)) {
-                    ci = ClientHangup(ci);
-                    if (--rc == 0) break;
-                    continue;
-                }
+        ci = clients.begin();
 
-                if (FD_ISSET(ci->first, &fds_write)) {
+        while (ci != clients.end()) {
 
-                    bi = buffers.find(ci->first);
-                    if (bi == buffers.end()) {
-                        throw ndSystemException(__PRETTY_FUNCTION__,
-                            "buffers.find", ENOENT);
-                    }
-
-                    ssize_t length;
-                    const uint8_t *p = bi->second->GetBuffer(length);
-
-                    try {
-                        ssize_t bytes = ci->second->Write(p, length);
-                        bi->second->Pop(bytes);
-                    } catch (ndSocketHangupException &e) {
-                        ci = ClientHangup(ci);
-                    } catch (ndSystemException &e) {
-                        ci = ClientHangup(ci);
-                    }
-
-                    if (--rc == 0) break;
-                }
+            if (FD_ISSET(ci->first, &fds_read)) {
+                nd_printf("%s: read event on client socket: %d\n", tag.c_str(), ci->first);
+                ClientHangup(ci);
+                if (--rc == 0) break;
+                continue;
             }
 
-            if (rc == 0) break;
+            if (FD_ISSET(ci->first, &fds_write)) {
 
-            for (si = servers.begin(); si != servers.end(); si++) {
-                if (FD_ISSET(si->first, &fds_read)) {
-                    try {
-                        ClientAccept(si);
-                    } catch (runtime_error &e) {
-                        nd_printf("%s: Error accepting socket connection: %s\n",
-                            tag.c_str(), e.what());
-                    }
-
-                    if (--rc == 0) break;
+                bi = buffers.find(ci->first);
+                if (bi == buffers.end()) {
+                    throw ndSystemException(__PRETTY_FUNCTION__,
+                        "buffers.find", ENOENT);
                 }
+
+                ssize_t length;
+                const uint8_t *p = bi->second->GetBuffer(length);
+
+                try {
+                    ssize_t bytes = ci->second->Write(p, length);
+                    bi->second->Pop(bytes);
+                } catch (ndSocketHangupException &e) {
+                    ClientHangup(ci);
+                } catch (ndSystemException &e) {
+                    ClientHangup(ci);
+                }
+
+                if (--rc == 0) break;
+                continue;
+            }
+
+            ci++;
+        }
+
+        if (rc == 0) continue;
+
+        for (si = servers.begin(); si != servers.end(); si++) {
+            if (FD_ISSET(si->first, &fds_read)) {
+                try {
+                    ClientAccept(si);
+                } catch (runtime_error &e) {
+                    nd_printf("%s: Error accepting socket connection: %s\n",
+                        tag.c_str(), e.what());
+                }
+
+                if (--rc == 0) break;
             }
         }
     }
