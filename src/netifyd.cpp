@@ -84,7 +84,7 @@ static char *nd_conf_filename = NULL;
 
 ndGlobalConfig nd_config;
 
-static void usage(int rc = 0, bool version = false)
+static void nd_usage(int rc = 0, bool version = false)
 {
     cerr << "Netify Daemon v" << PACKAGE_VERSION << endl;
     cerr << "Copyright (C) 2015-2016 eGloo Incorporated [" <<
@@ -512,9 +512,9 @@ int main(int argc, char *argv[])
                 "Try " << argv[0] << " --help for more information." << endl;
             return 1;
         case 'h':
-            usage();
+            nd_usage();
         case 'V':
-            usage(0, true);
+            nd_usage(0, true);
         case 'd':
             nd_debug = true;
             break;
@@ -544,7 +544,7 @@ int main(int argc, char *argv[])
             nd_dump_protocols();
             exit(0);
         default:
-            usage(1);
+            nd_usage(1);
         }
     }
 
