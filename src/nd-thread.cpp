@@ -22,6 +22,8 @@
 #include <vector>
 
 #include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
 #include <pthread.h>
 
 #include "ndpi_main.h"
