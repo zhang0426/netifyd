@@ -159,10 +159,10 @@ static int nd_config_load(void)
         return -1;
     }
 
-    string serial = reader.Get("netifyd", "serial", "");
+    string serial = reader.Get("netifyd", "uuid_serial", "");
     if (serial.size() > 0) {
-        if (nd_config.serial != NULL) free(nd_config.serial);
-        nd_config.serial = strdup(serial.c_str());
+        if (nd_config.uuid_serial != NULL) free(nd_config.uuid_serial);
+        nd_config.uuid_serial = strdup(serial.c_str());
     }
 
     string url_upload = reader.Get("netifyd", "url_upload", "");
@@ -526,7 +526,7 @@ int main(int argc, char *argv[])
             nd_debug = true;
             break;
         case 's':
-            nd_config.serial = strdup(optarg);
+            nd_config.uuid_serial = strdup(optarg);
             break;
         case 'I':
             for (nd_devices::iterator i = devices.begin();

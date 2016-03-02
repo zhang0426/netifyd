@@ -137,7 +137,8 @@ ndUploadThread::ndUploadThread()
     uuid << "X-UUID: " << nd_config.uuid;
 
     ostringstream serial;
-    serial << "X-Serial: " << (nd_config.serial != NULL) ? nd_config.serial : "-";
+    serial << "X-UUID-Serial: " <<
+        ((nd_config.uuid_serial != NULL) ? nd_config.uuid_serial : "-");
 
     ostringstream domain_uuid;
     domain_uuid << "X-UUID-Domain: " << nd_config.uuid_domain;

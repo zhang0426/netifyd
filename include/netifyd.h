@@ -58,7 +58,7 @@
 
 typedef struct {
     char *uuid;
-    char *serial;
+    char *uuid_serial;
     char *uuid_domain;
     char *url_upload;
     size_t max_backlog;
