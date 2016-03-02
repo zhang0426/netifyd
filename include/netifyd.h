@@ -58,7 +58,8 @@
 
 typedef struct {
     char *uuid;
-    char *uuid_zone;
+    char *serial;
+    char *uuid_domain;
     char *url_upload;
     size_t max_backlog;
     bool ssl_verify_peer;

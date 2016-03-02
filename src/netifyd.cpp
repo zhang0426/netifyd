@@ -159,6 +159,12 @@ static int nd_config_load(void)
         return -1;
     }
 
+    string serial = reader.Get("netifyd", "serial", "");
+    if (serial.size() > 0) {
+        if (nd_config.serial != NULL) free(nd_config.serial);
+        nd_config.serial = strdup(serial.c_str());
+    }
+
     string url_upload = reader.Get("netifyd", "url_upload", "");
     if (url_upload.size() > 0)
         nd_config.url_upload = strdup(url_upload.c_str());
@@ -172,8 +178,8 @@ static int nd_config_load(void)
     nd_config.ssl_verify_peer = reader.GetBoolean(
         "netifyd", "ssl_verify_peer", true);
 
-    string uuid_zone = reader.Get("netifyd", "uuid_zone", ND_UUID_NULL);
-    nd_config.uuid_zone = strdup(uuid_zone.c_str());
+    string uuid_domain = reader.Get("netifyd", "uuid_domain", ND_UUID_NULL);
+    nd_config.uuid_domain = strdup(uuid_domain.c_str());
 
     for (int i = 0; ; i++) {
         ostringstream os;
@@ -492,6 +498,7 @@ int main(int argc, char *argv[])
         { "help", 0, 0, 'h' },
         { "version", 0, 0, 'V' },
         { "debug", 0, 0, 'd' },
+        { "serial", 1, 0, 's' },
         { "interface", 1, 0, 'I' },
         { "json", 1, 0, 'j' },
         { "interval", 1, 0, 'i' },
@@ -505,7 +512,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdI:j:i:c:UP", options, &o)) == -1) break;
+            "?hVds:I:j:i:c:UP", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -517,6 +524,9 @@ int main(int argc, char *argv[])
             nd_usage(0, true);
         case 'd':
             nd_debug = true;
+            break;
+        case 's':
+            nd_config.serial = strdup(optarg);
             break;
         case 'I':
             for (nd_devices::iterator i = devices.begin();

@@ -136,19 +136,24 @@ ndUploadThread::ndUploadThread()
     ostringstream uuid;
     uuid << "X-UUID: " << nd_config.uuid;
 
-    ostringstream zone_uuid;
-    zone_uuid << "X-UUID-Zone: " << nd_config.uuid_zone;
+    ostringstream serial;
+    serial << "X-Serial: " << (nd_config.serial != NULL) ? nd_config.serial : "-";
+
+    ostringstream domain_uuid;
+    domain_uuid << "X-UUID-Domain: " << nd_config.uuid_domain;
 
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, uuid.str().c_str());
-    headers = curl_slist_append(headers, zone_uuid.str().c_str());
+    headers = curl_slist_append(headers, serial.str().c_str());
+    headers = curl_slist_append(headers, domain_uuid.str().c_str());
 
     headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
     headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
     headers_gz = curl_slist_append(headers_gz, "Content-Encoding: gzip");
     headers_gz = curl_slist_append(headers_gz, uuid.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, zone_uuid.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, serial.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, domain_uuid.str().c_str());
 
     pthread_condattr_t cond_attr;
 
