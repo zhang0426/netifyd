@@ -206,7 +206,7 @@ public:
 
     virtual void Terminate(void) { terminate = true; }
 
-    void QueueWrite(const string &data, bool no_lock = false);
+    void QueueWrite(const string &data);
 
     virtual void *Entry(void);
 

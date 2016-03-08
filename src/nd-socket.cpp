@@ -647,11 +647,11 @@ ndSocketThread::~ndSocketThread()
     }
 }
 
-void ndSocketThread::QueueWrite(const string &data, bool no_lock)
+void ndSocketThread::QueueWrite(const string &data)
 {
-    if (no_lock == false) pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     queue_write.push_back(data);
-    if (no_lock == false) pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&lock);
 }
 
 void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
@@ -677,6 +677,8 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     buffers[client->GetDescriptor()] = buffer;
     clients[client->GetDescriptor()] = client;
 
+    pthread_mutex_lock(&lock);
+
     for (nd_threads::iterator t = threads->begin();
         t != threads->end(); t++) {
 
@@ -694,16 +696,19 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
             json_flow = f->second->json_encode(
                 t->first, json, t->second->GetDetectionModule(), false);
             json.AddObject(NULL, "flow", json_flow);
+
             string json_string;
             json.ToString(json_string, false);
             json_string.append("\n");
-            QueueWrite(json_string);
+            queue_write.push_back(json_string);
 
             json.Destroy();
         }
 
         t->second->Unlock();
     }
+
+    pthread_mutex_unlock(&lock);
 }
 
 void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
