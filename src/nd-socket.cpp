@@ -103,8 +103,7 @@ const char *ndSocketGetAddrInfoException::what() const throw()
 ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)
     : base(base)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
-
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
     struct sockaddr_un *sa_un = new struct sockaddr_un;
 
     base->node = node;
@@ -126,12 +125,12 @@ ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)
 
 ndSocketLocal::~ndSocketLocal()
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 int ndSocketLocal::IsValid(void)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 
     struct stat socket_stat;
 
@@ -184,7 +183,7 @@ ndSocketRemote::ndSocketRemote(
     ndSocket *base, const string &node, const string &service)
     : base(base)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 
     base->node = node;
     base->service = service;
@@ -194,13 +193,13 @@ ndSocketRemote::ndSocketRemote(
 
 ndSocketRemote::~ndSocketRemote()
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocketClient::ndSocketClient(ndSocket *base)
     : base(base)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 
     base->type = ndSOCKET_TYPE_CLIENT;
 }
@@ -211,8 +210,7 @@ ndSocketClient::~ndSocketClient()
 
 ndSocket *ndSocketServer::Accept(void)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
-
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
     ndSocket *peer = NULL;
     int peer_sd = -1;
     socklen_t peer_sa_size = 0;
@@ -275,59 +273,58 @@ ndSocket *ndSocketServer::Accept(void)
 ndSocketServer::ndSocketServer(ndSocket *base)
     : base(base)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
-
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
     base->type = ndSOCKET_TYPE_SERVER;
 }
 
 ndSocketServer::~ndSocketServer()
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocketClientLocal::ndSocketClientLocal(const string &node)
     : ndSocketClient(this), ndSocketLocal(this, node)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 
 }
 
 ndSocketClientLocal::~ndSocketClientLocal()
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocketServerLocal::ndSocketServerLocal(const string &node)
     : ndSocketServer(this), ndSocketLocal(this, node)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocketServerLocal::~ndSocketServerLocal()
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocketClientRemote::ndSocketClientRemote(const string &node, const string &service)
     : ndSocketClient(this), ndSocketRemote(this, node, service)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocketClientRemote::~ndSocketClientRemote()
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocketServerRemote::ndSocketServerRemote(const string &node, const string &service)
     : ndSocketServer(this), ndSocketRemote(this, node, service)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocketServerRemote::~ndSocketServerRemote()
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocket::ndSocket()
@@ -335,7 +332,7 @@ ndSocket::ndSocket()
     type(ndSOCKET_TYPE_NULL), state(ndSOCKET_STATE_INIT),
     bytes_in(0), bytes_out(0)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocket::ndSocket(const string &node)
@@ -343,7 +340,7 @@ ndSocket::ndSocket(const string &node)
     node(node), type(ndSOCKET_TYPE_NULL), state(ndSOCKET_STATE_INIT),
     bytes_in(0), bytes_out(0)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocket::ndSocket(const string &host, const string &service)
@@ -352,13 +349,12 @@ ndSocket::ndSocket(const string &host, const string &service)
     type(ndSOCKET_TYPE_NULL), state(ndSOCKET_STATE_INIT),
     bytes_in(0), bytes_out(0)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 }
 
 ndSocket::~ndSocket()
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
-
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
     if (sd != -1) close(sd);
     if (sa != NULL) delete sa;
 
@@ -371,7 +367,7 @@ ssize_t ndSocket::Read(uint8_t *buffer, ssize_t length)
     uint8_t *p = buffer;
     ssize_t bytes_read = 0, bytes_remaining = length;
 
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 
     do {
         ssize_t rc = read(sd, p, bytes_remaining);
@@ -399,7 +395,7 @@ ssize_t ndSocket::Write(const uint8_t *buffer, ssize_t length)
     const uint8_t *p = buffer;
     ssize_t bytes_wrote = 0, bytes_remaining = length;
 
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 
     do {
         ssize_t rc = write(sd, p, bytes_remaining);
@@ -426,7 +422,7 @@ void ndSocket::SetBlockingMode(bool enable)
 {
     int flags;
 
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 
     if (enable == false) {
         flags = fcntl(sd, F_GETFL);
@@ -447,7 +443,7 @@ void ndSocket::SetBlockingMode(bool enable)
 
 void ndSocket::Create(void)
 {
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    //nd_printf("%s\n", __PRETTY_FUNCTION__);
 
     if (family == AF_UNSPEC) {
         struct addrinfo hints;
@@ -796,7 +792,6 @@ void *ndSocketThread::Entry(void)
         while (ci != clients.end()) {
 
             if (FD_ISSET(ci->first, &fds_read)) {
-                nd_printf("%s: read event on client socket: %d\n", tag.c_str(), ci->first);
                 ClientHangup(ci);
                 if (--rc == 0) break;
                 continue;
