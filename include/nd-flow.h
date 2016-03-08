@@ -104,6 +104,7 @@ struct ndFlow
 };
 
 typedef unordered_map<string, struct ndFlow *> nd_flow_map;
+typedef map<string, nd_flow_map *> nd_flows;
 typedef pair<string, struct ndFlow *> nd_flow_pair;
 typedef pair<nd_flow_map::iterator, bool> nd_flow_insert;
 

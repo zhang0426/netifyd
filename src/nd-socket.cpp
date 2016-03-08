@@ -17,39 +17,57 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
+#include <cerrno>
+#include <cstring>
+#include <deque>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <cerrno>
-#include <sstream>
+#include <unordered_map>
 #include <vector>
-#include <deque>
-#include <map>
 
-#include <unistd.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <json.h>
+#include <linux/if_ether.h>
+#include <linux/netlink.h>
+#include <linux/un.h>
+#include <netdb.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <pcap/pcap.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
-#include <fcntl.h>
-#include <errno.h>
-
-#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/select.h>
-#include <linux/un.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <netdb.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "ndpi_main.h"
 
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-netlink.h"
+#include "nd-sha1.h"
+#include "nd-json.h"
+#include "nd-flow.h"
 #include "nd-thread.h"
+#include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-util.h"
 
@@ -584,8 +602,8 @@ void ndSocketBuffer::Pop(ssize_t length)
     length -= bytes;
 }
 
-ndSocketThread::ndSocketThread()
-    : ndThread("netify-socket", -1)
+ndSocketThread::ndSocketThread(nd_threads *threads)
+    : ndThread("netify-socket", -1), terminate(false), threads(threads)
 {
     int rc;
     if ((rc = pthread_mutex_init(&lock, NULL)) != 0) {
@@ -633,11 +651,11 @@ ndSocketThread::~ndSocketThread()
     }
 }
 
-void ndSocketThread::QueueWrite(const string &data)
+void ndSocketThread::QueueWrite(const string &data, bool no_lock)
 {
-    pthread_mutex_lock(&lock);
+    if (no_lock == false) pthread_mutex_lock(&lock);
     queue_write.push_back(data);
-    pthread_mutex_unlock(&lock);
+    if (no_lock == false) pthread_mutex_unlock(&lock);
 }
 
 void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
@@ -651,15 +669,44 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
             throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
 
         client = si->second->Accept();
-
-        buffers[client->GetDescriptor()] = buffer;
-        clients[client->GetDescriptor()] = client;
     } catch (ndSocketGetAddrInfoException &e) {
         if (client) delete client;
         throw;
     } catch (ndSystemException &e) {
         if (client) delete client;
         throw;
+    }
+
+    json_object *json_flow;
+    buffers[client->GetDescriptor()] = buffer;
+    clients[client->GetDescriptor()] = client;
+
+    for (nd_threads::iterator t = threads->begin();
+        t != threads->end(); t++) {
+
+        t->second->Lock();
+
+        nd_flow_map *flows = t->second->GetFlows();
+
+        for (nd_flow_map::const_iterator f = flows->begin();
+            f != flows->end(); f++) {
+
+            ndJson json;
+            json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
+            json.AddObject(NULL, "interface", t->first);
+
+            json_flow = f->second->json_encode(
+                t->first, json, t->second->GetDetectionModule(), false);
+            json.AddObject(NULL, "flow", json_flow);
+            string json_string;
+            json.ToString(json_string, false);
+            json_string.append("\n");
+            QueueWrite(json_string);
+
+            json.Destroy();
+        }
+
+        t->second->Unlock();
     }
 }
 

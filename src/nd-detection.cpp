@@ -18,33 +18,33 @@
 #include "config.h"
 #endif
 
-#include <string>
-#include <cstring>
 #include <cerrno>
-#include <stdexcept>
+#include <cstring>
+#include <deque>
 #include <iostream>
 #include <map>
-#include <vector>
-#include <unordered_map>
 #include <queue>
-#include <deque>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include <unistd.h>
-#include <signal.h>
-#include <pthread.h>
-#include <sys/ioctl.h>
-#include <pcap/pcap.h>
 #include <arpa/inet.h>
-#include <netinet/ip.h>
-#include <netinet/ip6.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-#include <net/if.h>
+#include <json.h>
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
-
-#include <json.h>
+#include <net/if.h>
+#include <netinet/ip6.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <pcap/pcap.h>
+#include <pthread.h>
+#include <signal.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 extern "C" {
 #include "ndpi_api.h"
@@ -58,8 +58,8 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
-#include "nd-socket.h"
 #include "nd-detection.h"
+#include "nd-socket.h"
 #include "nd-util.h"
 
 extern bool nd_debug;
@@ -608,6 +608,8 @@ void ndDetectionThread::ProcessPacket(void)
             json.ToString(json_string, false);
             json_string.append("\n");
             thread_socket->QueueWrite(json_string);
+
+            json.Destroy();
         }
     }
 

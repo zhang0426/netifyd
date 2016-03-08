@@ -17,6 +17,8 @@
 #ifndef _ND_DETECTION_THREAD_H
 #define _ND_DETECTION_THREAD_H
 
+class ndSocketThread;
+
 class ndDetectionThread : public ndThread
 {
 public:
@@ -29,6 +31,8 @@ public:
         return ndpi;
     }
     virtual void *Entry(void);
+
+    nd_flow_map *GetFlows(void) { return flows; }
 
 protected:
     ndNetlink *netlink;
@@ -48,6 +52,8 @@ protected:
 
     void ProcessPacket(void);
 };
+
+typedef map<string, ndDetectionThread *> nd_threads;
 
 #endif // _ND_DETECTION_THREAD_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

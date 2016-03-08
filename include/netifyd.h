@@ -108,5 +108,8 @@ struct ndDetectionStats
     void print(const char *tag = "");
 };
 
+typedef vector<string> nd_devices;
+typedef map<string, ndDetectionStats *> nd_stats;
+
 #endif // _ND_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

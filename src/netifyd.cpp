@@ -57,18 +57,13 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
-#include "nd-socket.h"
 #include "nd-detection.h"
+#include "nd-socket.h"
 #include "nd-upload.h"
 #include "nd-util.h"
 
 bool nd_debug = false;
 pthread_mutex_t *nd_output_mutex = NULL;
-
-typedef vector<string> nd_devices;
-typedef map<string, nd_flow_map *> nd_flows;
-typedef map<string, ndDetectionStats *> nd_stats;
-typedef map<string, ndDetectionThread *> nd_threads;
 
 static nd_devices devices;
 static nd_flows flows;
@@ -616,7 +611,7 @@ int main(int argc, char *argv[])
     thread_upload = new ndUploadThread();
     thread_upload->Create();
 
-    thread_socket = new ndSocketThread();
+    thread_socket = new ndSocketThread(&threads);
     thread_socket->Create();
 
     for (nd_devices::iterator i = devices.begin();

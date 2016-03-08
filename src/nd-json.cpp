@@ -21,6 +21,7 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <map>
 
 #include <unistd.h>
 #include <string.h>

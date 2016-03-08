@@ -20,6 +20,7 @@
 
 #include <stdexcept>
 #include <vector>
+#include <map>
 
 #include <unistd.h>
 #include <stdlib.h>
