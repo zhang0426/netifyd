@@ -276,12 +276,12 @@ void ndDetectionThread::ProcessPacket(void)
     stats->pkt_vlan += vlan_packet;
 
     hdr_ip = reinterpret_cast<const struct iphdr *>(&pkt_data[ip_offset]);
-    flow.version = hdr_ip->version;
+    flow.ip_version = hdr_ip->version;
 
-    if (flow.version == 4) {
+    if (flow.ip_version == 4) {
         ip_len = ((uint16_t)hdr_ip->ihl * 4);
         l4_len = ntohs(hdr_ip->tot_len) - ip_len;
-        flow.protocol = hdr_ip->protocol;
+        flow.ip_protocol = hdr_ip->protocol;
         layer3 = reinterpret_cast<const uint8_t *>(hdr_ip);
 
         if (pkt_header->caplen >= ip_offset)
@@ -340,18 +340,18 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
     }
-    else if (flow.version == 6) {
+    else if (flow.ip_version == 6) {
         hdr_ip6 = reinterpret_cast<const struct ip6_hdr *>(&pkt_data[ip_offset]);
         ip_len = sizeof(struct ip6_hdr);
         l4_len = ntohs(hdr_ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
-        flow.protocol = hdr_ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+        flow.ip_protocol = hdr_ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
         layer3 = reinterpret_cast<const uint8_t *>(hdr_ip6);
 
-        if (flow.protocol == IPPROTO_DSTOPTS) {
+        if (flow.ip_protocol == IPPROTO_DSTOPTS) {
             const uint8_t *options = reinterpret_cast<const uint8_t *>(
                 hdr_ip6 + sizeof(const struct ip6_hdr)
             );
-            flow.protocol = options[0];
+            flow.ip_protocol = options[0];
             ip_len += 8 * (options[1] + 1);
         }
 
@@ -390,7 +390,7 @@ void ndDetectionThread::ProcessPacket(void)
         return;
     }
 
-    switch (flow.protocol) {
+    switch (flow.ip_protocol) {
     case IPPROTO_TCP:
         if (l4_len >= 20) {
             const struct tcphdr *hdr_tcp;
@@ -471,21 +471,25 @@ void ndDetectionThread::ProcessPacket(void)
     stats->pkt_ip++;
     stats->pkt_ip_bytes += pkt_header->len;
     stats->pkt_wire_bytes += pkt_header->len + 24;
-    new_flow->packets++;
-    new_flow->bytes += pkt_header->len;
+    new_flow->total_packets++;
+    new_flow->total_bytes += pkt_header->len;
     new_flow->ts_last_seen = ts_pkt;
 
-    if (addr_cmp < 0)
+    if (addr_cmp < 0) {
+        new_flow->lower_packets++;
         new_flow->lower_bytes += pkt_header->len;
-    else
+    }
+    else {
+        new_flow->upper_packets++;
         new_flow->upper_bytes += pkt_header->len;
+    }
 
     if (new_flow->detection_complete) return;
 
     new_flow->detected_protocol = ndpi_detection_process_packet(
         ndpi,
         new_flow->ndpi_flow,
-        (new_flow->version == 4) ?
+        (new_flow->ip_version == 4) ?
             (const uint8_t *)hdr_ip : (const uint8_t *)hdr_ip6,
         pkt_header->len - ip_offset,
         pkt_header->len,
@@ -494,8 +498,8 @@ void ndDetectionThread::ProcessPacket(void)
     );
 
     if (new_flow->detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN
-        || (new_flow->protocol == IPPROTO_UDP && new_flow->packets > 8)
-        || (new_flow->protocol == IPPROTO_TCP && new_flow->packets > 10)) {
+        || (new_flow->ip_protocol == IPPROTO_UDP && new_flow->total_packets > 8)
+        || (new_flow->ip_protocol == IPPROTO_TCP && new_flow->total_packets > 10)) {
 
         new_flow->detection_complete = true;
 
@@ -503,7 +507,7 @@ void ndDetectionThread::ProcessPacket(void)
         struct sockaddr_in6 lower6, upper6;
         struct sockaddr_storage *lower_addr, *upper_addr;
 
-        if (new_flow->version == 4) {
+        if (new_flow->ip_version == 4) {
             lower.sin_family = AF_INET;
             memcpy(&lower.sin_addr, &new_flow->lower_addr, sizeof(struct in_addr));
             upper.sin_family = AF_INET;
@@ -538,16 +542,16 @@ void ndDetectionThread::ProcessPacket(void)
                 new_flow->detection_guessed = true;
                 new_flow->detected_protocol = ndpi_guess_undetected_protocol(
                     ndpi,
-                    new_flow->protocol,
+                    new_flow->ip_protocol,
                     ntohl(
-                        (new_flow->version == 4) ?
+                        (new_flow->ip_version == 4) ?
                             new_flow->lower_addr.s_addr :
                                 new_flow->lower_addr6.s6_addr32[2] +
                                 new_flow->lower_addr6.s6_addr32[3]
                     ),
                     ntohs(new_flow->lower_port),
                     ntohl(
-                        (new_flow->version == 4) ?
+                        (new_flow->ip_version == 4) ?
                             new_flow->upper_addr.s_addr :
                                 new_flow->upper_addr6.s6_addr32[2] +
                                 new_flow->upper_addr6.s6_addr32[3]
@@ -563,7 +567,7 @@ void ndDetectionThread::ProcessPacket(void)
             "%s", new_flow->ndpi_flow->host_server_name
         );
 
-        if (new_flow->protocol == IPPROTO_TCP
+        if (new_flow->ip_protocol == IPPROTO_TCP
             && new_flow->detected_protocol.protocol != NDPI_PROTOCOL_DNS) {
             snprintf(new_flow->ssl.client_cert, ND_FLOW_SSL_CERTLEN,
                 "%s", new_flow->ndpi_flow->protos.ssl.client_certificate);
@@ -571,7 +575,7 @@ void ndDetectionThread::ProcessPacket(void)
                 "%s", new_flow->ndpi_flow->protos.ssl.server_certificate);
         }
 
-        switch (new_flow->version) {
+        switch (new_flow->ip_version) {
         case 4:
             inet_ntop(AF_INET, &new_flow->lower_addr.s_addr,
                 new_flow->lower_ip, INET_ADDRSTRLEN);

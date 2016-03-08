@@ -325,6 +325,9 @@ static void nd_json_add_flows(
 
         json_object *json_flow = i->second->json_encode(device, json, ndpi);
         json.PushObject(NULL, json_flow);
+
+        i->second->lower_bytes = i->second->upper_bytes = 0;
+        i->second->lower_packets = i->second->upper_packets = 0;
     }
 }
 

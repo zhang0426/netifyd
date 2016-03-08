@@ -52,14 +52,14 @@ void ndFlow::hash(const string &device, string &digest, bool full_hash)
     sha1_init(&ctx);
     sha1_write(&ctx, (const char *)device.c_str(), device.size());
 
-    sha1_write(&ctx, (const char *)&version, sizeof(version));
-    sha1_write(&ctx, (const char *)&protocol, sizeof(protocol));
+    sha1_write(&ctx, (const char *)&ip_version, sizeof(ip_version));
+    sha1_write(&ctx, (const char *)&ip_protocol, sizeof(ip_protocol));
     sha1_write(&ctx, (const char *)&vlan_id, sizeof(vlan_id));
 
     sha1_write(&ctx, (const char *)&lower_mac, ETH_ALEN);
     sha1_write(&ctx, (const char *)&upper_mac, ETH_ALEN);
 
-    switch (version) {
+    switch (ip_version) {
     case 4:
         sha1_write(&ctx, (const char *)&lower_addr, sizeof(struct in_addr));
         sha1_write(&ctx, (const char *)&upper_addr, sizeof(struct in_addr));
@@ -132,6 +132,7 @@ json_object *ndFlow::json_encode(const string &device,
     string _lower_ip = "local_ip", _upper_ip = "other_ip";
     string _lower_port = "local_port", _upper_port = "other_port";
     string _lower_bytes = "local_bytes", _upper_bytes = "other_bytes";
+    string _lower_packets = "local_packets", _upper_packets = "other_packets";
 
     json_object *json_flow = json.CreateObject();
 
@@ -140,9 +141,9 @@ json_object *ndFlow::json_encode(const string &device,
     nd_sha1_to_string((const uint8_t *)digest_bin.c_str(), digest);
     json.AddObject(json_flow, "digest", digest);
 
-    json.AddObject(json_flow, "ip_version", (int32_t)version);
+    json.AddObject(json_flow, "ip_version", (int32_t)ip_version);
 
-    json.AddObject(json_flow, "ip_protocol", (int32_t)protocol);
+    json.AddObject(json_flow, "ip_protocol", (int32_t)ip_protocol);
 
     json.AddObject(json_flow, "vlan_id", (int32_t)vlan_id);
 
@@ -157,10 +158,12 @@ json_object *ndFlow::json_encode(const string &device,
         _lower_ip = "other_ip";
         _lower_port = "other_port";
         _lower_bytes = "other_bytes";
+        _lower_packets = "other_packets";
         _upper_mac = "local_mac";
         _upper_ip = "local_ip";
         _upper_port = "local_port";
         _upper_bytes = "local_bytes";
+        _upper_packets = "local_packets";
     }
     else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
         upper_type == ndNETLINK_ATYPE_LOCALIP) {
@@ -169,10 +172,12 @@ json_object *ndFlow::json_encode(const string &device,
         _lower_ip = "local_ip";
         _lower_port = "local_port";
         _lower_bytes = "local_bytes";
+        _lower_packets = "local_packets";
         _upper_mac = "other_mac";
         _upper_ip = "other_ip";
         _upper_port = "other_port";
         _upper_bytes = "other_bytes";
+        _upper_packets = "other_packets";
     }
     else if (lower_type == ndNETLINK_ATYPE_MULTICAST) {
         other_type = "multicast";
@@ -180,10 +185,12 @@ json_object *ndFlow::json_encode(const string &device,
         _lower_ip = "other_ip";
         _lower_port = "other_port";
         _lower_bytes = "other_bytes";
+        _lower_packets = "other_packets";
         _upper_mac = "local_mac";
         _upper_ip = "local_ip";
         _upper_port = "local_port";
         _upper_bytes = "local_bytes";
+        _upper_packets = "local_packets";
     }
     else if (upper_type == ndNETLINK_ATYPE_MULTICAST) {
         other_type = "multicast";
@@ -191,10 +198,12 @@ json_object *ndFlow::json_encode(const string &device,
         _lower_ip = "local_ip";
         _lower_port = "local_port";
         _lower_bytes = "local_bytes";
+        _lower_packets = "local_packets";
         _upper_mac = "other_mac";
         _upper_ip = "other_ip";
         _upper_port = "other_port";
         _upper_bytes = "other_bytes";
+        _upper_packets = "other_packets";
     }
     else if (lower_type == ndNETLINK_ATYPE_BROADCAST) {
         other_type = "broadcast";
@@ -202,10 +211,12 @@ json_object *ndFlow::json_encode(const string &device,
         _lower_ip = "other_ip";
         _lower_port = "other_port";
         _lower_bytes = "other_bytes";
+        _lower_packets = "other_packets";
         _upper_mac = "local_mac";
         _upper_ip = "local_ip";
         _upper_port = "local_port";
         _upper_bytes = "local_bytes";
+        _upper_packets = "local_packets";
     }
     else if (upper_type == ndNETLINK_ATYPE_BROADCAST) {
         other_type = "broadcast";
@@ -213,10 +224,12 @@ json_object *ndFlow::json_encode(const string &device,
         _lower_ip = "local_ip";
         _lower_port = "local_port";
         _lower_bytes = "local_bytes";
+        _lower_packets = "local_packets";
         _upper_mac = "other_mac";
         _upper_ip = "other_ip";
         _upper_port = "other_port";
         _upper_bytes = "other_bytes";
+        _upper_packets = "other_packets";
     }
     else if (lower_type == ndNETLINK_ATYPE_UNKNOWN) {
         other_type = "remote";
@@ -224,10 +237,12 @@ json_object *ndFlow::json_encode(const string &device,
         _lower_ip = "other_ip";
         _lower_port = "other_port";
         _lower_bytes = "other_bytes";
+        _lower_packets = "other_packets";
         _upper_mac = "local_mac";
         _upper_ip = "local_ip";
         _upper_port = "local_port";
         _upper_bytes = "local_bytes";
+        _upper_packets = "local_packets";
     }
     else if (upper_type == ndNETLINK_ATYPE_UNKNOWN) {
         other_type = "remote";
@@ -235,10 +250,12 @@ json_object *ndFlow::json_encode(const string &device,
         _lower_ip = "local_ip";
         _lower_port = "local_port";
         _lower_bytes = "local_bytes";
+        _lower_packets = "local_packets";
         _upper_mac = "other_mac";
         _upper_ip = "other_ip";
         _upper_port = "other_port";
         _upper_bytes = "other_bytes";
+        _upper_packets = "other_packets";
     }
 
     json.AddObject(json_flow, "other_type", other_type);
@@ -264,6 +281,10 @@ json_object *ndFlow::json_encode(const string &device,
     if (counters) {
         json.AddObject(json_flow, _lower_bytes, lower_bytes);
         json.AddObject(json_flow, _upper_bytes, upper_bytes);
+        json.AddObject(json_flow, _lower_packets, lower_packets);
+        json.AddObject(json_flow, _upper_packets, upper_packets);
+        json.AddObject(json_flow, "total_packets", total_packets);
+        json.AddObject(json_flow, "total_bytes", total_bytes);
     }
 
     if (detected_protocol.master_protocol) {
@@ -290,11 +311,6 @@ json_object *ndFlow::json_encode(const string &device,
 
     json.AddObject(json_flow, "detection_guessed", detection_guessed);
 
-    if (counters) {
-        json.AddObject(json_flow, "packets", packets);
-        json.AddObject(json_flow, "bytes", bytes);
-    }
-
     if (host_server_name[0] != '\0') {
         json.AddObject(json_flow,
             "host_server_name", host_server_name);
@@ -312,7 +328,7 @@ json_object *ndFlow::json_encode(const string &device,
             json.AddObject(ssl, "server", this->ssl.server_cert);
     }
 
-    json.AddObject(json_flow, "last_seen", ts_last_seen);
+    json.AddObject(json_flow, "last_seen_at", ts_last_seen);
 
     return json_flow;
 }

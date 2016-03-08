@@ -21,7 +21,14 @@
 
 struct ndFlow
 {
-    uint8_t version;
+    uint8_t ip_version;
+    uint8_t ip_protocol;
+
+    uint16_t vlan_id;
+    uint64_t ts_last_seen;
+
+    ndNetlinkAddressType lower_type;
+    ndNetlinkAddressType upper_type;
 
     uint8_t lower_mac[ETH_ALEN];
     uint8_t upper_mac[ETH_ALEN];
@@ -43,18 +50,11 @@ struct ndFlow
 
     uint64_t lower_bytes;
     uint64_t upper_bytes;
+    uint64_t total_bytes;
 
-    ndNetlinkAddressType lower_type;
-    ndNetlinkAddressType upper_type;
-
-    uint8_t protocol;
-
-    uint16_t vlan_id;
-
-    uint64_t ts_last_seen;
-
-    uint64_t bytes;
-    uint32_t packets;
+    uint32_t lower_packets;
+    uint32_t upper_packets;
+    uint32_t total_packets;
 
     bool detection_complete;
     bool detection_guessed;
@@ -76,7 +76,7 @@ struct ndFlow
 
     inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;
-        switch (version) {
+        switch (ip_version) {
         case 4:
             if (memcmp(&lower_addr, &f.lower_addr, sizeof(struct in_addr)) == 0 &&
                 memcmp(&upper_addr, &f.upper_addr, sizeof(struct in_addr)) == 0)
