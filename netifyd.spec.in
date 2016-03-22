@@ -2,7 +2,7 @@
 
 Name: @PACKAGE_TARNAME@
 Version: @PACKAGE_VERSION@
-Release: 19%{dist}
+Release: 20%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -57,10 +57,11 @@ install -D -m 755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pr
 install -D -m 644 deploy/%{name}.service %{buildroot}/lib/systemd/system/%{name}.service
 %if "0%{dist}" == "0.v7"
 install -D -m 0644 deploy/%{name}.tmpf-clearos %{buildroot}/%{_tmpfilesdir}/%{name}.conf
+install -D -m 0660 deploy/%{name}.conf-clearos %{buildroot}/%{_sysconfdir}/%{name}.conf
 %else
 install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
-%endif
 install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
+%endif
 mkdir -p %{buildroot}/run
 install -d -m 0755 %{buildroot}/run/%{name}
 
