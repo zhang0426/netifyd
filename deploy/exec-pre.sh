@@ -1,17 +1,8 @@
 #!/bin/bash
-# Build netifyd command-line with all configured LAN interfaces (ClearOS)
+# Set Netify Daemon configuration options for systemd
 
 NETIFYD_OPTS=
-
-for ifn in $(/usr/sbin/network --get-lan-interfaces 2>/dev/null); do
-    [ -z "$ifn" ] && break
-    NETIFYD_OPTS="$NETIFYD_OPTS -I $ifn"
-done
-
-if [ -z "$NETIFYD_OPTS" ]; then
-    echo "No LAN interfaces configured."
-    exit 1
-fi
+# NETIFYD_OPTS="--external eth0 --internal eth1"
 
 systemctl set-environment NETIFYD_OPTS="$NETIFYD_OPTS"
 

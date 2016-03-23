@@ -108,7 +108,7 @@ struct ndDetectionStats
     void print(const char *tag = "");
 };
 
-typedef vector<string> nd_devices;
+typedef vector<pair<bool, string> > nd_devices;
 typedef map<string, ndDetectionStats *> nd_stats;
 
 #endif // _ND_H

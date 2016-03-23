@@ -107,9 +107,14 @@ static void nd_usage(int rc = 0, bool version = false)
         cerr <<
             "    Output debug messages and remain in the foreground." << endl;
         cerr <<
-            "  -I, --interface <device>" << endl;
+            "  -I, --internal <device>" << endl;
         cerr <<
-            "    Interface to capture traffic on.  Repeat for multiple interfaces.";
+            "    Internal LAN interface.  Repeat for multiple interfaces.";
+        cerr << endl;
+        cerr <<
+            "  -E, --external <device>" << endl;
+        cerr <<
+            "    External WAN interface.  Repeat for multiple interfaces.";
         cerr << endl;
         cerr <<
             "  -c, --config <filename>" << endl;
@@ -497,7 +502,8 @@ int main(int argc, char *argv[])
         { "version", 0, 0, 'V' },
         { "debug", 0, 0, 'd' },
         { "serial", 1, 0, 's' },
-        { "interface", 1, 0, 'I' },
+        { "internal", 1, 0, 'I' },
+        { "external", 1, 0, 'E' },
         { "json", 1, 0, 'j' },
         { "interval", 1, 0, 'i' },
         { "config", 1, 0, 'c' },
@@ -510,7 +516,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:j:i:c:UP", options, &o)) == -1) break;
+            "?hVds:I:E:j:i:c:UP", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -529,12 +535,22 @@ int main(int argc, char *argv[])
         case 'I':
             for (nd_devices::iterator i = devices.begin();
                 i != devices.end(); i++) {
-                if (strcasecmp((*i).c_str(), optarg) == 0) {
+                if (strcasecmp((*i).second.c_str(), optarg) == 0) {
                     cerr << "Duplicate interface specified: " << optarg << endl;
                     exit(1);
                 }
             }
-            devices.push_back(optarg);
+            devices.push_back(make_pair(true, optarg));
+            break;
+        case 'E':
+            for (nd_devices::iterator i = devices.begin();
+                i != devices.end(); i++) {
+                if (strcasecmp((*i).second.c_str(), optarg) == 0) {
+                    cerr << "Duplicate interface specified: " << optarg << endl;
+                    exit(1);
+                }
+            }
+            devices.push_back(make_pair(false, optarg));
             break;
         case 'j':
             nd_config.json_filename = strdup(optarg);
@@ -616,8 +632,8 @@ int main(int argc, char *argv[])
 
     for (nd_devices::iterator i = devices.begin();
         i != devices.end(); i++) {
-        flows[(*i)] = new nd_flow_map;
-        stats[(*i)] = new ndDetectionStats;
+        flows[(*i).second] = new nd_flow_map;
+        stats[(*i).second] = new ndDetectionStats;
     }
 
     try {
@@ -645,15 +661,15 @@ int main(int argc, char *argv[])
 
         for (nd_devices::iterator i = devices.begin();
             i != devices.end(); i++) {
-            threads[(*i)] = new ndDetectionThread(
-                (*i),
+            threads[(*i).second] = new ndDetectionThread(
+                (*i).second,
                 netlink,
                 thread_socket,
-                flows[(*i)],
-                stats[(*i)],
+                flows[(*i).second],
+                stats[(*i).second],
                 (devices.size() > 1) ? cpu++ : -1
             );
-            threads[(*i)]->Create();
+            threads[(*i).second]->Create();
             if (cpu == cpus) cpu = 0;
         }
     }
@@ -730,10 +746,10 @@ int main(int argc, char *argv[])
 
     for (nd_devices::iterator i = devices.begin();
         i != devices.end(); i++) {
-        threads[(*i)]->Terminate();
-        delete threads[(*i)];
-        delete flows[(*i)];
-        delete stats[(*i)];
+        threads[(*i).second]->Terminate();
+        delete threads[(*i).second];
+        delete flows[(*i).second];
+        delete stats[(*i).second];
     }
 
     thread_upload->Terminate();

@@ -38,6 +38,7 @@
 
 using namespace std;
 
+#include "netifyd.h"
 #include "nd-netlink.h"
 #include "nd-json.h"
 #include "nd-flow.h"

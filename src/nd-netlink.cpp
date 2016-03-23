@@ -40,6 +40,7 @@ using namespace std;
 
 #include "ndpi_main.h"
 
+#include "netifyd.h"
 #include "nd-netlink.h"
 #include "nd-util.h"
 
@@ -152,7 +153,7 @@ inline bool ndNetlinkNetworkAddr::operator!=(const ndNetlinkNetworkAddr &n) cons
     return (rc != 0);
 }
 
-ndNetlink::ndNetlink(const vector<string> &devices)
+ndNetlink::ndNetlink(const nd_devices &devices)
     : nd(-1), seq(0)
 {
     int rc;
@@ -199,8 +200,8 @@ ndNetlink::ndNetlink(const vector<string> &devices)
         throw ndNetlinkException(strerror(rc));
     }
 
-    for (vector<string>::const_iterator i = devices.begin(); i != devices.end(); i++)
-        AddDevice((*i));
+    for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++)
+        AddDevice((*i).second);
 
     // Add private networks for when all else fails...
     AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "10.0.0.0", 8);

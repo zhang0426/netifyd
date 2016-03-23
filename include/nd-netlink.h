@@ -76,7 +76,7 @@ enum ndNetlinkAddressType
 class ndNetlink
 {
 public:
-    ndNetlink(const vector<string> &devices);
+    ndNetlink(const nd_devices &devices);
     virtual ~ndNetlink();
 
     int GetDescriptor(void) { return nd; }

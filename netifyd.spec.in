@@ -53,14 +53,15 @@ rm -rf %{buildroot}/%{_includedir}
 rm -rf %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_sharedstatedir}/%{name}
 mkdir -p %{buildroot}/%{_sysconfdir}
-install -D -m 755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
 install -D -m 644 deploy/%{name}.service %{buildroot}/lib/systemd/system/%{name}.service
 %if "0%{dist}" == "0.v7"
-install -D -m 0644 deploy/%{name}.tmpf-clearos %{buildroot}/%{_tmpfilesdir}/%{name}.conf
-install -D -m 0660 deploy/%{name}.conf-clearos %{buildroot}/%{_sysconfdir}/%{name}.conf
+install -D -m 0644 deploy/clearos/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
+install -D -m 0660 deploy/clearos/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
+install -D -m 0755 deploy/clearos/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
 %else
 install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
+install -D -m 0755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
 %endif
 mkdir -p %{buildroot}/run
 install -d -m 0755 %{buildroot}/run/%{name}
