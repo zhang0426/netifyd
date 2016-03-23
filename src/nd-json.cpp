@@ -341,7 +341,10 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
         throw ndJsonParseException("Version field type mismatch");
 
     double version = json_object_get_double(jver);
-    nd_printf("version: %.02f\n", version);
+    if (version > ND_JSON_VERSION) {
+        nd_printf("Unsupported remote JSON version: %.02f\n", version);
+        throw ndJsonParseException("Unsupported remote JSON version");
+    }
 
     if (!json_object_object_get_ex(jobj, "type", &jtype))
         throw ndJsonParseException("Missing type field");
