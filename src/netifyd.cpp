@@ -35,6 +35,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+//#include <net/if.h>
+//#include <ifaddrs.h>
 #include <errno.h>
 
 #include <linux/if_ether.h>
@@ -246,6 +248,86 @@ void ndDetectionStats::print(const char *tag)
     nd_printf("Discard bytes: %llu\n", pkt_discard_bytes);
 }
 
+static void nd_json_add_interfaces(json_object *parent)
+{
+    json_object *jobj;
+    ndJson json(parent);
+/*
+    char addr[INET6_ADDRSTRLEN];
+    struct ifaddrs *ifap = NULL, *p = NULL;
+
+    if (getifaddrs(&ifap) < 0) {
+        nd_printf("Error collecting interface addresses: %s\n",
+            strerror(errno));
+    }
+*/
+    for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++) {
+/*
+        for (p = ifap; p != NULL; p = p->ifa_next) {
+            if (strncmp(p->ifa_name, i->second.c_str(), IFNAMSIZ)) continue;
+            break;
+        }
+*/
+        jobj = json.CreateObject(NULL, i->second);
+        json.AddObject(jobj, "role", (i->first) ? "local" : "wide");
+/*
+        if (p == NULL) continue;
+
+        inet_ntop(p->ifa_addr, &new_flow->lower_addr.s_addr,
+            new_flow->lower_ip, INET_ADDRSTRLEN);
+
+        inet_ntop(AF_INET6, &new_flow->lower_addr6.s6_addr,
+            new_flow->lower_ip, INET6_ADDRSTRLEN);
+*/
+    }
+
+//    if (ifap) freeifaddrs(ifap);
+}
+
+static void nd_json_add_stats(json_object *parent, const ndDetectionStats *stats)
+{
+    ndJson json(parent);
+
+    json.AddObject(NULL, "raw", stats->pkt_raw);
+    json.AddObject(NULL, "ethernet", stats->pkt_eth);
+    json.AddObject(NULL, "mpls", stats->pkt_mpls);
+    json.AddObject(NULL, "pppoe", stats->pkt_pppoe);
+    json.AddObject(NULL, "vlan", stats->pkt_vlan);
+    json.AddObject(NULL, "fragmented", stats->pkt_frags);
+    json.AddObject(NULL, "discarded", stats->pkt_discard);
+    json.AddObject(NULL, "discarded_bytes", stats->pkt_discard_bytes);
+    json.AddObject(NULL, "largest_bytes", stats->pkt_maxlen);
+    json.AddObject(NULL, "ip", stats->pkt_ip);
+    json.AddObject(NULL, "tcp", stats->pkt_tcp);
+    json.AddObject(NULL, "udp", stats->pkt_udp);
+    json.AddObject(NULL, "ip_bytes", stats->pkt_ip_bytes);
+    json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
+}
+
+static void nd_json_add_flows(
+    const string &device, json_object *parent,
+    struct ndpi_detection_module_struct *ndpi,
+    const nd_flow_map *flows, bool unknown = true)
+{
+    ndJson json(parent);
+
+    for (nd_flow_map::const_iterator i = flows->begin();
+        i != flows->end(); i++) {
+
+        if (i->second->detection_complete == false)
+            continue;
+        if (unknown == false &&
+            i->second->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN)
+            continue;
+
+        json_object *json_flow = i->second->json_encode(device, json, ndpi);
+        json.PushObject(NULL, json_flow);
+
+        i->second->lower_bytes = i->second->upper_bytes = 0;
+        i->second->lower_packets = i->second->upper_packets = 0;
+    }
+}
+
 static void nd_json_add_file(
     json_object *parent, const string &type, const string &filename)
 {
@@ -287,50 +369,6 @@ static void nd_json_upload(ndJson *json)
     thread_upload->QueuePush(json_string);
 }
 
-static void nd_json_add_stats(json_object *parent, const ndDetectionStats *stats)
-{
-    ndJson json(parent);
-
-    json.AddObject(NULL, string("raw"), stats->pkt_raw);
-    json.AddObject(NULL, "ethernet", stats->pkt_eth);
-    json.AddObject(NULL, "mpls", stats->pkt_mpls);
-    json.AddObject(NULL, "pppoe", stats->pkt_pppoe);
-    json.AddObject(NULL, "vlan", stats->pkt_vlan);
-    json.AddObject(NULL, "fragmented", stats->pkt_frags);
-    json.AddObject(NULL, "discarded", stats->pkt_discard);
-    json.AddObject(NULL, "discarded_bytes", stats->pkt_discard_bytes);
-    json.AddObject(NULL, "largest_bytes", stats->pkt_maxlen);
-    json.AddObject(NULL, "ip", stats->pkt_ip);
-    json.AddObject(NULL, "tcp", stats->pkt_tcp);
-    json.AddObject(NULL, "udp", stats->pkt_udp);
-    json.AddObject(NULL, "ip_bytes", stats->pkt_ip_bytes);
-    json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
-}
-
-static void nd_json_add_flows(
-    const string &device, json_object *parent,
-    struct ndpi_detection_module_struct *ndpi,
-    const nd_flow_map *flows, bool unknown = true)
-{
-    ndJson json(parent);
-
-    for (nd_flow_map::const_iterator i = flows->begin();
-        i != flows->end(); i++) {
-
-        if (i->second->detection_complete == false)
-            continue;
-        if (unknown == false &&
-            i->second->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN)
-            continue;
-
-        json_object *json_flow = i->second->json_encode(device, json, ndpi);
-        json.PushObject(NULL, json_flow);
-
-        i->second->lower_bytes = i->second->upper_bytes = 0;
-        i->second->lower_packets = i->second->upper_packets = 0;
-    }
-}
-
 static void nd_dump_stats(void)
 {
     uint32_t flow_count = 0;
@@ -341,14 +379,17 @@ static void nd_dump_stats(void)
     json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
     json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
 
-    json_object *json_devs = json.CreateArray(NULL, "interfaces");
+    json_object *json_devs = json.CreateObject(NULL, "interfaces");
+//    json_object *json_devs = json.CreateArray(NULL, "interfaces");
     json_object *json_stats = json.CreateObject(NULL, "stats");
     json_object *json_flows = json.CreateObject(NULL, "flows");
+
+    nd_json_add_interfaces(json_devs);
 
     for (nd_threads::iterator i = threads.begin();
         i != threads.end(); i++) {
 
-        json.PushObject(json_devs, i->first.c_str());
+//        json.PushObject(json_devs, i->first.c_str());
 
         i->second->Lock();
 
@@ -664,7 +705,7 @@ int main(int argc, char *argv[])
             threads[(*i).second] = new ndDetectionThread(
                 (*i).second,
                 netlink,
-                thread_socket,
+                (i->first) ? thread_socket : NULL,
                 flows[(*i).second],
                 stats[(*i).second],
                 (devices.size() > 1) ? cpu++ : -1
