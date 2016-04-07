@@ -587,12 +587,12 @@ void ndSocketBuffer::Pop(ssize_t length)
     if (length <= 0 || buffer.size() == 0) return;
     size_t bytes = buffer.front().size() - offset;
     if (bytes <= 0) return;
-    if (length > bytes) return;
-    if (length == bytes) {
+    if ((size_t)length > bytes) return;
+    if ((size_t)length == bytes) {
         offset = 0;
         buffer.pop_front();
     }
-    else if (length < bytes)
+    else if ((size_t)length < bytes)
         offset += length;
 
     length -= bytes;

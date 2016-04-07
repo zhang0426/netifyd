@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.1
-Release: 2%{dist}
+Release: 3%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -10,13 +10,6 @@ Packager: eGloo Incorporated
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-%{version}
 Obsoletes: cdpid
-Requires(post): systemd
-Requires(preun): systemd
-Requires(postun): systemd
-%if "0%{dist}" == "0.v7"
-Requires: webconfig-httpd
-Requires: app-network-core
-%endif
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: json-c-devel
@@ -24,9 +17,12 @@ BuildRequires: libcurl-devel
 BuildRequires: libpcap-devel
 BuildRequires: libtool
 BuildRequires: pkgconfig
-BuildRequires: systemd
 BuildRequires: zlib-devel
-#BuildRequires: libmnl-devel
+%if "0%{dist}" == "0.v7"
+Requires: webconfig-httpd
+Requires: app-network-core
+%endif
+%{?systemd_requires}
 Summary: Netify DPI Daemon
 
 %description
@@ -53,7 +49,7 @@ rm -rf %{buildroot}/%{_includedir}
 rm -rf %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_sharedstatedir}/%{name}
 mkdir -p %{buildroot}/%{_sysconfdir}
-install -D -m 644 deploy/%{name}.service %{buildroot}/lib/systemd/system/%{name}.service
+install -D -m 644 deploy/%{name}.service %{buildroot}/%{_unitdir}/%{name}.service
 %if "0%{dist}" == "0.v7"
 install -D -m 0644 deploy/clearos/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 install -D -m 0660 deploy/clearos/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
@@ -93,13 +89,12 @@ fi
 # Files
 %files
 %defattr(-,root,root)
-%{_sbindir}/%{name}
+%attr(644,root,root) %{_tmpfilesdir}/%{name}.conf
+%attr(644,root,root) %{_unitdir}/%{name}.service
 %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
 %attr(755,root,root) %{_libexecdir}/%{name}/
-%attr(755,root,root) /lib/systemd/system
-%dir /run/%{name}
-%attr(755,root,root) %{_tmpfilesdir}
-%attr(755,root,root) %{_sysconfdir}
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
+%dir /run/%{name}
+%{_sbindir}/%{name}
 
 # vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

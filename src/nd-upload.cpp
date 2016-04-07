@@ -354,7 +354,7 @@ string ndUploadThread::Deflate(const string &data)
 void ndUploadThread::ProcessResponse(void)
 {
     ndJsonObject *json_obj = NULL;
-    ndJsonObjectType json_type;
+    ndJsonObjectType json_type = ndJSON_OBJ_TYPE_NULL;
     ndJsonObjectResult *json_result = NULL;
     ndJsonObjectFactory json_factory;
 

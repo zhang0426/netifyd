@@ -444,9 +444,10 @@ void nd_generate_uuid(void)
     FILE *fh = fopen("/dev/urandom", "r");
 
     if (fh == NULL)
-        fprintf(stderr, "WARNING: Error opening random device: %s\n", strerror(errno));
+        cerr << "Error opening random device: " << strerror(errno) << endl;
     else {
-        fread((void *)&seed, 1, sizeof(unsigned int), fh);
+        if (fread((void *)&seed, sizeof(unsigned int), 1, fh) != 1)
+            cerr << "Error reading from random device: " << strerror(errno) << endl;
         fclose(fh);
     }
 
