@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.1
-Release: 3%{dist}
+Release: 4%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -17,6 +17,7 @@ BuildRequires: libcurl-devel
 BuildRequires: libpcap-devel
 BuildRequires: libtool
 BuildRequires: pkgconfig
+BuildRequires: systemd
 BuildRequires: zlib-devel
 %if "0%{dist}" == "0.v7"
 Requires: webconfig-httpd
