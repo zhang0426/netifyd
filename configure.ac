@@ -2,7 +2,7 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify DPI Daemon], [1.0],
+AC_INIT([Netify DPI Daemon], [1.1],
 	[http://www.egloo.ca/gnats],
 	[netifyd], [http://www.egloo.ca/])
 AM_INIT_AUTOMAKE
