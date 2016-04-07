@@ -15,6 +15,8 @@ sub-modules.
 Configuring Source
 ------------------
 
+```
 # ./autoconf.sh
 # ./configure --prefix=/usr/local --enable-netify-sink --with-pic=inih,ndpi
+```
 
