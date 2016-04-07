@@ -2,7 +2,7 @@
 
 Name: @PACKAGE_TARNAME@
 Version: @PACKAGE_VERSION@
-Release: 1%{dist}
+Release: 2%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -20,7 +20,7 @@ Requires: app-network-core
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: json-c-devel
-BuildRequires: libcurl
+BuildRequires: libcurl-devel
 BuildRequires: libpcap-devel
 BuildRequires: libtool
 BuildRequires: pkgconfig
