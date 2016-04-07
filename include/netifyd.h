@@ -62,6 +62,7 @@ typedef struct {
     char *uuid_domain;
     char *url_upload;
     size_t max_backlog;
+    bool enable_netify_sink;
     bool ssl_verify_peer;
     char *json_filename;
     unsigned update_interval;

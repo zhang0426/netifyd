@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.1
-Release: 4%{dist}
+Release: 5%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -30,15 +30,13 @@ Summary: Netify DPI Daemon
 Netify DPI Daemon
 Report bugs to: http://www.egloo.ca/gnats
 
-# Build
+# Prepare
 %prep
 %setup -q
 ./autogen.sh
-ac_flags="--with-pic=inih --with-pic=ndpi"
-%if "0%{dist}" == "0.v7"
-ac_flags="$ac_flags --enable-netify-sink"
-%endif
-%{configure} $ac_flags
+%{configure} --with-pic=inih,ndpi
+
+# Build
 %build
 make %{?_smp_mflags}
 

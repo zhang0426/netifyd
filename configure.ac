@@ -22,12 +22,6 @@ m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
 AX_CXX_COMPILE_STDCXX_11([ext], [mandatory])
 
 # Check for optional parameters
-AC_ARG_ENABLE(netify-sink,
-	AS_HELP_STRING([--enable-netify-sink], [enable Netify Sink cloud integration])
-)
-AS_IF([test "x$enable_netify_sink" = "xyes"], [
-    AC_DEFINE([USE_NETIFY_SINK], [1], [Define to enable Netify Sink cloud integration.])
-])
 
 # Checks for libraries.
 AC_CHECK_LIB([rt], [timer_create], [], [

@@ -177,6 +177,9 @@ static int nd_config_load(void)
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
 
+    nd_config.enable_netify_sink = reader.GetBoolean(
+        "netifyd", "enable_netify_sink", false);
+
     nd_config.ssl_verify_peer = reader.GetBoolean(
         "netifyd", "ssl_verify_peer", true);
 
@@ -417,14 +420,15 @@ static void nd_dump_stats(void)
             nd_config.json_filename, e.what());
     }
 
-#ifdef USE_NETIFY_SINK
-    try {
-        nd_json_upload(&json);
+    if (nd_config.enable_netify_sink) {
+        try {
+            nd_json_upload(&json);
+        }
+        catch (runtime_error &e) {
+            nd_printf("Error uploading JSON: %s\n", e.what());
+        }
     }
-    catch (runtime_error &e) {
-        nd_printf("Error uploading JSON: %s\n", e.what());
-    }
-#endif // USE_NETIFY_SINK
+
     json.Destroy();
 
     if (nd_debug) {
