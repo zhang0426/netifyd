@@ -1,6 +1,19 @@
-Netify DPI Daemon
-=================
+Netify Daemon
+=============
+Deep Packet Inspection Server
+-----------------------------
 
-The Netify Daemon performs deep packet inspection on configured LAN interfaces.
-The resulting protocol detection is optionally uploaded to the Netify Cloud for
-further analysis.
+Netify is a deep packet inspection server based off of nDPI (OpenDPI).
+
+Download Source
+---------------
+
+When cloning the source tree, ensure you use --recursive to include all
+sub-modules.
+
+Configuring Source
+------------------
+
+# ./autoconf.sh
+# ./configure --prefix=/usr/local --enable-netify-sink --with-pic=inih,ndpi
+
