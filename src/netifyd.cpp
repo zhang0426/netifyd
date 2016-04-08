@@ -272,7 +272,7 @@ static void nd_json_add_interfaces(json_object *parent)
         }
 */
         jobj = json.CreateObject(NULL, i->second);
-        json.AddObject(jobj, "role", (i->first) ? "local" : "wide");
+        json.AddObject(jobj, "role", (i->first) ? "LAN" : "WAN");
 /*
         if (p == NULL) continue;
 
