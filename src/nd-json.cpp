@@ -327,50 +327,62 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
         jtok, jstring.c_str(), jstring.length()
     );
 
-    enum json_tokener_error jterr;
-    if ((jterr = json_tokener_get_error(jtok)) != json_tokener_success)
-        throw ndJsonParseException(json_tokener_error_desc(jterr));
+    try {
+        enum json_tokener_error jterr;
+        if ((jterr = json_tokener_get_error(jtok)) != json_tokener_success)
+            throw ndJsonParseException(json_tokener_error_desc(jterr));
 
-    if (!json_object_is_type(jobj, json_type_object))
-        throw ndJsonParseException("Unexpected JSON type");
+        if (!json_object_is_type(jobj, json_type_object))
+            throw ndJsonParseException("Unexpected JSON type");
 
-    if (!json_object_object_get_ex(jobj, "version", &jver))
-        throw ndJsonParseException("Missing version field");
+        if (!json_object_object_get_ex(jobj, "version", &jver))
+            throw ndJsonParseException("Missing version field");
 
-    if (json_object_get_type(jver) != json_type_double)
-        throw ndJsonParseException("Version field type mismatch");
+        if (json_object_get_type(jver) != json_type_double)
+            throw ndJsonParseException("Version field type mismatch");
 
-    double version = json_object_get_double(jver);
-    if (version > ND_JSON_VERSION) {
-        nd_printf("Unsupported remote JSON version: %.02f\n", version);
-        throw ndJsonParseException("Unsupported remote JSON version");
+        double version = json_object_get_double(jver);
+        if (version > ND_JSON_VERSION) {
+            nd_printf("Unsupported remote JSON version: %.02f\n", version);
+            throw ndJsonParseException("Unsupported remote JSON version");
+        }
+
+        if (!json_object_object_get_ex(jobj, "type", &jtype))
+            throw ndJsonParseException("Missing type field");
+
+        if (json_object_get_type(jtype) != json_type_int)
+            throw ndJsonParseException("Type field type mismatch");
+
+        int type = json_object_get_int(jtype);
+        if (type <= ndJSON_OBJ_TYPE_NULL || type >= ndJSON_OBJ_TYPE_MAX)
+            throw ndJsonParseException("Type field invalid value");
+        if (nd_debug) nd_printf("type: %d\n", type);
+
+        switch (type) {
+        case ndJSON_OBJ_TYPE_OK:
+            *result = NULL;
+            json_object_put(jobj);
+            return ndJSON_OBJ_TYPE_OK;
+
+        case ndJSON_OBJ_TYPE_RESULT:
+            if (!json_object_object_get_ex(jobj, "data", &jdata))
+                throw ndJsonParseException("Missing data field");
+            if (!json_object_is_type(jdata, json_type_object))
+                throw ndJsonParseException("Unexpected data type");
+            *result = reinterpret_cast<ndJsonObject *>(new ndJsonObjectResult(jdata));
+            json_object_put(jobj);
+            return ndJSON_OBJ_TYPE_RESULT;
+
+        default:
+            throw ndJsonParseException("Invalid type");
+        }
+    }
+    catch (ndJsonParseException &e) {
+        if (jobj != NULL) json_object_put(jobj);
+        throw;
     }
 
-    if (!json_object_object_get_ex(jobj, "type", &jtype))
-        throw ndJsonParseException("Missing type field");
-
-    if (json_object_get_type(jtype) != json_type_int)
-        throw ndJsonParseException("Type field type mismatch");
-
-    int type = json_object_get_int(jtype);
-    if (type <= ndJSON_OBJ_TYPE_NULL || type >= ndJSON_OBJ_TYPE_MAX)
-        throw ndJsonParseException("Type field invalid value");
-    if (nd_debug) nd_printf("type: %d\n", type);
-
-    switch (type) {
-    case ndJSON_OBJ_TYPE_OK:
-        *result = NULL;
-        return ndJSON_OBJ_TYPE_OK;
-    case ndJSON_OBJ_TYPE_RESULT:
-        if (!json_object_object_get_ex(jobj, "data", &jdata))
-            throw ndJsonParseException("Missing data field");
-        if (!json_object_is_type(jdata, json_type_object))
-            throw ndJsonParseException("Unexpected data type");
-        *result = reinterpret_cast<ndJsonObject *>(new ndJsonObjectResult(jdata));
-        return ndJSON_OBJ_TYPE_RESULT;
-    default:
-        throw ndJsonParseException("Invalid type");
-    }
+    json_object_put(jobj);
 
     return ndJSON_OBJ_TYPE_NULL;
 }

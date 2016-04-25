@@ -794,6 +794,8 @@ int main(int argc, char *argv[])
         i != devices.end(); i++) {
         threads[(*i).second]->Terminate();
         delete threads[(*i).second];
+        for (nd_flow_map::iterator j = flows[(*i).second]->begin();
+            j != flows[(*i).second]->end(); j++) delete j->second;
         delete flows[(*i).second];
         delete stats[(*i).second];
     }

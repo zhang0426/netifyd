@@ -97,6 +97,7 @@ ndDetectionThread::~ndDetectionThread()
 {
     Join();
     if (pcap != NULL) pcap_close(pcap);
+    if (ndpi != NULL) ndpi_exit_detection_module(ndpi, nd_mem_free);
 }
 
 void *ndDetectionThread::Entry(void)
@@ -445,7 +446,7 @@ void ndDetectionThread::ProcessPacket(void)
     nd_flow_insert rc = flows->insert(nd_flow_pair(digest, new_flow));
 
     if (rc.second) {
-        new_flow->ndpi_flow = new ndpi_flow_struct;
+        new_flow->ndpi_flow = (ndpi_flow_struct *)ndpi_malloc(sizeof(ndpi_flow_struct));
         if (new_flow->ndpi_flow == NULL) throw ndThreadException(strerror(ENOMEM));
         memset(new_flow->ndpi_flow, 0, sizeof(ndpi_flow_struct));
 
