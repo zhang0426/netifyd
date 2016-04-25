@@ -795,7 +795,10 @@ int main(int argc, char *argv[])
         threads[(*i).second]->Terminate();
         delete threads[(*i).second];
         for (nd_flow_map::iterator j = flows[(*i).second]->begin();
-            j != flows[(*i).second]->end(); j++) delete j->second;
+            j != flows[(*i).second]->end(); j++) {
+            j->second->release();
+            delete j->second;
+        }
         delete flows[(*i).second];
         delete stats[(*i).second];
     }
@@ -807,6 +810,7 @@ int main(int argc, char *argv[])
     delete thread_socket;
 
     pthread_mutex_destroy(nd_output_mutex);
+    delete nd_output_mutex;
 
     curl_global_cleanup();
 

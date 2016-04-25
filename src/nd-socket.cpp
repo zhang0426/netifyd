@@ -225,6 +225,9 @@ ndSocket *ndSocketServer::Accept(void)
         peer_sa_size = sizeof(struct sockaddr_storage);
     }
 
+    if (peer_sa == NULL)
+        throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+
     try {
         peer_sd = accept(base->sd, peer_sa, &peer_sa_size);
         if (peer_sd < 0)
@@ -232,6 +235,8 @@ ndSocket *ndSocketServer::Accept(void)
 
         if (base->sa_size == sizeof(struct sockaddr_un)) {
             peer = new ndSocket(base->node);
+            if (peer == NULL)
+                throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
 
             nd_printf("%s: peer: %s\n", __PRETTY_FUNCTION__, base->node.c_str());
         }
@@ -247,6 +252,8 @@ ndSocket *ndSocketServer::Accept(void)
             }
 
             peer = new ndSocket(node, service);
+            if (peer == NULL)
+                throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
     
             nd_printf("%s: peer: %s:%s\n", __PRETTY_FUNCTION__, node, service);
         }
@@ -255,6 +262,8 @@ ndSocket *ndSocketServer::Accept(void)
         peer->family = base->family;
         peer->type = ndSOCKET_TYPE_CLIENT;
         peer->state = ndSOCKET_STATE_ACCEPTED;
+
+        delete (peer_sa);
     }
     catch (runtime_error &e) {
         if (peer != NULL) {
