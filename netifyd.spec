@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.1
-Release: 6%{dist}
+Release: 7%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
