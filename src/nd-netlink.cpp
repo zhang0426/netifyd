@@ -400,24 +400,25 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
     ndNetlinkAddresses::const_iterator addr_list;
 
     addr_list = addresses.find(_ND_NETLINK_BROADCAST);
-    if (addr_list == addresses.end()) return ndNETLINK_ATYPE_ERROR;
+    if (addr_list != addresses.end()) {
 
-    pthread_mutex_lock(lock->second);
+        pthread_mutex_lock(lock->second);
 
-    // Is addr a broadcast address?
-    for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
+        // Is addr a broadcast address?
+        for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
 
-        if ((*a)->ss_family != addr->ss_family) continue;
+            if ((*a)->ss_family != addr->ss_family) continue;
 
-        ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
-        if (_addr1 != _addr2) continue;
+            ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
+            if (_addr1 != _addr2) continue;
 
-        type = ndNETLINK_ATYPE_BROADCAST;
-        break;
+            type = ndNETLINK_ATYPE_BROADCAST;
+            break;
+        }
+
+        pthread_mutex_unlock(lock->second);
+        if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
     }
-
-    pthread_mutex_unlock(lock->second);
-    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
     addr_list = addresses.find(device);
     if (addr_list == addresses.end()) return ndNETLINK_ATYPE_ERROR;
