@@ -395,25 +395,27 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
     vector<struct sockaddr_storage *>::const_iterator a;
     ndNetlinkAddresses::const_iterator addr_list;
 
-    // Is addr a broadcast address?
-    addr_list = addresses.find(_ND_NETLINK_BROADCAST);
-    if (addr_list == addresses.end()) return ndNETLINK_ATYPE_ERROR;
+    // Is addr a broadcast address (IPv4 only)?
+    if (addr->ss_family == AF_INET) {
+        addr_list = addresses.find(_ND_NETLINK_BROADCAST);
+        if (addr_list == addresses.end()) return ndNETLINK_ATYPE_ERROR;
 
-    pthread_mutex_lock(lock->second);
+        pthread_mutex_lock(lock->second);
 
-    for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
+        for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
 
-        if ((*a)->ss_family != addr->ss_family) continue;
+            if ((*a)->ss_family != addr->ss_family) continue;
 
-        ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
-        if (_addr1 != _addr2) continue;
+            ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
+            if (_addr1 != _addr2) continue;
 
-        type = ndNETLINK_ATYPE_BROADCAST;
-        break;
+            type = ndNETLINK_ATYPE_BROADCAST;
+            break;
+        }
+
+        pthread_mutex_unlock(lock->second);
+        if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
     }
-
-    pthread_mutex_unlock(lock->second);
-    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
     // Is addr a local address to this device?
     addr_list = addresses.find(device);
