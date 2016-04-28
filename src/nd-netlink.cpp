@@ -496,30 +496,39 @@ bool ndNetlink::InNetwork(sa_family_t family, uint8_t length,
     const struct sockaddr_storage *addr_net, const struct sockaddr_storage *addr_host)
 {
     const struct sockaddr_in *ipv4_net, *ipv4_host;
-   const  struct sockaddr_in6 *ipv6_net, *ipv6_host;
-    int o, b = (int)length, octets = 1;
-    uint32_t i, octet_net[4], octet_host[4];
+    const  struct sockaddr_in6 *ipv6_net, *ipv6_host;
+    int bit = (int)length, word, words;
+    uint32_t i, word_net[4], word_host[4];
 
     switch (family) {
     case AF_INET:
+        words = 1;
+
         ipv4_net = reinterpret_cast<const struct sockaddr_in *>(addr_net);
+        word_net[0] = ntohl(ipv4_net->sin_addr.s_addr);
+
         ipv4_host = reinterpret_cast<const struct sockaddr_in *>(addr_host);
-        octet_net[0] = ntohl(ipv4_net->sin_addr.s_addr);
-        octet_host[0] = ntohl(ipv4_host->sin_addr.s_addr);
+        word_host[0] = ntohl(ipv4_host->sin_addr.s_addr);
         break;
+
     case AF_INET6:
-        octets = 4;
+        words = 4;
+
         ipv6_net = reinterpret_cast<const struct sockaddr_in6 *>(addr_net);
+        word_net[0] = ntohl(ipv6_net->sin6_addr.s6_addr32[0]);
+        word_net[1] = ntohl(ipv6_net->sin6_addr.s6_addr32[1]);
+        word_net[2] = ntohl(ipv6_net->sin6_addr.s6_addr32[2]);
+        word_net[3] = ntohl(ipv6_net->sin6_addr.s6_addr32[3]);
+
         ipv6_host = reinterpret_cast<const struct sockaddr_in6 *>(addr_host);
-        octet_net[0] = ntohl(ipv6_net->sin6_addr.s6_addr32[0]);
-        octet_net[1] = ntohl(ipv6_net->sin6_addr.s6_addr32[1]);
-        octet_net[2] = ntohl(ipv6_net->sin6_addr.s6_addr32[2]);
-        octet_net[3] = ntohl(ipv6_net->sin6_addr.s6_addr32[3]);
-        octet_host[0] = ntohl(ipv6_host->sin6_addr.s6_addr32[0]);
-        octet_host[1] = ntohl(ipv6_host->sin6_addr.s6_addr32[1]);
-        octet_host[2] = ntohl(ipv6_host->sin6_addr.s6_addr32[2]);
-        octet_host[3] = ntohl(ipv6_host->sin6_addr.s6_addr32[3]);
+        word_host[0] = ntohl(ipv6_host->sin6_addr.s6_addr32[0]);
+        word_host[1] = ntohl(ipv6_host->sin6_addr.s6_addr32[1]);
+        word_host[2] = ntohl(ipv6_host->sin6_addr.s6_addr32[2]);
+        word_host[3] = ntohl(ipv6_host->sin6_addr.s6_addr32[3]);
         break;
+
+    default:
+        return false;
     }
 #if 0
     char host[INET6_ADDRSTRLEN], net[INET6_ADDRSTRLEN];
@@ -540,37 +549,37 @@ bool ndNetlink::InNetwork(sa_family_t family, uint8_t length,
     }
 
     nd_printf("Network: ");
-    for (o = 0; o < octets; o++) {
-        print_binary(octet_net[o]);
-        if (o + 1 < octets) nd_printf(".");
+    for (word = 0; word < words; word++) {
+        print_binary(word_net[word]);
+        if (word + 1 < words) nd_printf(".");
     }
     nd_printf(" (%s)\n", net);
     nd_printf("   Host: ");
-    for (o = 0; o < octets; o++) {
-        print_binary(octet_host[o]);
-        if (o + 1 < octets) nd_printf(".");
+    for (word = 0; word < words; word++) {
+        print_binary(word_host[word]);
+        if (word + 1 < words) nd_printf(".");
     }
     nd_printf(" (%s)\n\n", host);
 #endif
 
-    for (o = 0; o < octets && b > 0; o++) {
-        for (i = 0x80000000; i > 0 && b > 0; i >>= 1) {
+    for (word = 0; word < words && bit > 0; word++) {
+        for (i = 0x80000000; i > 0 && bit > 0; i >>= 1) {
 #if 0
-            nd_printf("%3d: ", b);
+            nd_printf("%3d: ", bit);
             print_binary(i);
             nd_printf(": ");
-            print_binary((octet_host[o] & i));
+            print_binary((word_host[word] & i));
             nd_printf(" ?= ");
-            print_binary((octet_net[o] & i));
+            print_binary((word_net[word] & i));
             nd_printf("\n");
 #endif
-            if ((octet_host[o] & i) != (octet_net[o] & i)) {
-                //nd_printf("Mis-match at prefix bit: %d\n", b);
-                //nd_printf("octet_host[%d] & %lu: %lu, octet_net[%d] & %lu: %lu\n",
-                //  o, i, octet_host[o] & i, o, i, octet_net[o] & i);
+            if ((word_host[word] & i) != (word_net[word] & i)) {
+                //nd_printf("Mis-match at prefix bit: %d\n", bit);
+                //nd_printf("word_host[%d] & %lu: %lu, word_net[%d] & %lu: %lu\n",
+                //  word, i, word_host[word] & i, word, i, word_net[word] & i);
                 return false;
             }
-            b--;
+            bit--;
         }
     }
 

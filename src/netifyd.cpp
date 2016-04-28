@@ -505,38 +505,50 @@ static void nd_dump_protocols(void)
     }
 }
 
-static void nd_add_device_networks(vector<pair<string, string> > &device_networks)
+static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
 {
     char *token = NULL;
     struct sockaddr_in network_ip4;
     struct sockaddr_in6 network_ip6;
+    int bit, word, words;
+    uint32_t b, word_net[4];
+    char netaddr[INET6_ADDRSTRLEN];
 
-    for (vector<pair<string, string> >::const_iterator i = device_networks.begin();
-        i != device_networks.end(); i++) {
+    for (vector<pair<string, string> >::const_iterator i = device_addresses.begin();
+        i != device_addresses.end(); i++) {
 
         sa_family_t family = AF_UNSPEC;
 
         token = (char *)realloc(token, (*i).second.size() + 1);
         strncpy(token, (*i).second.c_str(), (*i).second.size() + 1);
 
-        const char *network = strtok(token, "/");
-        if (network == NULL) {
-            nd_printf("WARNING: Invalid network, use CIDR notation: %s\n", (*i).second.c_str());
+        const char *address = strtok(token, "/");
+        if (address == NULL) {
+            nd_printf("WARNING: Invalid address, use CIDR notation: %s\n", (*i).second.c_str());
             continue;
         }
 
-        if (inet_pton(AF_INET, network, &network_ip4.sin_addr) == 1)
+        if (inet_pton(AF_INET, address, &network_ip4.sin_addr) == 1) {
+            words = 1;
+            word_net[0] = ntohl(network_ip4.sin_addr.s_addr);
             family = AF_INET;
-        else if (inet_pton(AF_INET6, network, &network_ip6.sin6_addr) == 1)
+        }
+        else if (inet_pton(AF_INET6, address, &network_ip6.sin6_addr) == 1) {
+            words = 4;
+            word_net[0] = ntohl(network_ip6.sin6_addr.s6_addr32[0]);
+            word_net[1] = ntohl(network_ip6.sin6_addr.s6_addr32[1]);
+            word_net[2] = ntohl(network_ip6.sin6_addr.s6_addr32[2]);
+            word_net[3] = ntohl(network_ip6.sin6_addr.s6_addr32[3]);
             family = AF_INET6;
+        }
         else {
-            nd_printf("WARNING: Not an IPv4 or IPv6 network address: %s\n", network);
+            nd_printf("WARNING: Not an IPv4 or IPv6 address: %s\n", address);
             continue;
         }
 
         const char *length = strtok(NULL, "/");
         if (length == NULL) {
-            nd_printf("WARNING: Invalid network, use CIDR notation: %s\n", (*i).second.c_str());
+            nd_printf("WARNING: Invalid address, use CIDR notation: %s\n", (*i).second.c_str());
             continue;
         }
 
@@ -549,44 +561,43 @@ static void nd_add_device_networks(vector<pair<string, string> > &device_network
         }
 
         if (nd_debug) {
-            nd_printf("%s: %s: network: %s, length: %hu\n",
-                __PRETTY_FUNCTION__, (*i).first.c_str(), network, _length);
+            nd_printf("%s: %s: address: %s, length: %hu\n",
+                __PRETTY_FUNCTION__, (*i).first.c_str(), address, _length);
         }
 
-        if (! netlink->AddNetwork(family, (*i).first, network, _length))
+        bit = (int)_length;
+
+        for (word = 0; word < words; word++) {
+            for (b = 0x80000000; b > 0; b >>= 1, bit--) {
+                if (bit < 1) word_net[word] &= ~b;
+            }
+        }
+
+        switch (family) {
+        case AF_INET:
+            network_ip4.sin_addr.s_addr = htonl(word_net[0]);
+            inet_ntop(AF_INET,
+                &network_ip4.sin_addr.s_addr, netaddr, INET_ADDRSTRLEN);
+            break;
+
+        case AF_INET6:
+            network_ip6.sin6_addr.s6_addr32[0] = htonl(word_net[0]);
+            network_ip6.sin6_addr.s6_addr32[1] = htonl(word_net[1]);
+            network_ip6.sin6_addr.s6_addr32[2] = htonl(word_net[2]);
+            network_ip6.sin6_addr.s6_addr32[3] = htonl(word_net[3]);
+            inet_ntop(AF_INET6,
+                &network_ip6.sin6_addr.s6_addr, netaddr, INET6_ADDRSTRLEN);
+            break;
+        }
+
+        if (! netlink->AddNetwork(family, (*i).first, netaddr, _length))
             nd_printf("WARNING: Error adding device network: %s\n", (*i).second.c_str());
+
+        if (! netlink->AddAddress(family, (*i).first, address))
+            nd_printf("WARNING: Error adding device address: %s\n", address);
     }
 
     if (token != NULL) free(token);
-}
-
-static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
-{
-    struct sockaddr_in addr_ip4;
-    struct sockaddr_in6 addr_ip6;
-
-    for (vector<pair<string, string> >::const_iterator i = device_addresses.begin();
-        i != device_addresses.end(); i++) {
-
-        sa_family_t family = AF_UNSPEC;
-
-        if (inet_pton(AF_INET, (*i).second.c_str(), &addr_ip4.sin_addr) == 1)
-            family = AF_INET;
-        else if (inet_pton(AF_INET6, (*i).second.c_str(), &addr_ip6.sin6_addr) == 1)
-            family = AF_INET6;
-        else {
-            nd_printf("WARNING: Not an IPv4 or IPv6 address: %s\n", (*i).second.c_str());
-            continue;
-        }
-
-        if (nd_debug) {
-            nd_printf("%s: %s: address: %s\n",
-                __PRETTY_FUNCTION__, (*i).first.c_str(), (*i).second.c_str());
-        }
-
-        if (! netlink->AddAddress(family, (*i).first, (*i).second))
-            nd_printf("WARNING: Error adding device address: %s\n", (*i).second.c_str());
-    }
 }
 
 #if 0
@@ -618,7 +629,6 @@ int main(int argc, char *argv[])
     timer_t timer_id;
     struct itimerspec it_spec;
     string last_device;
-    vector<pair<string, string> > device_networks;
     vector<pair<string, string> > device_addresses;
 
     memset(&nd_config, 0, sizeof(ndGlobalConfig));
@@ -642,7 +652,6 @@ int main(int argc, char *argv[])
         { "config", 1, 0, 'c' },
         { "uuidgen", 0, 0, 'U' },
         { "protocols", 0, 0, 'P' },
-        { "device-network", 0, 0, 'N' },
         { "device-address", 0, 0, 'A' },
 
         { NULL, 0, 0, 0 }
@@ -651,7 +660,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:E:j:i:c:UPN:A:", options, &o)) == -1) break;
+            "?hVds:I:E:j:i:c:UPA:", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -704,13 +713,6 @@ int main(int argc, char *argv[])
         case 'P':
             nd_dump_protocols();
             exit(0);
-        case 'N':
-            if (last_device.size() == 0) {
-                cerr << "You must specify an interface first." << endl;
-                exit(1);
-            }
-            device_networks.push_back(make_pair(last_device, optarg));
-            break;
         case 'A':
             if (last_device.size() == 0) {
                 cerr << "You must specify an interface first." << endl;
@@ -806,7 +808,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    nd_add_device_networks(device_networks);
     nd_add_device_addresses(device_addresses);
 
     try {
