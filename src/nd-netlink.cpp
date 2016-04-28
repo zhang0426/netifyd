@@ -395,33 +395,12 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
     vector<struct sockaddr_storage *>::const_iterator a;
     ndNetlinkAddresses::const_iterator addr_list;
 
+    // Is addr a broadcast address?
     addr_list = addresses.find(_ND_NETLINK_BROADCAST);
-    if (addr_list != addresses.end()) {
-
-        pthread_mutex_lock(lock->second);
-
-        // Is addr a broadcast address?
-        for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
-
-            if ((*a)->ss_family != addr->ss_family) continue;
-
-            ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
-            if (_addr1 != _addr2) continue;
-
-            type = ndNETLINK_ATYPE_BROADCAST;
-            break;
-        }
-
-        pthread_mutex_unlock(lock->second);
-        if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
-    }
-
-    addr_list = addresses.find(device);
     if (addr_list == addresses.end()) return ndNETLINK_ATYPE_ERROR;
 
     pthread_mutex_lock(lock->second);
 
-    // Is addr a local address to this device?
     for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
 
         if ((*a)->ss_family != addr->ss_family) continue;
@@ -429,17 +408,38 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
         ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
         if (_addr1 != _addr2) continue;
 
-        type = ndNETLINK_ATYPE_LOCALIP;
+        type = ndNETLINK_ATYPE_BROADCAST;
         break;
     }
 
     pthread_mutex_unlock(lock->second);
     if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
+    // Is addr a local address to this device?
+    addr_list = addresses.find(device);
+    if (addr_list != addresses.end()) {
+
+        pthread_mutex_lock(lock->second);
+
+        for (a = addr_list->second.begin(); a != addr_list->second.end(); a++) {
+
+            if ((*a)->ss_family != addr->ss_family) continue;
+
+            ndNetlinkNetworkAddr _addr1(addr), _addr2((*a));
+            if (_addr1 != _addr2) continue;
+
+            type = ndNETLINK_ATYPE_LOCALIP;
+            break;
+        }
+
+        pthread_mutex_unlock(lock->second);
+    }
+    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
+
+    // Is addr a member of a multicast network?
     net_list = networks.find(_ND_NETLINK_MULTICAST);
     if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
 
-    // Is addr a member of a multicast network?
     for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
 
         if ((*n)->network.ss_family != addr->ss_family) continue;
@@ -453,30 +453,31 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
 
     if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
-    net_list = networks.find(device);
-    if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
-
-    pthread_mutex_lock(lock->second);
-
     // Is addr a member of a local network to this device?
-    for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
+    net_list = networks.find(device);
+    if (net_list != networks.end()) {
 
-        if ((*n)->network.ss_family != addr->ss_family) continue;
+        pthread_mutex_lock(lock->second);
 
-        if (! InNetwork(
-            (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
+        for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
 
-        type = ndNETLINK_ATYPE_LOCALNET;
-        break;
+            if ((*n)->network.ss_family != addr->ss_family) continue;
+
+            if (! InNetwork(
+                (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
+
+            type = ndNETLINK_ATYPE_LOCALNET;
+            break;
+        }
+
+        pthread_mutex_unlock(lock->second);
     }
-
-    pthread_mutex_unlock(lock->second);
     if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
+    // Final guess: Is addr a member of a private (reserved/non-routable) network?
     net_list = networks.find(_ND_NETLINK_PRIVATE);
     if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
 
-    // Final guess: Is addr a member of a private (reserved/non-routable) network?
     for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
 
         if ((*n)->network.ss_family != addr->ss_family) continue;
