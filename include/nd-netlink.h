@@ -19,6 +19,10 @@
 
 #define ND_NETLINK_BUFSIZ       4096
 
+#define _ND_NETLINK_PRIVATE     "__nd_private__"
+#define _ND_NETLINK_MULTICAST   "__nd_multicast__"
+#define _ND_NETLINK_BROADCAST   "__nd_broadcast__"
+
 #define ND_NETLINK_DEVALLOC(m) { \
     m = new pthread_mutex_t; \
     if (m == NULL) throw ndNetlinkException(strerror(ENOMEM)); \
@@ -91,6 +95,11 @@ public:
 
     void Dump(void);
 
+    bool AddNetwork(sa_family_t family,
+        const string &type, const string &saddr, uint8_t length);
+
+    bool AddAddress(sa_family_t family, const string &type, const string &saddr);
+
 protected:
     bool InNetwork(
         sa_family_t family, uint8_t length,
@@ -108,12 +117,9 @@ protected:
     bool AddDevice(const string &device);
 
     bool AddNetwork(struct nlmsghdr *nlh);
-    bool AddNetwork(sa_family_t family,
-        const string &type, const string &saddr, uint8_t length);
     bool RemoveNetwork(struct nlmsghdr *nlh);
 
     bool AddAddress(struct nlmsghdr *nlh);
-    bool AddAddress(sa_family_t family, const string &type, const string &saddr);
     bool AddAddress(const string &type, const struct sockaddr_storage &addr);
     bool RemoveAddress(struct nlmsghdr *nlh);
 

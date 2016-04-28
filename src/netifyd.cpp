@@ -505,6 +505,90 @@ static void nd_dump_protocols(void)
     }
 }
 
+static void nd_add_device_networks(vector<pair<string, string> > &device_networks)
+{
+    char *token = NULL;
+    struct sockaddr_in network_ip4;
+    struct sockaddr_in6 network_ip6;
+
+    for (vector<pair<string, string> >::const_iterator i = device_networks.begin();
+        i != device_networks.end(); i++) {
+
+        sa_family_t family = AF_UNSPEC;
+
+        token = (char *)realloc(token, (*i).second.size() + 1);
+        strncpy(token, (*i).second.c_str(), (*i).second.size() + 1);
+
+        const char *network = strtok(token, "/");
+        if (network == NULL) {
+            nd_printf("WARNING: Invalid network, use CIDR notation: %s\n", (*i).second.c_str());
+            continue;
+        }
+
+        if (inet_pton(AF_INET, network, &network_ip4.sin_addr) == 1)
+            family = AF_INET;
+        else if (inet_pton(AF_INET6, network, &network_ip6.sin6_addr) == 1)
+            family = AF_INET6;
+        else {
+            nd_printf("WARNING: Not an IPv4 or IPv6 network address: %s\n", network);
+            continue;
+        }
+
+        const char *length = strtok(NULL, "/");
+        if (length == NULL) {
+            nd_printf("WARNING: Invalid network, use CIDR notation: %s\n", (*i).second.c_str());
+            continue;
+        }
+
+        uint8_t _length = (uint8_t)atoi(length);
+        if (_length == 0 || (
+            (family == AF_INET && _length > 32) ||
+            (family == AF_INET6 && _length > 128))) {
+            nd_printf("WARNING: Invalid network length: %hu\n", _length);
+            continue;
+        }
+
+        if (nd_debug) {
+            nd_printf("%s: %s: network: %s, length: %hu\n",
+                __PRETTY_FUNCTION__, (*i).first.c_str(), network, _length);
+        }
+
+        if (! netlink->AddNetwork(family, (*i).first, network, _length))
+            nd_printf("WARNING: Error adding device network: %s\n", (*i).second.c_str());
+    }
+
+    if (token != NULL) free(token);
+}
+
+static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
+{
+    struct sockaddr_in addr_ip4;
+    struct sockaddr_in6 addr_ip6;
+
+    for (vector<pair<string, string> >::const_iterator i = device_addresses.begin();
+        i != device_addresses.end(); i++) {
+
+        sa_family_t family = AF_UNSPEC;
+
+        if (inet_pton(AF_INET, (*i).second.c_str(), &addr_ip4.sin_addr) == 1)
+            family = AF_INET;
+        else if (inet_pton(AF_INET6, (*i).second.c_str(), &addr_ip6.sin6_addr) == 1)
+            family = AF_INET6;
+        else {
+            nd_printf("WARNING: Not an IPv4 or IPv6 address: %s\n", (*i).second.c_str());
+            continue;
+        }
+
+        if (nd_debug) {
+            nd_printf("%s: %s: address: %s\n",
+                __PRETTY_FUNCTION__, (*i).first.c_str(), (*i).second.c_str());
+        }
+
+        if (! netlink->AddAddress(family, (*i).first, (*i).second))
+            nd_printf("WARNING: Error adding device address: %s\n", (*i).second.c_str());
+    }
+}
+
 #if 0
 void debug_test(void)
 {
@@ -533,6 +617,9 @@ int main(int argc, char *argv[])
     struct sigevent sigev;
     timer_t timer_id;
     struct itimerspec it_spec;
+    string last_device;
+    vector<pair<string, string> > device_networks;
+    vector<pair<string, string> > device_addresses;
 
     memset(&nd_config, 0, sizeof(ndGlobalConfig));
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
@@ -555,6 +642,8 @@ int main(int argc, char *argv[])
         { "config", 1, 0, 'c' },
         { "uuidgen", 0, 0, 'U' },
         { "protocols", 0, 0, 'P' },
+        { "device-network", 0, 0, 'N' },
+        { "device-address", 0, 0, 'A' },
 
         { NULL, 0, 0, 0 }
     };
@@ -562,7 +651,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:E:j:i:c:UP", options, &o)) == -1) break;
+            "?hVds:I:E:j:i:c:UPN:A:", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -586,6 +675,7 @@ int main(int argc, char *argv[])
                     exit(1);
                 }
             }
+            last_device = optarg;
             devices.push_back(make_pair(true, optarg));
             break;
         case 'E':
@@ -596,6 +686,7 @@ int main(int argc, char *argv[])
                     exit(1);
                 }
             }
+            last_device = optarg;
             devices.push_back(make_pair(false, optarg));
             break;
         case 'j':
@@ -613,6 +704,20 @@ int main(int argc, char *argv[])
         case 'P':
             nd_dump_protocols();
             exit(0);
+        case 'N':
+            if (last_device.size() == 0) {
+                cerr << "You must specify an interface first." << endl;
+                exit(1);
+            }
+            device_networks.push_back(make_pair(last_device, optarg));
+            break;
+        case 'A':
+            if (last_device.size() == 0) {
+                cerr << "You must specify an interface first." << endl;
+                exit(1);
+            }
+            device_addresses.push_back(make_pair(last_device, optarg));
+            break;
         default:
             nd_usage(1);
         }
@@ -700,6 +805,9 @@ int main(int argc, char *argv[])
         nd_printf("Error creating netlink watch: %s\n", e.what());
         return 1;
     }
+
+    nd_add_device_networks(device_networks);
+    nd_add_device_addresses(device_addresses);
 
     try {
         long cpu = 0;

@@ -46,10 +46,6 @@ using namespace std;
 
 extern bool nd_debug;
 
-#define _ND_NETLINK_PRIVATE     "__nd_private__"
-#define _ND_NETLINK_MULTICAST   "__nd_multicast__"
-#define _ND_NETLINK_BROADCAST   "__nd_broadcast__"
-
 #if 0
 static void print_binary(uint32_t byte)
 {
@@ -877,11 +873,11 @@ bool ndNetlink::AddNetwork(sa_family_t family,
 
     switch (family) {
     case AF_INET:
-        if (inet_pton(AF_INET, saddr.c_str(), &saddr_ip4->sin_addr) < 0)
+        if (inet_pton(AF_INET, saddr.c_str(), &saddr_ip4->sin_addr) < 1)
             return false;
         break;
     case AF_INET6:
-        if (inet_pton(AF_INET6, saddr.c_str(), &saddr_ip6->sin6_addr) < 0)
+        if (inet_pton(AF_INET6, saddr.c_str(), &saddr_ip6->sin6_addr) < 1)
             return false;
         break;
     default:
