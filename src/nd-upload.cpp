@@ -125,8 +125,10 @@ ndUploadThread::ndUploadThread()
         curl_easy_setopt(ch, CURLOPT_COOKIEJAR, ND_COOKIE_JAR);
     }
 
-    if (nd_config.ssl_verify_peer == false)
+    if (nd_config.ssl_verify_peer == false) {
         curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_easy_setopt(ch, CURLOPT_SSL_VERIFYHOST, 0);
+    }
 
     ostringstream user_agent;
     user_agent << "User-Agent: " <<
