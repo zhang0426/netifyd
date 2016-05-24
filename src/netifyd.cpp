@@ -483,12 +483,14 @@ static void nd_dump_protocols(void)
 {
     struct ndpi_detection_module_struct *ndpi;
 
-    ndpi = ndpi_init_detection_module(
+    ndpi = ndpi_init_detection_module();
+/*    ndpi = ndpi_init_detection_module(
         ND_DETECTION_TICKS,
         nd_mem_alloc,
         nd_mem_free,
         nd_debug_printf
     );
+*/
 
     nd_debug = true;
 
@@ -509,10 +511,11 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
 {
     char *token = NULL;
     struct sockaddr_in network_ip4;
+    struct sockaddr_in bcast_ip4;
     struct sockaddr_in6 network_ip6;
     int bit, word, words;
-    uint32_t b, word_net[4];
-    char netaddr[INET6_ADDRSTRLEN];
+    uint32_t b, word_net[4], word_bcast[1];
+    char netaddr[INET6_ADDRSTRLEN], bcastaddr[INET6_ADDRSTRLEN];
 
     for (vector<pair<string, string> >::const_iterator i = device_addresses.begin();
         i != device_addresses.end(); i++) {
@@ -531,6 +534,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
         if (inet_pton(AF_INET, address, &network_ip4.sin_addr) == 1) {
             words = 1;
             word_net[0] = ntohl(network_ip4.sin_addr.s_addr);
+            word_bcast[0] = ntohl(network_ip4.sin_addr.s_addr);
             family = AF_INET;
         }
         else if (inet_pton(AF_INET6, address, &network_ip6.sin6_addr) == 1) {
@@ -578,6 +582,22 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
             network_ip4.sin_addr.s_addr = htonl(word_net[0]);
             inet_ntop(AF_INET,
                 &network_ip4.sin_addr.s_addr, netaddr, INET_ADDRSTRLEN);
+
+            bit = (int)_length;
+
+            for (word = 0; word < words; word++) {
+                for (b = 0x80000000; b > 0; b >>= 1, bit--) {
+                    if (bit < 1) word_bcast[word] |= b;
+                }
+            }
+
+            bcast_ip4.sin_addr.s_addr = htonl(word_bcast[0]);
+            inet_ntop(AF_INET,
+                &bcast_ip4.sin_addr.s_addr, bcastaddr, INET_ADDRSTRLEN);
+
+            if (! netlink->AddAddress(family, _ND_NETLINK_BROADCAST, bcastaddr))
+                nd_printf("WARNING: Error adding device address: %s\n", bcastaddr);
+
             break;
 
         case AF_INET6:

@@ -77,12 +77,13 @@ ndDetectionThread::ndDetectionThread(const string &dev,
 {
     memset(stats, 0, sizeof(struct ndDetectionStats));
 
-    ndpi = ndpi_init_detection_module(
+    ndpi = ndpi_init_detection_module();
+/*    ndpi = ndpi_init_detection_module(
         ND_DETECTION_TICKS,
         nd_mem_alloc,
         nd_mem_free,
         nd_debug_printf
-    );
+    );*/
 
     if (ndpi == NULL)
         throw ndThreadException("Detection module initialization failure");
@@ -97,7 +98,8 @@ ndDetectionThread::~ndDetectionThread()
 {
     Join();
     if (pcap != NULL) pcap_close(pcap);
-    if (ndpi != NULL) ndpi_exit_detection_module(ndpi, nd_mem_free);
+    //if (ndpi != NULL) ndpi_exit_detection_module(ndpi, nd_mem_free);
+    if (ndpi != NULL) ndpi_exit_detection_module(ndpi);
 }
 
 void *ndDetectionThread::Entry(void)
