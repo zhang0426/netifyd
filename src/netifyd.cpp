@@ -35,8 +35,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-//#include <net/if.h>
-//#include <ifaddrs.h>
 #include <errno.h>
 
 #include <linux/if_ether.h>
