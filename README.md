@@ -17,6 +17,6 @@ Configuring Source
 
 ```
 # ./autoconf.sh
-# ./configure --prefix=/usr/local --enable-netify-sink --with-pic=inih,ndpi
+# ./configure --prefix=/usr/local --with-pic=inih,ndpi
 ```
 
