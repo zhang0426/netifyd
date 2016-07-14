@@ -134,7 +134,7 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [dnl
     else
       HAVE_CXX11=1
       AC_DEFINE(HAVE_CXX11,1,
-                [define if the compiler supports basic C++11 syntax])
+                [Define if the compiler supports basic C++11 syntax])
     fi
 
     AC_SUBST(HAVE_CXX11)

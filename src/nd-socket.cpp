@@ -728,7 +728,8 @@ void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
 
     delete ci->second;
     bi = buffers.find(ci->first);
-    ci = clients.erase(ci);
+    //ci = clients.erase(ci);
+    clients.erase(ci++);
 
     if (bi == buffers.end()) {
         throw ndSystemException(

@@ -56,6 +56,10 @@
 #define ND_SOCKET_PATH_USER     "root"
 #define ND_SOCKET_PATH_GROUP    "root"
 
+#ifndef PACKAGE_URL
+#define PACKAGE_URL             "http://www.egloo.ca/"
+#endif
+
 typedef struct {
     char *uuid;
     char *uuid_serial;
