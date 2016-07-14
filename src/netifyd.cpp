@@ -181,6 +181,9 @@ static int nd_config_load(void)
     nd_config.ssl_verify_peer = reader.GetBoolean(
         "netifyd", "ssl_verify_peer", true);
 
+    nd_config.ssl_use_tlsv1 = reader.GetBoolean(
+        "netifyd", "ssl_use_tlsv1", false);
+
     string uuid_domain = reader.Get("netifyd", "uuid_domain", ND_UUID_NULL);
     nd_config.uuid_domain = strdup(uuid_domain.c_str());
 

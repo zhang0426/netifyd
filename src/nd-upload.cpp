@@ -130,6 +130,9 @@ ndUploadThread::ndUploadThread()
         curl_easy_setopt(ch, CURLOPT_SSL_VERIFYHOST, 0);
     }
 
+    if (nd_config.ssl_use_tlsv1)
+        curl_easy_setopt(ch, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1);
+
     ostringstream user_agent;
     user_agent << "User-Agent: " <<
         PACKAGE_NAME << "/" << PACKAGE_VERSION <<

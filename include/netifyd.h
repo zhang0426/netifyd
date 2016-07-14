@@ -68,6 +68,7 @@ typedef struct {
     size_t max_backlog;
     bool enable_netify_sink;
     bool ssl_verify_peer;
+    bool ssl_use_tlsv1;
     char *json_filename;
     unsigned update_interval;
     vector<pair<string, string> > socket_host;
