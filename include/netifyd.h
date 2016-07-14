@@ -68,6 +68,7 @@ typedef struct {
     unsigned update_interval;
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
+    char *proto_file;
 } ndGlobalConfig;
 
 struct ndDetectionStats

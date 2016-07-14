@@ -68,7 +68,8 @@ extern ndGlobalConfig nd_config;
 
 ndDetectionThread::ndDetectionThread(const string &dev,
     ndNetlink *netlink, ndSocketThread *thread_socket,
-    nd_flow_map *flow_map, ndDetectionStats *stats, long cpu)
+    nd_flow_map *flow_map, ndDetectionStats *stats, long cpu,
+    char *proto_file)
     : ndThread(dev, cpu), netlink(netlink), thread_socket(thread_socket),
     pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN), pcap_datalink_type(0),
     pkt_header(NULL), pkt_data(NULL),
@@ -92,6 +93,13 @@ ndDetectionThread::ndDetectionThread(const string &dev,
     NDPI_BITMASK_SET_ALL(proto_all);
 
     ndpi_set_protocol_detection_bitmask2(ndpi, &proto_all);
+
+    if (proto_file != NULL) {
+        nd_printf("%s: loading custom protocols from: %s\n",
+            tag.c_str(), proto_file);
+        ndpi_load_protocols_file(ndpi, proto_file);
+        nd_printf("%s: done.\n", tag.c_str());
+    }
 }
 
 ndDetectionThread::~ndDetectionThread()

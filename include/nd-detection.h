@@ -24,7 +24,8 @@ class ndDetectionThread : public ndThread
 public:
     ndDetectionThread(const string &dev,
         ndNetlink *netlink, ndSocketThread *thread_socket,
-        nd_flow_map *flow_map, ndDetectionStats *stats, long cpu = -1);
+        nd_flow_map *flow_map, ndDetectionStats *stats, long cpu = -1,
+        char *proto_file = NULL);
     virtual ~ndDetectionThread();
 
     struct ndpi_detection_module_struct *GetDetectionModule(void) {

@@ -671,6 +671,7 @@ int main(int argc, char *argv[])
         { "uuidgen", 0, 0, 'U' },
         { "protocols", 0, 0, 'P' },
         { "device-address", 0, 0, 'A' },
+        { "protocol-file", 0, 0, 'f' },
 
         { NULL, 0, 0, 0 }
     };
@@ -678,7 +679,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:E:j:i:c:UPA:", options, &o)) == -1) break;
+            "?hVds:I:E:j:i:c:UPA:f:", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -737,6 +738,9 @@ int main(int argc, char *argv[])
                 exit(1);
             }
             device_addresses.push_back(make_pair(last_device, optarg));
+            break;
+        case 'f':
+            nd_config.proto_file = strdup(optarg);
             break;
         default:
             nd_usage(1);
@@ -840,7 +844,8 @@ int main(int argc, char *argv[])
                 (i->first) ? thread_socket : NULL,
                 flows[(*i).second],
                 stats[(*i).second],
-                (devices.size() > 1) ? cpu++ : -1
+                (devices.size() > 1) ? cpu++ : -1,
+                nd_config.proto_file
             );
             threads[(*i).second]->Create();
             if (cpu == cpus) cpu = 0;
