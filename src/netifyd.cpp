@@ -759,7 +759,7 @@ int main(int argc, char *argv[])
         nd_config.url_upload = strdup(ND_URL_UPLOAD);
 
     if (devices.size() == 0) {
-        cerr << "Required argument, (-I, --iterface) missing." << endl;
+        cerr << "Required argument, (-I, --internal, or -E, --external) missing." << endl;
         return 1;
     }
 

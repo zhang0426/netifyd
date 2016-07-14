@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# netifyd    Start up the Netify daemon
+#
+# chkconfig: 2345 55 25
+# description: Netify daemon
+#
+# processname: netifyd
+# config: /etc/clearsync.conf
+# pidfile: /var/run/clearsync/netifyd.pid
+
+### BEGIN INIT INFO
+# Provides: netifyd
+# Required-Start: $local_fs $network $syslog
+# Required-Stop: $local_fs $syslog
+# Should-Start: $syslog
+# Should-Stop: $network $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Start up the Netify daemon
+# Description: Netify daemon
+### END INIT INFO
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+prog="netifyd"
+PID_FILE=/var/run/netifyd/netifyd.pid
+
+start() {
+    echo -n "Starting $prog: "
+
+    source /etc/clearos/network.conf
+
+    NETIFYD_OPTS=
+
+    for ifn in $LANIF; do
+        [ -z "$ifn" ] && break
+        NETIFYD_OPTS="$NETIFYD_OPTS -I $ifn"
+    done
+
+    for ifn in $EXTIF; do
+        [ -z "$ifn" ] && break
+        NETIFYD_OPTS="$NETIFYD_OPTS -E $ifn"
+    done
+
+    if [ -z "$NETIFYD_OPTS" ]; then
+        failure
+        RETVAL=1
+        return $RETVAL
+    fi
+
+    daemon $prog $NETIFYD_OPTS
+    success
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$prog
+    echo
+    return $RETVAL
+}   
+
+stop() {
+    echo -n "Shutting down $prog: "
+    killproc $prog
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$prog
+    echo
+    return $RETVAL
+}
+
+case "$1" in
+    start)
+        start
+    ;;
+    stop)
+        stop
+    ;;
+    status)
+        status $prog
+    ;;
+    restart)
+        stop
+        start
+    ;;
+    condrestart)
+        if [ -f /var/lock/subsys/$prog ]; then
+            stop
+            start
+            RETVAL=$?
+        fi
+    ;;
+    *)
+    echo "Usage: $prog {start|stop|status|restart|condrestart}"
+    exit 1
+    ;;
+esac
+exit $RETVAL
+
+# vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4 syntax=sh
