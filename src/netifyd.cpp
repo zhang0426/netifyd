@@ -184,8 +184,8 @@ static int nd_config_load(void)
     nd_config.ssl_use_tlsv1 = reader.GetBoolean(
         "netifyd", "ssl_use_tlsv1", false);
 
-    string uuid_domain = reader.Get("netifyd", "uuid_domain", ND_UUID_NULL);
-    nd_config.uuid_domain = strdup(uuid_domain.c_str());
+    string uuid_realm = reader.Get("netifyd", "uuid_realm", ND_UUID_NULL);
+    nd_config.uuid_realm = strdup(uuid_realm.c_str());
 
     for (int i = 0; ; i++) {
         ostringstream os;

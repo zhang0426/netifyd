@@ -40,6 +40,7 @@
 #define ND_URL_UPLOAD           "https://v1-netify-sink.egloo.ca/"
 #define ND_COOKIE_JAR           "/var/lib/netifyd/netifyd.cookies"
 
+#define ND_UUID_PATH            "/var/lib/netifyd/netify-realm.uuid"
 #define ND_UUID_NULL            "00000000-0000-0000-0000-000000000000"
 
 #define ND_WATCH_HOSTS          "/etc/hosts"
@@ -63,7 +64,7 @@
 typedef struct {
     char *uuid;
     char *uuid_serial;
-    char *uuid_domain;
+    char *uuid_realm;
     char *url_upload;
     size_t max_backlog;
     bool enable_netify_sink;
