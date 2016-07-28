@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.1
-Release: 12%{dist}
+Release: 13%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -47,6 +47,7 @@ rm -rf %{buildroot}/%{_includedir}
 rm -rf %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_sharedstatedir}/%{name}
 mkdir -p %{buildroot}/%{_sysconfdir}
+
 %if "0%{dist}" == "0.v7"
 install -D -m 0644 deploy/clearos/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 install -D -m 0660 deploy/clearos/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
@@ -54,19 +55,21 @@ install -D -m 0755 deploy/clearos/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name
 install -D -m 644 deploy/%{name}.service %{buildroot}/%{_unitdir}/%{name}.service
 mkdir -p %{buildroot}/run
 install -d -m 0755 %{buildroot}/run/%{name}
-%else if "0%{dist}" == "0.v6"
+%endif
+
+%if "0%{dist}" == "0.v6"
 install -D -m 0660 deploy/clearos/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
 install -D -m 0755 deploy/clearos/%{name}.init %{buildroot}/%{_sysconfdir}/init.d/%{name}
 mkdir -p %{buildroot}/var/run
 install -d -m 0755 %{buildroot}/var/run/%{name}
-%else
-install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
-install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
-install -D -m 0755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
-install -D -m 644 deploy/%{name}.service %{buildroot}/%{_unitdir}/%{name}.service
-mkdir -p %{buildroot}/run
-install -d -m 0755 %{buildroot}/run/%{name}
 %endif
+
+#install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
+#install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
+#install -D -m 0755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
+#install -D -m 644 deploy/%{name}.service %{buildroot}/%{_unitdir}/%{name}.service
+#mkdir -p %{buildroot}/run
+#install -d -m 0755 %{buildroot}/run/%{name}
 
 # Clean-up
 %clean
@@ -101,6 +104,10 @@ fi
 # Files
 %files
 %defattr(-,root,root)
+%if "0%{dist}" == "0.v6"
+%dir /var/run/%{name}
+%attr(755,root,root) %{_sysconfdir}/init.d/%{name}
+%endif
 %if "0%{dist}" == "0.v7"
 %attr(644,root,root) %{_tmpfilesdir}/%{name}.conf
 %attr(644,root,root) %{_unitdir}/%{name}.service
@@ -109,10 +116,6 @@ fi
 %endif
 %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
-%if "0%{dist}" == "0.v6"
-%dir /var/run/%{name}
-%attr(755,root,root) %{_sysconfdir}/init.d/%{name}
-%endif
 %{_sbindir}/%{name}
 
 # vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
