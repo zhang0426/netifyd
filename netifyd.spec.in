@@ -2,7 +2,7 @@
 
 Name: @PACKAGE_TARNAME@
 Version: @PACKAGE_VERSION@
-Release: 13%{dist}
+Release: 15%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons

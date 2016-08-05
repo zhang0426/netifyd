@@ -40,8 +40,9 @@
 #define ND_URL_UPLOAD           "https://v1-netify-sink.egloo.ca/"
 #define ND_COOKIE_JAR           "/var/lib/netifyd/netifyd.cookies"
 
-#define ND_UUID_PATH            "/var/lib/netifyd/netify-realm.uuid"
-#define ND_UUID_NULL            "00000000-0000-0000-0000-000000000000"
+#define ND_REALM_UUID_PATH      "/var/lib/netifyd/netify-realm.uuid"
+#define ND_REALM_UUID_NULL      "-"
+#define ND_REALM_UUID_LEN       36
 
 #define ND_WATCH_HOSTS          "/etc/hosts"
 #define ND_WATCH_ETHERS         "/etc/ethers"

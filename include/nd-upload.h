@@ -29,7 +29,9 @@ public:
 
     void QueuePush(const string &json);
 
-    void AppendData(const char *data, size_t length) { body_data.append(data, length); }
+    void AppendData(const char *data, size_t length) {
+        body_data.append(data, length);
+    }
 
 protected:
     CURL *ch;
@@ -42,9 +44,15 @@ protected:
     pthread_mutex_t uploads_cond_mutex;
     string body_data;
 
+    void CreateHeaders(void);
+    void FreeHeaders(void);
+
     void Upload(void);
     string Deflate(const string &data);
     void ProcessResponse(void);
+
+    bool LoadRealmUUID(string &uuid);
+    bool SaveRealmUUID(const string &uuid);
 };
 
 #endif // _ND_UPLOAD_THREAD_H

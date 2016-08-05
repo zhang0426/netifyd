@@ -104,7 +104,8 @@ static size_t ndUploadThread_read_data(
 }
 
 ndUploadThread::ndUploadThread()
-    : ndThread("netify-sink", -1), headers(NULL), headers_gz(NULL), pending_size(0)
+    : ndThread("netify-sink", -1),
+    headers(NULL), headers_gz(NULL), pending_size(0)
 {
     int rc;
 
@@ -133,33 +134,7 @@ ndUploadThread::ndUploadThread()
     if (nd_config.ssl_use_tlsv1)
         curl_easy_setopt(ch, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1);
 
-    ostringstream user_agent;
-    user_agent << "User-Agent: " <<
-        PACKAGE_NAME << "/" << PACKAGE_VERSION <<
-        " (+" << PACKAGE_URL << ")";
-
-    ostringstream uuid;
-    uuid << "X-UUID: " << nd_config.uuid;
-
-    ostringstream serial;
-    serial << "X-UUID-Serial: " <<
-        ((nd_config.uuid_serial != NULL) ? nd_config.uuid_serial : "-");
-
-    ostringstream realm_uuid;
-    realm_uuid << "X-UUID-Realm: " << nd_config.uuid_realm;
-
-    headers = curl_slist_append(headers, user_agent.str().c_str());
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    headers = curl_slist_append(headers, uuid.str().c_str());
-    headers = curl_slist_append(headers, serial.str().c_str());
-    headers = curl_slist_append(headers, realm_uuid.str().c_str());
-
-    headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
-    headers_gz = curl_slist_append(headers_gz, "Content-Encoding: gzip");
-    headers_gz = curl_slist_append(headers_gz, uuid.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, serial.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, realm_uuid.str().c_str());
+    CreateHeaders();
 
     pthread_condattr_t cond_attr;
 
@@ -177,8 +152,7 @@ ndUploadThread::~ndUploadThread()
 {
     Join();
     if (ch != NULL) curl_easy_cleanup(ch);
-    if (headers != NULL) curl_slist_free_all(headers);
-    if (headers_gz != NULL) curl_slist_free_all(headers_gz);
+    FreeHeaders();
 }
 
 void *ndUploadThread::Entry(void)
@@ -247,6 +221,60 @@ void ndUploadThread::QueuePush(const string &json)
         throw ndThreadException(strerror(rc));
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
         throw ndThreadException(strerror(rc));
+}
+
+void ndUploadThread::CreateHeaders(void)
+{
+    FreeHeaders();
+
+    ostringstream user_agent;
+    user_agent << "User-Agent: " <<
+        PACKAGE_NAME << "/" << PACKAGE_VERSION <<
+        " (+" << PACKAGE_URL << ")";
+
+    ostringstream uuid;
+    uuid << "X-UUID: " << nd_config.uuid;
+
+    ostringstream serial;
+    serial << "X-UUID-Serial: " <<
+        ((nd_config.uuid_serial != NULL) ? nd_config.uuid_serial : "-");
+
+    ostringstream realm_uuid;
+    if (nd_config.uuid_realm[0] != '-')
+        realm_uuid << "X-UUID-Realm: " << nd_config.uuid_realm;
+    else {
+        string _uuid;
+        if (LoadRealmUUID(_uuid))
+            realm_uuid << "X-UUID-Realm: " << _uuid;
+        else
+            realm_uuid << "X-UUID-Realm: " << nd_config.uuid_realm;
+    }
+
+    headers = curl_slist_append(headers, user_agent.str().c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, uuid.str().c_str());
+    headers = curl_slist_append(headers, serial.str().c_str());
+    headers = curl_slist_append(headers, realm_uuid.str().c_str());
+
+    headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
+    headers_gz = curl_slist_append(headers_gz, "Content-Encoding: gzip");
+    headers_gz = curl_slist_append(headers_gz, uuid.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, serial.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, realm_uuid.str().c_str());
+}
+
+void ndUploadThread::FreeHeaders(void)
+{
+    if (headers != NULL) {
+        curl_slist_free_all(headers);
+        headers = NULL;
+    }
+
+    if (headers_gz != NULL) {
+        curl_slist_free_all(headers_gz);
+        headers_gz = NULL;
+    }
 }
 
 void ndUploadThread::Upload(void)
@@ -375,11 +403,23 @@ void ndUploadThread::ProcessResponse(void)
     case ndJSON_OBJ_TYPE_OK:
         break;
     case ndJSON_OBJ_TYPE_RESULT:
-        if (nd_debug) break;
         json_result = reinterpret_cast<ndJsonObjectResult *>(json_obj);
-        nd_printf("%s: [%d] %s\n", tag.c_str(),
-            json_result->GetCode(),
-            json_result->GetMessage().c_str());
+        if (nd_debug) {
+            nd_printf("%s: [%d] %s\n", tag.c_str(),
+                json_result->GetCode(),
+                (json_result->GetMessage().length() > 0) ?
+                    json_result->GetMessage().c_str() : "(null)");
+        }
+        if (json_result->GetCode() == ndJSON_RES_SET_REALM_UUID) {
+            if (json_result->GetMessage().length() == ND_REALM_UUID_LEN
+                && SaveRealmUUID(json_result->GetMessage())) {
+                if (nd_debug) {
+                    nd_printf("%s: saved new realm UUID: %s\n", tag.c_str(),
+                        json_result->GetMessage().c_str());
+                }
+                CreateHeaders();
+            }
+        }
         break;
     case ndJSON_OBJ_TYPE_NULL:
     default:
@@ -387,6 +427,39 @@ void ndUploadThread::ProcessResponse(void)
     }
 
     if (json_obj != NULL) delete json_obj;
+}
+
+bool ndUploadThread::LoadRealmUUID(string &uuid)
+{
+    char _uuid[ND_REALM_UUID_LEN + 1];
+    FILE *fh = fopen(ND_REALM_UUID_PATH, "r");
+
+    if (fh == NULL) return false;
+    if (fread((void *)_uuid,
+        1, ND_REALM_UUID_LEN, fh) != ND_REALM_UUID_LEN) {
+        fclose(fh);
+        return false;
+    }
+
+    fclose(fh);
+    _uuid[ND_REALM_UUID_LEN] = '\0';
+    uuid.assign(_uuid);
+
+    return true;
+}
+
+bool ndUploadThread::SaveRealmUUID(const string &uuid)
+{
+    FILE *fh = fopen(ND_REALM_UUID_PATH, "w");
+
+    if (fwrite((const void *)uuid.c_str(),
+        1, ND_REALM_UUID_LEN, fh) != ND_REALM_UUID_LEN) {
+        fclose(fh);
+        return false;
+    }
+
+    fclose(fh);
+    return true;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
