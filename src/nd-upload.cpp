@@ -229,7 +229,7 @@ void ndUploadThread::CreateHeaders(void)
 
     ostringstream user_agent;
     user_agent << "User-Agent: " <<
-        PACKAGE_NAME << "/" << PACKAGE_VERSION <<
+        PACKAGE_NAME << "/" << PACKAGE_VERSION << "/" << ndpi_revision() <<
         " (+" << PACKAGE_URL << ")";
 
     ostringstream uuid;

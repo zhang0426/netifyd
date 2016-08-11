@@ -68,8 +68,7 @@ extern ndGlobalConfig nd_config;
 
 ndDetectionThread::ndDetectionThread(const string &dev,
     ndNetlink *netlink, ndSocketThread *thread_socket,
-    nd_flow_map *flow_map, ndDetectionStats *stats, long cpu,
-    char *proto_file)
+    nd_flow_map *flow_map, ndDetectionStats *stats, long cpu)
     : ndThread(dev, cpu), netlink(netlink), thread_socket(thread_socket),
     pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN), pcap_datalink_type(0),
     pkt_header(NULL), pkt_data(NULL),
@@ -78,26 +77,26 @@ ndDetectionThread::ndDetectionThread(const string &dev,
 {
     memset(stats, 0, sizeof(struct ndDetectionStats));
 
+    // XXX: ND_DETECTION_TICKS
+    // Is now hard-coded in ndpi/src/lib/ndpi_main.c, which is 1000
     ndpi = ndpi_init_detection_module();
-/*    ndpi = ndpi_init_detection_module(
-        ND_DETECTION_TICKS,
-        nd_mem_alloc,
-        nd_mem_free,
-        nd_debug_printf
-    );*/
 
     if (ndpi == NULL)
         throw ndThreadException("Detection module initialization failure");
+
+    set_ndpi_malloc(nd_mem_alloc);
+    set_ndpi_free(nd_mem_free);
+    set_ndpi_debug_function(nd_debug_printf);
 
     NDPI_PROTOCOL_BITMASK proto_all;
     NDPI_BITMASK_SET_ALL(proto_all);
 
     ndpi_set_protocol_detection_bitmask2(ndpi, &proto_all);
 
-    if (proto_file != NULL) {
+    if (nd_config.proto_file != NULL) {
         nd_printf("%s: loading custom protocols from: %s\n",
-            tag.c_str(), proto_file);
-        ndpi_load_protocols_file(ndpi, proto_file);
+            tag.c_str(), nd_config.proto_file);
+        ndpi_load_protocols_file(ndpi, nd_config.proto_file);
         nd_printf("%s: done.\n", tag.c_str());
     }
 }
@@ -106,7 +105,6 @@ ndDetectionThread::~ndDetectionThread()
 {
     Join();
     if (pcap != NULL) pcap_close(pcap);
-    //if (ndpi != NULL) ndpi_exit_detection_module(ndpi, nd_mem_free);
     if (ndpi != NULL) ndpi_exit_detection_module(ndpi);
 }
 

@@ -86,6 +86,9 @@ static void nd_usage(int rc = 0, bool version = false)
         __DATE__ <<  " " << __TIME__ << "]" << endl;
     if (version) {
         cerr <<
+            "This application uses nDPI v" <<  ndpi_revision() << endl;
+        cerr << endl;
+        cerr <<
             "  This program comes with ABSOLUTELY NO WARRANTY." << endl;
         cerr <<
             "  This is free software, and you are welcome to redistribute it" << endl;
@@ -94,6 +97,7 @@ static void nd_usage(int rc = 0, bool version = false)
         cerr <<
             "  License version 3, or (at your option) any later version." << endl;
 #ifdef PACKAGE_BUGREPORT
+        cerr << endl;
         cerr << "Report bugs to: " << PACKAGE_BUGREPORT << endl;
 #endif
     }
@@ -234,6 +238,62 @@ static int nd_config_load(void)
     return 0;
 }
 
+int nd_start_detection_threads(void)
+{
+    for (nd_devices::iterator i = devices.begin();
+        i != devices.end(); i++) {
+        flows[(*i).second] = new nd_flow_map;
+        stats[(*i).second] = new ndDetectionStats;
+    }
+
+    try {
+        long cpu = 0;
+        long cpus = sysconf(_SC_NPROCESSORS_ONLN);
+
+        for (nd_devices::iterator i = devices.begin();
+            i != devices.end(); i++) {
+            threads[(*i).second] = new ndDetectionThread(
+                (*i).second,
+                netlink,
+                (i->first) ? thread_socket : NULL,
+                flows[(*i).second],
+                stats[(*i).second],
+                (devices.size() > 1) ? cpu++ : -1
+            );
+            threads[(*i).second]->Create();
+            if (cpu == cpus) cpu = 0;
+        }
+    }
+    catch (exception &e) {
+        nd_printf("Runtime error: %s\n", e.what());
+        return 1;
+    }
+
+    return 0;
+}
+
+void nd_stop_detection_threads(void)
+{
+    for (nd_devices::iterator i = devices.begin();
+        i != devices.end(); i++) {
+        threads[(*i).second]->Terminate();
+        delete threads[(*i).second];
+
+        for (nd_flow_map::iterator j = flows[(*i).second]->begin();
+            j != flows[(*i).second]->end(); j++) {
+            j->second->release();
+            delete j->second;
+        }
+
+        delete flows[(*i).second];
+        delete stats[(*i).second];
+    }
+
+    threads.clear();
+    flows.clear();
+    stats.clear();
+}
+
 void ndDetectionStats::print(const char *tag)
 {
     nd_printf("          RAW: %llu\n", pkt_raw);
@@ -248,7 +308,7 @@ void ndDetectionStats::print(const char *tag)
     nd_printf("      Largest: %lu\n", pkt_maxlen);
     nd_printf("     IP bytes: %llu\n", pkt_ip_bytes);
     nd_printf("   Wire bytes: %llu\n", pkt_wire_bytes);
-    nd_printf("      Discard: %llu\n", pkt_discard);
+    nd_printf("    Discarded: %llu\n", pkt_discard);
     nd_printf("Discard bytes: %llu\n", pkt_discard_bytes);
 }
 
@@ -384,7 +444,6 @@ static void nd_dump_stats(void)
     json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
 
     json_object *json_devs = json.CreateObject(NULL, "interfaces");
-//    json_object *json_devs = json.CreateArray(NULL, "interfaces");
     json_object *json_stats = json.CreateObject(NULL, "stats");
     json_object *json_flows = json.CreateObject(NULL, "flows");
 
@@ -392,8 +451,6 @@ static void nd_dump_stats(void)
 
     for (nd_threads::iterator i = threads.begin();
         i != threads.end(); i++) {
-
-//        json.PushObject(json_devs, i->first.c_str());
 
         i->second->Lock();
 
@@ -482,30 +539,25 @@ void nd_generate_uuid(void)
 
 static void nd_dump_protocols(void)
 {
-    struct ndpi_detection_module_struct *ndpi;
-
-    ndpi = ndpi_init_detection_module();
-/*    ndpi = ndpi_init_detection_module(
-        ND_DETECTION_TICKS,
-        nd_mem_alloc,
-        nd_mem_free,
-        nd_debug_printf
-    );
-*/
-
     nd_debug = true;
+
+    struct ndpi_detection_module_struct *ndpi = NULL;
+    ndpi = ndpi_init_detection_module();
 
     if (ndpi == NULL)
         throw ndThreadException("Detection module initialization failure");
+
+    set_ndpi_malloc(nd_mem_alloc);
+    set_ndpi_free(nd_mem_free);
+    set_ndpi_debug_function(nd_debug_printf);
 
     NDPI_PROTOCOL_BITMASK proto_all;
     NDPI_BITMASK_SET_ALL(proto_all);
 
     ndpi_set_protocol_detection_bitmask2(ndpi, &proto_all);
 
-    for (int i = 0; i < (int)ndpi->ndpi_num_supported_protocols; i++) {
+    for (int i = 0; i < (int)ndpi->ndpi_num_supported_protocols; i++)
         nd_printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
-    }
 }
 
 static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
@@ -528,7 +580,8 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
 
         const char *address = strtok(token, "/");
         if (address == NULL) {
-            nd_printf("WARNING: Invalid address, use CIDR notation: %s\n", (*i).second.c_str());
+            nd_printf("WARNING: Invalid address, use CIDR notation: %s\n",
+                (*i).second.c_str());
             continue;
         }
 
@@ -553,7 +606,8 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
 
         const char *length = strtok(NULL, "/");
         if (length == NULL) {
-            nd_printf("WARNING: Invalid address, use CIDR notation: %s\n", (*i).second.c_str());
+            nd_printf("WARNING: Invalid address, use CIDR notation: %s\n",
+                (*i).second.c_str());
             continue;
         }
 
@@ -611,36 +665,19 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
             break;
         }
 
-        if (! netlink->AddNetwork(family, (*i).first, netaddr, _length))
-            nd_printf("WARNING: Error adding device network: %s\n", (*i).second.c_str());
+        if (! netlink->AddNetwork(family, (*i).first, netaddr, _length)) {
+            nd_printf("WARNING: Error adding device network: %s\n",
+                (*i).second.c_str());
+        }
 
-        if (! netlink->AddAddress(family, (*i).first, address))
+        if (! netlink->AddAddress(family, (*i).first, address)) {
             nd_printf("WARNING: Error adding device address: %s\n", address);
+        }
     }
 
     if (token != NULL) free(token);
 }
 
-#if 0
-void debug_test(void)
-{
-    nd_debug = true;
-
-    ndJsonObject *json_obj = NULL;
-    ndJsonObjectType json_type;
-    ndJsonObjectFactory json_factory;
-//        "{\"version\":1.0,\"type\":2,\"data\":{\"code\":1,\"message\":\"unknown error\"}}",
-//        "{\"version\":1,\"type\":2,\"data\":{\"code\":2,\"message\":\"Authorization failure\"}}",
-    json_type = json_factory.Parse(
-        "{\"version\":1,\"type\":2,\"data\":{\"code\":2,\"message\":\"Authorization failure\"}}",
-        &json_obj
-    );
-
-    if (json_obj != NULL) delete json_obj;
-
-    exit(0);
-}
-#endif
 int main(int argc, char *argv[])
 {
     int rc = 0;
@@ -657,8 +694,6 @@ int main(int argc, char *argv[])
 
     nd_output_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_output_mutex, NULL);
-
-    //debug_test();
 
     static struct option options[] =
     {
@@ -762,7 +797,9 @@ int main(int argc, char *argv[])
         nd_config.url_upload = strdup(ND_URL_UPLOAD);
 
     if (devices.size() == 0) {
-        cerr << "Required argument, (-I, --internal, or -E, --external) missing." << endl;
+        cerr <<
+            "Required argument, (-I, --internal, or -E, --external) missing." <<
+            endl;
         return 1;
     }
 
@@ -777,6 +814,7 @@ int main(int argc, char *argv[])
             nd_printf("daemon: %s\n", strerror(errno));
             return 1;
         }
+
         FILE *hpid = fopen(ND_PID_FILE_NAME, "w+");
         if (hpid == NULL) {
             nd_printf("Error opening PID file: %s: %s\n",
@@ -808,12 +846,6 @@ int main(int argc, char *argv[])
     thread_socket = new ndSocketThread(&threads);
     thread_socket->Create();
 
-    for (nd_devices::iterator i = devices.begin();
-        i != devices.end(); i++) {
-        flows[(*i).second] = new nd_flow_map;
-        stats[(*i).second] = new ndDetectionStats;
-    }
-
     try {
         inotify = new ndInotify();
         inotify->AddWatch(ND_WATCH_HOSTS);
@@ -835,29 +867,8 @@ int main(int argc, char *argv[])
 
     nd_add_device_addresses(device_addresses);
 
-    try {
-        long cpu = 0;
-        long cpus = sysconf(_SC_NPROCESSORS_ONLN);
-
-        for (nd_devices::iterator i = devices.begin();
-            i != devices.end(); i++) {
-            threads[(*i).second] = new ndDetectionThread(
-                (*i).second,
-                netlink,
-                (i->first) ? thread_socket : NULL,
-                flows[(*i).second],
-                stats[(*i).second],
-                (devices.size() > 1) ? cpu++ : -1,
-                nd_config.proto_file
-            );
-            threads[(*i).second]->Create();
-            if (cpu == cpus) cpu = 0;
-        }
-    }
-    catch (exception &e) {
-        nd_printf("Runtime error: %s\n", e.what());
+    if (nd_start_detection_threads() != 0)
         return 1;
-    }
 
     memset(&sigev, 0, sizeof(struct sigevent));
     sigev.sigev_notify = SIGEV_SIGNAL;
@@ -890,7 +901,6 @@ int main(int argc, char *argv[])
             nd_printf("sigwaitinfo: %s\n", strerror(errno));
             rc = -1;
             terminate = true;
-
             continue;
         }
 
@@ -913,9 +923,8 @@ int main(int argc, char *argv[])
                 continue;
             }
             else if (netlink->GetDescriptor() == si.si_fd) {
-                if (netlink->ProcessEvent()) {
+                if (netlink->ProcessEvent())
                     if (nd_debug) netlink->Dump();
-                }
                 continue;
             }
         }
@@ -925,18 +934,7 @@ int main(int argc, char *argv[])
 
     timer_delete(timer_id);
 
-    for (nd_devices::iterator i = devices.begin();
-        i != devices.end(); i++) {
-        threads[(*i).second]->Terminate();
-        delete threads[(*i).second];
-        for (nd_flow_map::iterator j = flows[(*i).second]->begin();
-            j != flows[(*i).second]->end(); j++) {
-            j->second->release();
-            delete j->second;
-        }
-        delete flows[(*i).second];
-        delete stats[(*i).second];
-    }
+    nd_stop_detection_threads();
 
     thread_upload->Terminate();
     delete thread_upload;
