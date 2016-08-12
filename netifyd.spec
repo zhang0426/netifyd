@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.1
-Release: 15%{dist}
+Release: 16%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -27,7 +27,7 @@ Summary: Netify DPI Daemon
 
 %description
 Netify DPI Daemon
-Report bugs to: http://www.egloo.ca/gnats
+Report bugs to: https://github.com/eglooca/netify-daemon/issues
 
 # Prepare
 %prep

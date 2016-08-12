@@ -85,8 +85,9 @@ static void nd_usage(int rc = 0, bool version = false)
     cerr << "Copyright (C) 2015-2016 eGloo Incorporated [" <<
         __DATE__ <<  " " << __TIME__ << "]" << endl;
     if (version) {
-        cerr <<
-            "This application uses nDPI v" <<  ndpi_revision() << endl;
+        cerr << endl <<
+            "This application uses nDPI v" <<  ndpi_revision() << endl << 
+            "http://www.ntop.org/products/deep-packet-inspection/ndpi/" << endl;
         cerr << endl;
         cerr <<
             "  This program comes with ABSOLUTELY NO WARRANTY." << endl;
