@@ -2,7 +2,7 @@
 
 Name: @PACKAGE_TARNAME@
 Version: @PACKAGE_VERSION@
-Release: 16%{dist}
+Release: 17%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -19,6 +19,7 @@ BuildRequires: libtool
 BuildRequires: pkgconfig
 BuildRequires: zlib-devel
 %if "0%{dist}" == "0.v7"
+Requires: ncurses
 Requires: webconfig-httpd
 Requires: app-network-core
 %{?systemd_requires}
@@ -80,13 +81,20 @@ install -d -m 0755 %{buildroot}/var/run/%{name}
 %if "0%{dist}" == "0.v7"
 %systemd_post %{name}.service
 %endif
-if `egrep -q '^uuid[[:space:]]*=[[:space:]]*00-00-00-00$' %{_sysconfdir}/%{name}.conf 2>/dev/null`; then
+
+uuid=$(egrep '^uuid' %{_sysconfdir}/%{name}.conf | sed -e "s/^uuid[[:space:]]*=[[:space:]]*\([A-NP-Z0-9-]*\)$/\1/")
+if [ -z "$uuid" -o "$uuid" == "00-00-00-00" ]; then
     uuid=$(%{_sbindir}/%{name} -U 2>/dev/null)
     if [ -z "$uuid" ]; then
         echo "Error generating UUID."
     else
         sed -e "s/^uuid[[:space:]]*=[[:space:]]*00-00-00-00/uuid = $uuid/" -i %{_sysconfdir}/%{name}.conf
     fi
+fi
+
+if [ ! -z "$uuid" ]; then
+    echo "Your Netify Site UUID is: $(tput smso)$uuid$(tput rmso)"
+    echo "Follow this link to provision your site: https://www.egloo.ca/login"
 fi
 
 # Pre uninstall
