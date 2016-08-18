@@ -4,7 +4,7 @@ Deep Packet Inspection Server
 -----------------------------
 
 Netify is a deep packet inspection server based off of
-[nDPI](www.ntop.org/products/deep-packet-inspection/ndpi/) (OpenDPI).
+[nDPI](http://www.ntop.org/products/deep-packet-inspection/ndpi/) (OpenDPI).
 
 Download Source
 ---------------
