@@ -17,7 +17,8 @@
 #ifndef _ND_FLOW_H
 #define _ND_FLOW_H
 
-#define ND_FLOW_SSL_CERTLEN	48      // SSL certificate length
+#define ND_FLOW_OS_LEN      32      // Detected OS length
+#define ND_FLOW_SSL_CERTLEN 48      // SSL certificate length
 
 struct ndFlow
 {
@@ -58,6 +59,8 @@ struct ndFlow
 
     bool detection_complete;
     bool detection_guessed;
+
+    char detected_os[ND_FLOW_OS_LEN];
 
     ndpi_protocol detected_protocol;
 

@@ -288,6 +288,10 @@ json_object *ndFlow::json_encode(const string &device,
         json.AddObject(json_flow, "total_bytes", total_bytes);
     }
 
+    if (detected_os[0] != '\0') {
+        json.AddObject(json_flow, "detected_os", detected_os);
+    }
+
     if (detected_protocol.master_protocol) {
         json.AddObject(json_flow, "detected_service",
             (int32_t)detected_protocol.protocol);

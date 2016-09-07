@@ -578,6 +578,11 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         snprintf(
+            new_flow->detected_os, ND_FLOW_OS_LEN,
+            "%s", new_flow->ndpi_flow->detected_os
+        );
+
+        snprintf(
             new_flow->host_server_name, HOST_NAME_MAX,
             "%s", new_flow->ndpi_flow->host_server_name
         );
