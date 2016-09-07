@@ -99,6 +99,9 @@ ndDetectionThread::ndDetectionThread(const string &dev,
         ndpi_load_protocols_file(ndpi, nd_config.proto_file);
         nd_printf("%s: done.\n", tag.c_str());
     }
+
+    if (nd_debug)
+        nd_printf("%s: detection thread created.\n", tag.c_str());
 }
 
 ndDetectionThread::~ndDetectionThread()
@@ -106,6 +109,9 @@ ndDetectionThread::~ndDetectionThread()
     Join();
     if (pcap != NULL) pcap_close(pcap);
     if (ndpi != NULL) ndpi_exit_detection_module(ndpi);
+
+    if (nd_debug)
+        nd_printf("%s: detection thread destroyed.\n", tag.c_str());
 }
 
 void *ndDetectionThread::Entry(void)

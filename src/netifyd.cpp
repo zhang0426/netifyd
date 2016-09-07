@@ -170,9 +170,8 @@ static int nd_config_load(void)
         nd_config.uuid_serial = strdup(serial.c_str());
     }
 
-    string url_upload = reader.Get("netifyd", "url_upload", "");
-    if (url_upload.size() > 0)
-        nd_config.url_upload = strdup(url_upload.c_str());
+    string url_upload = reader.Get("netifyd", "url_upload", ND_URL_UPLOAD);
+    nd_config.url_upload = strdup(url_upload.c_str());
 
     nd_config.update_interval = (unsigned)reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);
@@ -267,7 +266,7 @@ int nd_start_detection_threads(void)
     }
     catch (exception &e) {
         nd_printf("Runtime error: %s\n", e.what());
-        return 1;
+        return -1;
     }
 
     return 0;
@@ -794,9 +793,6 @@ int main(int argc, char *argv[])
     if (nd_config_load() < 0)
         return 1;
 
-    if (nd_config.url_upload == NULL)
-        nd_config.url_upload = strdup(ND_URL_UPLOAD);
-
     if (devices.size() == 0) {
         cerr <<
             "Required argument, (-I, --internal, or -E, --external) missing." <<
@@ -840,6 +836,7 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGTERM);
     sigaddset(&sigset, SIGRTMIN);
     sigaddset(&sigset, SIGIO);
+    sigaddset(&sigset, SIGHUP);
 
     thread_upload = new ndUploadThread();
     thread_upload->Create();
@@ -868,7 +865,7 @@ int main(int argc, char *argv[])
 
     nd_add_device_addresses(device_addresses);
 
-    if (nd_start_detection_threads() != 0)
+    if (nd_start_detection_threads() < 0)
         return 1;
 
     memset(&sigev, 0, sizeof(struct sigevent));
@@ -928,6 +925,13 @@ int main(int argc, char *argv[])
                     if (nd_debug) netlink->Dump();
                 continue;
             }
+        }
+
+        if (sig == SIGHUP) {
+            nd_stop_detection_threads();
+            if (nd_start_detection_threads() < 0) break;
+
+            continue;
         }
 
         nd_printf("Unhandled signal: %s\n", strsignal(sig));

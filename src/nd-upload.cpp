@@ -118,6 +118,7 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (nd_debug) ? ND_COOKIE_JAR : "");
     curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndUploadThread_read_data);
     curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
+    curl_easy_setopt(ch, CURLOPT_ACCEPT_ENCODING, "gzip");
 
     if (nd_debug) {
         curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
@@ -284,7 +285,7 @@ void ndUploadThread::Upload(void)
     size_t xfer = 0, total = pending.size();
 
     do {
-        if (nd_debug) nd_printf("%s: data %lu/%lu (%d of %d bytes)...\n",
+        if (nd_debug) nd_printf("%s: payload %lu/%lu (%d of %d bytes)...\n",
             tag.c_str(), ++xfer, total, pending.front().second.size(), pending_size);
 
         if (!pending.front().first)
@@ -318,6 +319,7 @@ void ndUploadThread::Upload(void)
 
         switch (http_rc) {
         case 200:
+            //kill(getpid(), SIGHUP);
             break;
 
         case 400:

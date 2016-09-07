@@ -30,7 +30,11 @@ public:
     void QueuePush(const string &json);
 
     void AppendData(const char *data, size_t length) {
-        body_data.append(data, length);
+        try {
+            body_data.append(data, length);
+        } catch (exception &e) {
+            throw ndThreadException(e.what());
+        }
     }
 
 protected:
