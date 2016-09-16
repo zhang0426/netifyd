@@ -1,7 +1,8 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include -I ../ndpi/src/include -I ../inih/cpp \
+AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
+	-I ../ndpi/src/include -I ../inih/cpp \
 	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS)
 
 #EXTRA_DIST = 

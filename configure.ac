@@ -61,5 +61,5 @@ AC_CHECK_FUNC([pthread_attr_setaffinity_np], [
 #CXXFLAGS+=" -fomit-frame-pointer -O3 -falign-functions=16 -falign-jumps=16 -falign-loops=16 -falign-labels=16"
 
 # Output files
-AC_CONFIG_FILES([Makefile src/Makefile netifyd.spec])
+AC_CONFIG_FILES([Makefile src/Makefile util/Makefile netifyd.spec])
 AC_OUTPUT

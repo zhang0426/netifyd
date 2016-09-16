@@ -1,0 +1,4 @@
+.deps/
+nd-content-match-export
+*.o
+
