@@ -62,6 +62,11 @@
 #define PACKAGE_URL             "http://www.egloo.ca/"
 #endif
 
+#define ND_CSV_HOST_PROTOCOL    "/var/lib/netifyd/host-protocol.csv"
+#define ND_CSV_CONTENT_MATCH    "/var/lib/netifyd/content-match.csv"
+
+#include "nd-sha1.h"
+
 typedef struct {
     char *uuid;
     char *uuid_serial;
@@ -76,6 +81,11 @@ typedef struct {
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
     char *proto_file;
+    char *csv_host_protocol;
+    char *csv_content_match;
+    uint8_t digest_host_protocol[SHA1_DIGEST_LENGTH];
+    uint8_t digest_content_match[SHA1_DIGEST_LENGTH];
+    vector<uint8_t *> mac_filter_list;
 } ndGlobalConfig;
 
 struct ndDetectionStats

@@ -42,7 +42,6 @@ using namespace std;
 #include "nd-netlink.h"
 #include "nd-json.h"
 #include "nd-flow.h"
-#include "nd-sha1.h"
 #include "nd-util.h"
 
 void ndFlow::hash(const string &device, string &digest, bool full_hash)

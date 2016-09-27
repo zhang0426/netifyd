@@ -57,6 +57,8 @@ protected:
 
     bool LoadRealmUUID(string &uuid);
     bool SaveRealmUUID(const string &uuid);
+
+    bool ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *config);
 };
 
 #endif // _ND_UPLOAD_THREAD_H

@@ -230,7 +230,7 @@ void ndUploadThread::CreateHeaders(void)
 
     ostringstream user_agent;
     user_agent << "User-Agent: " <<
-        PACKAGE_NAME << "/" << PACKAGE_VERSION <<
+        PACKAGE_NAME << "/" << GIT_RELEASE <<
         " nDPI/" << ndpi_revision() <<
         " (+" << PACKAGE_URL << ")";
 
@@ -319,7 +319,6 @@ void ndUploadThread::Upload(void)
 
         switch (http_rc) {
         case 200:
-            //kill(getpid(), SIGHUP);
             break;
 
         case 400:
@@ -392,6 +391,7 @@ void ndUploadThread::ProcessResponse(void)
     ndJsonObject *json_obj = NULL;
     ndJsonObjectType json_type = ndJSON_OBJ_TYPE_NULL;
     ndJsonObjectResult *json_result = NULL;
+    ndJsonObjectConfig *json_config = NULL;
     ndJsonObjectFactory json_factory;
 
     try {
@@ -423,6 +423,17 @@ void ndUploadThread::ProcessResponse(void)
                 CreateHeaders();
             }
         }
+        break;
+    case ndJSON_OBJ_TYPE_CONFIG:
+        json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
+
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH))
+            ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_PROTOCOL))
+            ExportConfig(ndJSON_CFG_TYPE_HOST_PROTOCOL, json_config);
+
+        kill(getpid(), SIGHUP);
+
         break;
     case ndJSON_OBJ_TYPE_NULL:
     default:
@@ -462,6 +473,94 @@ bool ndUploadThread::SaveRealmUUID(const string &uuid)
     }
 
     fclose(fh);
+    return true;
+}
+
+bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *config)
+{
+    FILE *fp = NULL;
+    string config_type_string;
+    size_t entries = 0;
+    ndJsonConfigContentMatch *content_match;
+    ndJsonConfigHostProtocol *host_protocol;
+    char ip_addr[INET6_ADDRSTRLEN];
+    struct sockaddr_in *saddr_ip4;
+    struct sockaddr_in6 *saddr_ip6;
+
+    switch (type) {
+    case ndJSON_CFG_TYPE_CONTENT_MATCH:
+        fp = fopen(nd_config.csv_content_match, "w");
+        config_type_string = "content match";
+        entries = config->GetContentMatchCount();
+        break;
+    case ndJSON_CFG_TYPE_HOST_PROTOCOL:
+        fp = fopen(nd_config.csv_host_protocol, "w");
+        config_type_string = "host protocol";
+        entries = config->GetHostProtocolCount();
+        break;
+    default:
+        throw ndJsonParseException("Unsupported configuration type for export");
+    }
+
+    if (fp == NULL)
+        throw ndJsonParseException("Error opening file for configuration export");
+
+
+    switch (type) {
+    case ndJSON_CFG_TYPE_CONTENT_MATCH:
+        fprintf(fp, "\"match\",\"application_name\",\"application_id\"\n");
+        content_match = config->GetFirstContentMatchEntry();
+        while (content_match != NULL) {
+            fprintf(fp, "\"%s\",\"%s\",%u\n",
+                content_match->match.c_str(),
+                content_match->app_name.c_str(),
+                content_match->app_id);
+            content_match = config->GetNextContentMatchEntry();
+        }
+        fflush(fp);
+        nd_sha1_file(
+            nd_config.csv_content_match, nd_config.digest_content_match);
+        break;
+    case ndJSON_CFG_TYPE_HOST_PROTOCOL:
+        fprintf(fp, "\"ip_address\",\"ip_prefix\",\"application_id\"\n");
+        host_protocol = config->GetFirstHostProtocolEntry();
+        while (host_protocol != NULL) {
+            memset(ip_addr, '\0', INET6_ADDRSTRLEN);
+            switch (host_protocol->ip_addr.ss_family) {
+            case AF_INET:
+                saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&host_protocol->ip_addr);
+                inet_ntop(host_protocol->ip_addr.ss_family, &saddr_ip4, ip_addr, INET6_ADDRSTRLEN);
+                break;
+            case AF_INET6:
+                saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&host_protocol->ip_addr);
+                inet_ntop(host_protocol->ip_addr.ss_family, &saddr_ip6, ip_addr, INET6_ADDRSTRLEN);
+                break;
+            }
+            if (ip_addr[0] != '\0') {
+                fprintf(fp, "\"%s\",%hhu,%u\n",
+                    ip_addr, host_protocol->ip_prefix, host_protocol->app_id);
+            }
+            host_protocol = config->GetNextHostProtocolEntry();
+        }
+        fflush(fp);
+        nd_sha1_file(
+            nd_config.csv_host_protocol, nd_config.digest_host_protocol);
+        break;
+    }
+
+    fclose(fp);
+
+    if (nd_debug) {
+        if (entries == 0) {
+            nd_printf("%s: cleared %s configuration\n", tag.c_str(),
+                config_type_string.c_str());
+        }
+        else {
+            nd_printf("%s: exported %lu %s configuration entries\n", tag.c_str(),
+                entries, config_type_string.c_str());
+        }
+    }
+
     return true;
 }
 

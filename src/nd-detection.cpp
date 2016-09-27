@@ -54,7 +54,6 @@ using namespace std;
 
 #include "netifyd.h"
 #include "nd-netlink.h"
-#include "nd-sha1.h"
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
@@ -84,6 +83,9 @@ ndDetectionThread::ndDetectionThread(const string &dev,
     if (ndpi == NULL)
         throw ndThreadException("Detection module initialization failure");
 
+    LoadHostProtocol();
+    LoadContentMatch();
+
     set_ndpi_malloc(nd_mem_alloc);
     set_ndpi_free(nd_mem_free);
     set_ndpi_debug_function(nd_debug_printf);
@@ -112,6 +114,114 @@ ndDetectionThread::~ndDetectionThread()
 
     if (nd_debug)
         nd_printf("%s: detection thread destroyed.\n", tag.c_str());
+}
+
+void ndDetectionThread::LoadHostProtocol(void)
+{
+    int rc;
+    char header[1024];
+    char *ip_address;
+    struct sockaddr_in saddr_ip4;
+    struct sockaddr_in6 saddr_ip6;
+    unsigned loaded = 0, line = 1;
+    ndpi_network host_entry;
+    FILE *fp = fopen(nd_config.csv_host_protocol, "r");
+
+    if (fp == NULL) {
+        if (nd_debug) {
+            nd_printf("%s: unable to open host protocol file: %s\n",
+                tag.c_str(), nd_config.csv_host_protocol);
+        }
+        return;
+    }
+
+    fgets(header, 1024, fp);
+
+    while (!feof(fp)) {
+        line++;
+        if ((rc = fscanf(fp,
+            " \"%m[0-9A-f:.]\" , %hhu , %hhu\n",
+            &ip_address, &host_entry.cidr, &host_entry.value)) != 3) {
+            nd_printf("%s: %s: parse error at line #%u [%d]\n",
+                tag.c_str(), nd_config.csv_host_protocol, line, rc);
+            if (rc >= 1) free(ip_address);
+            break;
+        }
+
+        if (inet_pton(AF_INET6, ip_address, &saddr_ip6.sin6_addr) == 1) {
+            // TODO: nDPI doesn't support IPv6 for host_protocol yet.
+            if (nd_debug) {
+                nd_printf("%s: %s: skipping IPv6 host protocol entry: %s/%hhu\n",
+                    tag.c_str(), nd_config.csv_host_protocol, ip_address, host_entry.cidr);
+            }
+        }
+        else if (inet_pton(AF_INET, ip_address, &saddr_ip4.sin_addr) == 1) {
+            host_entry.network = ntohl(saddr_ip4.sin_addr.s_addr);
+            ndpi_add_to_ptree_ipv4(ndpi, ndpi->protocols_ptree, &host_entry);
+
+            loaded++;
+        }
+
+        free(ip_address);
+    }
+
+    fclose(fp);
+
+    if (nd_debug) {
+        nd_printf("%s: loaded %u host protocol records from: %s\n",
+            tag.c_str(), loaded, nd_config.csv_host_protocol);
+    }
+}
+
+void ndDetectionThread::LoadContentMatch(void)
+{
+    int rc;
+    unsigned loaded = 0, line = 1;
+    char header[1024], *match, *name;
+    ndpi_protocol_match content_match;
+    FILE *fp = fopen(nd_config.csv_content_match, "r");
+
+    if (fp == NULL) {
+        if (nd_debug) {
+            nd_printf("%s: unable to open content match file: %s\n",
+                tag.c_str(), nd_config.csv_content_match);
+        }
+        return;
+    }
+
+    content_match.protocol_breed = NDPI_PROTOCOL_UNRATED;
+
+    fgets(header, 1024, fp);
+
+    while (!feof(fp)) {
+        line++;
+        if ((rc = fscanf(fp,
+            " \"%m[0-9A-z*.-]\" , \"%m[0-9A-z_.-]\" , %u\n",
+            &match, &name, &content_match.protocol_id)) != 3) {
+            nd_printf("%s: %s: parse error at line #%u [%d]\n",
+                tag.c_str(), nd_config.csv_content_match, line, rc);
+            if (rc >= 1) free(match);
+            if (rc >= 2) free(name);
+            break;
+        }
+
+        content_match.string_to_match = match;
+        content_match.proto_name = name;
+
+        ndpi_init_protocol_match(ndpi, &content_match);
+
+        free(match);
+        free(name);
+
+        loaded++;
+    }
+
+    fclose(fp);
+
+    if (nd_debug) {
+        nd_printf("%s: loaded %u content match records from: %s\n",
+            tag.c_str(), loaded, nd_config.csv_content_match);
+    }
 }
 
 void *ndDetectionThread::Entry(void)
@@ -450,6 +560,12 @@ void ndDetectionThread::ProcessPacket(void)
     default:
         // Non-TCP/UDP protocols...
         break;
+    }
+
+    for (vector<uint8_t *>::iterator i = nd_config.mac_filter_list.begin();
+        i != nd_config.mac_filter_list.end(); i++) {
+        if (!memcmp((*i), flow.lower_mac, ETH_ALEN)) return;
+        if (!memcmp((*i), flow.upper_mac, ETH_ALEN)) return;
     }
 
     flow.hash(tag, digest);

@@ -17,6 +17,23 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 
+# Get git revision
+if test -d ".git"; then :
+    GIT_TAG=`git log -1 --format=%h`
+    GIT_DATE=`git log -1 --format=%cd`
+
+    # On CentOS 6 `git rev-list HEAD --count` does not work
+    GIT_NUM=`git log --pretty=oneline | wc -l | tr -d '[[:space:]]'`
+    GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
+    GIT_RELEASE="${PACKAGE_VERSION}-${GIT_BRANCH}-${GIT_NUM}-${GIT_TAG}"
+else
+    GIT_RELEASE="${PACKAGE_VERSION}"
+    GIT_DATE=`date`
+fi
+
+AC_DEFINE_UNQUOTED(GIT_RELEASE, "${GIT_RELEASE}", [GIT Release])
+AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
+
 # Check compiler flags (gnu++11)
 m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
 m4_include([m4/ax_cxx_compile_stdcxx_11.m4])

@@ -50,6 +50,9 @@ protected:
     nd_flow_map *flows;
     ndDetectionStats *stats;
 
+    void LoadContentMatch(void);
+    void LoadHostProtocol(void);
+
     void ProcessPacket(void);
 };
 

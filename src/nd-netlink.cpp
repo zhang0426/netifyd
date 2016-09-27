@@ -880,8 +880,8 @@ bool ndNetlink::AddNetwork(sa_family_t family,
 
     addr.length = length;
     addr.network.ss_family = family;
-    saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&addr.network);;
-    saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&addr.network);;
+    saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&addr.network);
+    saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&addr.network);
 
     switch (family) {
     case AF_INET:

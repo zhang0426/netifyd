@@ -23,6 +23,8 @@
 #include <stdio.h>
 #include <getopt.h>
 
+#include <arpa/inet.h>
+
 #include "ndpi_main.h"
 #include "ndpi_content_match.c.inc"
 
@@ -73,11 +75,17 @@ static void nd_usage(int rc = 0, bool version = false)
 
 static void nd_dump_host_protocol_list(FILE *fp)
 {
-    fprintf(fp, "\"ipv4_address\",\"ipv4_prefix\",\"application_id\"\n");
+    struct sockaddr_in saddr_ip4;
+    char ip_addr[INET6_ADDRSTRLEN];
+
+    fprintf(fp, "\"ip_address\",\"ip_prefix\",\"application_id\"\n");
     for (unsigned i = 0; host_protocol_list[i].network != 0; i++) {
-        fprintf(fp, "0x%08X,%hhu,%hhu\n",
-            host_protocol_list[i].network, host_protocol_list[i].cidr,
-            host_protocol_list[i].value);
+        saddr_ip4.sin_addr.s_addr = htonl(host_protocol_list[i].network);
+        if (!inet_ntop(AF_INET, &saddr_ip4.sin_addr, ip_addr, INET6_ADDRSTRLEN))
+            continue;
+
+        fprintf(fp, "\"%s\",%hhu,%hhu\n", ip_addr,
+            host_protocol_list[i].cidr, host_protocol_list[i].value);
     }
 }
 

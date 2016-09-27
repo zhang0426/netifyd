@@ -373,6 +373,15 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
             json_object_put(jobj);
             return ndJSON_OBJ_TYPE_RESULT;
 
+        case ndJSON_OBJ_TYPE_CONFIG:
+            if (!json_object_object_get_ex(jobj, "config", &jdata))
+                throw ndJsonParseException("Missing config field");
+            if (!json_object_is_type(jdata, json_type_object))
+                throw ndJsonParseException("Unexpected config type");
+            *result = reinterpret_cast<ndJsonObject *>(new ndJsonObjectConfig(jdata));
+            json_object_put(jobj);
+            return ndJSON_OBJ_TYPE_CONFIG;
+
         default:
             throw ndJsonParseException("Invalid type");
         }
@@ -417,6 +426,211 @@ ndJsonObjectResult::ndJsonObjectResult(json_object *jdata)
 
     if (nd_debug)
         nd_printf("message: %s\n", message.c_str());
+}
+
+ndJsonObjectConfig::ndJsonObjectConfig(json_object *jdata)
+    : ndJsonObject(ndJSON_OBJ_TYPE_CONFIG)
+{
+    json_object *jarray;
+
+    if (json_object_object_get_ex(jdata, "content_match", &jarray)) {
+        if (json_object_get_type(jarray) != json_type_array)
+            throw ndJsonParseException("Content match type mismatch");
+
+        present |= (unsigned)ndJSON_CFG_TYPE_CONTENT_MATCH;
+        UnserializeConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, jarray);
+    }
+
+    if (json_object_object_get_ex(jdata, "host_protocol", &jarray)) {
+        if (json_object_get_type(jarray) != json_type_array)
+            throw ndJsonParseException("Host protocol type mismatch");
+
+        present |= (unsigned)ndJSON_CFG_TYPE_HOST_PROTOCOL;
+        UnserializeConfig(ndJSON_CFG_TYPE_HOST_PROTOCOL, jarray);
+    }
+}
+
+ndJsonObjectConfig::~ndJsonObjectConfig()
+{
+    for (content_match_iterator = content_match_list.begin();
+        content_match_iterator != content_match_list.end();
+        content_match_iterator++) delete (*content_match_iterator);
+    content_match_list.clear();
+
+    for (host_protocol_iterator = host_protocol_list.begin();
+        host_protocol_iterator != host_protocol_list.end();
+        host_protocol_iterator++) delete (*host_protocol_iterator);
+    host_protocol_list.clear();
+}
+
+ndJsonConfigContentMatch *ndJsonObjectConfig::GetFirstContentMatchEntry(void)
+{
+    content_match_iterator = content_match_list.begin();
+    if (content_match_iterator == content_match_list.end()) return NULL;
+    return (*content_match_iterator);
+}
+
+ndJsonConfigHostProtocol *ndJsonObjectConfig::GetFirstHostProtocolEntry(void)
+{
+    host_protocol_iterator = host_protocol_list.begin();
+    if (host_protocol_iterator == host_protocol_list.end()) return NULL;
+    return (*host_protocol_iterator);
+}
+
+ndJsonConfigContentMatch *ndJsonObjectConfig::GetNextContentMatchEntry(void)
+{
+    if (content_match_iterator == content_match_list.end())
+        return NULL;
+    content_match_iterator++;
+    if (content_match_iterator == content_match_list.end())
+        return NULL;
+    return (*content_match_iterator);
+}
+
+ndJsonConfigHostProtocol *ndJsonObjectConfig::GetNextHostProtocolEntry(void)
+{
+    if (host_protocol_iterator == host_protocol_list.end())
+        return NULL;
+    host_protocol_iterator++;
+    if (host_protocol_iterator == host_protocol_list.end())
+        return NULL;
+    return (*host_protocol_iterator);
+}
+
+void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *jarray)
+{
+    int jarray_length;
+    json_object *jentry;
+    string jkey;
+
+    switch (type) {
+    case ndJSON_CFG_TYPE_CONTENT_MATCH:
+        jkey = "content_type";
+        break;
+    case ndJSON_CFG_TYPE_HOST_PROTOCOL:
+        jkey = "host_protocol";
+        break;
+    }
+
+    jarray_length = json_object_array_length(jarray);
+
+    for (int i = 0; i < jarray_length; i++) {
+        switch (type) {
+        case ndJSON_CFG_TYPE_CONTENT_MATCH:
+            if ((jentry = json_object_array_get_idx(jarray, i)))
+                UnserializeContentMatch(jentry);
+            break;
+        case ndJSON_CFG_TYPE_HOST_PROTOCOL:
+            if ((jentry = json_object_array_get_idx(jarray, i)))
+                UnserializeHostProtocol(jentry);
+            break;
+        }
+
+        if (jentry == NULL) {
+            if (nd_debug)
+                nd_printf("Premature end of JSON array: %s\n", jkey.c_str());
+            break;
+        }
+    }
+}
+
+void ndJsonObjectConfig::UnserializeContentMatch(json_object *jentry)
+{
+    json_object *jobj;
+    ndJsonConfigContentMatch entry;
+
+    if (!json_object_object_get_ex(jentry, "match", &jobj))
+        throw ndJsonParseException("Missing match field");
+
+    if (json_object_get_type(jobj) != json_type_string)
+        throw ndJsonParseException("Match field type mismatch");
+
+    entry.match = json_object_get_string(jobj);
+
+    if (!json_object_object_get_ex(jentry, "app_name", &jobj))
+        throw ndJsonParseException("Missing application name field");
+
+    if (json_object_get_type(jobj) != json_type_string)
+        throw ndJsonParseException("Application name type mismatch");
+
+    entry.app_name = json_object_get_string(jobj);
+
+    if (!json_object_object_get_ex(jentry, "app_id", &jobj))
+        throw ndJsonParseException("Missing application ID field");
+
+    if (json_object_get_type(jobj) != json_type_int)
+        throw ndJsonParseException("Application ID field type mismatch");
+
+    entry.app_id = (uint32_t)json_object_get_int(jobj);
+
+    content_match_list.push_back(new ndJsonConfigContentMatch(entry));
+}
+
+void ndJsonObjectConfig::UnserializeHostProtocol(json_object *jentry)
+{
+    json_object *jobj;
+    ndJsonConfigHostProtocol entry;
+    struct sockaddr_in *saddr_ip4;
+    struct sockaddr_in6 *saddr_ip6;
+    saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&entry.ip_addr);
+    saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&entry.ip_addr);
+
+    if (!json_object_object_get_ex(jentry, "ip_version", &jobj))
+        throw ndJsonParseException("Missing IP version field");
+
+    if (json_object_get_type(jobj) != json_type_int)
+        throw ndJsonParseException("IP version field type mismatch");
+
+    switch (json_object_get_int(jobj)) {
+    case 4:
+        entry.ip_addr.ss_family = AF_INET;
+        break;
+    case 6:
+        entry.ip_addr.ss_family = AF_INET6;
+        break;
+    default:
+        throw ndJsonParseException("Invalid IP version field value");
+    }
+
+    if (!json_object_object_get_ex(jentry, "ip_address", &jobj))
+        throw ndJsonParseException("Missing IP address field");
+
+    if (json_object_get_type(jobj) != json_type_string)
+        throw ndJsonParseException("IP address type mismatch");
+
+    const char *ip_addr = json_object_get_string(jobj);
+
+    if (ip_addr == NULL || ip_addr[0] == '\0')
+        throw ndJsonParseException("Invalid IP address length");
+
+    switch (entry.ip_addr.ss_family) {
+    case AF_INET:
+        if (inet_pton(AF_INET, ip_addr, &saddr_ip4->sin_addr) < 1)
+            throw ndJsonParseException("Invalid IPv4 address");
+        break;
+    case AF_INET6:
+        if (inet_pton(AF_INET6, ip_addr, &saddr_ip6->sin6_addr) < 1)
+            throw ndJsonParseException("Invalid IPv6 address");
+        break;
+    }
+
+    if (!json_object_object_get_ex(jentry, "ip_prefix", &jobj))
+        throw ndJsonParseException("Missing IP prefix field");
+
+    if (json_object_get_type(jobj) != json_type_int)
+        throw ndJsonParseException("IP prefix field type mismatch");
+
+    entry.ip_prefix = json_object_get_int(jobj);
+
+    if (!json_object_object_get_ex(jentry, "app_id", &jobj))
+        throw ndJsonParseException("Missing application ID field");
+
+    if (json_object_get_type(jobj) != json_type_int)
+        throw ndJsonParseException("Application ID field type mismatch");
+
+    entry.app_id = json_object_get_int(jobj);
+
+    host_protocol_list.push_back(new ndJsonConfigHostProtocol(entry));
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

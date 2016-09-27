@@ -13,13 +13,17 @@ netifyd_SOURCES = netifyd.cpp nd-detection.cpp nd-flow.cpp nd-inotify.cpp \
 netifyd_LDFLAGS = $(JSONC_LIBS) $(LIBCURL_LIBS) $(ZLIB_LIBS)
 #	/home/dsokoloski/openwrt-15.05/staging_dir/target-mips_34kc_uClibc-0.9.33.2/usr/lib/libmbedtls.so.9
 netifyd_LDADD = ../inih/libini.la ../ndpi/src/lib/libndpi.la
-nodist_netifyd_SOURCES = nd-json-object-type.h nd-json-result-code.h
-BUILT_SOURCES = nd-json-object-type.h nd-json-result-code.h
-CLEANFILES = nd-json-object-type.h nd-json-result-code.h
+
+nodist_netifyd_SOURCES = nd-json-object-type.h nd-json-result-code.h nd-json-config-type.h
+BUILT_SOURCES = nd-json-object-type.h nd-json-result-code.h nd-json-config-type.h
+CLEANFILES = nd-json-object-type.h nd-json-result-code.h nd-json-config-type.h
 
 nd-json-object-type.h: Makefile
 	../util/generate-json-include.sh c-object-type >$@
 
 nd-json-result-code.h: Makefile
 	../util/generate-json-include.sh c-result-code >$@
+
+nd-json-config-type.h: Makefile
+	../util/generate-json-include.sh c-config-type >$@
 

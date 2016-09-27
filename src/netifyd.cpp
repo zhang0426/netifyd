@@ -82,8 +82,8 @@ ndGlobalConfig nd_config;
 static void nd_usage(int rc = 0, bool version = false)
 {
     cerr << "Netify Daemon v" << PACKAGE_VERSION << endl;
-    cerr << "Copyright (C) 2015-2016 eGloo Incorporated [" <<
-        __DATE__ <<  " " << __TIME__ << "]" << endl;
+    cerr << "Copyright (C) 2015-2016 eGloo Incorporated"
+         <<  endl << "[" << GIT_RELEASE << " " << GIT_DATE << "]" << endl;
     if (version) {
         cerr << endl <<
             "This application uses nDPI v" <<  ndpi_revision() << endl << 
@@ -210,6 +210,27 @@ static int nd_config_load(void)
                 nd_config.socket_path.push_back(socket_node);
                 continue;
             }
+        }
+
+        break;
+    }
+
+    nd_config.csv_host_protocol = strdup(ND_CSV_HOST_PROTOCOL);
+    nd_config.csv_content_match = strdup(ND_CSV_CONTENT_MATCH);
+
+    for (int i = 0; ; i++) {
+        ostringstream os;
+        os << "mac[" << i << "]";
+        string mac_addr = reader.Get("filter", os.str(), "");
+        if (mac_addr.size() == ETH_ALEN * 2 + ETH_ALEN - 1) {
+            uint8_t mac[ETH_ALEN], *p = mac;
+            const char *a = mac_addr.c_str();
+            for (int j = 0; j < ETH_ALEN * 2 + ETH_ALEN - 1; j += 3, p++)
+                sscanf(a + j, "%2x", p);
+            p = new uint8_t[ETH_ALEN];
+            memcpy(p, mac, ETH_ALEN);
+            nd_config.mac_filter_list.push_back(p);
+            continue;
         }
 
         break;
@@ -435,6 +456,7 @@ static void nd_json_upload(ndJson *json)
 
 static void nd_dump_stats(void)
 {
+    string digest;
     uint32_t flow_count = 0;
 
     ndJson json;
@@ -442,6 +464,10 @@ static void nd_dump_stats(void)
 
     json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
     json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
+    nd_sha1_to_string(nd_config.digest_host_protocol, digest);
+    json.AddObject(NULL, "host-protocol", digest);
+    nd_sha1_to_string(nd_config.digest_content_match, digest);
+    json.AddObject(NULL, "content-match", digest);
 
     json_object *json_devs = json.CreateObject(NULL, "interfaces");
     json_object *json_stats = json.CreateObject(NULL, "stats");
@@ -825,6 +851,11 @@ int main(int argc, char *argv[])
     nd_printf("Netify Daemon v%s\n", PACKAGE_VERSION);
 
     memset(&totals, 0, sizeof(ndDetectionStats));
+
+    nd_sha1_file(
+        nd_config.csv_host_protocol, nd_config.digest_host_protocol);
+    nd_sha1_file(
+        nd_config.csv_content_match, nd_config.digest_content_match);
 
     sigfillset(&sigset);
     //sigdelset(&sigset, SIGPROF);
