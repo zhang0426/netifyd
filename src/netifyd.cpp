@@ -20,6 +20,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <map>
 #include <unordered_map>
@@ -81,7 +82,8 @@ ndGlobalConfig nd_config;
 
 static void nd_usage(int rc = 0, bool version = false)
 {
-    cerr << "Netify Daemon v" << PACKAGE_VERSION << endl;
+    cerr << "Netify Daemon v" << PACKAGE_VERSION << "/";
+    cerr << fixed << showpoint << setprecision(1) << ND_JSON_VERSION << endl;
     cerr << "Copyright (C) 2015-2016 eGloo Incorporated"
          <<  endl << "[" << GIT_RELEASE << " " << GIT_DATE << "]" << endl;
     if (version) {
@@ -464,10 +466,10 @@ static void nd_dump_stats(void)
 
     json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
     json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
-    nd_sha1_to_string(nd_config.digest_host_protocol, digest);
-    json.AddObject(NULL, "host-protocol", digest);
     nd_sha1_to_string(nd_config.digest_content_match, digest);
-    json.AddObject(NULL, "content-match", digest);
+    json.AddObject(NULL, "content_match_digest", digest);
+    nd_sha1_to_string(nd_config.digest_host_protocol, digest);
+    json.AddObject(NULL, "host_protocol_digest", digest);
 
     json_object *json_devs = json.CreateObject(NULL, "interfaces");
     json_object *json_stats = json.CreateObject(NULL, "stats");
@@ -662,7 +664,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
         case AF_INET:
             network_ip4.sin_addr.s_addr = htonl(word_net[0]);
             inet_ntop(AF_INET,
-                &network_ip4.sin_addr.s_addr, netaddr, INET_ADDRSTRLEN);
+                &network_ip4.sin_addr, netaddr, INET_ADDRSTRLEN);
 
             bit = (int)_length;
 
@@ -674,7 +676,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
 
             bcast_ip4.sin_addr.s_addr = htonl(word_bcast[0]);
             inet_ntop(AF_INET,
-                &bcast_ip4.sin_addr.s_addr, bcastaddr, INET_ADDRSTRLEN);
+                &bcast_ip4.sin_addr, bcastaddr, INET_ADDRSTRLEN);
 
             if (! netlink->AddAddress(family, _ND_NETLINK_BROADCAST, bcastaddr))
                 nd_printf("WARNING: Error adding device address: %s\n", bcastaddr);
@@ -687,7 +689,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
             network_ip6.sin6_addr.s6_addr32[2] = htonl(word_net[2]);
             network_ip6.sin6_addr.s6_addr32[3] = htonl(word_net[3]);
             inet_ntop(AF_INET6,
-                &network_ip6.sin6_addr.s6_addr, netaddr, INET6_ADDRSTRLEN);
+                &network_ip6.sin6_addr, netaddr, INET6_ADDRSTRLEN);
             break;
         }
 
@@ -736,6 +738,7 @@ int main(int argc, char *argv[])
         { "protocols", 0, 0, 'P' },
         { "device-address", 0, 0, 'A' },
         { "protocol-file", 0, 0, 'f' },
+        { "hash-file", 0, 0, 'H' },
 
         { NULL, 0, 0, 0 }
     };
@@ -743,7 +746,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:E:j:i:c:UPA:f:", options, &o)) == -1) break;
+            "?hVds:I:E:j:i:c:UPA:f:H:", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -806,6 +809,20 @@ int main(int argc, char *argv[])
         case 'f':
             nd_config.proto_file = strdup(optarg);
             break;
+        case 'H':
+            {
+                uint8_t digest[SHA1_DIGEST_LENGTH];
+
+                nd_debug = true;
+
+                if (nd_sha1_file(optarg, digest) < 0) return 1;
+                else {
+                    string sha1;
+                    nd_sha1_to_string(digest, sha1);
+                    nd_printf("%s\n", sha1.c_str());
+                    return 0;
+                }
+            }
         default:
             nd_usage(1);
         }

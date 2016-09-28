@@ -356,7 +356,6 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
         int type = json_object_get_int(jtype);
         if (type <= ndJSON_OBJ_TYPE_NULL || type >= ndJSON_OBJ_TYPE_MAX)
             throw ndJsonParseException("Type field invalid value");
-        if (nd_debug) nd_printf("type: %d\n", type);
 
         switch (type) {
         case ndJSON_OBJ_TYPE_OK:
@@ -413,8 +412,6 @@ ndJsonObjectResult::ndJsonObjectResult(json_object *jdata)
         throw ndJsonParseException("Code field invalid value");
 
     code = (ndJsonObjectResultCode)icode;
-    if (nd_debug)
-        nd_printf("code: %d\n", code);
 
     if (!json_object_object_get_ex(jdata, "message", &jmessage))
         throw ndJsonParseException("Missing message field");
@@ -423,9 +420,6 @@ ndJsonObjectResult::ndJsonObjectResult(json_object *jdata)
         throw ndJsonParseException("Message field type mismatch");
 
     message = json_object_get_string(jmessage);
-
-    if (nd_debug)
-        nd_printf("message: %s\n", message.c_str());
 }
 
 ndJsonObjectConfig::ndJsonObjectConfig(json_object *jdata)
@@ -575,23 +569,6 @@ void ndJsonObjectConfig::UnserializeHostProtocol(json_object *jentry)
     saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&entry.ip_addr);
     saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&entry.ip_addr);
 
-    if (!json_object_object_get_ex(jentry, "ip_version", &jobj))
-        throw ndJsonParseException("Missing IP version field");
-
-    if (json_object_get_type(jobj) != json_type_int)
-        throw ndJsonParseException("IP version field type mismatch");
-
-    switch (json_object_get_int(jobj)) {
-    case 4:
-        entry.ip_addr.ss_family = AF_INET;
-        break;
-    case 6:
-        entry.ip_addr.ss_family = AF_INET6;
-        break;
-    default:
-        throw ndJsonParseException("Invalid IP version field value");
-    }
-
     if (!json_object_object_get_ex(jentry, "ip_address", &jobj))
         throw ndJsonParseException("Missing IP address field");
 
@@ -603,16 +580,14 @@ void ndJsonObjectConfig::UnserializeHostProtocol(json_object *jentry)
     if (ip_addr == NULL || ip_addr[0] == '\0')
         throw ndJsonParseException("Invalid IP address length");
 
-    switch (entry.ip_addr.ss_family) {
-    case AF_INET:
-        if (inet_pton(AF_INET, ip_addr, &saddr_ip4->sin_addr) < 1)
-            throw ndJsonParseException("Invalid IPv4 address");
-        break;
-    case AF_INET6:
-        if (inet_pton(AF_INET6, ip_addr, &saddr_ip6->sin6_addr) < 1)
-            throw ndJsonParseException("Invalid IPv6 address");
-        break;
+    if (inet_pton(AF_INET6, ip_addr, &saddr_ip6->sin6_addr) != 1) {
+        if (inet_pton(AF_INET, ip_addr, &saddr_ip4->sin_addr) != 1)
+            throw ndJsonParseException("Invalid IP address");
+        else
+            entry.ip_addr.ss_family = AF_INET;
     }
+    else
+            entry.ip_addr.ss_family = AF_INET6;
 
     if (!json_object_object_get_ex(jentry, "ip_prefix", &jobj))
         throw ndJsonParseException("Missing IP prefix field");

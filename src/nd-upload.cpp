@@ -23,6 +23,7 @@
 #include <cerrno>
 #include <stdexcept>
 #include <iostream>
+#include <iomanip>
 #include <map>
 #include <vector>
 #include <unordered_map>
@@ -231,6 +232,7 @@ void ndUploadThread::CreateHeaders(void)
     ostringstream user_agent;
     user_agent << "User-Agent: " <<
         PACKAGE_NAME << "/" << GIT_RELEASE <<
+        " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION <<
         " nDPI/" << ndpi_revision() <<
         " (+" << PACKAGE_URL << ")";
 
@@ -312,7 +314,7 @@ void ndUploadThread::Upload(void)
         double content_length = 0;
         curl_easy_getinfo(ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &content_length);
 
-        if (content_type != NULL && content_length > 0) {
+        if (content_type != NULL && content_length != 0.0f) {
             if (strcasecmp("application/json", content_type) == 0)
                 ProcessResponse();
         }
@@ -404,6 +406,7 @@ void ndUploadThread::ProcessResponse(void)
 
     switch (json_type) {
     case ndJSON_OBJ_TYPE_OK:
+        if (nd_debug) nd_printf("%s: upload successful.\n", tag.c_str());
         break;
     case ndJSON_OBJ_TYPE_RESULT:
         json_result = reinterpret_cast<ndJsonObjectResult *>(json_obj);
@@ -425,6 +428,7 @@ void ndUploadThread::ProcessResponse(void)
         }
         break;
     case ndJSON_OBJ_TYPE_CONFIG:
+        if (nd_debug) nd_printf("%s: upload successful (w/config).\n", tag.c_str());
         json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
 
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH))
@@ -437,7 +441,7 @@ void ndUploadThread::ProcessResponse(void)
         break;
     case ndJSON_OBJ_TYPE_NULL:
     default:
-        nd_printf("%s: Unexpected JSON result type.\n", tag.c_str());
+        nd_printf("%s: unexpected JSON result type.\n", tag.c_str());
     }
 
     if (json_obj != NULL) delete json_obj;
@@ -478,6 +482,7 @@ bool ndUploadThread::SaveRealmUUID(const string &uuid)
 
 bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *config)
 {
+    int rc = 0;
     FILE *fp = NULL;
     string config_type_string;
     size_t entries = 0;
@@ -505,7 +510,6 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
     if (fp == NULL)
         throw ndJsonParseException("Error opening file for configuration export");
 
-
     switch (type) {
     case ndJSON_CFG_TYPE_CONTENT_MATCH:
         fprintf(fp, "\"match\",\"application_name\",\"application_id\"\n");
@@ -517,7 +521,7 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
                 content_match->app_id);
             content_match = config->GetNextContentMatchEntry();
         }
-        fflush(fp);
+        fclose(fp);
         nd_sha1_file(
             nd_config.csv_content_match, nd_config.digest_content_match);
         break;
@@ -529,26 +533,26 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
             switch (host_protocol->ip_addr.ss_family) {
             case AF_INET:
                 saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&host_protocol->ip_addr);
-                inet_ntop(host_protocol->ip_addr.ss_family, &saddr_ip4, ip_addr, INET6_ADDRSTRLEN);
+                if (inet_ntop(AF_INET, &saddr_ip4->sin_addr, ip_addr, INET6_ADDRSTRLEN))
+                    rc = 1;
                 break;
             case AF_INET6:
                 saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&host_protocol->ip_addr);
-                inet_ntop(host_protocol->ip_addr.ss_family, &saddr_ip6, ip_addr, INET6_ADDRSTRLEN);
+                if (inet_ntop(AF_INET6, &saddr_ip6->sin6_addr, ip_addr, INET6_ADDRSTRLEN))
+                    rc = 1;
                 break;
             }
-            if (ip_addr[0] != '\0') {
+            if (rc == 1) {
                 fprintf(fp, "\"%s\",%hhu,%u\n",
                     ip_addr, host_protocol->ip_prefix, host_protocol->app_id);
             }
             host_protocol = config->GetNextHostProtocolEntry();
         }
-        fflush(fp);
+        fclose(fp);
         nd_sha1_file(
             nd_config.csv_host_protocol, nd_config.digest_host_protocol);
         break;
     }
-
-    fclose(fp);
 
     if (nd_debug) {
         if (entries == 0) {
