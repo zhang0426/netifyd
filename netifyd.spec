@@ -24,6 +24,7 @@ Requires: app-network-core
 Requires: ncurses
 Requires: webconfig-httpd
 %{?systemd_requires}
+BuildRequires: systemd
 %endif
 Summary: Netify DPI Daemon
 
