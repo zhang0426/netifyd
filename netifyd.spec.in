@@ -12,6 +12,7 @@ BuildRoot: /var/tmp/%{name}-%{version}
 Obsoletes: cdpid
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
+BuildRequires: bc
 BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
 BuildRequires: libpcap-devel
@@ -19,9 +20,9 @@ BuildRequires: libtool
 BuildRequires: pkgconfig
 BuildRequires: zlib-devel
 %if "0%{dist}" == "0.v7"
+Requires: app-network-core
 Requires: ncurses
 Requires: webconfig-httpd
-Requires: app-network-core
 %{?systemd_requires}
 %endif
 Summary: Netify DPI Daemon
