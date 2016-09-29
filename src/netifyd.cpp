@@ -958,8 +958,8 @@ int main(int argc, char *argv[])
         }
 
         if (sig == sigev.sigev_signo) {
-            nd_dump_stats();
             inotify->RefreshWatches();
+            nd_dump_stats();
             continue;
         }
 

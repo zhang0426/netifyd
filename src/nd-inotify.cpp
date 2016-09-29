@@ -135,11 +135,14 @@ void ndInotify::ProcessEvent(void)
                                     "CLOSE_WRITE" : "IGNORE");
                         }
 
+                        if (iev->mask & IN_DELETE_SELF) {
+                            inotify_rm_watch(fd, watch->second->wd);
+                            watch->second->wd = -1;
+                        }
+
                         watch->second->event_occured = true;
                         watch->second->rehash = true;
                 }
-                else
-                    nd_printf("Event on unknown inotify watch descriptor!\n");
 
                 p += sizeof(struct inotify_event) + iev->len;
                 bytes -= sizeof(struct inotify_event) + iev->len;
