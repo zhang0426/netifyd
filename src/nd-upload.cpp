@@ -552,6 +552,9 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         nd_sha1_file(
             nd_config.csv_host_protocol, nd_config.digest_host_protocol);
         break;
+    default:
+        fclose(fp);
+        break;
     }
 
     if (nd_debug) {

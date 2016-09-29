@@ -228,7 +228,7 @@ static int nd_config_load(void)
             uint8_t mac[ETH_ALEN], *p = mac;
             const char *a = mac_addr.c_str();
             for (int j = 0; j < ETH_ALEN * 2 + ETH_ALEN - 1; j += 3, p++)
-                sscanf(a + j, "%2x", p);
+                sscanf(a + j, "%2hhx", p);
             p = new uint8_t[ETH_ALEN];
             memcpy(p, mac, ETH_ALEN);
             nd_config.mac_filter_list.push_back(p);
@@ -595,7 +595,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
     struct sockaddr_in bcast_ip4;
     struct sockaddr_in6 network_ip6;
     int bit, word, words;
-    uint32_t b, word_net[4], word_bcast[1];
+    uint32_t b, word_net[4] = { 0, 0, 0, 0 }, word_bcast[1] = { 0 };
     char netaddr[INET6_ADDRSTRLEN], bcastaddr[INET6_ADDRSTRLEN];
 
     for (vector<pair<string, string> >::const_iterator i = device_addresses.begin();

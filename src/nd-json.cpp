@@ -504,6 +504,11 @@ void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *j
     case ndJSON_CFG_TYPE_HOST_PROTOCOL:
         jkey = "host_protocol";
         break;
+    case ndJSON_CFG_TYPE_NULL:
+    default:
+        if (nd_debug)
+            nd_printf("Invalid config type: %d\n", type);
+        return;
     }
 
     jarray_length = json_object_array_length(jarray);
@@ -517,6 +522,8 @@ void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *j
         case ndJSON_CFG_TYPE_HOST_PROTOCOL:
             if ((jentry = json_object_array_get_idx(jarray, i)))
                 UnserializeHostProtocol(jentry);
+            break;
+        default:
             break;
         }
 

@@ -135,7 +135,7 @@ void ndDetectionThread::LoadHostProtocol(void)
         return;
     }
 
-    fgets(header, 1024, fp);
+    if (fgets(header, 1024, fp) == NULL) return;
 
     while (!feof(fp)) {
         line++;
@@ -191,7 +191,7 @@ void ndDetectionThread::LoadContentMatch(void)
 
     content_match.protocol_breed = NDPI_PROTOCOL_UNRATED;
 
-    fgets(header, 1024, fp);
+    if (fgets(header, 1024, fp) == NULL) return;
 
     while (!feof(fp)) {
         line++;
