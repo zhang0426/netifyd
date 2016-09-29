@@ -2,7 +2,7 @@
 
 Name: @PACKAGE_TARNAME@
 Version: @PACKAGE_VERSION@
-Release: 1%{dist}
+Release: 2%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -67,6 +67,9 @@ mkdir -p %{buildroot}/var/run
 install -d -m 0755 %{buildroot}/var/run/%{name}
 %endif
 
+install -D -m 0644 deploy/content-match.csv %{buildroot}/%{_sharedstatedir}/%{name}/content-match.csv
+install -D -m 0644 deploy/host-protocol.csv %{buildroot}/%{_sharedstatedir}/%{name}/host-protocol.csv
+
 #install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 #install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
 #install -D -m 0755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
@@ -125,6 +128,8 @@ fi
 %dir /run/%{name}
 %endif
 %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
+%attr(644,root,root) %{_sharedstatedir}/%{name}/content-match.csv
+%attr(644,root,root) %{_sharedstatedir}/%{name}/host-protocol.csv
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
 
