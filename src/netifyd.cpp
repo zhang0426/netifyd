@@ -61,6 +61,7 @@ using namespace std;
 #include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-upload.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 
 bool nd_debug = false;
@@ -216,9 +217,6 @@ static int nd_config_load(void)
 
         break;
     }
-
-    nd_config.csv_host_protocol = strdup(ND_CSV_HOST_PROTOCOL);
-    nd_config.csv_content_match = strdup(ND_CSV_CONTENT_MATCH);
 
     for (int i = 0; ; i++) {
         ostringstream os;
@@ -567,25 +565,11 @@ void nd_generate_uuid(void)
 
 static void nd_dump_protocols(void)
 {
-    nd_debug = true;
-
-    struct ndpi_detection_module_struct *ndpi = NULL;
-    ndpi = ndpi_init_detection_module();
-
-    if (ndpi == NULL)
-        throw ndThreadException("Detection module initialization failure");
-
-    set_ndpi_malloc(nd_mem_alloc);
-    set_ndpi_free(nd_mem_free);
-    set_ndpi_debug_function(nd_debug_printf);
-
-    NDPI_PROTOCOL_BITMASK proto_all;
-    NDPI_BITMASK_SET_ALL(proto_all);
-
-    ndpi_set_protocol_detection_bitmask2(ndpi, &proto_all);
+    struct ndpi_detection_module_struct *ndpi;
+    ndpi = nd_ndpi_init("netifyd");
 
     for (int i = 0; i < (int)ndpi->ndpi_num_supported_protocols; i++)
-        nd_printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
+        printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
 }
 
 static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
@@ -719,6 +703,8 @@ int main(int argc, char *argv[])
 
     memset(&nd_config, 0, sizeof(ndGlobalConfig));
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
+    nd_config.csv_host_protocol = strdup(ND_CSV_HOST_PROTOCOL);
+    nd_config.csv_content_match = strdup(ND_CSV_CONTENT_MATCH);
 
     nd_output_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_output_mutex, NULL);
@@ -738,7 +724,9 @@ int main(int argc, char *argv[])
         { "protocols", 0, 0, 'P' },
         { "device-address", 0, 0, 'A' },
         { "protocol-file", 0, 0, 'f' },
-        { "hash-file", 0, 0, 'H' },
+        { "content-match", 1, 0, 'C' },
+        { "host-protocol", 1, 0, 'H' },
+        { "hash-file", 1, 0, 'S' },
 
         { NULL, 0, 0, 0 }
     };
@@ -746,7 +734,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:E:j:i:c:UPA:f:H:", options, &o)) == -1) break;
+            "?hVds:I:E:j:i:c:UPA:f:H:C:S:", options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -809,7 +797,15 @@ int main(int argc, char *argv[])
         case 'f':
             nd_config.proto_file = strdup(optarg);
             break;
+        case 'C':
+            free(nd_config.csv_content_match);
+            nd_config.csv_content_match = strdup(optarg);
+            break;
         case 'H':
+            free(nd_config.csv_host_protocol);
+            nd_config.csv_host_protocol = strdup(optarg);
+            break;
+        case 'S':
             {
                 uint8_t digest[SHA1_DIGEST_LENGTH];
 
