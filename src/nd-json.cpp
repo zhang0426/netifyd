@@ -435,6 +435,14 @@ ndJsonObjectConfig::ndJsonObjectConfig(json_object *jdata)
         UnserializeConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, jarray);
     }
 
+    if (json_object_object_get_ex(jdata, "custom_protos", &jarray)) {
+        if (json_object_get_type(jarray) != json_type_array)
+            throw ndJsonParseException("Custom protos type mismatch");
+
+        present |= (unsigned)ndJSON_CFG_TYPE_CUSTOM_PROTOS;
+        UnserializeConfig(ndJSON_CFG_TYPE_CUSTOM_PROTOS, jarray);
+    }
+
     if (json_object_object_get_ex(jdata, "host_protocol", &jarray)) {
         if (json_object_get_type(jarray) != json_type_array)
             throw ndJsonParseException("Host protocol type mismatch");
@@ -451,6 +459,11 @@ ndJsonObjectConfig::~ndJsonObjectConfig()
         content_match_iterator++) delete (*content_match_iterator);
     content_match_list.clear();
 
+    for (custom_protos_iterator = custom_protos_list.begin();
+        custom_protos_iterator != custom_protos_list.end();
+        custom_protos_iterator++) delete (*custom_protos_iterator);
+    custom_protos_list.clear();
+
     for (host_protocol_iterator = host_protocol_list.begin();
         host_protocol_iterator != host_protocol_list.end();
         host_protocol_iterator++) delete (*host_protocol_iterator);
@@ -462,6 +475,13 @@ ndJsonConfigContentMatch *ndJsonObjectConfig::GetFirstContentMatchEntry(void)
     content_match_iterator = content_match_list.begin();
     if (content_match_iterator == content_match_list.end()) return NULL;
     return (*content_match_iterator);
+}
+
+ndJsonConfigCustomProtos *ndJsonObjectConfig::GetFirstCustomProtosEntry(void)
+{
+    custom_protos_iterator = custom_protos_list.begin();
+    if (custom_protos_iterator == custom_protos_list.end()) return NULL;
+    return (*custom_protos_iterator);
 }
 
 ndJsonConfigHostProtocol *ndJsonObjectConfig::GetFirstHostProtocolEntry(void)
@@ -479,6 +499,16 @@ ndJsonConfigContentMatch *ndJsonObjectConfig::GetNextContentMatchEntry(void)
     if (content_match_iterator == content_match_list.end())
         return NULL;
     return (*content_match_iterator);
+}
+
+ndJsonConfigCustomProtos *ndJsonObjectConfig::GetNextCustomProtosEntry(void)
+{
+    if (custom_protos_iterator == custom_protos_list.end())
+        return NULL;
+    custom_protos_iterator++;
+    if (custom_protos_iterator == custom_protos_list.end())
+        return NULL;
+    return (*custom_protos_iterator);
 }
 
 ndJsonConfigHostProtocol *ndJsonObjectConfig::GetNextHostProtocolEntry(void)
@@ -501,6 +531,9 @@ void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *j
     case ndJSON_CFG_TYPE_CONTENT_MATCH:
         jkey = "content_type";
         break;
+    case ndJSON_CFG_TYPE_CUSTOM_PROTOS:
+        jkey = "custom_protos";
+        break;
     case ndJSON_CFG_TYPE_HOST_PROTOCOL:
         jkey = "host_protocol";
         break;
@@ -518,6 +551,10 @@ void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *j
         case ndJSON_CFG_TYPE_CONTENT_MATCH:
             if ((jentry = json_object_array_get_idx(jarray, i)))
                 UnserializeContentMatch(jentry);
+            break;
+        case ndJSON_CFG_TYPE_CUSTOM_PROTOS:
+            if ((jentry = json_object_array_get_idx(jarray, i)))
+                UnserializeCustomProtos(jentry);
             break;
         case ndJSON_CFG_TYPE_HOST_PROTOCOL:
             if ((jentry = json_object_array_get_idx(jarray, i)))
@@ -565,6 +602,20 @@ void ndJsonObjectConfig::UnserializeContentMatch(json_object *jentry)
     entry.app_id = (uint32_t)json_object_get_int(jobj);
 
     content_match_list.push_back(new ndJsonConfigContentMatch(entry));
+}
+
+void ndJsonObjectConfig::UnserializeCustomProtos(json_object *jentry)
+{
+    json_object *jobj;
+    ndJsonConfigCustomProtos entry;
+
+    if (!json_object_object_get_ex(jentry, "rule", &jobj))
+        throw ndJsonParseException("Missing rule field");
+
+    if (json_object_get_type(jobj) != json_type_string)
+        throw ndJsonParseException("Rule field type mismatch");
+
+    entry.rule = json_object_get_string(jobj);
 }
 
 void ndJsonObjectConfig::UnserializeHostProtocol(json_object *jentry)

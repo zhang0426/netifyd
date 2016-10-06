@@ -126,7 +126,8 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 json_object *ndFlow::json_encode(const string &device,
     ndJson &json, struct ndpi_detection_module_struct *ndpi, bool counters)
 {
-    char buffer[256];
+#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
+    char mac_addr[_ND_STR_ALEN + 1];
     string other_type = "unknown";
     string _lower_mac = "local_mac", _upper_mac = "other_mac";
     string _lower_ip = "local_ip", _upper_ip = "other_ip";
@@ -260,17 +261,17 @@ json_object *ndFlow::json_encode(const string &device,
 
     json.AddObject(json_flow, "other_type", other_type);
 
-    snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
+    snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
         lower_mac[0], lower_mac[1], lower_mac[2],
         lower_mac[3], lower_mac[4], lower_mac[5]
     );
-    json.AddObject(json_flow, _lower_mac, buffer);
+    json.AddObject(json_flow, _lower_mac, mac_addr);
 
-    snprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
+    snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
         upper_mac[0], upper_mac[1], upper_mac[2],
         upper_mac[3], upper_mac[4], upper_mac[5]
     );
-    json.AddObject(json_flow, _upper_mac, buffer);
+    json.AddObject(json_flow, _upper_mac, mac_addr);
 
     json.AddObject(json_flow, _lower_ip, lower_ip);
     json.AddObject(json_flow, _upper_ip, upper_ip);
@@ -292,25 +293,25 @@ json_object *ndFlow::json_encode(const string &device,
     }
 
     if (detected_protocol.master_protocol) {
-        json.AddObject(json_flow, "detected_service",
-            (int32_t)detected_protocol.protocol);
         json.AddObject(json_flow, "detected_protocol",
             (int32_t)detected_protocol.master_protocol);
+        json.AddObject(json_flow, "detected_protocol_name",
+            ndpi_get_proto_name(ndpi, detected_protocol.master_protocol));
 
-        snprintf(buffer, sizeof(buffer), "%s.%s",
-            ndpi_get_proto_name(ndpi,
-                detected_protocol.master_protocol),
-            ndpi_get_proto_name(ndpi,
-                detected_protocol.protocol));
-
-        json.AddObject(json_flow, "detected_protocol_name", buffer);
+        json.AddObject(json_flow, "detected_service",
+            (int32_t)detected_protocol.protocol);
+        json.AddObject(json_flow, "detected_service_name",
+            ndpi_get_proto_name(ndpi, detected_protocol.protocol));
     }
     else {
-        json.AddObject(json_flow, "detected_service", 0);
         json.AddObject(json_flow, "detected_protocol",
             (int32_t)detected_protocol.protocol);
         json.AddObject(json_flow, "detected_protocol_name",
             ndpi_get_proto_name(ndpi, detected_protocol.protocol));
+
+        json.AddObject(json_flow, "detected_service", 0);
+        json.AddObject(json_flow, "detected_service_name",
+            ndpi_get_proto_name(ndpi, 0));
     }
 
     json.AddObject(json_flow, "detection_guessed", detection_guessed);

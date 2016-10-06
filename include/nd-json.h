@@ -135,6 +135,13 @@ typedef vector<ndJsonConfigContentMatch *> ndJsonConfigContentMatchList;
 
 typedef struct
 {
+    string rule;
+} ndJsonConfigCustomProtos;
+
+typedef vector<ndJsonConfigCustomProtos *> ndJsonConfigCustomProtosList;
+
+typedef struct
+{
     struct sockaddr_storage ip_addr;
     uint8_t ip_prefix;
     uint32_t app_id;
@@ -151,24 +158,31 @@ public:
     bool IsPresent(ndJsonConfigType type) { return bool(present & (unsigned)type); }
 
     size_t GetContentMatchCount(void) { return content_match_list.size(); }
+    size_t GetCustomProtosCount(void) { return custom_protos_list.size(); }
     size_t GetHostProtocolCount(void) { return host_protocol_list.size(); }
 
     ndJsonConfigContentMatch *GetFirstContentMatchEntry(void);
+    ndJsonConfigCustomProtos *GetFirstCustomProtosEntry(void);
     ndJsonConfigHostProtocol *GetFirstHostProtocolEntry(void);
 
     ndJsonConfigContentMatch *GetNextContentMatchEntry(void);
+    ndJsonConfigCustomProtos *GetNextCustomProtosEntry(void);
     ndJsonConfigHostProtocol *GetNextHostProtocolEntry(void);
 
 protected:
     void UnserializeConfig(ndJsonConfigType type, json_object *jarray);
     void UnserializeContentMatch(json_object *jentry);
+    void UnserializeCustomProtos(json_object *jentry);
     void UnserializeHostProtocol(json_object *jentry);
 
     unsigned present;
 
     ndJsonConfigContentMatchList content_match_list;
+    ndJsonConfigCustomProtosList custom_protos_list;
     ndJsonConfigHostProtocolList host_protocol_list;
+
     ndJsonConfigContentMatchList::const_iterator content_match_iterator;
+    ndJsonConfigCustomProtosList::const_iterator custom_protos_iterator;
     ndJsonConfigHostProtocolList::const_iterator host_protocol_iterator;
 };
 

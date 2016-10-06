@@ -23,6 +23,7 @@
 #include <map>
 
 #include <stdio.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 
 extern "C" {
@@ -151,8 +152,7 @@ static void nd_ndpi_load_host_protocol(
 
 struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
 {
-    // XXX: ND_DETECTION_TICKS
-    // Is now hard-coded in ndpi/src/lib/ndpi_main.c, which is 1000
+    struct stat proto_file_stat;
     struct ndpi_detection_module_struct *ndpi = NULL;
 
     ndpi = ndpi_init_detection_module();
@@ -174,13 +174,13 @@ struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
 
     ndpi_set_protocol_detection_bitmask2(ndpi, &proto_all);
 
-    if (nd_config.proto_file != NULL) {
+    if (nd_config.proto_file != NULL &&
+        stat(nd_config.proto_file, &proto_file_stat) == 0) {
         if (nd_debug) {
             nd_printf("%s: loading custom protocols from: %s\n",
                 tag.c_str(), nd_config.proto_file);
         }
         ndpi_load_protocols_file(ndpi, nd_config.proto_file);
-        nd_printf("%s: done.\n", tag.c_str());
     }
 
     return ndpi;

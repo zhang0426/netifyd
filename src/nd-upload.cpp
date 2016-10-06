@@ -433,6 +433,8 @@ void ndUploadThread::ProcessResponse(void)
 
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH))
             ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_PROTOS))
+            ExportConfig(ndJSON_CFG_TYPE_CUSTOM_PROTOS, json_config);
         if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_PROTOCOL))
             ExportConfig(ndJSON_CFG_TYPE_HOST_PROTOCOL, json_config);
 
@@ -487,6 +489,7 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
     string config_type_string;
     size_t entries = 0;
     ndJsonConfigContentMatch *content_match;
+    ndJsonConfigCustomProtos *custom_protos;
     ndJsonConfigHostProtocol *host_protocol;
     char ip_addr[INET6_ADDRSTRLEN];
     struct sockaddr_in *saddr_ip4;
@@ -497,6 +500,11 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         fp = fopen(nd_config.csv_content_match, "w");
         config_type_string = "content match";
         entries = config->GetContentMatchCount();
+        break;
+    case ndJSON_CFG_TYPE_CUSTOM_PROTOS:
+        fp = fopen(nd_config.proto_file, "w");
+        config_type_string = "custom protos";
+        entries = config->GetCustomProtosCount();
         break;
     case ndJSON_CFG_TYPE_HOST_PROTOCOL:
         fp = fopen(nd_config.csv_host_protocol, "w");
@@ -524,6 +532,17 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         fclose(fp);
         nd_sha1_file(
             nd_config.csv_content_match, nd_config.digest_content_match);
+        break;
+    case ndJSON_CFG_TYPE_CUSTOM_PROTOS:
+        custom_protos = config->GetFirstCustomProtosEntry();
+        while (custom_protos != NULL) {
+            fprintf(fp, "%s",
+                custom_protos->rule.c_str());
+            custom_protos = config->GetNextCustomProtosEntry();
+        }
+        fclose(fp);
+        nd_sha1_file(
+            nd_config.proto_file, nd_config.digest_custom_protos);
         break;
     case ndJSON_CFG_TYPE_HOST_PROTOCOL:
         fprintf(fp, "\"ip_address\",\"ip_prefix\",\"application_id\"\n");
