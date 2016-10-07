@@ -119,8 +119,11 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (nd_debug) ? ND_COOKIE_JAR : "");
     curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndUploadThread_read_data);
     curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
+#if (LIBCURL_VERSION_NUM < 0x072106)
+    curl_easy_setopt(ch, CURLOPT_ENCODING, "gzip");
+#else
     curl_easy_setopt(ch, CURLOPT_ACCEPT_ENCODING, "gzip");
-
+#endif
     if (nd_debug) {
         curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, nd_curl_debug);
