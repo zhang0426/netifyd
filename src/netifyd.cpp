@@ -404,6 +404,8 @@ static void nd_json_add_flows(
         if (unknown == false &&
             i->second->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN)
             continue;
+        if (i->second->lower_packets == 0 && i->second->upper_packets == 0)
+            continue;
 
         json_object *json_flow = i->second->json_encode(device, json, ndpi);
         json.PushObject(NULL, json_flow);
