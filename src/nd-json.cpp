@@ -616,6 +616,8 @@ void ndJsonObjectConfig::UnserializeCustomProtos(json_object *jentry)
         throw ndJsonParseException("Rule field type mismatch");
 
     entry.rule = json_object_get_string(jobj);
+
+    custom_protos_list.push_back(new ndJsonConfigCustomProtos(entry));
 }
 
 void ndJsonObjectConfig::UnserializeHostProtocol(json_object *jentry)
