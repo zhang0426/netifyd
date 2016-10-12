@@ -128,8 +128,6 @@ fi
 %dir /run/%{name}
 %endif
 %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
-%attr(644,root,root) %{_sharedstatedir}/%{name}/content-match.csv
-%attr(644,root,root) %{_sharedstatedir}/%{name}/host-protocol.csv
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
 

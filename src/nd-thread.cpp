@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 #include <unistd.h>
 #include <stdlib.h>

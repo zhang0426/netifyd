@@ -60,7 +60,7 @@ typedef struct ndNetlinkNetworkAddr {
     inline bool operator!=(const ndNetlinkNetworkAddr &n) const;
 } ndNetlinkNetworkAddr;
 
-typedef map<string, pthread_mutex_t *> ndNetlinkDevices;
+typedef map<string, pthread_mutex_t *> ndNetlinkInterfaces;
 typedef map<string, vector<ndNetlinkNetworkAddr *> > ndNetlinkNetworks;
 typedef map<string, vector<struct sockaddr_storage *> > ndNetlinkAddresses;
 
@@ -80,7 +80,7 @@ enum ndNetlinkAddressType
 class ndNetlink
 {
 public:
-    ndNetlink(const nd_devices &devices);
+    ndNetlink(const nd_ifaces &iface);
     virtual ~ndNetlink();
 
     int GetDescriptor(void) { return nd; }
@@ -91,7 +91,7 @@ public:
     bool ProcessEvent(void);
 
     ndNetlinkAddressType ClassifyAddress(
-        const string &device, const struct sockaddr_storage *addr);
+        const string &iface, const struct sockaddr_storage *addr);
 
     void Dump(void);
 
@@ -110,11 +110,11 @@ protected:
         sa_family_t family, struct sockaddr_storage &dst, void *src);
 
     bool ParseMessage(struct rtmsg *rtm, size_t offset,
-        string &device, ndNetlinkNetworkAddr &addr);
+        string &iface, ndNetlinkNetworkAddr &addr);
     bool ParseMessage(struct ifaddrmsg *addrm, size_t offset,
-        string &device, struct sockaddr_storage &addr);
+        string &iface, struct sockaddr_storage &addr);
 
-    bool AddDevice(const string &device);
+    bool AddInterface(const string &iface);
 
     bool AddNetwork(struct nlmsghdr *nlh);
     bool RemoveNetwork(struct nlmsghdr *nlh);
@@ -130,7 +130,7 @@ protected:
     struct sockaddr_nl sa;
     uint8_t buffer[ND_NETLINK_BUFSIZ];
 
-    ndNetlinkDevices devices;
+    ndNetlinkInterfaces ifaces;
     ndNetlinkNetworks networks;
     ndNetlinkAddresses addresses;
 };

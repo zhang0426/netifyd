@@ -130,7 +130,9 @@ struct ndDetectionStats
     void print(const char *tag = "");
 };
 
-typedef vector<pair<bool, string> > nd_devices;
+typedef unordered_map<string, vector<struct sockaddr_storage> > nd_device_info;
+typedef map<string, nd_device_info> nd_devices;
+typedef vector<pair<bool, string> > nd_ifaces;
 typedef map<string, ndDetectionStats *> nd_stats;
 
 #endif // _ND_H

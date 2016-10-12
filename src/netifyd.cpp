@@ -67,6 +67,7 @@ using namespace std;
 bool nd_debug = false;
 pthread_mutex_t *nd_output_mutex = NULL;
 
+static nd_ifaces ifaces;
 static nd_devices devices;
 static nd_flows flows;
 static nd_stats stats;
@@ -261,8 +262,8 @@ static int nd_config_load(void)
 
 int nd_start_detection_threads(void)
 {
-    for (nd_devices::iterator i = devices.begin();
-        i != devices.end(); i++) {
+    for (nd_ifaces::iterator i = ifaces.begin();
+        i != ifaces.end(); i++) {
         flows[(*i).second] = new nd_flow_map;
         stats[(*i).second] = new ndDetectionStats;
     }
@@ -271,15 +272,15 @@ int nd_start_detection_threads(void)
         long cpu = 0;
         long cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
-        for (nd_devices::iterator i = devices.begin();
-            i != devices.end(); i++) {
+        for (nd_ifaces::iterator i = ifaces.begin();
+            i != ifaces.end(); i++) {
             threads[(*i).second] = new ndDetectionThread(
                 (*i).second,
                 netlink,
                 (i->first) ? thread_socket : NULL,
                 flows[(*i).second],
                 stats[(*i).second],
-                (devices.size() > 1) ? cpu++ : -1
+                (ifaces.size() > 1) ? cpu++ : -1
             );
             threads[(*i).second]->Create();
             if (cpu == cpus) cpu = 0;
@@ -295,8 +296,8 @@ int nd_start_detection_threads(void)
 
 void nd_stop_detection_threads(void)
 {
-    for (nd_devices::iterator i = devices.begin();
-        i != devices.end(); i++) {
+    for (nd_ifaces::iterator i = ifaces.begin();
+        i != ifaces.end(); i++) {
         threads[(*i).second]->Terminate();
         delete threads[(*i).second];
 
@@ -346,7 +347,7 @@ static void nd_json_add_interfaces(json_object *parent)
             strerror(errno));
     }
 */
-    for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++) {
+    for (nd_ifaces::const_iterator i = ifaces.begin(); i != ifaces.end(); i++) {
 /*
         for (p = ifap; p != NULL; p = p->ifa_next) {
             if (strncmp(p->ifa_name, i->second.c_str(), IFNAMSIZ)) continue;
@@ -758,26 +759,26 @@ int main(int argc, char *argv[])
             nd_config.uuid_serial = strdup(optarg);
             break;
         case 'I':
-            for (nd_devices::iterator i = devices.begin();
-                i != devices.end(); i++) {
+            for (nd_ifaces::iterator i = ifaces.begin();
+                i != ifaces.end(); i++) {
                 if (strcasecmp((*i).second.c_str(), optarg) == 0) {
                     cerr << "Duplicate interface specified: " << optarg << endl;
                     exit(1);
                 }
             }
             last_device = optarg;
-            devices.push_back(make_pair(true, optarg));
+            ifaces.push_back(make_pair(true, optarg));
             break;
         case 'E':
-            for (nd_devices::iterator i = devices.begin();
-                i != devices.end(); i++) {
+            for (nd_ifaces::iterator i = ifaces.begin();
+                i != ifaces.end(); i++) {
                 if (strcasecmp((*i).second.c_str(), optarg) == 0) {
                     cerr << "Duplicate interface specified: " << optarg << endl;
                     exit(1);
                 }
             }
             last_device = optarg;
-            devices.push_back(make_pair(false, optarg));
+            ifaces.push_back(make_pair(false, optarg));
             break;
         case 'j':
             nd_config.json_filename = strdup(optarg);
@@ -840,7 +841,7 @@ int main(int argc, char *argv[])
     if (nd_config_load() < 0)
         return 1;
 
-    if (devices.size() == 0) {
+    if (ifaces.size() == 0) {
         cerr <<
             "Required argument, (-I, --internal, or -E, --external) missing." <<
             endl;
@@ -910,7 +911,7 @@ int main(int argc, char *argv[])
     }
 
     try {
-        netlink = new ndNetlink(devices);
+        netlink = new ndNetlink(ifaces);
     }
     catch (exception &e) {
         nd_printf("Error creating netlink watch: %s\n", e.what());

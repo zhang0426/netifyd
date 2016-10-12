@@ -20,6 +20,7 @@
 
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <stdexcept>
 
 #include <unistd.h>
@@ -149,7 +150,7 @@ inline bool ndNetlinkNetworkAddr::operator!=(const ndNetlinkNetworkAddr &n) cons
     return (rc != 0);
 }
 
-ndNetlink::ndNetlink(const nd_devices &devices)
+ndNetlink::ndNetlink(const nd_ifaces &ifaces)
     : nd(-1), seq(0)
 {
     int rc;
@@ -196,8 +197,8 @@ ndNetlink::ndNetlink(const nd_devices &devices)
         throw ndNetlinkException(strerror(rc));
     }
 
-    for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++)
-        AddDevice((*i).second);
+    for (nd_ifaces::const_iterator i = ifaces.begin(); i != ifaces.end(); i++)
+        AddInterface((*i).second);
 
     // Add private networks for when all else fails...
     AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "10.0.0.0", 8);
@@ -210,7 +211,7 @@ ndNetlink::ndNetlink(const nd_devices &devices)
     AddNetwork(AF_INET6, _ND_NETLINK_MULTICAST, "ff00::", 8);
 
     // Add broadcast addresses
-    AddDevice(_ND_NETLINK_BROADCAST);
+    AddInterface(_ND_NETLINK_BROADCAST);
     AddAddress(AF_INET, _ND_NETLINK_BROADCAST, "169.254.255.255");
     AddAddress(AF_INET, _ND_NETLINK_BROADCAST, "255.255.255.255");
 }
@@ -218,8 +219,8 @@ ndNetlink::ndNetlink(const nd_devices &devices)
 ndNetlink::~ndNetlink()
 {
     if (nd >= 0) close(nd);
-    for (ndNetlinkDevices::const_iterator i = devices.begin();
-        i != devices.end(); i++) {
+    for (ndNetlinkInterfaces::const_iterator i = ifaces.begin();
+        i != ifaces.end(); i++) {
         if (i->second != NULL) {
             pthread_mutex_destroy(i->second);
             delete i->second;
@@ -376,12 +377,12 @@ bool ndNetlink::ProcessEvent(void)
 }
 
 ndNetlinkAddressType ndNetlink::ClassifyAddress(
-    const string &device, const struct sockaddr_storage *addr)
+    const string &iface, const struct sockaddr_storage *addr)
 {
     ndNetlinkAddressType type = ndNETLINK_ATYPE_UNKNOWN;
 
-    ndNetlinkDevices::const_iterator lock = devices.find(device);
-    if (lock == devices.end()) return ndNETLINK_ATYPE_ERROR;
+    ndNetlinkInterfaces::const_iterator lock = ifaces.find(iface);
+    if (lock == ifaces.end()) return ndNETLINK_ATYPE_ERROR;
 
     // Paranoid AF_* check...
     if (addr->ss_family != AF_INET && addr->ss_family != AF_INET6) {
@@ -417,8 +418,8 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
         if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
     }
 
-    // Is addr a local address to this device?
-    addr_list = addresses.find(device);
+    // Is addr a local address to this interface?
+    addr_list = addresses.find(iface);
     if (addr_list != addresses.end()) {
 
         pthread_mutex_lock(lock->second);
@@ -455,8 +456,8 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
 
     if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
-    // Is addr a member of a local network to this device?
-    net_list = networks.find(device);
+    // Is addr a member of a local network to this interface?
+    net_list = networks.find(iface);
     if (net_list != networks.end()) {
 
         pthread_mutex_lock(lock->second);
@@ -610,26 +611,26 @@ bool ndNetlink::CopyNetlinkAddress(
     return false;
 }
 
-bool ndNetlink::AddDevice(const string &device)
+bool ndNetlink::AddInterface(const string &iface)
 {
-    ndNetlinkDevices::const_iterator i = devices.find(device);
-    if (i != devices.end()) return false;
+    ndNetlinkInterfaces::const_iterator i = ifaces.find(iface);
+    if (i != ifaces.end()) return false;
 
     pthread_mutex_t *mutex = NULL;
     ND_NETLINK_DEVALLOC(mutex);
-    devices[device] = mutex;
+    ifaces[iface] = mutex;
 
     return true;
 }
 
 bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
-    string &device, ndNetlinkNetworkAddr &addr)
+    string &iface, ndNetlinkNetworkAddr &addr)
 {
     char ifname[IFNAMSIZ];
 //    char saddr[NI_MAXHOST];
     bool daddr_set = false;
 
-    device.clear();
+    iface.clear();
 
     memset(&addr.network, 0, sizeof(struct sockaddr_storage));
     addr.length = 0;
@@ -748,8 +749,8 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
                 break;
             case RTA_OIF:
                 if_indextoname(*(int *)RTA_DATA(rta), ifname);
-                if (devices.find(ifname) == devices.end()) return false;
-                device.assign(ifname);
+                if (ifaces.find(ifname) == ifaces.end()) return false;
+                iface.assign(ifname);
 #if 0
                 nd_printf("Has output interface: %s\n", ifname);
 #endif
@@ -771,9 +772,9 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
         }
     }
 
-    if (daddr_set != true || device.size() == 0) {
-//        if (nd_debug) nd_printf("Route message: %saddress set, %sdevice name set\n",
-//            (daddr_set != true) ? "No " : "", (device.size() == 0) ? "No" : "");
+    if (daddr_set != true || iface.size() == 0) {
+//        if (nd_debug) nd_printf("Route message: %saddress set, %siface name set\n",
+//            (daddr_set != true) ? "No " : "", (iface.size() == 0) ? "No" : "");
         return false;
     }
 
@@ -781,7 +782,7 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
 }
 
 bool ndNetlink::ParseMessage(struct ifaddrmsg *addrm, size_t offset,
-    string &device, struct sockaddr_storage &addr)
+    string &iface, struct sockaddr_storage &addr)
 {
     bool addr_set = false;
     char ifname[IFNAMSIZ];
@@ -791,9 +792,9 @@ bool ndNetlink::ParseMessage(struct ifaddrmsg *addrm, size_t offset,
     addr.ss_family = AF_UNSPEC;
 
     if_indextoname(addrm->ifa_index, ifname);
-    if (devices.find(ifname) == devices.end()) return false;
+    if (ifaces.find(ifname) == ifaces.end()) return false;
 
-    device.assign(ifname);
+    iface.assign(ifname);
 
     for (struct rtattr *rta = static_cast<struct rtattr *>(IFA_RTA(addrm));
         RTA_OK(rta, offset); rta = RTA_NEXT(rta, offset)) {
@@ -841,14 +842,14 @@ bool ndNetlink::ParseMessage(struct ifaddrmsg *addrm, size_t offset,
 
 bool ndNetlink::AddNetwork(struct nlmsghdr *nlh)
 {
-    string device;
+    string iface;
     ndNetlinkNetworkAddr addr;
 
     if (ParseMessage(
         static_cast<struct rtmsg *>(NLMSG_DATA(nlh)),
-        RTM_PAYLOAD(nlh), device, addr) == false) return false;
+        RTM_PAYLOAD(nlh), iface, addr) == false) return false;
 
-    ndNetlinkNetworks::const_iterator i = networks.find(device);
+    ndNetlinkNetworks::const_iterator i = networks.find(iface);
     if (i != networks.end()) {
         for (vector<ndNetlinkNetworkAddr *>::const_iterator j = i->second.begin();
             j != i->second.end(); j++) {
@@ -856,14 +857,14 @@ bool ndNetlink::AddNetwork(struct nlmsghdr *nlh)
         }
     }
 
-    ndNetlinkDevices::const_iterator lock = devices.find(device);
-    if (lock == devices.end()) return false;
+    ndNetlinkInterfaces::const_iterator lock = ifaces.find(iface);
+    if (lock == ifaces.end()) return false;
 
     ndNetlinkNetworkAddr *entry;
     ND_NETLINK_NETALLOC(entry, addr);
 
     pthread_mutex_lock(lock->second);
-    networks[device].push_back(entry);
+    networks[iface].push_back(entry);
     pthread_mutex_unlock(lock->second);
 
     return true;
@@ -904,26 +905,26 @@ bool ndNetlink::AddNetwork(sa_family_t family,
 
 bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
 {
-    string device;
+    string iface;
     ndNetlinkNetworkAddr addr;
     bool removed = false;
 
     if (ParseMessage(
         static_cast<struct rtmsg *>(NLMSG_DATA(nlh)),
-        RTM_PAYLOAD(nlh), device, addr) == false) {
+        RTM_PAYLOAD(nlh), iface, addr) == false) {
 //        if (nd_debug) nd_printf("Remove network parse error\n");
         return false;
     }
 
-    ndNetlinkNetworks::iterator i = networks.find(device);
+    ndNetlinkNetworks::iterator i = networks.find(iface);
     if (i == networks.end()) {
-        if (nd_debug) nd_printf("WARNING: Couldn't find device in networks map: %s\n",
-            device.c_str());
+        if (nd_debug) nd_printf("WARNING: Couldn't find interface in networks map: %s\n",
+            iface.c_str());
         return false;
     }
 
-    ndNetlinkDevices::const_iterator lock = devices.find(device);
-    if (lock == devices.end()) return false;
+    ndNetlinkInterfaces::const_iterator lock = ifaces.find(iface);
+    if (lock == ifaces.end()) return false;
 
     pthread_mutex_lock(lock->second);
 
@@ -940,7 +941,7 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
 
 //    if (nd_debug) {
 //        nd_printf("WARNING: Couldn't find network address in map: %s, ",
-//            device.c_str());
+//            iface.c_str());
 //        print_address(&addr.network);
 //        nd_printf("/%hhu\n", addr.length);
 //    }
@@ -950,14 +951,14 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
 
 bool ndNetlink::AddAddress(struct nlmsghdr *nlh)
 {
-    string device;
+    string iface;
     struct sockaddr_storage addr;
 
     if (ParseMessage(
         static_cast<struct ifaddrmsg *>(NLMSG_DATA(nlh)),
-        IFA_PAYLOAD(nlh), device, addr) == false) return false;
+        IFA_PAYLOAD(nlh), iface, addr) == false) return false;
 
-    ndNetlinkAddresses::const_iterator i = addresses.find(device);
+    ndNetlinkAddresses::const_iterator i = addresses.find(iface);
     if (i != addresses.end()) {
         for (vector<struct sockaddr_storage *>::const_iterator j = i->second.begin();
             j != i->second.end(); j++) {
@@ -966,14 +967,14 @@ bool ndNetlink::AddAddress(struct nlmsghdr *nlh)
         }
     }
 
-    ndNetlinkDevices::const_iterator lock = devices.find(device);
-    if (lock == devices.end()) return false;
+    ndNetlinkInterfaces::const_iterator lock = ifaces.find(iface);
+    if (lock == ifaces.end()) return false;
 
     struct sockaddr_storage *entry;
     ND_NETLINK_ADDRALLOC(entry, addr);
 
     pthread_mutex_lock(lock->second);
-    addresses[device].push_back(entry);
+    addresses[iface].push_back(entry);
     pthread_mutex_unlock(lock->second);
 
     return true;
@@ -1015,8 +1016,8 @@ bool ndNetlink::AddAddress(const string &type, const struct sockaddr_storage &ad
 {
     struct sockaddr_storage *entry;
 
-    ndNetlinkDevices::const_iterator lock = devices.find(type);
-    if (lock == devices.end()) return false;
+    ndNetlinkInterfaces::const_iterator lock = ifaces.find(type);
+    if (lock == ifaces.end()) return false;
 
     pthread_mutex_lock(lock->second);
     ND_NETLINK_ADDRALLOC(entry, addr);
@@ -1028,25 +1029,25 @@ bool ndNetlink::AddAddress(const string &type, const struct sockaddr_storage &ad
 
 bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
 {
-    string device;
+    string iface;
     struct sockaddr_storage addr;
     bool removed = false;
 
     if (ParseMessage(
         static_cast<struct ifaddrmsg *>(NLMSG_DATA(nlh)),
-        IFA_PAYLOAD(nlh), device, addr) == false) return false;
+        IFA_PAYLOAD(nlh), iface, addr) == false) return false;
 
-    ndNetlinkAddresses::iterator i = addresses.find(device);
+    ndNetlinkAddresses::iterator i = addresses.find(iface);
     if (i == addresses.end()) {
         if (nd_debug) {
-            nd_printf("WARNING: Couldn't find device in addresses map: %s\n",
-                device.c_str());
+            nd_printf("WARNING: Couldn't find interface in addresses map: %s\n",
+                iface.c_str());
         }
         return false;
     }
 
-    ndNetlinkDevices::const_iterator lock = devices.find(device);
-    if (lock == devices.end()) return false;
+    ndNetlinkInterfaces::const_iterator lock = ifaces.find(iface);
+    if (lock == ifaces.end()) return false;
 
     pthread_mutex_lock(lock->second);
 
