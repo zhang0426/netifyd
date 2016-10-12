@@ -72,7 +72,7 @@ static nd_devices devices;
 static nd_flows flows;
 static nd_stats stats;
 static nd_threads threads;
-static ndDetectionStats totals;
+static nd_packet_stats totals;
 static ndUploadThread *thread_upload = NULL;
 static ndSocketThread *thread_socket = NULL;
 static ndInotify *inotify = NULL;
@@ -265,7 +265,8 @@ int nd_start_detection_threads(void)
     for (nd_ifaces::iterator i = ifaces.begin();
         i != ifaces.end(); i++) {
         flows[(*i).second] = new nd_flow_map;
-        stats[(*i).second] = new ndDetectionStats;
+        stats[(*i).second] = new nd_packet_stats;
+        devices[(*i).second] = ((*i).first) ? new nd_device_addrs : NULL;
     }
 
     try {
@@ -280,6 +281,7 @@ int nd_start_detection_threads(void)
                 (i->first) ? thread_socket : NULL,
                 flows[(*i).second],
                 stats[(*i).second],
+                devices[(*i).second],
                 (ifaces.size() > 1) ? cpu++ : -1
             );
             threads[(*i).second]->Create();
@@ -316,7 +318,7 @@ void nd_stop_detection_threads(void)
     stats.clear();
 }
 
-void ndDetectionStats::print(const char *tag)
+void nd_packet_stats::print(const char *tag)
 {
     nd_printf("          RAW: %llu\n", pkt_raw);
     nd_printf("          ETH: %llu\n", pkt_eth);
@@ -370,7 +372,7 @@ static void nd_json_add_interfaces(json_object *parent)
 //    if (ifap) freeifaddrs(ifap);
 }
 
-static void nd_json_add_stats(json_object *parent, const ndDetectionStats *stats)
+static void nd_json_add_stats(json_object *parent, const nd_packet_stats *stats)
 {
     ndJson json(parent);
 
@@ -492,7 +494,7 @@ static void nd_dump_stats(void)
         nd_json_add_stats(json_obj, stats[i->first]);
         json_object_object_add(json_stats, i->first.c_str(), json_obj);
 
-        memset(stats[i->first], 0, sizeof(ndDetectionStats));
+        memset(stats[i->first], 0, sizeof(nd_packet_stats));
 
         json_obj = json.CreateArray(json_flows, i->first);
         nd_json_add_flows(i->first, json_obj,
@@ -872,7 +874,7 @@ int main(int argc, char *argv[])
 
     nd_printf("Netify Daemon v%s\n", PACKAGE_VERSION);
 
-    memset(&totals, 0, sizeof(ndDetectionStats));
+    memset(&totals, 0, sizeof(nd_packet_stats));
 
     nd_sha1_file(
         nd_config.csv_content_match, nd_config.digest_content_match);

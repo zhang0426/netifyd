@@ -91,7 +91,7 @@ typedef struct {
     vector<uint8_t *> mac_filter_list;
 } ndGlobalConfig;
 
-struct ndDetectionStats
+typedef struct nd_packet_stats_t
 {
     uint64_t pkt_raw;
     uint64_t pkt_eth;
@@ -108,7 +108,7 @@ struct ndDetectionStats
     uint64_t pkt_wire_bytes;
     uint64_t pkt_discard_bytes;
 
-    inline ndDetectionStats& operator+=(const ndDetectionStats &rhs) {
+    inline nd_packet_stats_t& operator+=(const nd_packet_stats_t &rhs) {
         pkt_raw += rhs.pkt_raw;
         pkt_eth += rhs.pkt_eth;
         pkt_mpls += rhs.pkt_mpls;
@@ -128,12 +128,12 @@ struct ndDetectionStats
     }
 
     void print(const char *tag = "");
-};
+} nd_packet_stats;
 
-typedef unordered_map<string, vector<struct sockaddr_storage> > nd_device_info;
-typedef map<string, nd_device_info> nd_devices;
+typedef unordered_map<string, vector<struct sockaddr_storage> > nd_device_addrs;
+typedef map<string, nd_device_addrs *> nd_devices;
 typedef vector<pair<bool, string> > nd_ifaces;
-typedef map<string, ndDetectionStats *> nd_stats;
+typedef map<string, nd_packet_stats *> nd_stats;
 
 #endif // _ND_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

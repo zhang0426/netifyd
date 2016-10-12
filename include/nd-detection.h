@@ -24,7 +24,8 @@ class ndDetectionThread : public ndThread
 public:
     ndDetectionThread(const string &dev,
         ndNetlink *netlink, ndSocketThread *thread_socket,
-        nd_flow_map *flow_map, ndDetectionStats *stats, long cpu = -1);
+        nd_flow_map *flow_map, nd_packet_stats *stats,
+        nd_device_addrs *device_addrs = NULL, long cpu = -1);
     virtual ~ndDetectionThread();
 
     struct ndpi_detection_module_struct *GetDetectionModule(void) {
@@ -48,7 +49,8 @@ protected:
     struct ndpi_detection_module_struct *ndpi;
 
     nd_flow_map *flows;
-    ndDetectionStats *stats;
+    nd_packet_stats *stats;
+    nd_device_addrs *device_addrs;
 
     void LoadContentMatch(void);
     void LoadHostProtocol(void);

@@ -68,14 +68,15 @@ extern ndGlobalConfig nd_config;
 
 ndDetectionThread::ndDetectionThread(const string &dev,
     ndNetlink *netlink, ndSocketThread *thread_socket,
-    nd_flow_map *flow_map, ndDetectionStats *stats, long cpu)
+    nd_flow_map *flow_map, nd_packet_stats *stats,
+    nd_device_addrs *device_addrs, long cpu)
     : ndThread(dev, cpu), netlink(netlink), thread_socket(thread_socket),
     pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN), pcap_datalink_type(0),
     pkt_header(NULL), pkt_data(NULL),
     ts_pkt_last(0), ts_last_idle_scan(0),
-    ndpi(NULL), flows(flow_map), stats(stats)
+    ndpi(NULL), flows(flow_map), stats(stats), device_addrs(device_addrs)
 {
-    memset(stats, 0, sizeof(struct ndDetectionStats));
+    memset(stats, 0, sizeof(nd_packet_stats));
 
     ndpi = nd_ndpi_init(tag);
 
