@@ -432,12 +432,6 @@ void ndDetectionThread::ProcessPacket(void)
         break;
     }
 
-    for (vector<uint8_t *>::iterator i = nd_config.mac_filter_list.begin();
-        i != nd_config.mac_filter_list.end(); i++) {
-        if (!memcmp((*i), flow.lower_mac, ETH_ALEN)) return;
-        if (!memcmp((*i), flow.upper_mac, ETH_ALEN)) return;
-    }
-
     flow.hash(tag, digest);
 
     ndFlow *new_flow = new ndFlow(flow);
@@ -595,6 +589,36 @@ void ndDetectionThread::ProcessPacket(void)
             inet_ntop(AF_INET6, &new_flow->upper_addr6.s6_addr,
                 new_flow->upper_ip, INET6_ADDRSTRLEN);
             break;
+        }
+
+        if (device_addrs != NULL) {
+            string mac, ip;
+            uint8_t *umac = NULL;
+            nd_device_addrs::iterator i;
+
+            umac = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
+                new_flow->lower_mac : new_flow->upper_mac;
+
+            mac.assign((const char *)umac, ETH_ALEN);
+
+            ip = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
+                new_flow->lower_ip : new_flow->upper_ip;
+
+            if ((i = device_addrs->find(mac)) == device_addrs->end())
+                (*device_addrs)[mac].push_back(ip);
+            else {
+                bool duplicate = false;
+                vector<string>::iterator j;
+                for (j = (*device_addrs)[mac].begin();
+                    j != (*device_addrs)[mac].end(); j++) {
+                    if (ip != (*j)) continue;
+                    duplicate = true;
+                    break;
+                }
+
+                if (!duplicate)
+                    (*device_addrs)[mac].push_back(ip);
+            }
         }
 
         new_flow->release();

@@ -52,6 +52,8 @@
 
 using namespace std;
 
+#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
+
 #include "netifyd.h"
 #include "nd-inotify.h"
 #include "nd-netlink.h"
@@ -218,7 +220,7 @@ static int nd_config_load(void)
 
         break;
     }
-#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
+
     for (int i = 0; ; i++) {
         ostringstream os;
         os << "mac[" << i << "]";
@@ -372,6 +374,60 @@ static void nd_json_add_interfaces(json_object *parent)
 //    if (ifap) freeifaddrs(ifap);
 }
 
+static void nd_json_add_devices(json_object *parent)
+{
+    ndJson json(parent);
+    json_object *jarray;
+    nd_device_addrs device_addrs;
+
+    for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++) {
+        if (i->second == NULL) continue;
+
+        for (nd_device_addrs::const_iterator j = i->second->begin();
+            j != i->second->end(); j++) {
+
+            for (vector<string>::const_iterator k = j->second.begin();
+                k != j->second.end(); k++) {
+
+                bool duplicate = false;
+
+                if (device_addrs.find(j->first) != device_addrs.end()) {
+
+                    vector<string>::const_iterator l;
+                    for (l = device_addrs[j->first].begin();
+                        l != device_addrs[j->first].end(); l++) {
+                        if ((*k) != (*l)) continue;
+                        duplicate = true;
+                        break;
+                    }
+                }
+
+                if (!duplicate)
+                    device_addrs[j->first].push_back((*k));
+            }
+        }
+    }
+
+    for (nd_device_addrs::const_iterator i = device_addrs.begin();
+        i != device_addrs.end(); i++) {
+
+        uint8_t mac_src[ETH_ALEN];
+        memcpy(mac_src, i->first.c_str(), ETH_ALEN);
+        char mac_dst[_ND_STR_ALEN + 1];
+
+        sprintf(mac_dst, "%02x:%02x:%02x:%02x:%02x:%02x",
+            mac_src[0], mac_src[1], mac_src[2],
+            mac_src[3], mac_src[4], mac_src[5]);
+
+        jarray = json.CreateArray(NULL, mac_dst);
+
+        for (vector<string>::const_iterator j = i->second.begin();
+            j != i->second.end(); j++) {
+            json.PushObject(jarray, (*j));
+        }
+    }
+}
+
 static void nd_json_add_stats(json_object *parent, const nd_packet_stats *stats)
 {
     ndJson json(parent);
@@ -476,11 +532,13 @@ static void nd_dump_stats(void)
     nd_sha1_to_string(nd_config.digest_host_protocol, digest);
     json.AddObject(NULL, "host_protocol_digest", digest);
 
-    json_object *json_devs = json.CreateObject(NULL, "interfaces");
+    json_object *json_ifaces = json.CreateObject(NULL, "interfaces");
+    json_object *json_devices = json.CreateObject(NULL, "devices");
     json_object *json_stats = json.CreateObject(NULL, "stats");
     json_object *json_flows = json.CreateObject(NULL, "flows");
 
-    nd_json_add_interfaces(json_devs);
+    nd_json_add_interfaces(json_ifaces);
+    nd_json_add_devices(json_devices);
 
     for (nd_threads::iterator i = threads.begin();
         i != threads.end(); i++) {
