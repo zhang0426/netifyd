@@ -406,6 +406,8 @@ static void nd_json_add_devices(json_object *parent)
                     device_addrs[j->first].push_back((*k));
             }
         }
+
+        i->second->clear();
     }
 
     for (nd_device_addrs::const_iterator i = device_addrs.begin();
