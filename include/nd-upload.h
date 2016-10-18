@@ -17,6 +17,13 @@
 #ifndef _ND_UPLOAD_THREAD_H
 #define _ND_UPLOAD_THREAD_H
 
+class ndUploadThreadException : public runtime_error
+{
+public:
+    explicit ndUploadThreadException(const string &what_arg)
+        : runtime_error(what_arg) { }
+};
+
 class ndUploadThread : public ndThread
 {
 public:

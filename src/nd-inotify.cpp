@@ -33,9 +33,9 @@ using namespace std;
 
 #include "ndpi_main.h"
 
+#include "nd-util.h"
 #include "nd-inotify.h"
 #include "nd-sha1.h"
-#include "nd-util.h"
 
 extern bool nd_debug;
 

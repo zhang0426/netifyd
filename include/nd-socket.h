@@ -17,19 +17,36 @@
 #ifndef _ND_SOCKET_H
 #define _ND_SOCKET_H
 
-class ndSocketGetAddrInfoException : public runtime_error
+class ndSocketException : public ndException
+{
+public:
+    explicit ndSocketException(
+        const string &where_arg, const string &what_arg) throw()
+        : ndException(where_arg, what_arg) { }
+};
+
+class ndSocketThreadException : public ndSystemException
+{
+public:
+    explicit ndSocketThreadException(
+        const string &where_arg, const string &what_arg, int why_arg) throw()
+        : ndSystemException(where_arg, what_arg, why_arg) { }
+};
+
+class ndSocketSystemException : public ndSystemException
+{
+public:
+    explicit ndSocketSystemException(
+        const string &where_arg, const string &what_arg, int why_arg) throw()
+        : ndSystemException(where_arg, what_arg, why_arg) { }
+};
+
+class ndSocketGetAddrInfoException : public ndSystemException
 {
 public:
     explicit ndSocketGetAddrInfoException(
-        const string &where_arg, const string &what_arg, int why_arg) throw();
-    virtual ~ndSocketGetAddrInfoException() throw();
-
-    virtual const char *what() const throw();
-
-    string where_arg;
-    string what_arg;
-    int why_arg;
-    const char *message;
+        const string &where_arg, const string &what_arg, int why_arg) throw()
+        : ndSystemException(where_arg, what_arg, why_arg) { }
 };
 
 class ndSocketHangupException : public runtime_error

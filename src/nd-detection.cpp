@@ -53,6 +53,7 @@ extern "C" {
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-util.h"
 #include "nd-netlink.h"
 #include "nd-json.h"
 #include "nd-flow.h"
@@ -60,7 +61,6 @@ using namespace std;
 #include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-ndpi.h"
-#include "nd-util.h"
 
 extern bool nd_debug;
 
@@ -435,19 +435,22 @@ void ndDetectionThread::ProcessPacket(void)
     flow.hash(tag, digest);
 
     ndFlow *new_flow = new ndFlow(flow);
-    if (new_flow == NULL) throw ndThreadException(strerror(ENOMEM));
+    if (new_flow == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
 
     nd_flow_insert rc = flows->insert(nd_flow_pair(digest, new_flow));
 
     if (rc.second) {
         new_flow->ndpi_flow = (ndpi_flow_struct *)ndpi_malloc(sizeof(ndpi_flow_struct));
-        if (new_flow->ndpi_flow == NULL) throw ndThreadException(strerror(ENOMEM));
+        if (new_flow->ndpi_flow == NULL)
+            throw ndDetectionThreadException(strerror(ENOMEM));
         memset(new_flow->ndpi_flow, 0, sizeof(ndpi_flow_struct));
 
         new_flow->id_src = new ndpi_id_struct;
-        if (new_flow->id_src == NULL) throw ndThreadException(strerror(ENOMEM));
+        if (new_flow->id_src == NULL)
+            throw ndDetectionThreadException(strerror(ENOMEM));
         new_flow->id_dst = new ndpi_id_struct;
-        if (new_flow->id_dst == NULL) throw ndThreadException(strerror(ENOMEM));
+        if (new_flow->id_dst == NULL)
+            throw ndDetectionThreadException(strerror(ENOMEM));
         memset(new_flow->id_src, 0, sizeof(ndpi_id_struct));
         memset(new_flow->id_dst, 0, sizeof(ndpi_id_struct));
         id_src = new_flow->id_src;

@@ -19,6 +19,13 @@
 
 class ndSocketThread;
 
+class ndDetectionThreadException : public runtime_error
+{
+public:
+    explicit ndDetectionThreadException(const string &what_arg)
+        : runtime_error(what_arg) { }
+};
+
 class ndDetectionThread : public ndThread
 {
 public:

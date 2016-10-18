@@ -40,8 +40,8 @@
 using namespace std;
 
 #include "netifyd.h"
-#include "nd-json.h"
 #include "nd-util.h"
+#include "nd-json.h"
 
 extern bool nd_debug;
 

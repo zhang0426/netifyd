@@ -35,6 +35,7 @@ public:
     virtual void *Entry(void);
 
 protected:
+    int ctfd;
     nfct_handle *cth;
     bool terminate;
     int cb_registered;

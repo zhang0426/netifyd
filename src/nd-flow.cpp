@@ -39,10 +39,10 @@
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-util.h"
 #include "nd-netlink.h"
 #include "nd-json.h"
 #include "nd-flow.h"
-#include "nd-util.h"
 
 void ndFlow::hash(const string &device, string &digest, bool full_hash)
 {

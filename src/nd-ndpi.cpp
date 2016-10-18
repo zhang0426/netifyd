@@ -35,8 +35,8 @@ extern "C" {
 using namespace std;
 
 #include "netifyd.h"
-#include "nd-thread.h"
 #include "nd-util.h"
+#include "nd-thread.h"
 
 extern bool nd_debug;
 

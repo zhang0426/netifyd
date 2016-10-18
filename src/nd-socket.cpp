@@ -62,42 +62,19 @@
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-util.h"
 #include "nd-netlink.h"
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
 #include "nd-detection.h"
 #include "nd-socket.h"
-#include "nd-util.h"
 
 #define _ND_SOCKET_PROC_NET_UNIX    "/proc/net/unix"
 
 extern bool nd_debug;
 
 extern ndGlobalConfig nd_config;
-
-ndSocketGetAddrInfoException::ndSocketGetAddrInfoException(
-    const string &where_arg, const string &what_arg, int why_arg) throw()
-    : runtime_error(what_arg),
-    where_arg(where_arg), what_arg(what_arg), why_arg(why_arg), message(NULL)
-{
-    ostringstream os;
-    os <<
-        where_arg << ": " <<
-        what_arg  << ": " <<
-        gai_strerror(why_arg);
-    message = strdup(os.str().c_str());
-}
-
-ndSocketGetAddrInfoException::~ndSocketGetAddrInfoException() throw()
-{
-    if (message != NULL) free((void *)message);
-}
-
-const char *ndSocketGetAddrInfoException::what() const throw()
-{
-    return message;
-}
 
 ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)
     : base(base)
@@ -117,7 +94,7 @@ ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)
     int rc;
 
     if ((rc = IsValid()) != 0)
-        throw ndSystemException(__PRETTY_FUNCTION__, node, rc);
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, node, rc);
 
     base->Create();
 }
@@ -225,17 +202,17 @@ ndSocket *ndSocketServer::Accept(void)
     }
 
     if (peer_sa == NULL)
-        throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
 
     try {
         peer_sd = accept(base->sd, peer_sa, &peer_sa_size);
         if (peer_sd < 0)
-            throw ndSystemException(__PRETTY_FUNCTION__, "accept", errno);
+            throw ndSocketSystemException(__PRETTY_FUNCTION__, "accept", errno);
 
         if (base->sa_size == sizeof(struct sockaddr_un)) {
             peer = new ndSocket(base->node);
             if (peer == NULL)
-                throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+                throw ndSocketSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
 
             nd_printf("%s: peer: %s\n", __PRETTY_FUNCTION__, base->node.c_str());
         }
@@ -252,7 +229,7 @@ ndSocket *ndSocketServer::Accept(void)
 
             peer = new ndSocket(node, service);
             if (peer == NULL)
-                throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+                throw ndSocketSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
     
             nd_printf("%s: peer: %s:%s\n", __PRETTY_FUNCTION__, node, service);
         }
@@ -382,7 +359,7 @@ ssize_t ndSocket::Read(uint8_t *buffer, ssize_t length)
 
         if (rc < 0) {
             if (errno != EAGAIN && errno != EWOULDBLOCK)
-                throw ndSystemException(__PRETTY_FUNCTION__, "read", errno);
+                throw ndSocketSystemException(__PRETTY_FUNCTION__, "read", errno);
             break;
         }
 
@@ -410,7 +387,7 @@ ssize_t ndSocket::Write(const uint8_t *buffer, ssize_t length)
 
         if (rc < 0) {
             if (errno != EAGAIN && errno != EWOULDBLOCK)
-                throw ndSystemException(__PRETTY_FUNCTION__, "write", errno);
+                throw ndSocketSystemException(__PRETTY_FUNCTION__, "write", errno);
             break;
         }
 
@@ -435,7 +412,7 @@ void ndSocket::SetBlockingMode(bool enable)
     if (enable == false) {
         flags = fcntl(sd, F_GETFL);
         if (fcntl(sd, F_SETFL, flags | O_NONBLOCK) < 0) {
-            throw ndSystemException(
+            throw ndSocketSystemException(
                 __PRETTY_FUNCTION__, "fcntl: O_NONBLOCK", errno);
         }
     }
@@ -443,7 +420,7 @@ void ndSocket::SetBlockingMode(bool enable)
         flags = fcntl(sd, F_GETFL);
         flags &= ~O_NONBLOCK;
         if (fcntl(sd, F_SETFL, flags) < 0) {
-            throw ndSystemException(
+            throw ndSocketSystemException(
                 __PRETTY_FUNCTION__, "fcntl: O_NONBLOCK", errno);
         }
     }
@@ -511,7 +488,7 @@ void ndSocket::Create(void)
                 int on = 1;
                 if (setsockopt(sd,
                     SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on)) != 0) {
-                    throw ndSystemException(__PRETTY_FUNCTION__,
+                    throw ndSocketSystemException(__PRETTY_FUNCTION__,
                         "setsockopt: SO_REUSEADDR", errno);
                 }
 
@@ -527,7 +504,7 @@ void ndSocket::Create(void)
 
         if (rp == NULL) {
             freeaddrinfo(result);
-            throw ndException(__PRETTY_FUNCTION__, "no addresses found");
+            throw ndSocketException(__PRETTY_FUNCTION__, "no addresses found");
         }
 
         family = rp->ai_family;
@@ -538,29 +515,29 @@ void ndSocket::Create(void)
         freeaddrinfo(result);
 
         if (sd < 0) {
-            throw ndException(__PRETTY_FUNCTION__, "unable to create socket");
+            throw ndSocketException(__PRETTY_FUNCTION__, "unable to create socket");
         }
 
         if (type == ndSOCKET_TYPE_SERVER) {
             if (listen(sd, SOMAXCONN) != 0)
-                throw ndSystemException(__PRETTY_FUNCTION__, "listen", errno);
+                throw ndSocketSystemException(__PRETTY_FUNCTION__, "listen", errno);
         }
     }
     else if (family == AF_LOCAL) {
         if ((sd = socket(family, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
-            throw ndSystemException(__PRETTY_FUNCTION__, "socket", errno);
+            throw ndSocketSystemException(__PRETTY_FUNCTION__, "socket", errno);
 
         if (type == ndSOCKET_TYPE_CLIENT) {
             if (connect(sd, sa, sa_size) != 0)
-                throw ndSystemException(__PRETTY_FUNCTION__, "connect", errno);
+                throw ndSocketSystemException(__PRETTY_FUNCTION__, "connect", errno);
             nd_printf("%s: connected\n", __PRETTY_FUNCTION__);
         }
         else if (type == ndSOCKET_TYPE_SERVER) {
             if (bind(sd, sa, sa_size) != 0)
-                throw ndSystemException(__PRETTY_FUNCTION__, "bind", errno);
+                throw ndSocketSystemException(__PRETTY_FUNCTION__, "bind", errno);
 
             if (listen(sd, SOMAXCONN) != 0)
-                throw ndSystemException(__PRETTY_FUNCTION__, "listen", errno);
+                throw ndSocketSystemException(__PRETTY_FUNCTION__, "listen", errno);
         }
     }
 
@@ -611,7 +588,7 @@ ndSocketThread::ndSocketThread(nd_threads *threads)
 {
     int rc;
     if ((rc = pthread_mutex_init(&lock, NULL)) != 0) {
-        throw ndSystemException(
+        throw ndSocketThreadException(
             __PRETTY_FUNCTION__, "pthread_mutex_init", rc);
     }
 
@@ -620,7 +597,7 @@ ndSocketThread::ndSocketThread(nd_threads *threads)
         i != nd_config.socket_host.end(); i++) {
         ndSocketServerRemote *skt;
         if (!(skt = new ndSocketServerRemote((*i).first, (*i).second)))
-            throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+            throw ndSocketThreadException(__PRETTY_FUNCTION__, "new", ENOMEM);
         skt->SetBlockingMode(false);
         servers[skt->GetDescriptor()] = skt;
     }
@@ -629,7 +606,7 @@ ndSocketThread::ndSocketThread(nd_threads *threads)
         j != nd_config.socket_path.end(); j++) {
         ndSocketServerLocal *skt;
         if (!(skt = new ndSocketServerLocal((*j))))
-            throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+            throw ndSocketThreadException(__PRETTY_FUNCTION__, "new", ENOMEM);
         skt->SetBlockingMode(false);
         servers[skt->GetDescriptor()] = skt;
     }
@@ -670,13 +647,13 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     try {
         buffer = new ndSocketBuffer();
         if (buffer == NULL)
-            throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+            throw ndSocketThreadException(__PRETTY_FUNCTION__, "new", ENOMEM);
 
         client = si->second->Accept();
     } catch (ndSocketGetAddrInfoException &e) {
         if (client) delete client;
         throw;
-    } catch (ndSystemException &e) {
+    } catch (ndSocketSystemException &e) {
         if (client) delete client;
         throw;
     }
@@ -731,7 +708,7 @@ void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
     clients.erase(ci++);
 
     if (bi == buffers.end()) {
-        throw ndSystemException(
+        throw ndSocketThreadException(
             __PRETTY_FUNCTION__, "buffers.find", ENOENT);
     }
     else {
@@ -778,7 +755,7 @@ void *ndSocketThread::Entry(void)
 
             bi = buffers.find(ci->first);
             if (bi == buffers.end()) {
-                throw ndSystemException(
+                throw ndSocketThreadException(
                     __PRETTY_FUNCTION__, "buffers.find", ENOENT);
             }
 
@@ -795,7 +772,7 @@ void *ndSocketThread::Entry(void)
         rc = select(max_fd + 1, &fds_read, &fds_write, NULL, &tv);
 
         if (rc == -1 && errno != EINTR) {
-            throw ndSystemException(
+            throw ndSocketThreadException(
                 __PRETTY_FUNCTION__, "select", errno);
         }
 
@@ -815,7 +792,7 @@ void *ndSocketThread::Entry(void)
 
                 bi = buffers.find(ci->first);
                 if (bi == buffers.end()) {
-                    throw ndSystemException(__PRETTY_FUNCTION__,
+                    throw ndSocketThreadException(__PRETTY_FUNCTION__,
                         "buffers.find", ENOENT);
                 }
 
@@ -827,7 +804,7 @@ void *ndSocketThread::Entry(void)
                     bi->second->Pop(bytes);
                 } catch (ndSocketHangupException &e) {
                     ClientHangup(ci);
-                } catch (ndSystemException &e) {
+                } catch (ndSocketSystemException &e) {
                     ClientHangup(ci);
                 }
 

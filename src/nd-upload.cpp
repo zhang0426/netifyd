@@ -44,10 +44,10 @@
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-util.h"
 #include "nd-json.h"
 #include "nd-thread.h"
 #include "nd-upload.h"
-#include "nd-util.h"
 
 extern bool nd_debug;
 
@@ -111,7 +111,7 @@ ndUploadThread::ndUploadThread()
     int rc;
 
     if ((ch = curl_easy_init()) == NULL)
-        throw ndThreadException("curl_easy_init");
+        throw ndUploadThreadException("curl_easy_init");
 
     curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_upload);
     curl_easy_setopt(ch, CURLOPT_POST, 1);
@@ -146,11 +146,11 @@ ndUploadThread::ndUploadThread()
     pthread_condattr_init(&cond_attr);
     pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
     if ((rc = pthread_cond_init(&uploads_cond, &cond_attr)) != 0)
-        throw ndThreadException(strerror(rc));
+        throw ndUploadThreadException(strerror(rc));
     pthread_condattr_destroy(&cond_attr);
 
     if ((rc = pthread_mutex_init(&uploads_cond_mutex, NULL)) != 0)
-        throw ndThreadException(strerror(rc));
+        throw ndUploadThreadException(strerror(rc));
 }
 
 ndUploadThread::~ndUploadThread()
@@ -168,18 +168,18 @@ void *ndUploadThread::Entry(void)
 
     while (terminate == false) {
         if ((rc = pthread_mutex_lock(&lock)) != 0)
-            throw ndThreadException(strerror(rc));
+            throw ndUploadThreadException(strerror(rc));
 
         if (uploads.size() == 0) {
             if ((rc = pthread_mutex_unlock(&lock)) != 0)
-                throw ndThreadException(strerror(rc));
+                throw ndUploadThreadException(strerror(rc));
 
             if ((rc = pthread_mutex_lock(&uploads_cond_mutex)) != 0)
-                throw ndThreadException(strerror(rc));
+                throw ndUploadThreadException(strerror(rc));
             if ((rc = pthread_cond_wait(&uploads_cond, &uploads_cond_mutex)) != 0)
-                throw ndThreadException(strerror(rc));
+                throw ndUploadThreadException(strerror(rc));
             if ((rc = pthread_mutex_unlock(&uploads_cond_mutex)) != 0)
-                throw ndThreadException(strerror(rc));
+                throw ndUploadThreadException(strerror(rc));
 
             continue;
         }
@@ -205,7 +205,7 @@ void *ndUploadThread::Entry(void)
         }
 
         if ((rc = pthread_mutex_unlock(&lock)) != 0)
-            throw ndThreadException(strerror(rc));
+            throw ndUploadThreadException(strerror(rc));
 
         if (terminate == false && pending.size() > 0) Upload();
     }
@@ -218,14 +218,14 @@ void ndUploadThread::QueuePush(const string &json)
     int rc;
 
     if ((rc = pthread_mutex_lock(&lock)) != 0)
-        throw ndThreadException(strerror(rc));
+        throw ndUploadThreadException(strerror(rc));
 
     uploads.push(json);
 
     if ((rc = pthread_cond_broadcast(&uploads_cond)) != 0)
-        throw ndThreadException(strerror(rc));
+        throw ndUploadThreadException(strerror(rc));
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
-        throw ndThreadException(strerror(rc));
+        throw ndUploadThreadException(strerror(rc));
 }
 
 void ndUploadThread::CreateHeaders(void)
@@ -365,7 +365,7 @@ string ndUploadThread::Deflate(const string &data)
         Z_DEFLATED, 15 /* window bits */ | 16 /* enable GZIP format */,
         8,
         Z_DEFAULT_STRATEGY
-    ) != Z_OK) throw ndThreadException("deflateInit2");
+    ) != Z_OK) throw ndUploadThreadException("deflateInit2");
 
     zs.next_in = (uint8_t *)data.data();
     zs.avail_in = data.size();
@@ -374,14 +374,14 @@ string ndUploadThread::Deflate(const string &data)
         zs.avail_out = ND_ZLIB_CHUNK_SIZE;
         zs.next_out = chunk;
         if ((rc = deflate(&zs, Z_FINISH)) == Z_STREAM_ERROR)
-            throw ndThreadException("deflate");
+            throw ndUploadThreadException("deflate");
         buffer.append((const char *)chunk, ND_ZLIB_CHUNK_SIZE - zs.avail_out);
     } while (zs.avail_out == 0);
 
     deflateEnd(&zs);
 
     if (rc != Z_STREAM_END)
-        throw ndThreadException("deflate");
+        throw ndUploadThreadException("deflate");
 
     if (nd_debug) {
         nd_printf("%s: payload compressed: %lu -> %lu\n",

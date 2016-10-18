@@ -57,6 +57,7 @@ using namespace std;
 #define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
 #include "netifyd.h"
+#include "nd-util.h"
 #include "nd-inotify.h"
 #include "nd-netlink.h"
 #include "nd-json.h"
@@ -67,7 +68,6 @@ using namespace std;
 #include "nd-conntrack.h"
 #include "nd-upload.h"
 #include "nd-ndpi.h"
-#include "nd-util.h"
 
 bool nd_debug = false;
 pthread_mutex_t *nd_output_mutex = NULL;
@@ -959,14 +959,44 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
 
-    thread_upload = new ndUploadThread();
-    thread_upload->Create();
+    try {
+        thread_upload = new ndUploadThread();
+        thread_upload->Create();
 
-    thread_socket = new ndSocketThread(&threads);
-    thread_socket->Create();
+        thread_socket = new ndSocketThread(&threads);
+        thread_socket->Create();
 
-    thread_conntrack = new ndConntrackThread();
-    thread_conntrack->Create();
+        thread_conntrack = new ndConntrackThread();
+        thread_conntrack->Create();
+    }
+    catch (ndUploadThreadException &e) {
+        nd_printf("Error starting upload thread: %s\n", e.what());
+        return 1;
+    }
+    catch (ndSocketException &e) {
+        nd_printf("Error starting socket thread: %s\n", e.what());
+        return 1;
+    }
+    catch (ndSocketSystemException &e) {
+        nd_printf("Error starting socket thread: %s\n", e.what());
+        return 1;
+    }
+    catch (ndSocketThreadException &e) {
+        nd_printf("Error starting socket thread: %s\n", e.what());
+        return 1;
+    }
+    catch (ndConntrackThreadException &e) {
+        nd_printf("Error starting conntrack thread: %s\n", e.what());
+        return 1;
+    }
+    catch (ndThreadException &e) {
+        nd_printf("Error starting thread: %s\n", e.what());
+        return 1;
+    }
+    catch (exception &e) {
+        nd_printf("Error starting thread: %s\n", e.what());
+        return 1;
+    }
 
     try {
         inotify = new ndInotify();
