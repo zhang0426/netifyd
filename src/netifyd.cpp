@@ -41,6 +41,8 @@
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
 
+#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+
 #include <pthread.h>
 #include <pcap/pcap.h>
 #include <json.h>
@@ -62,6 +64,7 @@ using namespace std;
 #include "nd-thread.h"
 #include "nd-detection.h"
 #include "nd-socket.h"
+#include "nd-conntrack.h"
 #include "nd-upload.h"
 #include "nd-ndpi.h"
 #include "nd-util.h"
@@ -77,6 +80,7 @@ static nd_threads threads;
 static nd_packet_stats totals;
 static ndUploadThread *thread_upload = NULL;
 static ndSocketThread *thread_socket = NULL;
+static ndConntrackThread *thread_conntrack = NULL;
 static ndInotify *inotify = NULL;
 static ndNetlink *netlink = NULL;
 
@@ -961,6 +965,9 @@ int main(int argc, char *argv[])
     thread_socket = new ndSocketThread(&threads);
     thread_socket->Create();
 
+    thread_conntrack = new ndConntrackThread();
+    thread_conntrack->Create();
+
     try {
         inotify = new ndInotify();
         inotify->AddWatch(ND_WATCH_HOSTS);
@@ -1063,6 +1070,9 @@ int main(int argc, char *argv[])
 
     thread_socket->Terminate();
     delete thread_socket;
+
+    thread_conntrack->Terminate();
+    delete thread_conntrack;
 
     pthread_mutex_destroy(nd_output_mutex);
     delete nd_output_mutex;

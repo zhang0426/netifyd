@@ -51,6 +51,8 @@ AC_CHECK_LIB([pthread], [pthread_create], [], [
 	AC_MSG_ERROR([libpthread not found.])])
 AC_CHECK_LIB([pcap], [pcap_open_live], [], [
 	AC_MSG_ERROR([libpcap not found.])])
+AC_CHECK_LIB([netfilter_conntrack], [nfct_open], [], [
+	AC_MSG_ERROR([libnetfilter_conntrack not found.])])
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
