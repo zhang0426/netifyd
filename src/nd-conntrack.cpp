@@ -63,7 +63,7 @@ static int nd_conntrack_callback(
 
 ndConntrackThread::ndConntrackThread()
     : ctfd(-1), cth(NULL), terminate(false), cb_registered(-1),
-    ndThread("netify-cntrk", -1)
+    ndThread("nd-conntrack", -1)
 {
     int rc;
 

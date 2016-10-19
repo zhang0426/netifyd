@@ -584,7 +584,7 @@ void ndSocketBuffer::Pop(ssize_t length)
 }
 
 ndSocketThread::ndSocketThread(nd_threads *threads)
-    : ndThread("netify-socket", -1), terminate(false), threads(threads)
+    : ndThread("nd-socket", -1), terminate(false), threads(threads)
 {
     int rc;
     if ((rc = pthread_mutex_init(&lock, NULL)) != 0) {

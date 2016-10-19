@@ -105,7 +105,7 @@ static size_t ndUploadThread_read_data(
 }
 
 ndUploadThread::ndUploadThread()
-    : ndThread("netify-sink", -1),
+    : ndThread("nd-sink", -1),
     headers(NULL), headers_gz(NULL), pending_size(0)
 {
     int rc;
