@@ -1,5 +1,5 @@
 EXTRA_DIST = clearos content-match.csv exec-pre.sh host-protocol.csv \
-			 host-protocol.sed netifyd.conf netifyd.service netifyd.tmpf
+             host-protocol.sed netifyd.conf netifyd.service netifyd.tmpf
 
 all: content-match.csv host-protocol.csv
 
