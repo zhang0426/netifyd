@@ -110,7 +110,6 @@ void *ndConntrackThread::Entry(void)
 
     while (!terminate) {
         fd_set fds_read;
-        int max_fd = ctfd + 1;
 
         FD_ZERO(&fds_read);
         FD_SET(ctfd, &fds_read);
@@ -118,7 +117,7 @@ void *ndConntrackThread::Entry(void)
         memset(&tv, 0, sizeof(struct timeval));
         tv.tv_sec = 1;
 
-        rc = select(max_fd + 1, &fds_read, NULL, NULL, &tv);
+        rc = select(ctfd + 1, &fds_read, NULL, NULL, &tv);
 
         if (rc == -1) {
             nd_printf("%s: select: %s\n", tag.c_str(), strerror(errno));
