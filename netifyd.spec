@@ -1,8 +1,8 @@
 # Netify DPI Daemon
 
 Name: netifyd
-Version: 1.2
-Release: 8%{dist}
+Version: 1.3
+Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -15,6 +15,7 @@ BuildRequires: automake
 BuildRequires: bc
 BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
+BuildRequires: libmnl-devel
 BuildRequires: libnetfilter_conntrack-devel
 BuildRequires: libpcap-devel
 BuildRequires: libtool

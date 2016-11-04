@@ -24,6 +24,17 @@ public:
         : runtime_error(what_arg) { }
 };
 
+class ndConntrackSystemException : public ndSystemException
+{
+public:
+    explicit ndConntrackSystemException(
+        const string &where_arg, const string &what_arg, int why_arg) throw()
+        : ndSystemException(where_arg, what_arg, why_arg) { }
+};
+
+typedef map<uint32_t, string> nd_ct_id_map;
+typedef map<string, uint32_t> nd_ct_flow_map;
+
 class ndConntrackThread : public ndThread
 {
 public:
@@ -34,11 +45,19 @@ public:
 
     virtual void *Entry(void);
 
+    void ProcessConntrackEvent(
+        enum nf_conntrack_msg_type type, struct nf_conntrack *ct);
+
 protected:
+    void DumpConntrackTable(void);
+
     int ctfd;
     nfct_handle *cth;
     bool terminate;
     int cb_registered;
+    pthread_mutex_t *lock;
+    nd_ct_id_map ct_id_map;
+    nd_ct_flow_map ct_flow_map;
 };
 
 #endif // _ND_CONNTRACK_H

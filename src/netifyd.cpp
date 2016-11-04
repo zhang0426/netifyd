@@ -18,43 +18,42 @@
 #include "config.h"
 #endif
 
-#include <stdexcept>
-#include <iostream>
+#include <deque>
 #include <iomanip>
-#include <sstream>
+#include <iostream>
 #include <map>
+#include <queue>
+#include <sstream>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
-#include <queue>
-#include <deque>
 
-#include <unistd.h>
-#include <time.h>
-#include <signal.h>
-#include <getopt.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
-#include <errno.h>
 
+#include <errno.h>
+#include <getopt.h>
+#include <signal.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <arpa/inet.h>
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 
-#include <pthread.h>
-#include <pcap/pcap.h>
-#include <json.h>
 #include <curl/curl.h>
+#include <json.h>
+#include <pcap/pcap.h>
+#include <pthread.h>
 
 #include "INIReader.h"
 
 #include "ndpi_main.h"
 
 using namespace std;
-
-#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
 #include "netifyd.h"
 #include "nd-util.h"
@@ -68,6 +67,8 @@ using namespace std;
 #include "nd-conntrack.h"
 #include "nd-upload.h"
 #include "nd-ndpi.h"
+
+#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
 bool nd_debug = false;
 pthread_mutex_t *nd_output_mutex = NULL;

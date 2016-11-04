@@ -2,7 +2,7 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.69])
-AC_INIT([Netify DPI Daemon], [1.2],
+AC_INIT([Netify DPI Daemon], [1.3],
 	[https://github.com/eglooca/netify-daemon/issues],
 	[netifyd], [http://www.egloo.ca/])
 AM_INIT_AUTOMAKE
@@ -27,6 +27,8 @@ AC_CHECK_LIB([pcap], [pcap_open_live], [], [
 	AC_MSG_ERROR([libpcap not found.])])
 AC_CHECK_LIB([netfilter_conntrack], [nfct_open], [], [
 	AC_MSG_ERROR([libnetfilter_conntrack not found.])])
+AC_CHECK_LIB([mnl], [mnl_socket_open], [], [
+	AC_MSG_ERROR([libmnl not found.])])
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
