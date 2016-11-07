@@ -77,7 +77,7 @@ extern bool nd_debug;
 extern ndGlobalConfig nd_config;
 
 ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)
-    : base(base)
+    : base(base), valid(false)
 {
     //nd_printf("%s\n", __PRETTY_FUNCTION__);
     struct sockaddr_un *sa_un = new struct sockaddr_un;
@@ -96,12 +96,16 @@ ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)
     if ((rc = IsValid()) != 0)
         throw ndSocketSystemException(__PRETTY_FUNCTION__, node, rc);
 
+    valid = true;
+
     base->Create();
 }
 
 ndSocketLocal::~ndSocketLocal()
 {
     //nd_printf("%s\n", __PRETTY_FUNCTION__);
+    if (valid && base->type == ndSOCKET_TYPE_SERVER)
+        unlink(base->node.c_str());
 }
 
 int ndSocketLocal::IsValid(void)
@@ -126,7 +130,7 @@ int ndSocketLocal::IsValid(void)
 
         for ( ;; ) {
             char filename[max_path_len];
-            int a, b, c, d, e, f, g;
+            unsigned int a, b, c, d, e, f, g;
             int count = fscanf(fh, "%x: %u %u %u %u %u %u ",
                 &a, &b, &c, &d, &e, &f, &g);
             if (count == 0) {
@@ -148,8 +152,7 @@ int ndSocketLocal::IsValid(void)
         if (stat(base->node.c_str(), &socket_stat) != 0 && errno != ENOENT)
             return errno;
 
-        if (errno != ENOENT && unlink(base->node.c_str()) != 0)
-            return errno;
+        unlink(base->node.c_str());
     }
 
     return 0;
@@ -342,9 +345,6 @@ ndSocket::~ndSocket()
     //nd_printf("%s\n", __PRETTY_FUNCTION__);
     if (sd != -1) close(sd);
     if (sa != NULL) delete sa;
-
-    if (type == ndSOCKET_TYPE_SERVER && family == AF_LOCAL)
-        unlink(node.c_str());
 }
 
 ssize_t ndSocket::Read(uint8_t *buffer, ssize_t length)
@@ -494,7 +494,7 @@ void ndSocket::Create(void)
 
                 if (bind(sd, rp->ai_addr, rp->ai_addrlen) == 0) break;
                 else {
-                    nd_printf("%s: bind: %s",
+                    nd_printf("%s: bind: %s\n",
                         __PRETTY_FUNCTION__, strerror(errno));
                 }
             }
@@ -596,8 +596,7 @@ ndSocketThread::ndSocketThread(nd_threads *threads)
     for (i = nd_config.socket_host.begin();
         i != nd_config.socket_host.end(); i++) {
         ndSocketServerRemote *skt;
-        if (!(skt = new ndSocketServerRemote((*i).first, (*i).second)))
-            throw ndSocketThreadException(__PRETTY_FUNCTION__, "new", ENOMEM);
+        skt = new ndSocketServerRemote((*i).first, (*i).second);
         skt->SetBlockingMode(false);
         servers[skt->GetDescriptor()] = skt;
     }
@@ -605,8 +604,7 @@ ndSocketThread::ndSocketThread(nd_threads *threads)
     for (j = nd_config.socket_path.begin();
         j != nd_config.socket_path.end(); j++) {
         ndSocketServerLocal *skt;
-        if (!(skt = new ndSocketServerLocal((*j))))
-            throw ndSocketThreadException(__PRETTY_FUNCTION__, "new", ENOMEM);
+        skt = new ndSocketServerLocal((*j));
         skt->SetBlockingMode(false);
         servers[skt->GetDescriptor()] = skt;
     }

@@ -122,6 +122,7 @@ protected:
     int IsValid(void);
 
     ndSocket *base;
+    bool valid;
 };
 
 class ndSocketRemote

@@ -961,14 +961,14 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGHUP);
 
     try {
-        thread_upload = new ndUploadThread();
-        thread_upload->Create();
+        thread_conntrack = new ndConntrackThread();
+        thread_conntrack->Create();
 
         thread_socket = new ndSocketThread(&threads);
         thread_socket->Create();
 
-        thread_conntrack = new ndConntrackThread();
-        thread_conntrack->Create();
+        thread_upload = new ndUploadThread();
+        thread_upload->Create();
     }
     catch (ndUploadThreadException &e) {
         nd_printf("Error starting upload thread: %s\n", e.what());
