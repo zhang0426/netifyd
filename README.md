@@ -5,8 +5,23 @@ Netify Daemon
 Deep Packet Inspection Server
 -----------------------------
 
-Netify is a deep packet inspection server based off of
-[nDPI](http://www.ntop.org/products/deep-packet-inspection/ndpi/) (OpenDPI).
+Netify is a deep packet inspection server.  [nDPI](http://www.ntop.org/products/deep-packet-inspection/ndpi/) (OpenDPI) is used to detect protocols and services (applications).
+
+Build Requirements
+------------------
+
+Netify requires the following third-party packages:
+- libcurl
+- libjson-c
+- libmnl
+- libnetfilter-conntrack
+- libpcap
+- zlib
+
+Runtime Requirements
+--------------------
+
+Ensure that the nfnetlink and nf_conntrack_netlink kernel modules are loaded.
 
 Download Source
 ---------------
@@ -19,6 +34,6 @@ Configuring Source
 
 ```
 # ./autoconf.sh
-# ./configure --prefix=/usr/local --with-pic=inih,ndpi
+# ./configure --prefix=/usr/local
 ```
 

@@ -29,6 +29,9 @@ prog="netifyd"
 PID_FILE=/var/run/netifyd/netifyd.pid
 
 start() {
+    /sbin/modprobe -q nfnetlink
+    /sbin/modprobe -q nf_conntrack_netlink
+
     echo -n "Starting $prog: "
 
     source /etc/clearos/network.conf
