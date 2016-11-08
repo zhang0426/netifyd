@@ -19,12 +19,12 @@ AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 
 # Checks for libraries.
-AC_CHECK_LIB([rt], [timer_create], [], [
-	AC_MSG_ERROR([librt not found.])])
-AC_CHECK_LIB([pthread], [pthread_create], [], [
-	AC_MSG_ERROR([libpthread not found.])])
-AC_CHECK_LIB([pcap], [pcap_open_live], [], [
-	AC_MSG_ERROR([libpcap not found.])])
+AC_CHECK_LIB([pcap],
+    [pcap_open_live], [], [AC_MSG_ERROR([libpcap not found.])])
+AC_CHECK_LIB([pthread],
+    [pthread_create], [], [AC_MSG_ERROR([libpthread not found.])])
+AC_CHECK_LIB([rt],
+    [timer_create], [], [AC_MSG_ERROR([librt not found.])])
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
@@ -33,15 +33,15 @@ AC_ARG_ENABLE(conntrack,
     AS_HELP_STRING([--enable-conntrack],
     [Enable connection tracking support]))
 
-PKG_CHECK_MODULES([ZLIB], [zlib])
 PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
+PKG_CHECK_MODULES([ZLIB], [zlib])
 AS_IF([test "x$enable_conntrack" = "xyes"], [
     AC_DEFINE([_ND_USE_CONNTRACK], [1],
         [Define to enable connection tracking support.])
     AM_CONDITIONAL(USE_CONNTRACK, true)
-    PKG_CHECK_MODULES([LIBNETFILTER_CONNTRACK], [libnetfilter_conntrack >= 1.0.4])
     PKG_CHECK_MODULES([LIBMNL], [libmnl >= 1.0.3])
+    PKG_CHECK_MODULES([LIBNETFILTER_CONNTRACK], [libnetfilter_conntrack >= 1.0.4])
 ], [
     AM_CONDITIONAL(USE_CONNTRACK, false)
 ])
