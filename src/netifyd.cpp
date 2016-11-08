@@ -42,7 +42,9 @@
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
 
+#ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+#endif
 
 #include <curl/curl.h>
 #include <json.h>
@@ -64,7 +66,9 @@ using namespace std;
 #include "nd-thread.h"
 #include "nd-detection.h"
 #include "nd-socket.h"
+#ifdef _ND_USE_CONNTRACK
 #include "nd-conntrack.h"
+#endif
 #include "nd-upload.h"
 #include "nd-ndpi.h"
 
@@ -81,7 +85,9 @@ static nd_threads threads;
 static nd_packet_stats totals;
 static ndUploadThread *thread_upload = NULL;
 static ndSocketThread *thread_socket = NULL;
+#ifdef _ND_USE_CONNTRACK
 static ndConntrackThread *thread_conntrack = NULL;
+#endif
 static ndInotify *inotify = NULL;
 static ndNetlink *netlink = NULL;
 
@@ -961,9 +967,10 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGHUP);
 
     try {
+#ifdef _ND_USE_CONNTRACK
         thread_conntrack = new ndConntrackThread();
         thread_conntrack->Create();
-
+#endif
         thread_socket = new ndSocketThread(&threads);
         thread_socket->Create();
 
@@ -986,10 +993,12 @@ int main(int argc, char *argv[])
         nd_printf("Error starting socket thread: %s\n", e.what());
         return 1;
     }
+#ifdef _ND_USE_CONNTRACK
     catch (ndConntrackThreadException &e) {
         nd_printf("Error starting conntrack thread: %s\n", e.what());
         return 1;
     }
+#endif
     catch (ndThreadException &e) {
         nd_printf("Error starting thread: %s\n", e.what());
         return 1;
@@ -1101,10 +1110,10 @@ int main(int argc, char *argv[])
 
     thread_socket->Terminate();
     delete thread_socket;
-
+#ifdef _ND_USE_CONNTRACK
     thread_conntrack->Terminate();
     delete thread_conntrack;
-
+#endif
     pthread_mutex_destroy(nd_output_mutex);
     delete nd_output_mutex;
 
