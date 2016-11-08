@@ -1,7 +1,7 @@
 # Netify DPI Daemon
 # GNU Autoconf configuration
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.63])
 AC_INIT([Netify DPI Daemon], [1.3],
 	[https://github.com/eglooca/netify-daemon/issues],
 	[netifyd], [http://www.egloo.ca/])
@@ -25,16 +25,14 @@ AC_CHECK_LIB([pthread], [pthread_create], [], [
 	AC_MSG_ERROR([libpthread not found.])])
 AC_CHECK_LIB([pcap], [pcap_open_live], [], [
 	AC_MSG_ERROR([libpcap not found.])])
-AC_CHECK_LIB([netfilter_conntrack], [nfct_open], [], [
-	AC_MSG_ERROR([libnetfilter_conntrack not found.])])
-AC_CHECK_LIB([mnl], [mnl_socket_open], [], [
-	AC_MSG_ERROR([libmnl not found.])])
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
 PKG_CHECK_MODULES([ZLIB], [zlib])
 PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
+PKG_CHECK_MODULES([LIBNETFILTER_CONNTRACK], [libnetfilter_conntrack >= 1.0.4])
+PKG_CHECK_MODULES([LIBMNL], [libmnl >= 1.0.3])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])

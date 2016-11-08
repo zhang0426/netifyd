@@ -22,6 +22,9 @@ fi
 
 systemctl set-environment NETIFYD_OPTS="$NETIFYD_OPTS"
 
+/sbin/modprobe -q nfnetlink
+/sbin/modprobe -q nf_conntrack_netlink
+
 exit 0
 
 # vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4 syntax=sh
