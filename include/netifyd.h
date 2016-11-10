@@ -62,10 +62,10 @@
 #define PACKAGE_URL             "http://www.egloo.ca/"
 #endif
 
-#define ND_CUSTOM_PROTO_FILE    "/var/lib/netifyd/netify-protos.conf"
+#define ND_CSV_CONTENT_MATCH    "/var/lib/netifyd/app-content-match.csv"
+#define ND_CSV_HOST_MATCH       "/var/lib/netifyd/app-host-match.csv"
 
-#define ND_CSV_HOST_PROTOCOL    "/var/lib/netifyd/host-protocol.csv"
-#define ND_CSV_CONTENT_MATCH    "/var/lib/netifyd/content-match.csv"
+#define ND_CONF_CUSTOM_MATCH    "/var/lib/netifyd/custom-match.conf"
 
 #include "nd-sha1.h"
 
@@ -83,10 +83,10 @@ typedef struct {
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
     char *proto_file;
-    char *csv_host_protocol;
+    char *csv_host_match;
     char *csv_content_match;
-    uint8_t digest_host_protocol[SHA1_DIGEST_LENGTH];
-    uint8_t digest_custom_protos[SHA1_DIGEST_LENGTH];
+    uint8_t digest_host_match[SHA1_DIGEST_LENGTH];
+    uint8_t digest_custom_match[SHA1_DIGEST_LENGTH];
     uint8_t digest_content_match[SHA1_DIGEST_LENGTH];
     vector<uint8_t *> mac_filter_list;
 } ndGlobalConfig;

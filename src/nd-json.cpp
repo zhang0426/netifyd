@@ -436,20 +436,20 @@ ndJsonObjectConfig::ndJsonObjectConfig(json_object *jdata)
         UnserializeConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, jarray);
     }
 
-    if (json_object_object_get_ex(jdata, "custom_protos", &jarray)) {
+    if (json_object_object_get_ex(jdata, "custom_match", &jarray)) {
         if (json_object_get_type(jarray) != json_type_array)
             throw ndJsonParseException("Custom protos type mismatch");
 
-        present |= (unsigned)ndJSON_CFG_TYPE_CUSTOM_PROTOS;
-        UnserializeConfig(ndJSON_CFG_TYPE_CUSTOM_PROTOS, jarray);
+        present |= (unsigned)ndJSON_CFG_TYPE_CUSTOM_MATCH;
+        UnserializeConfig(ndJSON_CFG_TYPE_CUSTOM_MATCH, jarray);
     }
 
-    if (json_object_object_get_ex(jdata, "host_protocol", &jarray)) {
+    if (json_object_object_get_ex(jdata, "host_match", &jarray)) {
         if (json_object_get_type(jarray) != json_type_array)
             throw ndJsonParseException("Host protocol type mismatch");
 
-        present |= (unsigned)ndJSON_CFG_TYPE_HOST_PROTOCOL;
-        UnserializeConfig(ndJSON_CFG_TYPE_HOST_PROTOCOL, jarray);
+        present |= (unsigned)ndJSON_CFG_TYPE_HOST_MATCH;
+        UnserializeConfig(ndJSON_CFG_TYPE_HOST_MATCH, jarray);
     }
 }
 
@@ -460,15 +460,15 @@ ndJsonObjectConfig::~ndJsonObjectConfig()
         content_match_iterator++) delete (*content_match_iterator);
     content_match_list.clear();
 
-    for (custom_protos_iterator = custom_protos_list.begin();
-        custom_protos_iterator != custom_protos_list.end();
-        custom_protos_iterator++) delete (*custom_protos_iterator);
-    custom_protos_list.clear();
+    for (custom_match_iterator = custom_match_list.begin();
+        custom_match_iterator != custom_match_list.end();
+        custom_match_iterator++) delete (*custom_match_iterator);
+    custom_match_list.clear();
 
-    for (host_protocol_iterator = host_protocol_list.begin();
-        host_protocol_iterator != host_protocol_list.end();
-        host_protocol_iterator++) delete (*host_protocol_iterator);
-    host_protocol_list.clear();
+    for (host_match_iterator = host_match_list.begin();
+        host_match_iterator != host_match_list.end();
+        host_match_iterator++) delete (*host_match_iterator);
+    host_match_list.clear();
 }
 
 ndJsonConfigContentMatch *ndJsonObjectConfig::GetFirstContentMatchEntry(void)
@@ -478,18 +478,18 @@ ndJsonConfigContentMatch *ndJsonObjectConfig::GetFirstContentMatchEntry(void)
     return (*content_match_iterator);
 }
 
-ndJsonConfigCustomProtos *ndJsonObjectConfig::GetFirstCustomProtosEntry(void)
+ndJsonConfigCustomMatch *ndJsonObjectConfig::GetFirstCustomMatchEntry(void)
 {
-    custom_protos_iterator = custom_protos_list.begin();
-    if (custom_protos_iterator == custom_protos_list.end()) return NULL;
-    return (*custom_protos_iterator);
+    custom_match_iterator = custom_match_list.begin();
+    if (custom_match_iterator == custom_match_list.end()) return NULL;
+    return (*custom_match_iterator);
 }
 
-ndJsonConfigHostProtocol *ndJsonObjectConfig::GetFirstHostProtocolEntry(void)
+ndJsonConfigHostMatch *ndJsonObjectConfig::GetFirstHostMatchEntry(void)
 {
-    host_protocol_iterator = host_protocol_list.begin();
-    if (host_protocol_iterator == host_protocol_list.end()) return NULL;
-    return (*host_protocol_iterator);
+    host_match_iterator = host_match_list.begin();
+    if (host_match_iterator == host_match_list.end()) return NULL;
+    return (*host_match_iterator);
 }
 
 ndJsonConfigContentMatch *ndJsonObjectConfig::GetNextContentMatchEntry(void)
@@ -502,24 +502,24 @@ ndJsonConfigContentMatch *ndJsonObjectConfig::GetNextContentMatchEntry(void)
     return (*content_match_iterator);
 }
 
-ndJsonConfigCustomProtos *ndJsonObjectConfig::GetNextCustomProtosEntry(void)
+ndJsonConfigCustomMatch *ndJsonObjectConfig::GetNextCustomMatchEntry(void)
 {
-    if (custom_protos_iterator == custom_protos_list.end())
+    if (custom_match_iterator == custom_match_list.end())
         return NULL;
-    custom_protos_iterator++;
-    if (custom_protos_iterator == custom_protos_list.end())
+    custom_match_iterator++;
+    if (custom_match_iterator == custom_match_list.end())
         return NULL;
-    return (*custom_protos_iterator);
+    return (*custom_match_iterator);
 }
 
-ndJsonConfigHostProtocol *ndJsonObjectConfig::GetNextHostProtocolEntry(void)
+ndJsonConfigHostMatch *ndJsonObjectConfig::GetNextHostMatchEntry(void)
 {
-    if (host_protocol_iterator == host_protocol_list.end())
+    if (host_match_iterator == host_match_list.end())
         return NULL;
-    host_protocol_iterator++;
-    if (host_protocol_iterator == host_protocol_list.end())
+    host_match_iterator++;
+    if (host_match_iterator == host_match_list.end())
         return NULL;
-    return (*host_protocol_iterator);
+    return (*host_match_iterator);
 }
 
 void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *jarray)
@@ -532,11 +532,11 @@ void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *j
     case ndJSON_CFG_TYPE_CONTENT_MATCH:
         jkey = "content_type";
         break;
-    case ndJSON_CFG_TYPE_CUSTOM_PROTOS:
-        jkey = "custom_protos";
+    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
+        jkey = "custom_match";
         break;
-    case ndJSON_CFG_TYPE_HOST_PROTOCOL:
-        jkey = "host_protocol";
+    case ndJSON_CFG_TYPE_HOST_MATCH:
+        jkey = "host_match";
         break;
     case ndJSON_CFG_TYPE_NULL:
     default:
@@ -553,13 +553,13 @@ void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *j
             if ((jentry = json_object_array_get_idx(jarray, i)))
                 UnserializeContentMatch(jentry);
             break;
-        case ndJSON_CFG_TYPE_CUSTOM_PROTOS:
+        case ndJSON_CFG_TYPE_CUSTOM_MATCH:
             if ((jentry = json_object_array_get_idx(jarray, i)))
-                UnserializeCustomProtos(jentry);
+                UnserializeCustomMatch(jentry);
             break;
-        case ndJSON_CFG_TYPE_HOST_PROTOCOL:
+        case ndJSON_CFG_TYPE_HOST_MATCH:
             if ((jentry = json_object_array_get_idx(jarray, i)))
-                UnserializeHostProtocol(jentry);
+                UnserializeHostMatch(jentry);
             break;
         default:
             break;
@@ -605,10 +605,10 @@ void ndJsonObjectConfig::UnserializeContentMatch(json_object *jentry)
     content_match_list.push_back(new ndJsonConfigContentMatch(entry));
 }
 
-void ndJsonObjectConfig::UnserializeCustomProtos(json_object *jentry)
+void ndJsonObjectConfig::UnserializeCustomMatch(json_object *jentry)
 {
     json_object *jobj;
-    ndJsonConfigCustomProtos entry;
+    ndJsonConfigCustomMatch entry;
 
     if (!json_object_object_get_ex(jentry, "rule", &jobj))
         throw ndJsonParseException("Missing rule field");
@@ -618,13 +618,13 @@ void ndJsonObjectConfig::UnserializeCustomProtos(json_object *jentry)
 
     entry.rule = json_object_get_string(jobj);
 
-    custom_protos_list.push_back(new ndJsonConfigCustomProtos(entry));
+    custom_match_list.push_back(new ndJsonConfigCustomMatch(entry));
 }
 
-void ndJsonObjectConfig::UnserializeHostProtocol(json_object *jentry)
+void ndJsonObjectConfig::UnserializeHostMatch(json_object *jentry)
 {
     json_object *jobj;
-    ndJsonConfigHostProtocol entry;
+    ndJsonConfigHostMatch entry;
     struct sockaddr_in *saddr_ip4;
     struct sockaddr_in6 *saddr_ip6;
     saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&entry.ip_addr);
@@ -666,7 +666,7 @@ void ndJsonObjectConfig::UnserializeHostProtocol(json_object *jentry)
 
     entry.app_id = json_object_get_int(jobj);
 
-    host_protocol_list.push_back(new ndJsonConfigHostProtocol(entry));
+    host_match_list.push_back(new ndJsonConfigHostMatch(entry));
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

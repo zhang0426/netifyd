@@ -69,8 +69,8 @@ mkdir -p %{buildroot}/var/run
 install -d -m 0755 %{buildroot}/var/run/%{name}
 %endif
 
-install -D -m 0644 deploy/content-match.csv %{buildroot}/%{_sharedstatedir}/%{name}/content-match.csv
-install -D -m 0644 deploy/host-protocol.csv %{buildroot}/%{_sharedstatedir}/%{name}/host-protocol.csv
+install -D -m 0644 deploy/app-content-match.csv %{buildroot}/%{_sharedstatedir}/%{name}/app-content-match.csv
+install -D -m 0644 deploy/app-host-match.csv %{buildroot}/%{_sharedstatedir}/%{name}/app-host-match.csv
 
 #install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 #install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf

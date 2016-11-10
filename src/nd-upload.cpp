@@ -436,10 +436,10 @@ void ndUploadThread::ProcessResponse(void)
 
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH))
             ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_PROTOS))
-            ExportConfig(ndJSON_CFG_TYPE_CUSTOM_PROTOS, json_config);
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_PROTOCOL))
-            ExportConfig(ndJSON_CFG_TYPE_HOST_PROTOCOL, json_config);
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH))
+            ExportConfig(ndJSON_CFG_TYPE_CUSTOM_MATCH, json_config);
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_MATCH))
+            ExportConfig(ndJSON_CFG_TYPE_HOST_MATCH, json_config);
 
         kill(getpid(), SIGHUP);
 
@@ -492,8 +492,8 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
     string config_type_string;
     size_t entries = 0;
     ndJsonConfigContentMatch *content_match;
-    ndJsonConfigCustomProtos *custom_protos;
-    ndJsonConfigHostProtocol *host_protocol;
+    ndJsonConfigCustomMatch *custom_match;
+    ndJsonConfigHostMatch *host_match;
     char ip_addr[INET6_ADDRSTRLEN];
     struct sockaddr_in *saddr_ip4;
     struct sockaddr_in6 *saddr_ip6;
@@ -504,15 +504,15 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         config_type_string = "content match";
         entries = config->GetContentMatchCount();
         break;
-    case ndJSON_CFG_TYPE_CUSTOM_PROTOS:
+    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
         fp = fopen(nd_config.proto_file, "w");
         config_type_string = "custom protos";
-        entries = config->GetCustomProtosCount();
+        entries = config->GetCustomMatchCount();
         break;
-    case ndJSON_CFG_TYPE_HOST_PROTOCOL:
-        fp = fopen(nd_config.csv_host_protocol, "w");
+    case ndJSON_CFG_TYPE_HOST_MATCH:
+        fp = fopen(nd_config.csv_host_match, "w");
         config_type_string = "host protocol";
-        entries = config->GetHostProtocolCount();
+        entries = config->GetHostMatchCount();
         break;
     default:
         throw ndJsonParseException("Unsupported configuration type for export");
@@ -536,43 +536,43 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         nd_sha1_file(
             nd_config.csv_content_match, nd_config.digest_content_match);
         break;
-    case ndJSON_CFG_TYPE_CUSTOM_PROTOS:
-        custom_protos = config->GetFirstCustomProtosEntry();
-        while (custom_protos != NULL) {
+    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
+        custom_match = config->GetFirstCustomMatchEntry();
+        while (custom_match != NULL) {
             fprintf(fp, "%s",
-                custom_protos->rule.c_str());
-            custom_protos = config->GetNextCustomProtosEntry();
+                custom_match->rule.c_str());
+            custom_match = config->GetNextCustomMatchEntry();
         }
         fclose(fp);
         nd_sha1_file(
-            nd_config.proto_file, nd_config.digest_custom_protos);
+            nd_config.proto_file, nd_config.digest_custom_match);
         break;
-    case ndJSON_CFG_TYPE_HOST_PROTOCOL:
+    case ndJSON_CFG_TYPE_HOST_MATCH:
         fprintf(fp, "\"ip_address\",\"ip_prefix\",\"application_id\"\n");
-        host_protocol = config->GetFirstHostProtocolEntry();
-        while (host_protocol != NULL) {
+        host_match = config->GetFirstHostMatchEntry();
+        while (host_match != NULL) {
             memset(ip_addr, '\0', INET6_ADDRSTRLEN);
-            switch (host_protocol->ip_addr.ss_family) {
+            switch (host_match->ip_addr.ss_family) {
             case AF_INET:
-                saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&host_protocol->ip_addr);
+                saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&host_match->ip_addr);
                 if (inet_ntop(AF_INET, &saddr_ip4->sin_addr, ip_addr, INET6_ADDRSTRLEN))
                     rc = 1;
                 break;
             case AF_INET6:
-                saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&host_protocol->ip_addr);
+                saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&host_match->ip_addr);
                 if (inet_ntop(AF_INET6, &saddr_ip6->sin6_addr, ip_addr, INET6_ADDRSTRLEN))
                     rc = 1;
                 break;
             }
             if (rc == 1) {
                 fprintf(fp, "\"%s\",%hhu,%u\n",
-                    ip_addr, host_protocol->ip_prefix, host_protocol->app_id);
+                    ip_addr, host_match->ip_prefix, host_match->app_id);
             }
-            host_protocol = config->GetNextHostProtocolEntry();
+            host_match = config->GetNextHostMatchEntry();
         }
         fclose(fp);
         nd_sha1_file(
-            nd_config.csv_host_protocol, nd_config.digest_host_protocol);
+            nd_config.csv_host_match, nd_config.digest_host_match);
         break;
     default:
         fclose(fp);

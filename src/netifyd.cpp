@@ -540,10 +540,10 @@ static void nd_dump_stats(void)
     json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
     nd_sha1_to_string(nd_config.digest_content_match, digest);
     json.AddObject(NULL, "content_match_digest", digest);
-    nd_sha1_to_string(nd_config.digest_custom_protos, digest);
-    json.AddObject(NULL, "custom_protos_digest", digest);
-    nd_sha1_to_string(nd_config.digest_host_protocol, digest);
-    json.AddObject(NULL, "host_protocol_digest", digest);
+    nd_sha1_to_string(nd_config.digest_custom_match, digest);
+    json.AddObject(NULL, "custom_match_digest", digest);
+    nd_sha1_to_string(nd_config.digest_host_match, digest);
+    json.AddObject(NULL, "host_match_digest", digest);
 
     json_object *json_ifaces = json.CreateObject(NULL, "interfaces");
     json_object *json_devices = json.CreateObject(NULL, "devices");
@@ -646,7 +646,7 @@ static void nd_dump_protocols(void)
     struct ndpi_detection_module_struct *ndpi;
     ndpi = nd_ndpi_init("netifyd");
 
-    printf("%s\n", nd_config.csv_host_protocol);
+    printf("%s\n", nd_config.csv_host_match);
 
     for (int i = 0; i < (int)ndpi->ndpi_num_supported_protocols; i++)
         printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
@@ -783,8 +783,8 @@ int main(int argc, char *argv[])
 
     memset(&nd_config, 0, sizeof(ndGlobalConfig));
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
-    nd_config.proto_file = strdup(ND_CUSTOM_PROTO_FILE);
-    nd_config.csv_host_protocol = strdup(ND_CSV_HOST_PROTOCOL);
+    nd_config.proto_file = strdup(ND_CONF_CUSTOM_MATCH);
+    nd_config.csv_host_match = strdup(ND_CSV_HOST_MATCH);
     nd_config.csv_content_match = strdup(ND_CSV_CONTENT_MATCH);
 
     nd_output_mutex = new pthread_mutex_t;
@@ -884,8 +884,8 @@ int main(int argc, char *argv[])
             nd_config.csv_content_match = strdup(optarg);
             break;
         case 'H':
-            free(nd_config.csv_host_protocol);
-            nd_config.csv_host_protocol = strdup(optarg);
+            free(nd_config.csv_host_match);
+            nd_config.csv_host_match = strdup(optarg);
             break;
         case 'S':
             {
@@ -950,9 +950,9 @@ int main(int argc, char *argv[])
     nd_sha1_file(
         nd_config.csv_content_match, nd_config.digest_content_match);
     nd_sha1_file(
-        nd_config.proto_file, nd_config.digest_custom_protos);
+        nd_config.proto_file, nd_config.digest_custom_match);
     nd_sha1_file(
-        nd_config.csv_host_protocol, nd_config.digest_host_protocol);
+        nd_config.csv_host_match, nd_config.digest_host_match);
 
     sigfillset(&sigset);
     //sigdelset(&sigset, SIGPROF);

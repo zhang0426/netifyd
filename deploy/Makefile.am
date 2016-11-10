@@ -1,12 +1,12 @@
-EXTRA_DIST = clearos content-match.csv exec-pre.sh host-protocol.csv \
-             host-protocol.sed netifyd.conf netifyd.service netifyd.tmpf
+EXTRA_DIST = app-content-match.csv app-host-match.csv app-host-match.sed
+			clearos exec-pre.sh netifyd.conf netifyd.service netifyd.tmpf
 
-all: content-match.csv host-protocol.csv
+all: app-content-match.csv app-host-match.csv
 
-content-match.csv: ../util/nd-content-match-export
-	../util/nd-content-match-export -C content-match.csv
+app-content-match.csv: ../util/nd-app-match-export
+	../util/nd-app-content-match-export -C app-content-match.csv
 
-host-protocol.csv: ../util/nd-content-match-export
-	../util/nd-content-match-export -H host-protocol.csv
-	sed -i -f host-protocol.sed host-protocol.csv
+app-host-match.csv: ../util/nd-app-match-export
+	../util/nd-app-content-match-export -H app-host-match.csv
+	sed -i -f app-host-match.sed app-host-match.csv
 

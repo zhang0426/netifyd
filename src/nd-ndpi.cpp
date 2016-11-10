@@ -94,7 +94,7 @@ static void nd_ndpi_load_content_match(
     }
 }
 
-static void nd_ndpi_load_host_protocol(
+static void nd_ndpi_load_host_match(
     const string &tag, struct ndpi_detection_module_struct *ndpi)
 {
     int rc;
@@ -104,12 +104,12 @@ static void nd_ndpi_load_host_protocol(
     struct sockaddr_in6 saddr_ip6;
     unsigned loaded = 0, line = 1;
     ndpi_network host_entry;
-    FILE *fp = fopen(nd_config.csv_host_protocol, "r");
+    FILE *fp = fopen(nd_config.csv_host_match, "r");
 
     if (fp == NULL) {
         if (nd_debug) {
             nd_printf("%s: unable to open host protocol file: %s\n",
-                tag.c_str(), nd_config.csv_host_protocol);
+                tag.c_str(), nd_config.csv_host_match);
         }
         return;
     }
@@ -122,16 +122,16 @@ static void nd_ndpi_load_host_protocol(
             " \"%m[0-9A-f:.]\" , %hhu , %hhu\n",
             &ip_address, &host_entry.cidr, &host_entry.value)) != 3) {
             nd_printf("%s: %s: parse error at line #%u [%d]\n",
-                tag.c_str(), nd_config.csv_host_protocol, line, rc);
+                tag.c_str(), nd_config.csv_host_match, line, rc);
             if (rc >= 1) free(ip_address);
             break;
         }
 
         if (inet_pton(AF_INET6, ip_address, &saddr_ip6.sin6_addr) == 1) {
-            // TODO: nDPI doesn't support IPv6 for host_protocol yet.
+            // TODO: nDPI doesn't support IPv6 for host_match yet.
             if (nd_debug) {
                 nd_printf("%s: %s: skipping IPv6 host protocol entry: %s/%hhu\n",
-                    tag.c_str(), nd_config.csv_host_protocol, ip_address, host_entry.cidr);
+                    tag.c_str(), nd_config.csv_host_match, ip_address, host_entry.cidr);
             }
         }
         else if (inet_pton(AF_INET, ip_address, &saddr_ip4.sin_addr) == 1) {
@@ -148,7 +148,7 @@ static void nd_ndpi_load_host_protocol(
 
     if (nd_debug) {
         nd_printf("%s: loaded %u host protocol records from: %s\n",
-            tag.c_str(), loaded, nd_config.csv_host_protocol);
+            tag.c_str(), loaded, nd_config.csv_host_match);
     }
 }
 
@@ -163,7 +163,7 @@ struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
         throw ndThreadException("Detection module initialization failure");
 
     nd_ndpi_load_content_match(tag, ndpi);
-    nd_ndpi_load_host_protocol(tag, ndpi);
+    nd_ndpi_load_host_match(tag, ndpi);
 
     ndpi_init_string_based_protocols(ndpi);
 
