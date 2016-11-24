@@ -286,7 +286,8 @@ void ndUploadThread::FreeHeaders(void)
 
 void ndUploadThread::Upload(void)
 {
-    CURLcode rc;
+    int rc;
+    CURLcode curl_rc;
     size_t xfer = 0, total = pending.size();
 
     do {
@@ -303,11 +304,11 @@ void ndUploadThread::Upload(void)
 
         body_data.clear();
 
-        if ((rc = curl_easy_perform(ch)) != CURLE_OK)
+        if ((curl_rc = curl_easy_perform(ch)) != CURLE_OK)
             break;
 
         long http_rc = 0;
-        if ((rc = curl_easy_getinfo(ch,
+        if ((curl_rc = curl_easy_getinfo(ch,
             CURLINFO_RESPONSE_CODE, &http_rc)) != CURLE_OK)
             break;
 
@@ -344,8 +345,17 @@ void ndUploadThread::Upload(void)
 
         pending_size -= pending.front().second.size();
         pending.pop_front();
+
+        if ((rc = pthread_mutex_lock(&lock)) != 0)
+            throw ndUploadThreadException(strerror(rc));
+
+        if (uploads.size() > 0 && uploads.back() == "terminate")
+            terminate = true;
+
+        if ((rc = pthread_mutex_unlock(&lock)) != 0)
+            throw ndUploadThreadException(strerror(rc));
     }
-    while (pending.size() > 0);
+    while (pending.size() > 0 && !terminate);
 }
 
 string ndUploadThread::Deflate(const string &data)
