@@ -1,5 +1,5 @@
-EXTRA_DIST = app-content-match.csv app-host-match.csv app-host-match.sed
-			clearos exec-pre.sh netifyd.conf netifyd.service netifyd.tmpf
+EXTRA_DIST = app-content-match.csv app-host-match.csv app-host-match.sed \
+             clearos exec-pre.sh netifyd.conf netifyd.service netifyd.tmpf
 
 all: app-content-match.csv app-host-match.csv
 
