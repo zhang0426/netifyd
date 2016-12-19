@@ -169,7 +169,7 @@ struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
 
     set_ndpi_malloc(nd_mem_alloc);
     set_ndpi_free(nd_mem_free);
-    set_ndpi_debug_function(nd_debug_printf);
+    set_ndpi_debug_function(ndpi, nd_debug_printf);
 
     NDPI_PROTOCOL_BITMASK proto_all;
     NDPI_BITMASK_SET_ALL(proto_all);
