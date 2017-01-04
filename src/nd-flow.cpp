@@ -124,7 +124,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 }
 
 json_object *ndFlow::json_encode(const string &device,
-    ndJson &json, struct ndpi_detection_module_struct *ndpi, bool counters)
+    ndJson &json, struct ndpi_detection_module_struct *ndpi, bool include_stats)
 {
 #define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
     char mac_addr[_ND_STR_ALEN + 1];
@@ -141,6 +141,8 @@ json_object *ndFlow::json_encode(const string &device,
     hash(device, digest_bin, true);
     nd_sha1_to_string((const uint8_t *)digest_bin.c_str(), digest);
     json.AddObject(json_flow, "digest", digest);
+
+    json.AddObject(json_flow, "ip_nat", false);
 
     json.AddObject(json_flow, "ip_version", (int32_t)ip_version);
 
@@ -279,7 +281,7 @@ json_object *ndFlow::json_encode(const string &device,
     json.AddObject(json_flow, _lower_port, (int32_t)ntohs(lower_port));
     json.AddObject(json_flow, _upper_port, (int32_t)ntohs(upper_port));
 
-    if (counters) {
+    if (include_stats) {
         json.AddObject(json_flow, _lower_bytes, lower_bytes);
         json.AddObject(json_flow, _upper_bytes, upper_bytes);
         json.AddObject(json_flow, _lower_packets, lower_packets);
@@ -321,8 +323,7 @@ json_object *ndFlow::json_encode(const string &device,
             "host_server_name", host_server_name);
     }
 
-    if ((ssl.client_cert[0] != '\0') ||
-        (ssl.server_cert[0] != '\0')) {
+    if (ssl.client_cert[0] != '\0' || ssl.server_cert[0] != '\0') {
 
         json_object *ssl = json.CreateObject(json_flow, "ssl");
 

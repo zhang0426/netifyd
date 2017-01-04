@@ -347,7 +347,7 @@ void ndConntrackThread::ProcessConntrackEvent(
 
     if (type & NFCT_T_DESTROY) {
         ct_new_or_update = false;
-        if (i != ct_id_map.end()) ct_id_map.erase(i);
+        if (ct_exists) ct_id_map.erase(i);
     }
 
     if (ct_new_or_update) ct_id_map[id] = digest;

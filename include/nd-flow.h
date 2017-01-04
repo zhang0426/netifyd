@@ -24,6 +24,7 @@ struct ndFlow
 {
     uint8_t ip_version;
     uint8_t ip_protocol;
+    bool ip_nat;
 
     uint16_t vlan_id;
     uint64_t ts_last_seen;
@@ -103,7 +104,7 @@ struct ndFlow
     void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
 
     json_object *json_encode(const string &device, ndJson &json,
-        struct ndpi_detection_module_struct *ndpi, bool counters = true);
+        struct ndpi_detection_module_struct *ndpi, bool include_stats = true);
 };
 
 typedef unordered_map<string, struct ndFlow *> nd_flow_map;
