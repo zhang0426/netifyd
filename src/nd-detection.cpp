@@ -429,6 +429,7 @@ void ndDetectionThread::ProcessPacket(void)
 
     default:
         // Non-TCP/UDP protocols...
+        //if (nd_debug) nd_printf(">> Non TCP/UDP protocol: %d\n", flow.ip_protocol);
         break;
     }
 
@@ -496,6 +497,7 @@ void ndDetectionThread::ProcessPacket(void)
     );
 
     if (new_flow->detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN
+        || (new_flow->ip_protocol != IPPROTO_TCP && new_flow->ip_protocol != IPPROTO_UDP)
         || (new_flow->ip_protocol == IPPROTO_UDP && new_flow->total_packets > 8)
         || (new_flow->ip_protocol == IPPROTO_TCP && new_flow->total_packets > 10)) {
 
