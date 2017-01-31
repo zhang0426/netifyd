@@ -572,6 +572,17 @@ void ndDetectionThread::ProcessPacket(void)
             "%s", new_flow->ndpi_flow->host_server_name
         );
 
+        // Sanitize server name; RFC 952 plus underscore.
+        for (int i = 0; i < HOST_NAME_MAX; i++) {
+            if (!isalnum(new_flow->host_server_name[i]) &&
+                new_flow->host_server_name[i] != '-' &&
+                new_flow->host_server_name[i] != '_' &&
+                new_flow->host_server_name[i] != '.') {
+                new_flow->host_server_name[i] = '\0';
+                break;
+            }
+        }
+
         if (new_flow->ip_protocol == IPPROTO_TCP
             && new_flow->detected_protocol.protocol != NDPI_PROTOCOL_DNS) {
             snprintf(new_flow->ssl.client_cert, ND_FLOW_SSL_CERTLEN,
