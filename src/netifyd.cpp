@@ -971,7 +971,7 @@ int main(int argc, char *argv[])
         thread_conntrack = new ndConntrackThread();
         thread_conntrack->Create();
 #endif
-        thread_socket = new ndSocketThread(&threads);
+        thread_socket = new ndSocketThread();
         thread_socket->Create();
 
         thread_upload = new ndUploadThread();

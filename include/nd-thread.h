@@ -42,8 +42,8 @@ public:
 
     virtual void Terminate(void) { terminate = true; }
 
-    void Lock(void) { pthread_mutex_lock(&lock); }
-    void Unlock(void) { pthread_mutex_unlock(&lock); }
+    void Lock(void);
+    void Unlock(void);
 
 protected:
     string tag;

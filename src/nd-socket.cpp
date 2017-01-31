@@ -583,15 +583,9 @@ void ndSocketBuffer::Pop(ssize_t length)
     length -= bytes;
 }
 
-ndSocketThread::ndSocketThread(nd_threads *threads)
-    : ndThread("nd-socket", -1), terminate(false), threads(threads)
+ndSocketThread::ndSocketThread()
+    : ndThread("nd-socket", -1), terminate(false)
 {
-    int rc;
-    if ((rc = pthread_mutex_init(&lock, NULL)) != 0) {
-        throw ndSocketThreadException(
-            __PRETTY_FUNCTION__, "pthread_mutex_init", rc);
-    }
-
     vector<pair<string, string> >::const_iterator i;
     for (i = nd_config.socket_host.begin();
         i != nd_config.socket_host.end(); i++) {
@@ -614,8 +608,6 @@ ndSocketThread::~ndSocketThread()
 {
     Join();
 
-    pthread_mutex_destroy(&lock);
-
     for (ndSocketMap::const_iterator i = clients.begin();
         i != clients.end(); i++) {
         delete i->second;
@@ -632,9 +624,9 @@ ndSocketThread::~ndSocketThread()
 
 void ndSocketThread::QueueWrite(const string &data)
 {
-    pthread_mutex_lock(&lock);
+    Lock();
     queue_write.push_back(data);
-    pthread_mutex_unlock(&lock);
+    Unlock();
 }
 
 void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
@@ -659,39 +651,6 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     json_object *json_flow;
     buffers[client->GetDescriptor()] = buffer;
     clients[client->GetDescriptor()] = client;
-
-    pthread_mutex_lock(&lock);
-
-    for (nd_threads::iterator t = threads->begin();
-        t != threads->end(); t++) {
-
-        t->second->Lock();
-
-        nd_flow_map *flows = t->second->GetFlows();
-
-        for (nd_flow_map::const_iterator f = flows->begin();
-            f != flows->end(); f++) {
-
-            ndJson json;
-            json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
-            json.AddObject(NULL, "interface", t->first);
-
-            json_flow = f->second->json_encode(
-                t->first, json, t->second->GetDetectionModule(), false);
-            json.AddObject(NULL, "flow", json_flow);
-
-            string json_string;
-            json.ToString(json_string, false);
-            json_string.append("\n");
-            queue_write.push_back(json_string);
-
-            json.Destroy();
-        }
-
-        t->second->Unlock();
-    }
-
-    pthread_mutex_unlock(&lock);
 }
 
 void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
@@ -702,7 +661,6 @@ void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
 
     delete ci->second;
     bi = buffers.find(ci->first);
-    //ci = clients.erase(ci);
     clients.erase(ci++);
 
     if (bi == buffers.end()) {
@@ -732,10 +690,7 @@ void *ndSocketThread::Entry(void)
         FD_ZERO(&fds_read);
         FD_ZERO(&fds_write);
 
-        memset(&tv, 0, sizeof(struct timeval));
-        tv.tv_sec = 1;
-
-        pthread_mutex_lock(&lock);
+        Lock();
         if (queue_write.size()) {
             for (vector<string>::iterator i = queue_write.begin();
                 i != queue_write.end(); i++) {
@@ -744,7 +699,7 @@ void *ndSocketThread::Entry(void)
             }
             queue_write.clear();
         }
-        pthread_mutex_unlock(&lock);
+        Unlock();
 
         for (ci = clients.begin(); ci != clients.end(); ci++) {
 
@@ -766,6 +721,9 @@ void *ndSocketThread::Entry(void)
             FD_SET(si->first, &fds_read);
             if (si->first > max_fd) max_fd = si->first;
         }
+
+        memset(&tv, 0, sizeof(struct timeval));
+        tv.tv_sec = 1;
 
         rc = select(max_fd + 1, &fds_read, &fds_write, NULL, &tv);
 

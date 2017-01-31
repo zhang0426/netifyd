@@ -144,4 +144,20 @@ int ndThread::Join(void)
     return rc;
 }
 
+void ndThread::Lock(void)
+{
+    int rc = pthread_mutex_lock(&lock);
+
+    if (rc != 0)
+        throw ndThreadException(strerror(rc));
+}
+
+void ndThread::Unlock(void)
+{
+    int rc = pthread_mutex_unlock(&lock);
+
+    if (rc != 0)
+        throw ndThreadException(strerror(rc));
+}
+
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

@@ -219,7 +219,7 @@ typedef map<int, ndSocketBuffer *> ndSocketBufferMap;
 class ndSocketThread : public ndThread
 {
 public:
-    ndSocketThread(nd_threads *threads);
+    ndSocketThread();
     virtual ~ndSocketThread();
 
     virtual void Terminate(void) { terminate = true; }
@@ -233,7 +233,6 @@ protected:
     void ClientHangup(ndSocketMap::iterator &ci);
 
     bool terminate;
-    nd_threads *threads;
     pthread_mutex_t lock;
     vector<string> queue_write;
     ndSocketMap clients;
