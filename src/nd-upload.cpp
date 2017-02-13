@@ -291,7 +291,7 @@ void ndUploadThread::Upload(void)
     size_t xfer = 0, total = pending.size();
 
     do {
-        if (nd_debug) nd_printf("%s: payload %lu/%lu (%d of %d bytes)...\n",
+        nd_debug_printf("%s: payload %lu/%lu (%d of %d bytes)...\n",
             tag.c_str(), ++xfer, total, pending.front().second.size(), pending_size);
 
         if (!pending.front().first)
@@ -334,7 +334,7 @@ void ndUploadThread::Upload(void)
                     fwrite(pending.front().second.data(),
                         1, pending.front().second.size(), hf);
                     fclose(hf);
-                    nd_printf("Wrote rejected payload to: /tmp/rejected.json\n");
+                    nd_debug_printf("Wrote rejected payload to: /tmp/rejected.json\n");
                 }
             }
             break;
@@ -394,7 +394,7 @@ string ndUploadThread::Deflate(const string &data)
         throw ndUploadThreadException("deflate");
 
     if (nd_debug) {
-        nd_printf("%s: payload compressed: %lu -> %lu\n",
+        nd_debug_printf("%s: payload compressed: %lu -> %lu\n",
             tag.c_str(), data.size(), buffer.size());
     }
 
@@ -414,34 +414,30 @@ void ndUploadThread::ProcessResponse(void)
     } catch (ndJsonParseException &e) {
         nd_printf("JSON parse error: %s\n", e.what());
         if (nd_debug)
-            nd_printf("Payload:\n\"%s\"\n", body_data.c_str());
+            nd_debug_printf("Payload:\n\"%s\"\n", body_data.c_str());
     }
 
     switch (json_type) {
     case ndJSON_OBJ_TYPE_OK:
-        if (nd_debug) nd_printf("%s: upload successful.\n", tag.c_str());
+        nd_debug_printf("%s: upload successful.\n", tag.c_str());
         break;
     case ndJSON_OBJ_TYPE_RESULT:
         json_result = reinterpret_cast<ndJsonObjectResult *>(json_obj);
-        if (nd_debug) {
-            nd_printf("%s: [%d] %s\n", tag.c_str(),
-                json_result->GetCode(),
-                (json_result->GetMessage().length() > 0) ?
-                    json_result->GetMessage().c_str() : "(null)");
-        }
+        nd_debug_printf("%s: [%d] %s\n", tag.c_str(),
+            json_result->GetCode(),
+            (json_result->GetMessage().length() > 0) ?
+                json_result->GetMessage().c_str() : "(null)");
         if (json_result->GetCode() == ndJSON_RES_SET_REALM_UUID) {
             if (json_result->GetMessage().length() == ND_REALM_UUID_LEN
                 && SaveRealmUUID(json_result->GetMessage())) {
-                if (nd_debug) {
-                    nd_printf("%s: saved new realm UUID: %s\n", tag.c_str(),
-                        json_result->GetMessage().c_str());
-                }
+                nd_debug_printf("%s: saved new realm UUID: %s\n", tag.c_str(),
+                    json_result->GetMessage().c_str());
                 CreateHeaders();
             }
         }
         break;
     case ndJSON_OBJ_TYPE_CONFIG:
-        if (nd_debug) nd_printf("%s: upload successful (w/config).\n", tag.c_str());
+        nd_debug_printf("%s: upload successful (w/config).\n", tag.c_str());
         json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
 
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH))
@@ -591,11 +587,11 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
 
     if (nd_debug) {
         if (entries == 0) {
-            nd_printf("%s: cleared %s configuration\n", tag.c_str(),
+            nd_debug_printf("%s: cleared %s configuration\n", tag.c_str(),
                 config_type_string.c_str());
         }
         else {
-            nd_printf("%s: exported %lu %s configuration entries\n", tag.c_str(),
+            nd_debug_printf("%s: exported %lu %s configuration entries\n", tag.c_str(),
                 entries, config_type_string.c_str());
         }
     }

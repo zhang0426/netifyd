@@ -93,7 +93,7 @@ void ndInotify::RefreshWatches(void)
             fd, i->first.c_str(), IN_DELETE_SELF | IN_CLOSE_WRITE | IN_MODIFY);
 
         if (i->second->wd < 0) {
-            if (nd_debug) nd_printf("Error creating inotify watch: %s: %s\n",
+            nd_debug_printf("Error creating inotify watch: %s: %s\n",
                 i->first.c_str(), strerror(errno));
         }
         else
@@ -126,14 +126,12 @@ void ndInotify::ProcessEvent(void)
                         ((iev->mask & IN_DELETE_SELF) ||
                         (iev->mask & IN_MODIFY) || (iev->mask & IN_CLOSE_WRITE)))
 
-                        if (nd_debug) {
-                            nd_printf("File event occured: %s [%s]\n",
-                                watch->first.c_str(),
-                                (iev->mask & IN_DELETE_SELF) ? "DELETE_SELF" :
-                                (iev->mask & IN_MODIFY) ? "MODIFY" : 
-                                (iev->mask & IN_CLOSE_WRITE) ?
-                                    "CLOSE_WRITE" : "IGNORE");
-                        }
+                        nd_debug_printf("File event occured: %s [%s]\n",
+                            watch->first.c_str(),
+                            (iev->mask & IN_DELETE_SELF) ? "DELETE_SELF" :
+                            (iev->mask & IN_MODIFY) ? "MODIFY" : 
+                            (iev->mask & IN_CLOSE_WRITE) ?
+                                "CLOSE_WRITE" : "IGNORE");
 
                         if (iev->mask & IN_DELETE_SELF) {
                             inotify_rm_watch(fd, watch->second->wd);

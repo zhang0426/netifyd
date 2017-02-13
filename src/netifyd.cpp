@@ -595,9 +595,9 @@ static void nd_dump_stats(void)
     json.Destroy();
 
     if (nd_debug) {
-        nd_printf("\nCumulative Totals:\n");
+        nd_debug_printf("\nCumulative Totals:\n");
         totals.print();
-        nd_printf(" Active flows: %lu\n\n", flow_count);
+        nd_debug_printf(" Active flows: %lu\n\n", flow_count);
     }
 }
 
@@ -712,10 +712,8 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
             continue;
         }
 
-        if (nd_debug) {
-            nd_printf("%s: %s: address: %s, length: %hu\n",
-                __PRETTY_FUNCTION__, (*i).first.c_str(), address, _length);
-        }
+        nd_debug_printf("%s: %s: address: %s, length: %hu\n",
+            __PRETTY_FUNCTION__, (*i).first.c_str(), address, _length);
 
         bit = (int)_length;
 

@@ -84,8 +84,7 @@ ndDetectionThread::ndDetectionThread(const string &dev,
 
     ndpi = nd_ndpi_init(tag);
 
-    if (nd_debug)
-        nd_printf("%s: detection thread created.\n", tag.c_str());
+    nd_debug_printf("%s: detection thread created.\n", tag.c_str());
 }
 
 ndDetectionThread::~ndDetectionThread()
@@ -94,8 +93,7 @@ ndDetectionThread::~ndDetectionThread()
     if (pcap != NULL) pcap_close(pcap);
     if (ndpi != NULL) ndpi_exit_detection_module(ndpi);
 
-    if (nd_debug)
-        nd_printf("%s: detection thread destroyed.\n", tag.c_str());
+    nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
 }
 
 void *ndDetectionThread::Entry(void)
@@ -125,8 +123,7 @@ void *ndDetectionThread::Entry(void)
             }
 
             if (!(ifr.ifr_flags & IFF_UP)) {
-                if (nd_debug) nd_printf("%s: WARNING: interface is down.\n",
-                    tag.c_str());
+                nd_debug_printf("%s: WARNING: interface is down.\n", tag.c_str());
                 sleep(1);
                 continue;
             }
@@ -433,7 +430,7 @@ void ndDetectionThread::ProcessPacket(void)
 
     default:
         // Non-TCP/UDP protocols...
-        //if (nd_debug) nd_printf(">> Non TCP/UDP protocol: %d\n", flow.ip_protocol);
+        //nd_debug_printf(">> Non TCP/UDP protocol: %d\n", flow.ip_protocol);
         break;
     }
 
@@ -532,8 +529,7 @@ void ndDetectionThread::ProcessPacket(void)
 
         new_flow->lower_type = netlink->ClassifyAddress(tag, lower_addr);
         new_flow->upper_type = netlink->ClassifyAddress(tag, upper_addr);
-#if 1
-        usleep(50000);
+
         if (thread_conntrack != NULL) {
             if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
              new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
@@ -543,7 +539,7 @@ void ndDetectionThread::ProcessPacket(void)
                 thread_conntrack->ClassifyFlow(new_flow);
             }
         }
-#endif
+
         if (new_flow->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
                 ndpi_set_detected_protocol(

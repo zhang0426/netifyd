@@ -111,8 +111,7 @@ ndConntrackThread::ndConntrackThread()
 
     DumpConntrackTable();
 
-    if (nd_debug)
-        nd_printf("%s: Created.\n", tag.c_str());
+    nd_debug_printf("%s: Created.\n", tag.c_str());
 }
 
 ndConntrackThread::~ndConntrackThread()
@@ -130,8 +129,7 @@ ndConntrackThread::~ndConntrackThread()
     for (nd_ct_flow_map::const_iterator i = ct_flow_map.begin();
         i != ct_flow_map.end(); i++) delete i->second;
 
-    if (nd_debug)
-        nd_printf("%s: Destroyed.\n", tag.c_str());
+    nd_debug_printf("%s: Destroyed.\n", tag.c_str());
 }
 
 void ndConntrackThread::DumpConntrackTable(void)
@@ -187,8 +185,7 @@ void ndConntrackThread::DumpConntrackTable(void)
 
     mnl_socket_close(nl);
 
-    if (nd_debug)
-        nd_printf("%s: pre-loaded %lu conntrack entries.\n", tag.c_str(), ct_id_map.size());
+    nd_debug_printf("%s: pre-loaded %lu conntrack entries.\n", tag.c_str(), ct_id_map.size());
 }
 
 void *ndConntrackThread::Entry(void)
@@ -218,8 +215,7 @@ void *ndConntrackThread::Entry(void)
         }
     }
 
-    if (nd_debug)
-        nd_printf("%s: Exit.\n", tag.c_str());
+    nd_debug_printf("%s: Exit.\n", tag.c_str());
     return NULL;
 }
 
@@ -283,7 +279,7 @@ void ndConntrackThread::ProcessConntrackEvent(
         nfct_snprintf(buffer, sizeof(buffer), ct, type, NFCT_O_PLAIN, NFCT_OF_TIME);
 
         if (ct_new_or_update && !ct_exists)
-            nd_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
+            nd_debug_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
 //        if (!ct_new_or_update && !ct_exists)
 //            nd_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
 //        nd_printf("%s: [%s %u] %s\n", tag.c_str(),
@@ -304,6 +300,7 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
     struct sockaddr_in *sa_src = NULL, *sa_dst = NULL;
     struct sockaddr_in6 *sa6_src = NULL, *sa6_dst = NULL;
     nd_ct_flow_map::iterator flow_iter;
+    size_t bytes = 0;
 
     if (flow->ip_version == 4)
         family = AF_INET;
@@ -312,37 +309,50 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
 
     sha1_init(&ctx);
 
+    bytes += sizeof(sa_family_t);
     sha1_write(&ctx, (const char *)&family, sizeof(sa_family_t));
+    bytes += sizeof(uint8_t);
     sha1_write(&ctx, (const char *)&flow->ip_protocol, sizeof(uint8_t));
 
     switch (family) {
     case AF_INET:
-        sha1_write(&ctx, (const char*)&flow->lower_addr.s_addr,
-            sizeof(uint32_t));
-        sha1_write(&ctx, (const char*)&flow->upper_addr.s_addr,
-            sizeof(uint32_t));
+        bytes += sizeof(struct in_addr);
+        sha1_write(&ctx,
+            (const char *)&flow->lower_addr, sizeof(struct in_addr));
+        bytes += sizeof(struct in_addr);
+        sha1_write(&ctx,
+            (const char *)&flow->upper_addr, sizeof(struct in_addr));
         break;
     case AF_INET6:
-        sha1_write(&ctx, (const char*)&flow->lower_addr6.s6_addr,
-            sizeof(uint32_t) * 4);
-        sha1_write(&ctx, (const char*)&flow->upper_addr6.s6_addr,
-            sizeof(uint32_t) * 4);
+        bytes += sizeof(struct in6_addr);
+        sha1_write(&ctx,
+            (const char *)&flow->lower_addr6, sizeof(struct in6_addr));
+        bytes += sizeof(struct in6_addr);
+        sha1_write(&ctx,
+            (const char *)&flow->upper_addr6, sizeof(struct in6_addr));
         break;
     }
 
+    bytes += sizeof(uint16_t);
     sha1_write(&ctx,
         (const char *)&flow->lower_port, sizeof(uint16_t));
+    bytes += sizeof(uint16_t);
     sha1_write(&ctx,
         (const char *)&flow->upper_port, sizeof(uint16_t));
 
     _digest = sha1_result(&ctx);
     digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
 
+    nd_printf("Hashed %lu bytes (classify).\n", bytes);
+
     Lock();
 
     flow_iter = ct_flow_map.find(digest);
-    if (flow_iter != ct_flow_map.end())
-        nd_printf("%s: Flow found in conntrack map.\n", tag.c_str());
+    if (flow_iter != ct_flow_map.end()) {
+        nd_printf("%s: Flow found in conntrack map!\n", tag.c_str());
+    }
+    else
+        nd_printf("%s: Flow NOT found in conntrack map! (%u entries)\n", tag.c_str(), ct_flow_map.size());
 
     Unlock();
 }
@@ -455,14 +465,10 @@ void ndConntrackFlow::Update(struct nf_conntrack *ct)
         break;
     }
 
-    if (nfct_attr_is_set(ct, ATTR_ORIG_PORT_SRC)) {
-        memcpy(&orig_port[ndCT_DIR_SRC],
-            nfct_get_attr(ct, ATTR_ORIG_PORT_SRC), sizeof(uint16_t));
-    }
-    if (nfct_attr_is_set(ct, ATTR_ORIG_PORT_DST)) {
-        memcpy(&orig_port[ndCT_DIR_DST],
-            nfct_get_attr(ct, ATTR_ORIG_PORT_DST), sizeof(uint16_t));
-    }
+    if (nfct_attr_is_set(ct, ATTR_ORIG_PORT_SRC))
+        orig_port[ndCT_DIR_SRC] = nfct_get_attr_u16(ct, ATTR_ORIG_PORT_SRC);
+    if (nfct_attr_is_set(ct, ATTR_ORIG_PORT_DST))
+        orig_port[ndCT_DIR_DST] = nfct_get_attr_u16(ct, ATTR_ORIG_PORT_DST);
 
     switch (af) {
     case AF_INET:
@@ -527,14 +533,10 @@ void ndConntrackFlow::Update(struct nf_conntrack *ct)
         break;
     }
 
-    if (nfct_attr_is_set(ct, ATTR_REPL_PORT_SRC)) {
-        memcpy(&repl_port[ndCT_DIR_SRC],
-            nfct_get_attr(ct, ATTR_REPL_PORT_SRC), sizeof(uint16_t));
-    }
-    if (nfct_attr_is_set(ct, ATTR_REPL_PORT_DST)) {
-        memcpy(&repl_port[ndCT_DIR_DST],
-            nfct_get_attr(ct, ATTR_REPL_PORT_DST), sizeof(uint16_t));
-    }
+    if (nfct_attr_is_set(ct, ATTR_REPL_PORT_SRC))
+        repl_port[ndCT_DIR_SRC] = nfct_get_attr_u16(ct, ATTR_REPL_PORT_SRC);
+    if (nfct_attr_is_set(ct, ATTR_REPL_PORT_DST))
+        repl_port[ndCT_DIR_DST] = nfct_get_attr_u16(ct, ATTR_REPL_PORT_DST);
 
     Hash();
 }
@@ -565,10 +567,13 @@ void ndConntrackFlow::Hash(void)
     uint8_t *_digest;
     struct sockaddr_in *sa_src = NULL, *sa_dst = NULL;
     struct sockaddr_in6 *sa6_src = NULL, *sa6_dst = NULL;
+    size_t bytes = 0;
 
     sha1_init(&ctx);
 
+    bytes += sizeof(sa_family_t);
     sha1_write(&ctx, (const char *)&l3_proto, sizeof(sa_family_t));
+    bytes += sizeof(uint8_t);
     sha1_write(&ctx, (const char *)&l4_proto, sizeof(uint8_t));
 
     switch (orig_addr[ndCT_DIR_SRC]->ss_family) {
@@ -576,57 +581,69 @@ void ndConntrackFlow::Hash(void)
         sa_src = (struct sockaddr_in *)&orig_addr[ndCT_DIR_SRC];
         sa_dst = (struct sockaddr_in *)&orig_addr[ndCT_DIR_DST];
         addr_cmp = memcmp(
-            &sa_src->sin_addr.s_addr, &sa_dst->sin_addr.s_addr,
-            sizeof(uint32_t));
+            &sa_src->sin_addr, &sa_dst->sin_addr, sizeof(in_addr));
         if (addr_cmp < 0) {
-            sha1_write(&ctx, (const char*)&sa_src->sin_addr.s_addr,
-                sizeof(uint32_t));
-            sha1_write(&ctx, (const char*)&sa_dst->sin_addr.s_addr,
-                sizeof(uint32_t));
+            bytes += sizeof(struct in_addr);
+            sha1_write(&ctx,
+                (const char *)&sa_src->sin_addr, sizeof(struct in_addr));
+            bytes += sizeof(struct in_addr);
+            sha1_write(&ctx,
+                (const char *)&sa_dst->sin_addr, sizeof(struct in_addr));
         }
         else {
-            sha1_write(&ctx, (const char*)&sa_dst->sin_addr.s_addr,
-                sizeof(uint32_t));
-            sha1_write(&ctx, (const char*)&sa_src->sin_addr.s_addr,
-                sizeof(uint32_t));
+            bytes += sizeof(struct in_addr);
+            sha1_write(&ctx,
+                (const char *)&sa_dst->sin_addr, sizeof(struct in_addr));
+            bytes += sizeof(struct in_addr);
+            sha1_write(&ctx,
+                (const char *)&sa_src->sin_addr, sizeof(struct in_addr));
         }
         break;
     case AF_INET6:
         sa6_src = (struct sockaddr_in6 *)&orig_addr[ndCT_DIR_SRC];
         sa6_dst = (struct sockaddr_in6 *)&orig_addr[ndCT_DIR_DST];
         addr_cmp = memcmp(
-            &sa6_src->sin6_addr.s6_addr, &sa6_dst->sin6_addr.s6_addr,
-            sizeof(uint32_t) * 4);
+            &sa6_src->sin6_addr, &sa6_dst->sin6_addr, sizeof(struct in6_addr));
         if (addr_cmp < 0) {
-            sha1_write(&ctx, (const char*)&sa6_src->sin6_addr.s6_addr,
-                sizeof(uint32_t) * 4);
-            sha1_write(&ctx, (const char*)&sa6_dst->sin6_addr.s6_addr,
-                sizeof(uint32_t) * 4);
+            bytes += sizeof(struct in6_addr);
+            sha1_write(&ctx, (const char *)&sa6_src->sin6_addr,
+                sizeof(struct in6_addr));
+            bytes += sizeof(struct in6_addr);
+            sha1_write(&ctx, (const char *)&sa6_dst->sin6_addr,
+                sizeof(struct in6_addr));
         }
         else {
-            sha1_write(&ctx, (const char*)&sa6_dst->sin6_addr.s6_addr,
-                sizeof(uint32_t) * 4);
-            sha1_write(&ctx, (const char*)&sa6_src->sin6_addr.s6_addr,
-                sizeof(uint32_t) * 4);
+            bytes += sizeof(struct in6_addr);
+            sha1_write(&ctx, (const char *)&sa6_dst->sin6_addr,
+                sizeof(struct in6_addr));
+            bytes += sizeof(struct in6_addr);
+            sha1_write(&ctx, (const char *)&sa6_src->sin6_addr,
+                sizeof(struct in6_addr));
         }
         break;
     }
 
     if (addr_cmp < 0) {
+        bytes += sizeof(uint16_t);
         sha1_write(&ctx,
             (const char *)&orig_port[ndCT_DIR_SRC], sizeof(uint16_t));
+        bytes += sizeof(uint16_t);
         sha1_write(&ctx,
             (const char *)&orig_port[ndCT_DIR_DST], sizeof(uint16_t));
     }
     else {
+        bytes += sizeof(uint16_t);
         sha1_write(&ctx,
             (const char *)&orig_port[ndCT_DIR_DST], sizeof(uint16_t));
+        bytes += sizeof(uint16_t);
         sha1_write(&ctx,
             (const char *)&orig_port[ndCT_DIR_SRC], sizeof(uint16_t));
     }
 
     _digest = sha1_result(&ctx);
     digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
+
+    nd_printf("Hashed %lu bytes.\n", bytes);
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

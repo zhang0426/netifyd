@@ -52,10 +52,8 @@ static void nd_ndpi_load_content_match(
     FILE *fp = fopen(nd_config.csv_content_match, "r");
 
     if (fp == NULL) {
-        if (nd_debug) {
-            nd_printf("%s: unable to open content match file: %s\n",
-                tag.c_str(), nd_config.csv_content_match);
-        }
+        nd_debug_printf("%s: unable to open content match file: %s\n",
+            tag.c_str(), nd_config.csv_content_match);
         return;
     }
 
@@ -88,10 +86,8 @@ static void nd_ndpi_load_content_match(
 
     fclose(fp);
 
-    if (nd_debug) {
-        nd_printf("%s: loaded %u content match records from: %s\n",
-            tag.c_str(), loaded, nd_config.csv_content_match);
-    }
+    nd_debug_printf("%s: loaded %u content match records from: %s\n",
+        tag.c_str(), loaded, nd_config.csv_content_match);
 }
 
 static void nd_ndpi_load_host_match(
@@ -107,10 +103,8 @@ static void nd_ndpi_load_host_match(
     FILE *fp = fopen(nd_config.csv_host_match, "r");
 
     if (fp == NULL) {
-        if (nd_debug) {
-            nd_printf("%s: unable to open host protocol file: %s\n",
-                tag.c_str(), nd_config.csv_host_match);
-        }
+        nd_debug_printf("%s: unable to open host protocol file: %s\n",
+            tag.c_str(), nd_config.csv_host_match);
         return;
     }
 
@@ -129,10 +123,8 @@ static void nd_ndpi_load_host_match(
 
         if (inet_pton(AF_INET6, ip_address, &saddr_ip6.sin6_addr) == 1) {
             // TODO: nDPI doesn't support IPv6 for host_match yet.
-            if (nd_debug) {
-                nd_printf("%s: %s: skipping IPv6 host protocol entry: %s/%hhu\n",
-                    tag.c_str(), nd_config.csv_host_match, ip_address, host_entry.cidr);
-            }
+            nd_debug_printf("%s: %s: skipping IPv6 host protocol entry: %s/%hhu\n",
+                tag.c_str(), nd_config.csv_host_match, ip_address, host_entry.cidr);
         }
         else if (inet_pton(AF_INET, ip_address, &saddr_ip4.sin_addr) == 1) {
             host_entry.network = ntohl(saddr_ip4.sin_addr.s_addr);
@@ -146,10 +138,8 @@ static void nd_ndpi_load_host_match(
 
     fclose(fp);
 
-    if (nd_debug) {
-        nd_printf("%s: loaded %u host protocol records from: %s\n",
-            tag.c_str(), loaded, nd_config.csv_host_match);
-    }
+    nd_debug_printf("%s: loaded %u host protocol records from: %s\n",
+        tag.c_str(), loaded, nd_config.csv_host_match);
 }
 
 struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
@@ -169,7 +159,7 @@ struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
 
     set_ndpi_malloc(nd_mem_alloc);
     set_ndpi_free(nd_mem_free);
-    set_ndpi_debug_function(ndpi, nd_debug_printf);
+    set_ndpi_debug_function(ndpi, ndpi_debug_printf);
 
     NDPI_PROTOCOL_BITMASK proto_all;
     NDPI_BITMASK_SET_ALL(proto_all);
@@ -178,10 +168,8 @@ struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
 
     if (nd_config.proto_file != NULL &&
         stat(nd_config.proto_file, &proto_file_stat) == 0) {
-        if (nd_debug) {
-            nd_printf("%s: loading custom protocols from: %s\n",
-                tag.c_str(), nd_config.proto_file);
-        }
+        nd_debug_printf("%s: loading custom protocols from: %s\n",
+            tag.c_str(), nd_config.proto_file);
         ndpi_load_protocols_file(ndpi, nd_config.proto_file);
     }
 

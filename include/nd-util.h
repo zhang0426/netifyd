@@ -25,7 +25,9 @@ void nd_mem_free(void *ptr);
 
 void nd_printf(const char *format, ...);
 
-void nd_debug_printf(
+void nd_debug_printf(const char *format, ...);
+
+void ndpi_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...);
 
 int nd_sha1_file(const string &filename, uint8_t *digest);

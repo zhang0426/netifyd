@@ -67,7 +67,17 @@ void nd_printf(const char *format, ...)
     pthread_mutex_unlock(nd_output_mutex);
 }
 
-void nd_debug_printf(
+void nd_debug_printf(const char *format, ...)
+{
+    if (nd_debug) {
+        va_list ap;
+        va_start(ap, format);
+        vfprintf(stderr, format, ap);
+        va_end(ap);
+    }
+}
+
+void ndpi_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...)
 {
     if (nd_debug) {

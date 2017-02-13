@@ -308,41 +308,34 @@ bool ndNetlink::ProcessEvent(void)
     unsigned added_net = 0, removed_net = 0, added_addr = 0, removed_addr = 0;
 
     while ((bytes = recv(nd, buffer, ND_NETLINK_BUFSIZ, 0)) > 0) {
-//        if (nd_debug) nd_printf("Read %ld netlink bytes.\n", bytes);
+//        nd_debug_printf("Read %ld netlink bytes.\n", bytes);
         for (nlh = (struct nlmsghdr *)buffer;
             NLMSG_OK(nlh, bytes); nlh = NLMSG_NEXT(nlh, bytes)) {
 #if 0
-            if (nd_debug) {
-                nd_printf(
-                    "NLMSG: %hu, len: %u (%u, %u), flags: 0x%x, seq: %u, pid: %u\n",
-                    nlh->nlmsg_type, nlh->nlmsg_len,
-                    NLMSG_HDRLEN, NLMSG_LENGTH(nlh->nlmsg_len),
-                    nlh->nlmsg_flags, nlh->nlmsg_seq, nlh->nlmsg_pid);
-            }
+            nd_debug_printf(
+                "NLMSG: %hu, len: %u (%u, %u), flags: 0x%x, seq: %u, pid: %u\n",
+                nlh->nlmsg_type, nlh->nlmsg_len,
+                NLMSG_HDRLEN, NLMSG_LENGTH(nlh->nlmsg_len),
+                nlh->nlmsg_flags, nlh->nlmsg_seq, nlh->nlmsg_pid);
 #endif
             switch(nlh->nlmsg_type) {
             case NLMSG_DONE:
-//                if (nd_debug)
-//                    nd_printf("End of multi-part message.\n");
+//              nd_debug_printf("End of multi-part message.\n");
                 break;
             case RTM_NEWROUTE:
-//                if (nd_debug)
-//                    nd_printf("New route.\n");
+//              nd_debug_printf("New route.\n");
                 if (AddNetwork(nlh)) added_net++;
                 break;
             case RTM_DELROUTE:
-//                if (nd_debug)
-//                    nd_printf("Removed route.\n");
+//              nd_debug_printf("Removed route.\n");
                 if (RemoveNetwork(nlh)) removed_net++;
                 break;
             case RTM_NEWADDR:
-//                if (nd_debug)
-//                    nd_printf("New interface address.\n");
+//              nd_debug_printf("New interface address.\n");
                 if (AddAddress(nlh)) added_addr++;
                 break;
             case RTM_DELADDR:
-//                if (nd_debug)
-//                    nd_printf("Removed interface address.\n");
+//              nd_debug_printf("Removed interface address.\n");
                 if (RemoveAddress(nlh)) removed_addr++;
                 break;
             case NLMSG_ERROR:
@@ -356,18 +349,17 @@ bool ndNetlink::ProcessEvent(void)
                 nd_printf("Netlink overrun!\n");
                 return false;
             default:
-                if (nd_debug)
-                    nd_printf("Ignored netlink message: %04x\n", nlh->nlmsg_type);
+                nd_debug_printf("Ignored netlink message: %04x\n", nlh->nlmsg_type);
             }
         }
     }
 
     if (nd_debug) {
         if (added_net || removed_net) {
-            nd_printf("Networks added: %d, removed: %d\n", added_net, removed_net);
+            nd_debug_printf("Networks added: %d, removed: %d\n", added_net, removed_net);
         }
         if (added_addr || removed_addr) {
-            nd_printf("Addresses added: %d, removed: %d\n", added_addr, removed_addr);
+            nd_debug_printf("Addresses added: %d, removed: %d\n", added_addr, removed_addr);
         }
 
         if (added_net || removed_net || added_addr || removed_addr) Dump();
@@ -637,7 +629,7 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
     addr.network.ss_family = AF_UNSPEC;
 
     if (rtm->rtm_type != RTN_UNICAST) {
-//        if (nd_debug) nd_printf("Ignorning non-unicast route.\n");
+//        nd_debug_printf("Ignorning non-unicast route.\n");
         return false;
     }
 
@@ -649,7 +641,7 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
         if (rtm->rtm_dst_len == 0 || rtm->rtm_dst_len == 128) return false;
         break;
     default:
-        if (nd_debug) nd_printf(
+        nd_debug_printf(
             "WARNING: Ignorning non-IPv4/6 route message: %04hx\n", rtm->rtm_family);
         return false;
     }
@@ -659,58 +651,58 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
     if (nd_debug) {
         switch (rtm->rtm_type) {
         case RTN_UNSPEC:
-            nd_printf("         Type: Unknown\n");
+            nd_debug_printf("         Type: Unknown\n");
             break;
         case RTN_UNICAST:
-            nd_printf("         Type: Gateway or direct route\n");
+            nd_debug_printf("         Type: Gateway or direct route\n");
             break;
         case RTN_LOCAL:
-            nd_printf("         Type: Local interface route\n");
+            nd_debug_printf("         Type: Local interface route\n");
             break;
         case RTN_BROADCAST:
-            nd_printf("         Type: Local broadcast route\n");
+            nd_debug_printf("         Type: Local broadcast route\n");
             break;
         case RTN_ANYCAST:
-            nd_printf("         Type: Local broadcast route (unicast)\n");
+            nd_debug_printf("         Type: Local broadcast route (unicast)\n");
             break;
         case RTN_MULTICAST:
-            nd_printf("         Type: Multicast route\n");
+            nd_debug_printf("         Type: Multicast route\n");
             break;
         case RTN_BLACKHOLE:
-            nd_printf("         Type: Packet dropping route\n");
+            nd_debug_printf("         Type: Packet dropping route\n");
             break;
         case RTN_UNREACHABLE:
-            nd_printf("         Type: An unreachable destination\n");
+            nd_debug_printf("         Type: An unreachable destination\n");
             break;
         case RTN_PROHIBIT:
-            nd_printf("         Type: Packet rejection route\n");
+            nd_debug_printf("         Type: Packet rejection route\n");
             break;
         case RTN_THROW:
-            nd_printf("         Type: Continue routing lookup in next table\n");
+            nd_debug_printf("         Type: Continue routing lookup in next table\n");
             break;
         case RTN_NAT:
-            nd_printf("         Type: NAT rule\n");
+            nd_debug_printf("         Type: NAT rule\n");
             break;
         case RTN_XRESOLVE:
-            nd_printf("         Type: External resolver (not impl)\n");
+            nd_debug_printf("         Type: External resolver (not impl)\n");
             break;
         }
 
-        nd_printf("  Dest length: %hhu\n", rtm->rtm_dst_len);
-        nd_printf("Source length: %hhu\n", rtm->rtm_src_len);
-        nd_printf("   TOS filter: %hhu\n", rtm->rtm_tos);
-        nd_printf("Routing table: %s\n",
+        nd_debug_printf("  Dest length: %hhu\n", rtm->rtm_dst_len);
+        nd_debug_printf("Source length: %hhu\n", rtm->rtm_src_len);
+        nd_debug_printf("   TOS filter: %hhu\n", rtm->rtm_tos);
+        nd_debug_printf("Routing table: %s\n",
             (rtm->rtm_table == RT_TABLE_UNSPEC) ? "Unknown" :
                 (rtm->rtm_table == RT_TABLE_DEFAULT) ? "Default" :
                 (rtm->rtm_table == RT_TABLE_MAIN) ? "Main" :
                 (rtm->rtm_table == RT_TABLE_LOCAL) ? "Local" : "User");
-        nd_printf("     Protocol: %s\n",
+        nd_debug_printf("     Protocol: %s\n",
             (rtm->rtm_protocol == RTPROT_UNSPEC) ? "Unknown" :
                 (rtm->rtm_protocol == RTPROT_REDIRECT) ? "Redirect" :
                 (rtm->rtm_protocol == RTPROT_KERNEL) ? "Kernel" :
                 (rtm->rtm_protocol == RTPROT_BOOT) ? "Boot" :
                 (rtm->rtm_protocol == RTPROT_STATIC) ? "Static" : "???");
-        nd_printf("        Scope: %s\n",
+        nd_debug_printf("        Scope: %s\n",
             (rtm->rtm_scope == RT_SCOPE_UNIVERSE) ? "Global" :
                 (rtm->rtm_scope == RT_SCOPE_SITE) ? "Interior local" :
                 (rtm->rtm_scope == RT_SCOPE_LINK) ? "Route on this link" :
@@ -773,7 +765,7 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
     }
 
     if (daddr_set != true || iface.size() == 0) {
-//        if (nd_debug) nd_printf("Route message: %saddress set, %siface name set\n",
+//        nd_printf("Route message: %saddress set, %siface name set\n",
 //            (daddr_set != true) ? "No " : "", (iface.size() == 0) ? "No" : "");
         return false;
     }
@@ -836,7 +828,7 @@ bool ndNetlink::ParseMessage(struct ifaddrmsg *addrm, size_t offset,
         }
     }
 
-//    if (nd_debug) nd_printf("%s: %sddress set\n", ifname, (addr_set) ? "A" : "No a");
+//    nd_debug_printf("%s: %sddress set\n", ifname, (addr_set) ? "A" : "No a");
     return addr_set;
 }
 
@@ -912,13 +904,13 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
     if (ParseMessage(
         static_cast<struct rtmsg *>(NLMSG_DATA(nlh)),
         RTM_PAYLOAD(nlh), iface, addr) == false) {
-//        if (nd_debug) nd_printf("Remove network parse error\n");
+//        nd_debug_printf("Remove network parse error\n");
         return false;
     }
 
     ndNetlinkNetworks::iterator i = networks.find(iface);
     if (i == networks.end()) {
-        if (nd_debug) nd_printf("WARNING: Couldn't find interface in networks map: %s\n",
+        nd_debug_printf("WARNING: Couldn't find interface in networks map: %s\n",
             iface.c_str());
         return false;
     }
@@ -940,10 +932,10 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
     pthread_mutex_unlock(lock->second);
 
 //    if (nd_debug) {
-//        nd_printf("WARNING: Couldn't find network address in map: %s, ",
+//        nd_debug_printf("WARNING: Couldn't find network address in map: %s, ",
 //            iface.c_str());
 //        print_address(&addr.network);
-//        nd_printf("/%hhu\n", addr.length);
+//        nd_debug_printf("/%hhu\n", addr.length);
 //    }
 
     return removed;
@@ -1039,10 +1031,8 @@ bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
 
     ndNetlinkAddresses::iterator i = addresses.find(iface);
     if (i == addresses.end()) {
-        if (nd_debug) {
-            nd_printf("WARNING: Couldn't find interface in addresses map: %s\n",
-                iface.c_str());
-        }
+        nd_debug_printf("WARNING: Couldn't find interface in addresses map: %s\n",
+            iface.c_str());
         return false;
     }
 

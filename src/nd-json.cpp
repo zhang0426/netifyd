@@ -540,8 +540,7 @@ void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *j
         break;
     case ndJSON_CFG_TYPE_NULL:
     default:
-        if (nd_debug)
-            nd_printf("Invalid config type: %d\n", type);
+        nd_debug_printf("Invalid config type: %d\n", type);
         return;
     }
 
@@ -566,8 +565,7 @@ void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *j
         }
 
         if (jentry == NULL) {
-            if (nd_debug)
-                nd_printf("Premature end of JSON array: %s\n", jkey.c_str());
+            nd_debug_printf("Premature end of JSON array: %s\n", jkey.c_str());
             break;
         }
     }
