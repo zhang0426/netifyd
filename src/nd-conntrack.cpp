@@ -26,6 +26,7 @@
 
 #include <sys/stat.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 
 #include <unistd.h>
 #include <errno.h>
@@ -35,6 +36,9 @@
 #include <string.h>
 #include <time.h>
 #include <arpa/inet.h>
+#include <linux/if_ether.h>
+#include <linux/netlink.h>
+#include <json.h>
 
 #include <libmnl/libmnl.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -45,6 +49,9 @@ using namespace std;
 
 #include "netifyd.h"
 #include "nd-util.h"
+#include "nd-netlink.h"
+#include "nd-json.h"
+#include "nd-flow.h"
 #include "nd-thread.h"
 #include "nd-conntrack.h"
 
@@ -77,7 +84,7 @@ static int nd_ct_netlink_callback(const struct nlmsghdr *nlh, void *data)
 }
 
 ndConntrackThread::ndConntrackThread()
-    : ctfd(-1), cth(NULL), terminate(false), cb_registered(-1), lock(NULL),
+    : ctfd(-1), cth(NULL), terminate(false), cb_registered(-1),
     ndThread("nd-conntrack", -1)
 {
     int rc;
@@ -102,14 +109,6 @@ ndConntrackThread::ndConntrackThread()
             __PRETTY_FUNCTION__, "nfct_callback_register", errno);
     }
 
-    lock = new pthread_mutex_t;
-    if ((rc = pthread_mutex_init(lock, NULL)) != 0) {
-        delete lock;
-        lock = NULL;
-        throw ndConntrackSystemException(
-            __PRETTY_FUNCTION__, "pthread_mutex_init", rc);
-    }
-
     DumpConntrackTable();
 
     if (nd_debug)
@@ -128,11 +127,8 @@ ndConntrackThread::~ndConntrackThread()
         nfct_close(cth);
     }
 
-    if (lock != NULL) {
-        pthread_mutex_destroy(lock);
-        delete lock;
-        lock = NULL;
-    }
+    for (nd_ct_flow_map::const_iterator i = ct_flow_map.begin();
+        i != ct_flow_map.end(); i++) delete i->second;
 
     if (nd_debug)
         nd_printf("%s: Destroyed.\n", tag.c_str());
@@ -230,144 +226,407 @@ void *ndConntrackThread::Entry(void)
 void ndConntrackThread::ProcessConntrackEvent(
     enum nf_conntrack_msg_type type, struct nf_conntrack *ct)
 {
-    sha1 ctx;
-    string digest;
-    uint8_t *_digest;
-    sa_family_t af;
+    bool ct_exists = false, ct_new_or_update = false;
+    uint32_t id = nfct_get_attr_u32(ct, ATTR_ID);
+    ndConntrackFlow *ct_flow = NULL;
+    nd_ct_id_map::iterator id_iter = ct_id_map.find(id);
+    nd_ct_flow_map::iterator flow_iter;
 
-    if (!nfct_attr_is_set(ct, ATTR_ORIG_L3PROTO)) {
-        nd_printf("%s: ATTR_ORIG_L3PROTO not set.\n", tag.c_str());
-        return;
-    }
-
-    af = nfct_get_attr_u8(ct, ATTR_ORIG_L3PROTO);
-    if (af != AF_INET && af != AF_INET6) {
-        nd_printf("%s: Unsupported address familty: %d\n", tag.c_str(), af);
-        return;
-    }
-
-    sha1_init(&ctx);
-    sha1_write(&ctx, (const char *)&af, sizeof(sa_family_t));
-
-    switch (af) {
-    case AF_INET:
-        if (nfct_attr_is_set(ct, ATTR_ORIG_IPV4_SRC)) {
-            sha1_write(&ctx,
-                (const char *)nfct_get_attr(ct, ATTR_ORIG_IPV4_SRC),
-                sizeof(uint32_t));
+    if (id_iter == ct_id_map.end()) {
+        try {
+            ct_flow = new ndConntrackFlow(ct);
         }
-        if (nfct_attr_is_set(ct, ATTR_ORIG_IPV4_DST)) {
-            sha1_write(&ctx,
-                (const char *)nfct_get_attr(ct, ATTR_ORIG_IPV4_DST),
-                sizeof(uint32_t));
-        }
-        break;
-    case AF_INET6:
-        if (nfct_attr_is_set(ct, ATTR_ORIG_IPV6_SRC)) {
-            sha1_write(&ctx,
-                (const char *)nfct_get_attr(ct, ATTR_ORIG_IPV6_SRC),
-                sizeof(uint32_t) * 4);
-        }
-        if (nfct_attr_is_set(ct, ATTR_ORIG_IPV6_DST)) {
-            sha1_write(&ctx,
-                (const char *)nfct_get_attr(ct, ATTR_ORIG_IPV6_DST),
-                sizeof(uint32_t) * 4);
-        }
-        break;
-    default:
-        nd_printf("%s: Unsupported address familty: %d\n", tag.c_str(), af);
-        return;
-    }
-
-    if (nfct_attr_is_set(ct, ATTR_ORIG_PORT_SRC)) {
-        sha1_write(&ctx,
-            (const char *)nfct_get_attr(ct, ATTR_ORIG_PORT_SRC), sizeof(uint16_t));
-    }
-    if (nfct_attr_is_set(ct, ATTR_ORIG_PORT_DST)) {
-        sha1_write(&ctx,
-            (const char *)nfct_get_attr(ct, ATTR_ORIG_PORT_DST), sizeof(uint16_t));
-    }
-
-    if ((nfct_get_attr_u32(ct, ATTR_STATUS) & IPS_SEEN_REPLY) &&
-        nfct_attr_is_set(ct, ATTR_REPL_L3PROTO)) {
-
-        af = nfct_get_attr_u8(ct, ATTR_REPL_L3PROTO);
-        sha1_write(&ctx, (const char *)&af, sizeof(sa_family_t));
-
-        switch (af) {
-        case AF_INET:
-            if (nfct_attr_is_set(ct, ATTR_REPL_IPV4_SRC)) {
-                sha1_write(&ctx,
-                    (const char *)nfct_get_attr(ct, ATTR_REPL_IPV4_SRC),
-                    sizeof(uint32_t));
-            }
-            if (nfct_attr_is_set(ct, ATTR_REPL_IPV4_DST)) {
-                sha1_write(&ctx,
-                    (const char *)nfct_get_attr(ct, ATTR_REPL_IPV4_DST),
-                    sizeof(uint32_t));
-            }
-            break;
-        case AF_INET6:
-            if (nfct_attr_is_set(ct, ATTR_REPL_IPV6_SRC)) {
-                sha1_write(&ctx,
-                    (const char *)nfct_get_attr(ct, ATTR_REPL_IPV6_SRC),
-                    sizeof(uint32_t) * 4);
-            }
-            if (nfct_attr_is_set(ct, ATTR_REPL_IPV6_DST)) {
-                sha1_write(&ctx,
-                    (const char *)nfct_get_attr(ct, ATTR_REPL_IPV6_DST),
-                    sizeof(uint32_t) * 4);
-            }
-            break;
-        default:
-            nd_printf("%s: Unsupported address familty: %d\n", tag.c_str(), af);
+        catch (ndConntrackFlowException &e) {
+            nd_printf("%s: %s.\n", tag.c_str(), e.what());
             return;
         }
+
+        ct_id_map[id] = ct_flow->digest;
+        ct_flow_map[ct_flow->digest] = ct_flow;
+        ct_new_or_update = true;
     }
+    else {
+        ct_exists = true;
+        flow_iter = ct_flow_map.find(id_iter->second);
 
-    if (nfct_attr_is_set(ct, ATTR_REPL_PORT_SRC)) {
-        sha1_write(&ctx,
-            (const char *)nfct_get_attr(ct, ATTR_REPL_PORT_SRC), sizeof(uint16_t));
+        if (type & NFCT_T_DESTROY) {
+            if (flow_iter != ct_flow_map.end()) {
+                delete flow_iter->second;
+                ct_flow_map.erase(flow_iter);
+            }
+            ct_id_map.erase(id_iter);
+        }
+        else {
+            if (flow_iter == ct_flow_map.end()) {
+                nd_printf("%s: Connection tracking flow not found! [%u]\n",
+                    tag.c_str(), id);
+                ct_id_map.erase(id_iter);
+                return;
+            }
+
+            ct_new_or_update = true;
+            ct_flow = flow_iter->second;
+            ct_flow->Update(ct);
+
+            if (ct_flow->digest != id_iter->second) {
+                nd_printf("%s: [%u] Connection tracking flow hash changed!\n",
+                    tag.c_str(), id);
+                ct_flow_map.erase(flow_iter);
+                ct_flow_map[ct_flow->digest] = ct_flow;
+                ct_id_map[id] = ct_flow->digest;
+            }
+        }
     }
-    if (nfct_attr_is_set(ct, ATTR_REPL_PORT_DST)) {
-        sha1_write(&ctx,
-            (const char *)nfct_get_attr(ct, ATTR_REPL_PORT_DST), sizeof(uint16_t));
-    }
-
-    _digest = sha1_result(&ctx);
-    digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
-
-    pthread_mutex_lock(lock);
-
-    bool ct_new_or_update = true, ct_exists = false;
-    uint32_t id = nfct_get_attr_u32(ct, ATTR_ID);
-    nd_ct_id_map::iterator i = ct_id_map.find(id);
-
-    if (i != ct_id_map.end()) ct_exists = true;
-
-    if (type & NFCT_T_DESTROY) {
-        ct_new_or_update = false;
-        if (ct_exists) ct_id_map.erase(i);
-    }
-
-    if (ct_new_or_update) ct_id_map[id] = digest;
-
-    pthread_mutex_unlock(lock);
-
+#if 1
     if (nd_debug) {
         char buffer[1024];
         nfct_snprintf(buffer, sizeof(buffer), ct, type, NFCT_O_PLAIN, NFCT_OF_TIME);
 
-        if (!ct_new_or_update && !ct_exists)
+        if (ct_new_or_update && !ct_exists)
             nd_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
-        /*
-        nd_printf("%s: [%s %u] %s\n", tag.c_str(),
-            (ct_new_or_update && !ct_exists) ?
-                "INSERT" : (ct_new_or_update && ct_exists) ?
-                "UPDATE" : (ct_exists && !ct_new_or_update) ?
-                "ERASE" : "UNKNOWN", id, buffer);
-        */
+//        if (!ct_new_or_update && !ct_exists)
+//            nd_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
+//        nd_printf("%s: [%s %u] %s\n", tag.c_str(),
+//            (ct_new_or_update && !ct_exists) ?
+//                "INSERT" : (ct_new_or_update && ct_exists) ?
+//                "UPDATE" : (ct_exists && !ct_new_or_update) ?
+//                "ERASE" : "UNKNOWN", id, buffer);
     }
+#endif
+}
+
+void ndConntrackThread::ClassifyFlow(ndFlow *flow)
+{
+    sha1 ctx;
+    string digest;
+    uint8_t *_digest;
+    sa_family_t family;
+    struct sockaddr_in *sa_src = NULL, *sa_dst = NULL;
+    struct sockaddr_in6 *sa6_src = NULL, *sa6_dst = NULL;
+    nd_ct_flow_map::iterator flow_iter;
+
+    if (flow->ip_version == 4)
+        family = AF_INET;
+    else
+        family = AF_INET6;
+
+    sha1_init(&ctx);
+
+    sha1_write(&ctx, (const char *)&family, sizeof(sa_family_t));
+    sha1_write(&ctx, (const char *)&flow->ip_protocol, sizeof(uint8_t));
+
+    switch (family) {
+    case AF_INET:
+        sha1_write(&ctx, (const char*)&flow->lower_addr.s_addr,
+            sizeof(uint32_t));
+        sha1_write(&ctx, (const char*)&flow->upper_addr.s_addr,
+            sizeof(uint32_t));
+        break;
+    case AF_INET6:
+        sha1_write(&ctx, (const char*)&flow->lower_addr6.s6_addr,
+            sizeof(uint32_t) * 4);
+        sha1_write(&ctx, (const char*)&flow->upper_addr6.s6_addr,
+            sizeof(uint32_t) * 4);
+        break;
+    }
+
+    sha1_write(&ctx,
+        (const char *)&flow->lower_port, sizeof(uint16_t));
+    sha1_write(&ctx,
+        (const char *)&flow->upper_port, sizeof(uint16_t));
+
+    _digest = sha1_result(&ctx);
+    digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
+
+    Lock();
+
+    flow_iter = ct_flow_map.find(digest);
+    if (flow_iter != ct_flow_map.end())
+        nd_printf("%s: Flow found in conntrack map.\n", tag.c_str());
+
+    Unlock();
+}
+
+ndConntrackFlow::ndConntrackFlow(struct nf_conntrack *ct)
+    : l3_proto(0), l4_proto(0)
+{
+    orig_port[ndCT_DIR_SRC] = 0;
+    orig_port[ndCT_DIR_DST] = 0;
+    repl_port[ndCT_DIR_SRC] = 0;
+    repl_port[ndCT_DIR_DST] = 0;
+    orig_addr[ndCT_DIR_SRC] = NULL;
+    orig_addr[ndCT_DIR_DST] = NULL;
+    repl_addr[ndCT_DIR_SRC] = NULL;
+    repl_addr[ndCT_DIR_DST] = NULL;
+
+    Update(ct);
+}
+
+ndConntrackFlow::~ndConntrackFlow()
+{
+    if (orig_addr[ndCT_DIR_SRC] != NULL) delete orig_addr[ndCT_DIR_SRC];
+    if (orig_addr[ndCT_DIR_DST] != NULL) delete orig_addr[ndCT_DIR_DST];
+    if (repl_addr[ndCT_DIR_SRC] != NULL) delete repl_addr[ndCT_DIR_SRC];
+    if (repl_addr[ndCT_DIR_DST] != NULL) delete repl_addr[ndCT_DIR_DST];
+}
+
+void ndConntrackFlow::Update(struct nf_conntrack *ct)
+{
+    struct sockaddr_storage *ss_addr = NULL;
+
+    if (!nfct_attr_is_set(ct, ATTR_ORIG_L3PROTO))
+        throw ndConntrackFlowException("ATTR_ORIG_L3PROTO not set");
+
+    sa_family_t af = l3_proto = nfct_get_attr_u8(ct, ATTR_ORIG_L3PROTO);
+    if (af != AF_INET && af != AF_INET6)
+        throw ndConntrackFlowException("Unsupported address family");
+
+    if (!nfct_attr_is_set(ct, ATTR_ORIG_L4PROTO))
+        throw ndConntrackFlowException("ATTR_ORIG_L4PROTO not set");
+
+    l4_proto = nfct_get_attr_u8(ct, ATTR_ORIG_L4PROTO);
+
+    if ((!nfct_attr_is_set(ct, ATTR_ORIG_IPV4_SRC) &&
+         !nfct_attr_is_set(ct, ATTR_ORIG_IPV6_SRC)) ||
+        (!nfct_attr_is_set(ct, ATTR_ORIG_IPV4_DST) &&
+         !nfct_attr_is_set(ct, ATTR_ORIG_IPV6_DST)))
+        throw ndConntrackFlowException("ATTR_ORIG_SRC/DST not set");
+
+    switch (af) {
+    case AF_INET:
+        if (nfct_attr_is_set(ct, ATTR_ORIG_IPV4_SRC)) {
+            if (orig_addr[ndCT_DIR_SRC] != NULL)
+                ss_addr = orig_addr[ndCT_DIR_SRC];
+            else {
+                ss_addr = new struct sockaddr_storage;
+                if (ss_addr == NULL) {
+                    throw ndConntrackSystemException(
+                        __PRETTY_FUNCTION__, "new", ENOMEM);
+                }
+                orig_addr[ndCT_DIR_SRC] = ss_addr;
+            }
+
+            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_ORIG_IPV4_SRC));
+        }
+        if (nfct_attr_is_set(ct, ATTR_ORIG_IPV4_DST)) {
+            if (orig_addr[ndCT_DIR_DST] != NULL)
+                ss_addr = orig_addr[ndCT_DIR_DST];
+            else {
+                ss_addr = new struct sockaddr_storage;
+                if (ss_addr == NULL) {
+                    throw ndConntrackSystemException(
+                        __PRETTY_FUNCTION__, "new", ENOMEM);
+                }
+                orig_addr[ndCT_DIR_DST] = ss_addr;
+            }
+
+            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_ORIG_IPV4_DST));
+        }
+        break;
+    case AF_INET6:
+        if (nfct_attr_is_set(ct, ATTR_ORIG_IPV6_SRC)) {
+            if (orig_addr[ndCT_DIR_SRC] != NULL)
+                ss_addr = orig_addr[ndCT_DIR_SRC];
+            else {
+                ss_addr = new struct sockaddr_storage;
+                if (ss_addr == NULL) {
+                    throw ndConntrackSystemException(
+                        __PRETTY_FUNCTION__, "new", ENOMEM);
+                }
+                orig_addr[ndCT_DIR_SRC] = ss_addr;
+            }
+
+            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_ORIG_IPV6_SRC));
+        }
+        if (nfct_attr_is_set(ct, ATTR_ORIG_IPV6_DST)) {
+            if (orig_addr[ndCT_DIR_DST] != NULL)
+                ss_addr = orig_addr[ndCT_DIR_DST];
+            else {
+                ss_addr = new struct sockaddr_storage;
+                if (ss_addr == NULL) {
+                    throw ndConntrackSystemException(
+                        __PRETTY_FUNCTION__, "new", ENOMEM);
+                }
+                orig_addr[ndCT_DIR_DST] = ss_addr;
+            }
+
+            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_ORIG_IPV6_DST));
+        }
+        break;
+    }
+
+    if (nfct_attr_is_set(ct, ATTR_ORIG_PORT_SRC)) {
+        memcpy(&orig_port[ndCT_DIR_SRC],
+            nfct_get_attr(ct, ATTR_ORIG_PORT_SRC), sizeof(uint16_t));
+    }
+    if (nfct_attr_is_set(ct, ATTR_ORIG_PORT_DST)) {
+        memcpy(&orig_port[ndCT_DIR_DST],
+            nfct_get_attr(ct, ATTR_ORIG_PORT_DST), sizeof(uint16_t));
+    }
+
+    switch (af) {
+    case AF_INET:
+        if (nfct_attr_is_set(ct, ATTR_REPL_IPV4_SRC)) {
+            if (repl_addr[ndCT_DIR_SRC] != NULL)
+                ss_addr = repl_addr[ndCT_DIR_SRC];
+            else {
+                ss_addr = new struct sockaddr_storage;
+                if (ss_addr == NULL) {
+                    throw ndConntrackSystemException(
+                        __PRETTY_FUNCTION__, "new", ENOMEM);
+                }
+                repl_addr[ndCT_DIR_SRC] = ss_addr;
+            }
+
+            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_REPL_IPV4_SRC));
+        }
+        if (nfct_attr_is_set(ct, ATTR_REPL_IPV4_DST)) {
+            if (repl_addr[ndCT_DIR_DST] != NULL)
+                ss_addr = repl_addr[ndCT_DIR_DST];
+            else {
+                ss_addr = new struct sockaddr_storage;
+                if (ss_addr == NULL) {
+                    throw ndConntrackSystemException(
+                        __PRETTY_FUNCTION__, "new", ENOMEM);
+                }
+                repl_addr[ndCT_DIR_DST] = ss_addr;
+            }
+
+            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_REPL_IPV4_DST));
+        }
+        break;
+    case AF_INET6:
+        if (nfct_attr_is_set(ct, ATTR_REPL_IPV6_SRC)) {
+            if (repl_addr[ndCT_DIR_SRC] != NULL)
+                ss_addr = repl_addr[ndCT_DIR_SRC];
+            else {
+                ss_addr = new struct sockaddr_storage;
+                if (ss_addr == NULL) {
+                    throw ndConntrackSystemException(
+                        __PRETTY_FUNCTION__, "new", ENOMEM);
+                }
+                repl_addr[ndCT_DIR_SRC] = ss_addr;
+            }
+
+            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_REPL_IPV6_SRC));
+        }
+        if (nfct_attr_is_set(ct, ATTR_REPL_IPV6_DST)) {
+            if (repl_addr[ndCT_DIR_DST] != NULL)
+                ss_addr = repl_addr[ndCT_DIR_DST];
+            else {
+                ss_addr = new struct sockaddr_storage;
+                if (ss_addr == NULL) {
+                    throw ndConntrackSystemException(
+                        __PRETTY_FUNCTION__, "new", ENOMEM);
+                }
+                repl_addr[ndCT_DIR_DST] = ss_addr;
+            }
+
+            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_REPL_IPV6_DST));
+        }
+        break;
+    }
+
+    if (nfct_attr_is_set(ct, ATTR_REPL_PORT_SRC)) {
+        memcpy(&repl_port[ndCT_DIR_SRC],
+            nfct_get_attr(ct, ATTR_REPL_PORT_SRC), sizeof(uint16_t));
+    }
+    if (nfct_attr_is_set(ct, ATTR_REPL_PORT_DST)) {
+        memcpy(&repl_port[ndCT_DIR_DST],
+            nfct_get_attr(ct, ATTR_REPL_PORT_DST), sizeof(uint16_t));
+    }
+
+    Hash();
+}
+
+void ndConntrackFlow::CopyAddress(sa_family_t af,
+    struct sockaddr_storage *dst, const void *src)
+{
+    struct sockaddr_in *sa = (struct sockaddr_in *)dst;
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)dst;
+
+    memset(dst, 0, sizeof(struct sockaddr_storage));
+    dst->ss_family = af;
+
+    switch (af) {
+    case AF_INET:
+        memcpy(&sa->sin_addr.s_addr, src, sizeof(uint32_t));
+        break;
+    case AF_INET6:
+        memcpy(&sa6->sin6_addr.s6_addr, src, sizeof(uint32_t) * 4);
+        break;
+    }
+}
+
+void ndConntrackFlow::Hash(void)
+{
+    sha1 ctx;
+    int addr_cmp = 0;
+    uint8_t *_digest;
+    struct sockaddr_in *sa_src = NULL, *sa_dst = NULL;
+    struct sockaddr_in6 *sa6_src = NULL, *sa6_dst = NULL;
+
+    sha1_init(&ctx);
+
+    sha1_write(&ctx, (const char *)&l3_proto, sizeof(sa_family_t));
+    sha1_write(&ctx, (const char *)&l4_proto, sizeof(uint8_t));
+
+    switch (orig_addr[ndCT_DIR_SRC]->ss_family) {
+    case AF_INET:
+        sa_src = (struct sockaddr_in *)&orig_addr[ndCT_DIR_SRC];
+        sa_dst = (struct sockaddr_in *)&orig_addr[ndCT_DIR_DST];
+        addr_cmp = memcmp(
+            &sa_src->sin_addr.s_addr, &sa_dst->sin_addr.s_addr,
+            sizeof(uint32_t));
+        if (addr_cmp < 0) {
+            sha1_write(&ctx, (const char*)&sa_src->sin_addr.s_addr,
+                sizeof(uint32_t));
+            sha1_write(&ctx, (const char*)&sa_dst->sin_addr.s_addr,
+                sizeof(uint32_t));
+        }
+        else {
+            sha1_write(&ctx, (const char*)&sa_dst->sin_addr.s_addr,
+                sizeof(uint32_t));
+            sha1_write(&ctx, (const char*)&sa_src->sin_addr.s_addr,
+                sizeof(uint32_t));
+        }
+        break;
+    case AF_INET6:
+        sa6_src = (struct sockaddr_in6 *)&orig_addr[ndCT_DIR_SRC];
+        sa6_dst = (struct sockaddr_in6 *)&orig_addr[ndCT_DIR_DST];
+        addr_cmp = memcmp(
+            &sa6_src->sin6_addr.s6_addr, &sa6_dst->sin6_addr.s6_addr,
+            sizeof(uint32_t) * 4);
+        if (addr_cmp < 0) {
+            sha1_write(&ctx, (const char*)&sa6_src->sin6_addr.s6_addr,
+                sizeof(uint32_t) * 4);
+            sha1_write(&ctx, (const char*)&sa6_dst->sin6_addr.s6_addr,
+                sizeof(uint32_t) * 4);
+        }
+        else {
+            sha1_write(&ctx, (const char*)&sa6_dst->sin6_addr.s6_addr,
+                sizeof(uint32_t) * 4);
+            sha1_write(&ctx, (const char*)&sa6_src->sin6_addr.s6_addr,
+                sizeof(uint32_t) * 4);
+        }
+        break;
+    }
+
+    if (addr_cmp < 0) {
+        sha1_write(&ctx,
+            (const char *)&orig_port[ndCT_DIR_SRC], sizeof(uint16_t));
+        sha1_write(&ctx,
+            (const char *)&orig_port[ndCT_DIR_DST], sizeof(uint16_t));
+    }
+    else {
+        sha1_write(&ctx,
+            (const char *)&orig_port[ndCT_DIR_DST], sizeof(uint16_t));
+        sha1_write(&ctx,
+            (const char *)&orig_port[ndCT_DIR_SRC], sizeof(uint16_t));
+    }
+
+    _digest = sha1_result(&ctx);
+    digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

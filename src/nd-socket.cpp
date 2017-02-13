@@ -57,6 +57,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+
 #include "ndpi_main.h"
 
 using namespace std;
@@ -67,6 +69,7 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#include "nd-conntrack.h"
 #include "nd-detection.h"
 #include "nd-socket.h"
 

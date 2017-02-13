@@ -31,6 +31,7 @@ class ndDetectionThread : public ndThread
 public:
     ndDetectionThread(const string &dev,
         ndNetlink *netlink, ndSocketThread *thread_socket,
+        ndConntrackThread *thread_conntrack,
         nd_flow_map *flow_map, nd_packet_stats *stats,
         nd_device_addrs *device_addrs = NULL, long cpu = -1);
     virtual ~ndDetectionThread();
@@ -45,6 +46,7 @@ public:
 protected:
     ndNetlink *netlink;
     ndSocketThread *thread_socket;
+    ndConntrackThread *thread_conntrack;
     pcap_t *pcap;
     char pcap_errbuf[PCAP_ERRBUF_SIZE];
     int pcap_snaplen;

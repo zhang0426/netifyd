@@ -46,6 +46,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+
 extern "C" {
 #include "ndpi_api.h"
 }
@@ -58,6 +60,7 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#include "nd-conntrack.h"
 #include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-ndpi.h"
@@ -68,13 +71,14 @@ extern ndGlobalConfig nd_config;
 
 ndDetectionThread::ndDetectionThread(const string &dev,
     ndNetlink *netlink, ndSocketThread *thread_socket,
+    ndConntrackThread *thread_conntrack,
     nd_flow_map *flow_map, nd_packet_stats *stats,
     nd_device_addrs *device_addrs, long cpu)
     : ndThread(dev, cpu), netlink(netlink), thread_socket(thread_socket),
-    pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN), pcap_datalink_type(0),
-    pkt_header(NULL), pkt_data(NULL),
-    ts_pkt_last(0), ts_last_idle_scan(0),
-    ndpi(NULL), flows(flow_map), stats(stats), device_addrs(device_addrs)
+    thread_conntrack(thread_conntrack), pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN),
+    pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
+    ts_last_idle_scan(0), ndpi(NULL), flows(flow_map), stats(stats),
+    device_addrs(device_addrs)
 {
     memset(stats, 0, sizeof(nd_packet_stats));
 
@@ -528,7 +532,18 @@ void ndDetectionThread::ProcessPacket(void)
 
         new_flow->lower_type = netlink->ClassifyAddress(tag, lower_addr);
         new_flow->upper_type = netlink->ClassifyAddress(tag, upper_addr);
+#if 1
+        usleep(50000);
+        if (thread_conntrack != NULL) {
+            if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
+             new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
+             (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
+             new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP)) {
 
+                thread_conntrack->ClassifyFlow(new_flow);
+            }
+        }
+#endif
         if (new_flow->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
                 ndpi_set_detected_protocol(

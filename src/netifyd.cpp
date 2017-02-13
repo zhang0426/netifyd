@@ -64,11 +64,11 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
-#include "nd-detection.h"
-#include "nd-socket.h"
 #ifdef _ND_USE_CONNTRACK
 #include "nd-conntrack.h"
 #endif
+#include "nd-detection.h"
+#include "nd-socket.h"
 #include "nd-upload.h"
 #include "nd-ndpi.h"
 
@@ -292,6 +292,7 @@ int nd_start_detection_threads(void)
                 (*i).second,
                 netlink,
                 (i->first) ? thread_socket : NULL,
+                (i->first) ? NULL : thread_conntrack,
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
@@ -804,9 +805,9 @@ int main(int argc, char *argv[])
         { "uuidgen", 0, 0, 'U' },
         { "protocols", 0, 0, 'P' },
         { "device-address", 0, 0, 'A' },
-        { "protocol-file", 0, 0, 'f' },
+        { "custom-match", 1, 0, 'f' },
         { "content-match", 1, 0, 'C' },
-        { "host-protocol", 1, 0, 'H' },
+        { "host-match", 1, 0, 'H' },
         { "hash-file", 1, 0, 'S' },
 
         { NULL, 0, 0, 0 }

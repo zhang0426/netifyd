@@ -112,14 +112,21 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         p = ndpi_get_proto_name(ndpi, detected_protocol.protocol);
 
     nd_printf(
-        "%s: %s%s: %s:%hu <-> %s:%hu [Host: %s] [SSL/C: %s] [SSL/S: %s]\n", tag, p,
+        "%6s: [%c%c] %s %s:%hu <> %s:%hu%s%s%s%s%s%s%s\n",
+        tag,
         (detection_guessed &&
-            detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN) ? " [GUESSED]" : "",
+            detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN) ? 'g' : '-',
+        ip_nat ? 'n' : '-',
+        p,
         lower_ip, ntohs(lower_port),
         upper_ip, ntohs(upper_port),
-        (host_server_name[0] != '\0') ? host_server_name : "N/A",
-        (ssl.client_cert[0] != '\0') ? ssl.client_cert : "N/A",
-        (ssl.server_cert[0] != '\0') ? ssl.server_cert : "N/A"
+        (host_server_name[0] != '\0') ? " H: " : "",
+        (host_server_name[0] != '\0') ? host_server_name : "",
+        (ssl.client_cert[0] != '\0' || ssl.server_cert[0] != '\0') ? " SSL" : "",
+        (ssl.client_cert[0] != '\0') ? " C: " : "",
+        (ssl.client_cert[0] != '\0') ? ssl.client_cert : "",
+        (ssl.server_cert[0] != '\0') ? " S: " : "",
+        (ssl.server_cert[0] != '\0') ? ssl.server_cert : ""
     );
 }
 

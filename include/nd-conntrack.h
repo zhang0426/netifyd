@@ -32,8 +32,44 @@ public:
         : ndSystemException(where_arg, what_arg, why_arg) { }
 };
 
-typedef map<uint32_t, string> nd_ct_id_map;
-typedef map<string, uint32_t> nd_ct_flow_map;
+class ndConntrackFlowException : public runtime_error
+{
+public:
+    explicit ndConntrackFlowException(const string &what_arg)
+        : runtime_error(what_arg) { }
+};
+
+enum ndConntrackFlowDirection
+{
+    ndCT_DIR_SRC = 0,
+    ndCT_DIR_DST = 1
+};
+
+class ndConntrackFlow
+{
+public:
+    ndConntrackFlow(struct nf_conntrack *ct);
+    virtual ~ndConntrackFlow();
+
+    void Update(struct nf_conntrack *ct);
+
+protected:
+    friend class ndConntrackThread;
+
+    void CopyAddress(sa_family_t af, struct sockaddr_storage *dst, const void *src);
+    void Hash(void);
+
+    string digest;
+    sa_family_t l3_proto;
+    uint8_t l4_proto;
+    uint16_t orig_port[2];
+    uint16_t repl_port[2];
+    struct sockaddr_storage *orig_addr[2];
+    struct sockaddr_storage *repl_addr[2];
+};
+
+typedef unordered_map<uint32_t, string> nd_ct_id_map;
+typedef unordered_map<string, ndConntrackFlow *> nd_ct_flow_map;
 
 class ndConntrackThread : public ndThread
 {
@@ -48,6 +84,8 @@ public:
     void ProcessConntrackEvent(
         enum nf_conntrack_msg_type type, struct nf_conntrack *ct);
 
+    void ClassifyFlow(ndFlow *flow);
+
 protected:
     void DumpConntrackTable(void);
 
@@ -55,7 +93,6 @@ protected:
     nfct_handle *cth;
     bool terminate;
     int cb_registered;
-    pthread_mutex_t *lock;
     nd_ct_id_map ct_id_map;
     nd_ct_flow_map ct_flow_map;
 };
