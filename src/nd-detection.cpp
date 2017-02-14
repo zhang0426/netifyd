@@ -531,10 +531,25 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->upper_type = netlink->ClassifyAddress(tag, upper_addr);
 
         if (thread_conntrack != NULL) {
+            switch (new_flow->ip_version) {
+            case 4:
+                inet_ntop(AF_INET, &new_flow->lower_addr.s_addr,
+                    new_flow->lower_ip, INET_ADDRSTRLEN);
+                inet_ntop(AF_INET, &new_flow->upper_addr.s_addr,
+                    new_flow->upper_ip, INET_ADDRSTRLEN);
+                break;
+
+            case 6:
+                inet_ntop(AF_INET6, &new_flow->lower_addr6.s6_addr,
+                    new_flow->lower_ip, INET6_ADDRSTRLEN);
+                inet_ntop(AF_INET6, &new_flow->upper_addr6.s6_addr,
+                    new_flow->upper_ip, INET6_ADDRSTRLEN);
+                break;
+            }
             if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
-             new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
-             (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
-             new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP)) {
+                new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
+                (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
+                new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP)) {
 
                 thread_conntrack->ClassifyFlow(new_flow);
             }

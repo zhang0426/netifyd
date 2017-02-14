@@ -89,6 +89,9 @@ public:
 protected:
     void DumpConntrackTable(void);
 
+    void PrintFlow(ndFlow *flow, string &text);
+    void PrintFlow(ndConntrackFlow *flow, string &text);
+
     int ctfd;
     nfct_handle *cth;
     bool terminate;
