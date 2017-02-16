@@ -396,8 +396,10 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
     string digest;
     uint8_t *_digest;
     sa_family_t family;
-    struct sockaddr_in *sa_src = NULL, *sa_dst = NULL;
-    struct sockaddr_in6 *sa6_src = NULL, *sa6_dst = NULL;
+    struct sockaddr_in *sa_orig_src = NULL, *sa_orig_dst = NULL;
+    struct sockaddr_in *sa_repl_src = NULL, *sa_repl_dst = NULL;
+    struct sockaddr_in6 *sa6_orig_src = NULL, *sa6_orig_dst = NULL;
+    struct sockaddr_in6 *sa6_repl_src = NULL, *sa6_repl_dst = NULL;
     nd_ct_flow_map::iterator flow_iter;
 
     if (flow->ip_version == 4)
@@ -436,8 +438,43 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
     Lock();
 
     flow_iter = ct_flow_map.find(digest);
-    if (flow_iter != ct_flow_map.end()) {
-        nd_printf("%s: Flow found in conntrack map!\n", tag.c_str());
+    if (flow_iter != ct_flow_map.end() &&
+        flow_iter->second->orig_addr[ndCT_DIR_SRC] &&
+        flow_iter->second->orig_addr[ndCT_DIR_DST]) {
+        ndConntrackFlow *ct_flow = flow_iter->second;
+        switch (ct_flow->l3_proto) {
+        case AF_INET:
+            sa_orig_src = reinterpret_cast<struct sockaddr_in *>(
+                ct_flow->orig_addr[ndCT_DIR_SRC]);
+            sa_orig_dst = reinterpret_cast<struct sockaddr_in *>(
+                ct_flow->orig_addr[ndCT_DIR_DST]);
+            sa_repl_src = reinterpret_cast<struct sockaddr_in *>(
+                ct_flow->repl_addr[ndCT_DIR_SRC]);
+            sa_repl_dst = reinterpret_cast<struct sockaddr_in *>(
+                ct_flow->repl_addr[ndCT_DIR_DST]);
+
+            if (memcmp(sa_orig_src, sa_repl_dst, sizeof(struct sockaddr_in)) ||
+                memcmp(sa_orig_dst, sa_repl_src, sizeof(struct sockaddr_in)))
+                flow->ip_nat = true;
+
+            break;
+
+        case AF_INET6:
+            sa6_orig_src = reinterpret_cast<struct sockaddr_in6 *>(
+                ct_flow->orig_addr[ndCT_DIR_SRC]);
+            sa6_orig_dst = reinterpret_cast<struct sockaddr_in6 *>(
+                ct_flow->orig_addr[ndCT_DIR_DST]);
+            sa6_repl_src = reinterpret_cast<struct sockaddr_in6 *>(
+                ct_flow->repl_addr[ndCT_DIR_SRC]);
+            sa6_repl_dst = reinterpret_cast<struct sockaddr_in6 *>(
+                ct_flow->repl_addr[ndCT_DIR_DST]);
+
+            if (memcmp(sa6_orig_src, sa6_repl_dst, sizeof(struct sockaddr_in6)) ||
+                memcmp(sa6_orig_dst, sa6_repl_src, sizeof(struct sockaddr_in6)))
+                flow->ip_nat = true;
+
+            break;
+        }
     }
 
     Unlock();
