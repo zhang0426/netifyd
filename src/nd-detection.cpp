@@ -71,11 +71,16 @@ extern ndGlobalConfig nd_config;
 
 ndDetectionThread::ndDetectionThread(const string &dev,
     ndNetlink *netlink, ndSocketThread *thread_socket,
+#ifdef _ND_USE_CONNTRACK
     ndConntrackThread *thread_conntrack,
+#endif
     nd_flow_map *flow_map, nd_packet_stats *stats,
     nd_device_addrs *device_addrs, long cpu)
     : ndThread(dev, cpu), netlink(netlink), thread_socket(thread_socket),
-    thread_conntrack(thread_conntrack), pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN),
+#ifdef _ND_USE_CONNTRACK
+    thread_conntrack(thread_conntrack),
+#endif
+    pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
     ts_last_idle_scan(0), ndpi(NULL), flows(flow_map), stats(stats),
     device_addrs(device_addrs)
@@ -530,31 +535,6 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->lower_type = netlink->ClassifyAddress(tag, lower_addr);
         new_flow->upper_type = netlink->ClassifyAddress(tag, upper_addr);
 
-        if (thread_conntrack != NULL) {
-            switch (new_flow->ip_version) {
-            case 4:
-                inet_ntop(AF_INET, &new_flow->lower_addr.s_addr,
-                    new_flow->lower_ip, INET_ADDRSTRLEN);
-                inet_ntop(AF_INET, &new_flow->upper_addr.s_addr,
-                    new_flow->upper_ip, INET_ADDRSTRLEN);
-                break;
-
-            case 6:
-                inet_ntop(AF_INET6, &new_flow->lower_addr6.s6_addr,
-                    new_flow->lower_ip, INET6_ADDRSTRLEN);
-                inet_ntop(AF_INET6, &new_flow->upper_addr6.s6_addr,
-                    new_flow->upper_ip, INET6_ADDRSTRLEN);
-                break;
-            }
-            if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
-                new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
-                (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
-                new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP)) {
-
-                thread_conntrack->ClassifyFlow(new_flow);
-            }
-        }
-
         if (new_flow->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
                 ndpi_set_detected_protocol(
@@ -664,7 +644,21 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         new_flow->release();
+#ifdef _ND_USE_CONNTRACK
+        if (thread_conntrack != NULL) {
+#if 1
+            if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
+                new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
+                (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
+                new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP)) {
 
+                thread_conntrack->ClassifyFlow(new_flow);
+            }
+#else
+            thread_conntrack->ClassifyFlow(new_flow);
+#endif
+        }
+#endif
         if (nd_debug)
             new_flow->print(tag.c_str(), ndpi);
 

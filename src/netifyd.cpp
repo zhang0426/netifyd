@@ -292,7 +292,10 @@ int nd_start_detection_threads(void)
                 (*i).second,
                 netlink,
                 (i->first) ? thread_socket : NULL,
-                (i->first) ? NULL : thread_conntrack,
+#ifdef _ND_USE_CONNTRACK
+                (i->first || nd_config.disable_conntrack) ?
+                    NULL : thread_conntrack,
+#endif
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
@@ -807,6 +810,7 @@ int main(int argc, char *argv[])
         { "content-match", 1, 0, 'C' },
         { "host-match", 1, 0, 'H' },
         { "hash-file", 1, 0, 'S' },
+        { "disable-conntrack", 1, 0, 't' },
 
         { NULL, 0, 0, 0 }
     };
@@ -814,7 +818,8 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:E:j:i:c:UPA:f:H:C:S:", options, &o)) == -1) break;
+            "?hVds:I:E:j:i:c:UPA:f:H:C:S:t",
+            options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
@@ -900,6 +905,10 @@ int main(int argc, char *argv[])
                     return 0;
                 }
             }
+            break;
+        case 't':
+            nd_config.disable_conntrack = true;
+            break;
         default:
             nd_usage(1);
         }
@@ -967,8 +976,10 @@ int main(int argc, char *argv[])
 
     try {
 #ifdef _ND_USE_CONNTRACK
-        thread_conntrack = new ndConntrackThread();
-        thread_conntrack->Create();
+        if (nd_config.disable_conntrack == false) {
+            thread_conntrack = new ndConntrackThread();
+            thread_conntrack->Create();
+        }
 #endif
         thread_socket = new ndSocketThread();
         thread_socket->Create();
@@ -1110,8 +1121,10 @@ int main(int argc, char *argv[])
     thread_socket->Terminate();
     delete thread_socket;
 #ifdef _ND_USE_CONNTRACK
-    thread_conntrack->Terminate();
-    delete thread_conntrack;
+    if (nd_config.disable_conntrack == false) {
+        thread_conntrack->Terminate();
+        delete thread_conntrack;
+    }
 #endif
     pthread_mutex_destroy(nd_output_mutex);
     delete nd_output_mutex;

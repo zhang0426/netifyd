@@ -90,7 +90,8 @@ protected:
     void DumpConntrackTable(void);
 
     void PrintFlow(ndFlow *flow, string &text);
-    void PrintFlow(ndConntrackFlow *flow, string &text);
+    void PrintFlow(ndConntrackFlow *flow, string &text,
+        bool reorder = false, bool withreply = false);
 
     int ctfd;
     nfct_handle *cth;

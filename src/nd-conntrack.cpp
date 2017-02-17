@@ -275,7 +275,7 @@ void ndConntrackThread::ProcessConntrackEvent(
             }
         }
     }
-#if 1
+#if 0
     if (nd_debug) {
         char buffer[1024];
         nfct_snprintf(buffer, sizeof(buffer), ct, type, NFCT_O_PLAIN, NFCT_OF_TIME);
@@ -293,7 +293,8 @@ void ndConntrackThread::ProcessConntrackEvent(
 #endif
 }
 
-void ndConntrackThread::PrintFlow(ndConntrackFlow *flow, string &text)
+void ndConntrackThread::PrintFlow(
+    ndConntrackFlow *flow, string &text, bool reorder, bool withreply)
 {
     int addr_cmp = 0;
     ostringstream os;
@@ -311,57 +312,115 @@ void ndConntrackThread::PrintFlow(ndConntrackFlow *flow, string &text)
     case AF_INET:
         sa_src = (struct sockaddr_in *)flow->orig_addr[ndCT_DIR_SRC];
         sa_dst = (struct sockaddr_in *)flow->orig_addr[ndCT_DIR_DST];
-        addr_cmp = memcmp(
-            &sa_src->sin_addr, &sa_dst->sin_addr, sizeof(in_addr));
-        if (addr_cmp < 0) {
-            inet_ntop(AF_INET, &sa_src->sin_addr.s_addr,
-                ip, INET_ADDRSTRLEN);
-            os << ", lower_ip: " << ip;
-            inet_ntop(AF_INET, &sa_dst->sin_addr.s_addr,
-                ip, INET_ADDRSTRLEN);
-            os << ", upper_ip: " << ip;
+        if (reorder) {
+            addr_cmp = memcmp(&sa_src->sin_addr,
+                &sa_dst->sin_addr, sizeof(in_addr));
+            if (addr_cmp < 0) {
+                inet_ntop(AF_INET, &sa_src->sin_addr.s_addr,
+                    ip, INET_ADDRSTRLEN);
+                os << ", lower_ip: " << ip;
+                inet_ntop(AF_INET, &sa_dst->sin_addr.s_addr,
+                    ip, INET_ADDRSTRLEN);
+                os << ", upper_ip: " << ip;
+            }
+            else {
+                inet_ntop(AF_INET, &sa_dst->sin_addr.s_addr,
+                    ip, INET_ADDRSTRLEN);
+                os << ", lower_ip: " << ip;
+                inet_ntop(AF_INET, &sa_src->sin_addr.s_addr,
+                    ip, INET_ADDRSTRLEN);
+                os << ", upper_ip: " << ip;
+            }
         }
         else {
-            inet_ntop(AF_INET, &sa_dst->sin_addr.s_addr,
-                ip, INET_ADDRSTRLEN);
-            os << ", lower_ip: " << ip;
             inet_ntop(AF_INET, &sa_src->sin_addr.s_addr,
                 ip, INET_ADDRSTRLEN);
-            os << ", upper_ip: " << ip;
+            os << ", src_ip: " << ip;
+            inet_ntop(AF_INET, &sa_dst->sin_addr.s_addr,
+                ip, INET_ADDRSTRLEN);
+            os << ", dst_ip: " << ip;
         }
         break;
     case AF_INET6:
         sa6_src = (struct sockaddr_in6 *)flow->orig_addr[ndCT_DIR_SRC];
         sa6_dst = (struct sockaddr_in6 *)flow->orig_addr[ndCT_DIR_DST];
-        addr_cmp = memcmp(
-            &sa6_src->sin6_addr, &sa6_dst->sin6_addr, sizeof(struct in6_addr));
-        if (addr_cmp < 0) {
-            inet_ntop(AF_INET6, &sa6_src->sin6_addr.s6_addr,
-                ip, INET6_ADDRSTRLEN);
-            os << ", lower_ip: " << ip;
-            inet_ntop(AF_INET6, &sa6_dst->sin6_addr.s6_addr,
-                ip, INET6_ADDRSTRLEN);
-            os << ", upper_ip: " << ip;
+        if (reorder) {
+            addr_cmp = memcmp(&sa6_src->sin6_addr,
+                &sa6_dst->sin6_addr, sizeof(struct in6_addr));
+            if (addr_cmp < 0) {
+                inet_ntop(AF_INET6, &sa6_src->sin6_addr.s6_addr,
+                    ip, INET6_ADDRSTRLEN);
+                os << ", lower_ip: " << ip;
+                inet_ntop(AF_INET6, &sa6_dst->sin6_addr.s6_addr,
+                    ip, INET6_ADDRSTRLEN);
+                os << ", upper_ip: " << ip;
+            }
+            else {
+                inet_ntop(AF_INET6, &sa6_dst->sin6_addr.s6_addr,
+                    ip, INET6_ADDRSTRLEN);
+                os << ", lower_ip: " << ip;
+                inet_ntop(AF_INET6, &sa6_src->sin6_addr.s6_addr,
+                    ip, INET6_ADDRSTRLEN);
+                os << ", upper_ip: " << ip;
+            }
         }
         else {
-            inet_ntop(AF_INET6, &sa6_dst->sin6_addr.s6_addr,
-                ip, INET6_ADDRSTRLEN);
-            os << ", lower_ip: " << ip;
             inet_ntop(AF_INET6, &sa6_src->sin6_addr.s6_addr,
                 ip, INET6_ADDRSTRLEN);
-            os << ", upper_ip: " << ip;
+            os << ", src_ip: " << ip;
+            inet_ntop(AF_INET6, &sa6_dst->sin6_addr.s6_addr,
+                ip, INET6_ADDRSTRLEN);
+            os << ", dst_ip: " << ip;
         }
         break;
     }
 
-    if (addr_cmp < 0) {
-        os << ", lower_port: " << ntohs(flow->orig_port[ndCT_DIR_SRC]);
-        os << ", upper_port: " << ntohs(flow->orig_port[ndCT_DIR_DST]);
+    if (reorder) {
+        if (addr_cmp < 0) {
+            os << ", lower_port: " << ntohs(flow->orig_port[ndCT_DIR_SRC]);
+            os << ", upper_port: " << ntohs(flow->orig_port[ndCT_DIR_DST]);
+        }
+        else {
+            os << ", lower_port: " << ntohs(flow->orig_port[ndCT_DIR_DST]);
+            os << ", upper_port: " << ntohs(flow->orig_port[ndCT_DIR_SRC]);
+        }
     }
     else {
-        os << ", lower_port: " << ntohs(flow->orig_port[ndCT_DIR_DST]);
-        os << ", upper_port: " << ntohs(flow->orig_port[ndCT_DIR_SRC]);
+        os << ", src_port: " << ntohs(flow->orig_port[ndCT_DIR_SRC]);
+        os << ", dst_port: " << ntohs(flow->orig_port[ndCT_DIR_DST]);
     }
+
+    if (!withreply ||
+        !flow->repl_addr[ndCT_DIR_SRC] || !flow->repl_addr[ndCT_DIR_DST]) {
+        text = os.str();
+        return;
+    }
+
+    switch (flow->repl_addr[ndCT_DIR_SRC]->ss_family) {
+    case AF_INET:
+        sa_src = (struct sockaddr_in *)flow->repl_addr[ndCT_DIR_SRC];
+        sa_dst = (struct sockaddr_in *)flow->repl_addr[ndCT_DIR_DST];
+        inet_ntop(AF_INET, &sa_src->sin_addr.s_addr,
+            ip, INET_ADDRSTRLEN);
+        os << ", repl_src_ip: " << ip;
+        inet_ntop(AF_INET, &sa_dst->sin_addr.s_addr,
+            ip, INET_ADDRSTRLEN);
+        os << ", repl_dst_ip: " << ip;
+        break;
+    case AF_INET6:
+        sa6_src = (struct sockaddr_in6 *)flow->repl_addr[ndCT_DIR_SRC];
+        sa6_dst = (struct sockaddr_in6 *)flow->repl_addr[ndCT_DIR_DST];
+        inet_ntop(AF_INET6, &sa6_src->sin6_addr.s6_addr,
+            ip, INET6_ADDRSTRLEN);
+        os << ", repl_src_ip: " << ip;
+        inet_ntop(AF_INET6, &sa6_dst->sin6_addr.s6_addr,
+            ip, INET6_ADDRSTRLEN);
+        os << ", repl_dst_ip: " << ip;
+        break;
+    }
+
+    os << ", repl_src_port: " << ntohs(flow->repl_port[ndCT_DIR_SRC]);
+    os << ", repl_dst_port: " << ntohs(flow->repl_port[ndCT_DIR_DST]);
 
     text = os.str();
 }
@@ -439,9 +498,11 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
 
     flow_iter = ct_flow_map.find(digest);
     if (flow_iter != ct_flow_map.end() &&
-        flow_iter->second->orig_addr[ndCT_DIR_SRC] &&
-        flow_iter->second->orig_addr[ndCT_DIR_DST]) {
+        flow_iter->second->repl_addr[ndCT_DIR_SRC] &&
+        flow_iter->second->repl_addr[ndCT_DIR_DST]) {
+
         ndConntrackFlow *ct_flow = flow_iter->second;
+
         switch (ct_flow->l3_proto) {
         case AF_INET:
             sa_orig_src = reinterpret_cast<struct sockaddr_in *>(
@@ -452,7 +513,13 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
                 ct_flow->repl_addr[ndCT_DIR_SRC]);
             sa_repl_dst = reinterpret_cast<struct sockaddr_in *>(
                 ct_flow->repl_addr[ndCT_DIR_DST]);
-
+#if 0
+            {
+                string flow_text;
+                PrintFlow(ct_flow, flow_text, false, true);
+                nd_debug_printf("%s: %s\n", tag.c_str(), flow_text.c_str());
+            }
+#endif
             if (memcmp(sa_orig_src, sa_repl_dst, sizeof(struct sockaddr_in)) ||
                 memcmp(sa_orig_dst, sa_repl_src, sizeof(struct sockaddr_in)))
                 flow->ip_nat = true;
@@ -468,7 +535,13 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
                 ct_flow->repl_addr[ndCT_DIR_SRC]);
             sa6_repl_dst = reinterpret_cast<struct sockaddr_in6 *>(
                 ct_flow->repl_addr[ndCT_DIR_DST]);
-
+#if 0
+            {
+                string flow_text;
+                PrintFlow(ct_flow, flow_text, false, true);
+                nd_debug_printf("%s: %s\n", tag.c_str(), flow_text.c_str());
+            }
+#endif
             if (memcmp(sa6_orig_src, sa6_repl_dst, sizeof(struct sockaddr_in6)) ||
                 memcmp(sa6_orig_dst, sa6_repl_src, sizeof(struct sockaddr_in6)))
                 flow->ip_nat = true;
@@ -698,8 +771,12 @@ void ndConntrackFlow::Hash(void)
 
     switch (orig_addr[ndCT_DIR_SRC]->ss_family) {
     case AF_INET:
-        sa_src = (struct sockaddr_in *)orig_addr[ndCT_DIR_SRC];
-        sa_dst = (struct sockaddr_in *)orig_addr[ndCT_DIR_DST];
+        sa_src = repl_addr[ndCT_DIR_SRC] ?
+            (struct sockaddr_in *)repl_addr[ndCT_DIR_SRC] :
+            (struct sockaddr_in *)orig_addr[ndCT_DIR_SRC];
+        sa_dst = repl_addr[ndCT_DIR_DST] ?
+            (struct sockaddr_in *)repl_addr[ndCT_DIR_DST] :
+            (struct sockaddr_in *)orig_addr[ndCT_DIR_DST];
         addr_cmp = memcmp(
             &sa_src->sin_addr, &sa_dst->sin_addr, sizeof(in_addr));
         if (addr_cmp < 0) {
@@ -716,8 +793,12 @@ void ndConntrackFlow::Hash(void)
         }
         break;
     case AF_INET6:
-        sa6_src = (struct sockaddr_in6 *)orig_addr[ndCT_DIR_SRC];
-        sa6_dst = (struct sockaddr_in6 *)orig_addr[ndCT_DIR_DST];
+        sa6_src = repl_addr[ndCT_DIR_SRC] ?
+            (struct sockaddr_in6 *)repl_addr[ndCT_DIR_SRC] :
+            (struct sockaddr_in6 *)orig_addr[ndCT_DIR_SRC];
+        sa6_dst = repl_addr[ndCT_DIR_DST] ?
+            (struct sockaddr_in6 *)repl_addr[ndCT_DIR_DST] :
+            (struct sockaddr_in6 *)orig_addr[ndCT_DIR_DST];
         addr_cmp = memcmp(
             &sa6_src->sin6_addr, &sa6_dst->sin6_addr, sizeof(struct in6_addr));
         if (addr_cmp < 0) {
@@ -737,15 +818,15 @@ void ndConntrackFlow::Hash(void)
 
     if (addr_cmp < 0) {
         sha1_write(&ctx,
-            (const char *)&orig_port[ndCT_DIR_SRC], sizeof(uint16_t));
+            (const char *)&repl_port[ndCT_DIR_SRC], sizeof(uint16_t));
         sha1_write(&ctx,
-            (const char *)&orig_port[ndCT_DIR_DST], sizeof(uint16_t));
+            (const char *)&repl_port[ndCT_DIR_DST], sizeof(uint16_t));
     }
     else {
         sha1_write(&ctx,
-            (const char *)&orig_port[ndCT_DIR_DST], sizeof(uint16_t));
+            (const char *)&repl_port[ndCT_DIR_DST], sizeof(uint16_t));
         sha1_write(&ctx,
-            (const char *)&orig_port[ndCT_DIR_SRC], sizeof(uint16_t));
+            (const char *)&repl_port[ndCT_DIR_SRC], sizeof(uint16_t));
     }
 
     _digest = sha1_result(&ctx);
