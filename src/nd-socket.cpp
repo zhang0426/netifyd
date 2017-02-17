@@ -651,7 +651,6 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
         throw;
     }
 
-    json_object *json_flow;
     buffers[client->GetDescriptor()] = buffer;
     clients[client->GetDescriptor()] = client;
 }
