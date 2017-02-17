@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.5
-Release: 9%{dist}
+Release: 10%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -38,7 +38,7 @@ Report bugs to: https://github.com/eglooca/netify-daemon/issues
 %prep
 %setup -q
 ./autogen.sh
-%{configure} --with-pic=inih,ndpi
+%{configure} --with-pic=inih,ndpi --enable-conntrack
 
 # Build
 %build

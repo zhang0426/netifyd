@@ -2,7 +2,7 @@
 
 Name: @PACKAGE_TARNAME@
 Version: @PACKAGE_VERSION@
-Release: 9%{dist}
+Release: 10%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -38,7 +38,7 @@ Report bugs to: @PACKAGE_BUGREPORT@
 %prep
 %setup -q
 ./autogen.sh
-%{configure} --with-pic=inih,ndpi
+%{configure} --with-pic=inih,ndpi --enable-conntrack
 
 # Build
 %build
