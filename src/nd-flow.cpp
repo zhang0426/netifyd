@@ -149,7 +149,7 @@ json_object *ndFlow::json_encode(const string &device,
     nd_sha1_to_string((const uint8_t *)digest_bin.c_str(), digest);
     json.AddObject(json_flow, "digest", digest);
 
-    json.AddObject(json_flow, "ip_nat", false);
+    json.AddObject(json_flow, "ip_nat", ip_nat);
 
     json.AddObject(json_flow, "ip_version", (int32_t)ip_version);
 
