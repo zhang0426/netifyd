@@ -49,11 +49,11 @@ static void nd_ndpi_load_content_match(
     unsigned loaded = 0, line = 1;
     char header[1024], *match, *name;
     ndpi_protocol_match content_match;
-    FILE *fp = fopen(nd_config.csv_content_match, "r");
+    FILE *fp = fopen(nd_config.conf_content_match, "r");
 
     if (fp == NULL) {
         nd_debug_printf("%s: unable to open content match file: %s\n",
-            tag.c_str(), nd_config.csv_content_match);
+            tag.c_str(), nd_config.conf_content_match);
         return;
     }
 
@@ -67,7 +67,7 @@ static void nd_ndpi_load_content_match(
             " \"%m[0-9A-z*.-]\" , \"%m[0-9A-z_.()-]\" , %u\n",
             &match, &name, &content_match.protocol_id)) != 3) {
             nd_printf("%s: %s: parse error at line #%u [%d]\n",
-                tag.c_str(), nd_config.csv_content_match, line, rc);
+                tag.c_str(), nd_config.conf_content_match, line, rc);
             if (rc >= 1) free(match);
             if (rc >= 2) free(name);
             break;
@@ -87,7 +87,7 @@ static void nd_ndpi_load_content_match(
     fclose(fp);
 
     nd_debug_printf("%s: loaded %u content match records from: %s\n",
-        tag.c_str(), loaded, nd_config.csv_content_match);
+        tag.c_str(), loaded, nd_config.conf_content_match);
 }
 
 static void nd_ndpi_load_host_match(
@@ -100,11 +100,11 @@ static void nd_ndpi_load_host_match(
     struct sockaddr_in6 saddr_ip6;
     unsigned loaded = 0, line = 1;
     ndpi_network host_entry;
-    FILE *fp = fopen(nd_config.csv_host_match, "r");
+    FILE *fp = fopen(nd_config.conf_host_match, "r");
 
     if (fp == NULL) {
         nd_debug_printf("%s: unable to open host protocol file: %s\n",
-            tag.c_str(), nd_config.csv_host_match);
+            tag.c_str(), nd_config.conf_host_match);
         return;
     }
 
@@ -116,7 +116,7 @@ static void nd_ndpi_load_host_match(
             " \"%m[0-9A-f:.]\" , %hhu , %hhu\n",
             &ip_address, &host_entry.cidr, &host_entry.value)) != 3) {
             nd_printf("%s: %s: parse error at line #%u [%d]\n",
-                tag.c_str(), nd_config.csv_host_match, line, rc);
+                tag.c_str(), nd_config.conf_host_match, line, rc);
             if (rc >= 1) free(ip_address);
             break;
         }
@@ -124,7 +124,7 @@ static void nd_ndpi_load_host_match(
         if (inet_pton(AF_INET6, ip_address, &saddr_ip6.sin6_addr) == 1) {
             // TODO: nDPI doesn't support IPv6 for host_match yet.
             nd_debug_printf("%s: %s: skipping IPv6 host protocol entry: %s/%hhu\n",
-                tag.c_str(), nd_config.csv_host_match, ip_address, host_entry.cidr);
+                tag.c_str(), nd_config.conf_host_match, ip_address, host_entry.cidr);
         }
         else if (inet_pton(AF_INET, ip_address, &saddr_ip4.sin_addr) == 1) {
             host_entry.network = ntohl(saddr_ip4.sin_addr.s_addr);
@@ -139,12 +139,12 @@ static void nd_ndpi_load_host_match(
     fclose(fp);
 
     nd_debug_printf("%s: loaded %u host protocol records from: %s\n",
-        tag.c_str(), loaded, nd_config.csv_host_match);
+        tag.c_str(), loaded, nd_config.conf_host_match);
 }
 
 struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
 {
-    struct stat proto_file_stat;
+    struct stat conf_custom_match_stat;
     struct ndpi_detection_module_struct *ndpi = NULL;
 
     ndpi = ndpi_init_detection_module();
@@ -166,11 +166,13 @@ struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
 
     ndpi_set_protocol_detection_bitmask2(ndpi, &proto_all);
 
-    if (nd_config.proto_file != NULL &&
-        stat(nd_config.proto_file, &proto_file_stat) == 0) {
-        nd_debug_printf("%s: loading custom protocols from: %s\n",
-            tag.c_str(), nd_config.proto_file);
-        ndpi_load_protocols_file(ndpi, nd_config.proto_file);
+    if (nd_config.conf_custom_match != NULL &&
+        stat(nd_config.conf_custom_match, &conf_custom_match_stat) == 0) {
+        nd_debug_printf("%s: loading custom protocols from%s: %s\n",
+            tag.c_str(),
+            nd_config.conf_custom_match_override ? " override" : "",
+            nd_config.conf_custom_match);
+        ndpi_load_protocols_file(ndpi, nd_config.conf_custom_match);
     }
 
     return ndpi;

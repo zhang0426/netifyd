@@ -664,6 +664,7 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (thread_socket) {
             ndJson json;
+
             json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
             json.AddObject(NULL, "interface", tag);
             json_object *json_flow = new_flow->json_encode(
@@ -673,6 +674,7 @@ void ndDetectionThread::ProcessPacket(void)
             string json_string;
             json.ToString(json_string, false);
             json_string.append("\n");
+
             thread_socket->QueueWrite(json_string);
 
             json.Destroy();
@@ -694,12 +696,12 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         ts_last_idle_scan = ts_pkt_last;
-/*
+#if 0
         if (purged > 0) {
-            nd_printf("%s: Purged %lu idle flows (%lu active)\n",
+            nd_debug_printf("%s: Purged %lu idle flows (%lu active)\n",
                 tag.c_str(), purged, flows->size());
         }
-*/
+#endif
     }
 }
 

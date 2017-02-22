@@ -28,7 +28,7 @@
 
 #define ND_CONF_FILE_NAME       "/etc/netifyd.conf"
 
-#define ND_JSON_VERSION         1.3     // JSON format version
+#define ND_JSON_VERSION         1.4     // JSON format version
 #define ND_JSON_FILE_NAME       "/var/lib/netifyd/netifyd.json"
 #define ND_JSON_FILE_USER       "root"
 #define ND_JSON_FILE_GROUP      "webconfig"
@@ -62,10 +62,9 @@
 #define PACKAGE_URL             "http://www.egloo.ca/"
 #endif
 
-#define ND_CSV_CONTENT_MATCH    "/var/lib/netifyd/app-content-match.csv"
-#define ND_CSV_HOST_MATCH       "/var/lib/netifyd/app-host-match.csv"
-
+#define ND_CONF_CONTENT_MATCH   "/var/lib/netifyd/app-content-match.csv"
 #define ND_CONF_CUSTOM_MATCH    "/var/lib/netifyd/custom-match.conf"
+#define ND_CONF_HOST_MATCH      "/var/lib/netifyd/app-host-match.csv"
 
 #include "nd-sha1.h"
 
@@ -82,12 +81,15 @@ typedef struct {
     unsigned update_interval;
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
-    char *proto_file;
-    char *csv_host_match;
-    char *csv_content_match;
-    uint8_t digest_host_match[SHA1_DIGEST_LENGTH];
-    uint8_t digest_custom_match[SHA1_DIGEST_LENGTH];
+    char *conf_content_match;
+    bool conf_content_match_override;
+    char *conf_custom_match;
+    bool conf_custom_match_override;
+    char *conf_host_match;
+    bool conf_host_match_override;
     uint8_t digest_content_match[SHA1_DIGEST_LENGTH];
+    uint8_t digest_custom_match[SHA1_DIGEST_LENGTH];
+    uint8_t digest_host_match[SHA1_DIGEST_LENGTH];
     vector<uint8_t *> mac_filter_list;
     bool disable_conntrack;
 } ndGlobalConfig;

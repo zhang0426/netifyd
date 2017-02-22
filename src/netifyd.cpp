@@ -650,7 +650,7 @@ static void nd_dump_protocols(void)
     struct ndpi_detection_module_struct *ndpi;
     ndpi = nd_ndpi_init("netifyd");
 
-    printf("%s\n", nd_config.csv_host_match);
+    printf("%s\n", nd_config.conf_host_match);
 
     for (int i = 0; i < (int)ndpi->ndpi_num_supported_protocols; i++)
         printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
@@ -785,9 +785,9 @@ int main(int argc, char *argv[])
 
     memset(&nd_config, 0, sizeof(ndGlobalConfig));
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
-    nd_config.proto_file = strdup(ND_CONF_CUSTOM_MATCH);
-    nd_config.csv_host_match = strdup(ND_CSV_HOST_MATCH);
-    nd_config.csv_content_match = strdup(ND_CSV_CONTENT_MATCH);
+    nd_config.conf_content_match = strdup(ND_CONF_CONTENT_MATCH);
+    nd_config.conf_custom_match = strdup(ND_CONF_CUSTOM_MATCH);
+    nd_config.conf_host_match = strdup(ND_CONF_HOST_MATCH);
 
     nd_output_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_output_mutex, NULL);
@@ -879,17 +879,20 @@ int main(int argc, char *argv[])
             }
             device_addresses.push_back(make_pair(last_device, optarg));
             break;
-        case 'f':
-            free(nd_config.proto_file);
-            nd_config.proto_file = strdup(optarg);
-            break;
         case 'C':
-            free(nd_config.csv_content_match);
-            nd_config.csv_content_match = strdup(optarg);
+            free(nd_config.conf_content_match);
+            nd_config.conf_content_match = strdup(optarg);
+            nd_config.conf_content_match_override = true;
+            break;
+        case 'f':
+            free(nd_config.conf_custom_match);
+            nd_config.conf_custom_match = strdup(optarg);
+            nd_config.conf_custom_match_override = true;
             break;
         case 'H':
-            free(nd_config.csv_host_match);
-            nd_config.csv_host_match = strdup(optarg);
+            free(nd_config.conf_host_match);
+            nd_config.conf_host_match = strdup(optarg);
+            nd_config.conf_host_match_override = true;
             break;
         case 'S':
             {
@@ -956,11 +959,11 @@ int main(int argc, char *argv[])
     memset(&totals, 0, sizeof(nd_packet_stats));
 
     nd_sha1_file(
-        nd_config.csv_content_match, nd_config.digest_content_match);
+        nd_config.conf_content_match, nd_config.digest_content_match);
     nd_sha1_file(
-        nd_config.proto_file, nd_config.digest_custom_match);
+        nd_config.conf_custom_match, nd_config.digest_custom_match);
     nd_sha1_file(
-        nd_config.csv_host_match, nd_config.digest_host_match);
+        nd_config.conf_host_match, nd_config.digest_host_match);
 
     sigfillset(&sigset);
     //sigdelset(&sigset, SIGPROF);

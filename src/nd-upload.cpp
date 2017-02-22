@@ -440,11 +440,14 @@ void ndUploadThread::ProcessResponse(void)
         nd_debug_printf("%s: upload successful (w/config).\n", tag.c_str());
         json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
 
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH))
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH) &&
+            !nd_config.conf_content_match_override == false)
             ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH))
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH) &&
+            !nd_config.conf_custom_match_override == false)
             ExportConfig(ndJSON_CFG_TYPE_CUSTOM_MATCH, json_config);
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_MATCH))
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_MATCH) &&
+            !nd_config.conf_host_match_override == false)
             ExportConfig(ndJSON_CFG_TYPE_HOST_MATCH, json_config);
 
         kill(getpid(), SIGHUP);
@@ -506,17 +509,17 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
 
     switch (type) {
     case ndJSON_CFG_TYPE_CONTENT_MATCH:
-        fp = fopen(nd_config.csv_content_match, "w");
+        fp = fopen(nd_config.conf_content_match, "w");
         config_type_string = "content match";
         entries = config->GetContentMatchCount();
         break;
     case ndJSON_CFG_TYPE_CUSTOM_MATCH:
-        fp = fopen(nd_config.proto_file, "w");
+        fp = fopen(nd_config.conf_custom_match, "w");
         config_type_string = "custom protos";
         entries = config->GetCustomMatchCount();
         break;
     case ndJSON_CFG_TYPE_HOST_MATCH:
-        fp = fopen(nd_config.csv_host_match, "w");
+        fp = fopen(nd_config.conf_host_match, "w");
         config_type_string = "host protocol";
         entries = config->GetHostMatchCount();
         break;
@@ -540,7 +543,7 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         }
         fclose(fp);
         nd_sha1_file(
-            nd_config.csv_content_match, nd_config.digest_content_match);
+            nd_config.conf_content_match, nd_config.digest_content_match);
         break;
     case ndJSON_CFG_TYPE_CUSTOM_MATCH:
         custom_match = config->GetFirstCustomMatchEntry();
@@ -551,7 +554,7 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         }
         fclose(fp);
         nd_sha1_file(
-            nd_config.proto_file, nd_config.digest_custom_match);
+            nd_config.conf_custom_match, nd_config.digest_custom_match);
         break;
     case ndJSON_CFG_TYPE_HOST_MATCH:
         fprintf(fp, "\"ip_address\",\"ip_prefix\",\"application_id\"\n");
@@ -578,7 +581,7 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         }
         fclose(fp);
         nd_sha1_file(
-            nd_config.csv_host_match, nd_config.digest_host_match);
+            nd_config.conf_host_match, nd_config.digest_host_match);
         break;
     default:
         fclose(fp);
