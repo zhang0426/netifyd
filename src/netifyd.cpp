@@ -1,5 +1,5 @@
 // Netify Daemon
-// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
+// Copyright (C) 2015-2017 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -100,7 +100,7 @@ static void nd_usage(int rc = 0, bool version = false)
 {
     cerr << "Netify Daemon v" << PACKAGE_VERSION << "/";
     cerr << fixed << showpoint << setprecision(1) << ND_JSON_VERSION << endl;
-    cerr << "Copyright (C) 2015-2016 eGloo Incorporated"
+    cerr << "Copyright (C) 2015-2017 eGloo Incorporated"
          <<  endl << "[" << GIT_RELEASE << " " << GIT_DATE << "]" << endl;
     if (version) {
         cerr << endl <<

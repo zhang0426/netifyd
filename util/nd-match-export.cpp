@@ -1,5 +1,5 @@
 // Netify Content Match Export Tool
-// Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
+// Copyright (C) 2015-2017 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ static bool nd_debug = false;
 static void nd_usage(int rc = 0, bool version = false)
 {
     cerr << "Netify Content Match Export Tool v" << PACKAGE_VERSION << endl;
-    cerr << "Copyright (C) 2015-2016 eGloo Incorporated [" <<
+    cerr << "Copyright (C) 2015-2017 eGloo Incorporated [" <<
         __DATE__ <<  " " << __TIME__ << "]" << endl;
     if (version) {
         cerr <<
