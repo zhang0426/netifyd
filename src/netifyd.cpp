@@ -41,6 +41,7 @@
 #include <arpa/inet.h>
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
+#include <netdb.h>
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -187,7 +188,8 @@ static int nd_config_load(void)
         nd_config.uuid_serial = strdup(serial.c_str());
     }
 
-    string url_upload = reader.Get("netifyd", "url_upload", ND_URL_UPLOAD);
+    string url_upload = reader.Get(
+        "netifyd", "url_upload", ND_URL_UPLOAD);
     nd_config.url_upload = strdup(url_upload.c_str());
 
     nd_config.update_interval = (unsigned)reader.GetInteger(
@@ -205,8 +207,15 @@ static int nd_config_load(void)
     nd_config.ssl_use_tlsv1 = reader.GetBoolean(
         "netifyd", "ssl_use_tlsv1", false);
 
-    string uuid_realm = reader.Get("netifyd", "uuid_realm", ND_REALM_UUID_NULL);
+    string uuid_realm = reader.Get(
+        "netifyd", "uuid_realm", ND_REALM_UUID_NULL);
     nd_config.uuid_realm = strdup(uuid_realm.c_str());
+
+    nd_config.max_tcp_pkts = (unsigned)reader.GetInteger(
+        "netifyd", "max_tcp_pkts", ND_MAX_TCP_PKTS);
+
+    nd_config.max_udp_pkts = (unsigned)reader.GetInteger(
+        "netifyd", "max_udp_pkts", ND_MAX_UDP_PKTS);
 
     for (int i = 0; ; i++) {
         ostringstream os;
@@ -215,8 +224,10 @@ static int nd_config_load(void)
         if (socket_node.size() > 0) {
             os.str("");
             os << "listen_port[" << i << "]";
-            string socket_port = reader.Get("socket", os.str(), ND_SOCKET_PORT);
-            nd_config.socket_host.push_back(make_pair(socket_node, socket_port));
+            string socket_port = reader.Get(
+                "socket", os.str(), ND_SOCKET_PORT);
+            nd_config.socket_host.push_back(
+                make_pair(socket_node, socket_port));
             continue;
         }
         else {
@@ -236,20 +247,51 @@ static int nd_config_load(void)
         ostringstream os;
         os << "mac[" << i << "]";
         string mac_addr = reader.Get("filter", os.str(), "");
-        if (mac_addr.size() == _ND_STR_ALEN) {
-            uint8_t mac[ETH_ALEN], *p = mac;
-            const char *a = mac_addr.c_str();
-            for (int j = 0; j < _ND_STR_ALEN; j += 3, p++)
-                sscanf(a + j, "%2hhx", p);
-            p = new uint8_t[ETH_ALEN];
-            memcpy(p, mac, ETH_ALEN);
-            nd_config.mac_filter_list.push_back(p);
+
+        if (mac_addr.size() == 0) break;
+        if (mac_addr.size() != _ND_STR_ALEN) continue;
+
+        uint8_t mac[ETH_ALEN], *p = mac;
+        const char *a = mac_addr.c_str();
+        for (int j = 0; j < _ND_STR_ALEN; j += 3, p++)
+            sscanf(a + j, "%2hhx", p);
+        p = new uint8_t[ETH_ALEN];
+        memcpy(p, mac, ETH_ALEN);
+        nd_config.mac_filter_list.push_back(p);
+    }
+
+    for (int i = 0; ; i++) {
+        ostringstream os;
+        os << "host[" << i << "]";
+        string host_addr = reader.Get("filter", os.str(), "");
+
+        if (host_addr.size() == 0) break;
+
+        struct addrinfo hints;
+        struct addrinfo *result, *rp;
+
+        memset(&hints, 0, sizeof(struct addrinfo));
+        hints.ai_family = AF_UNSPEC;
+
+        int rc = getaddrinfo(host_addr.c_str(), NULL, &hints, &result);
+        if (rc != 0) {
+            nd_printf("host[%d]: %s: %s\n",
+                i, host_addr.c_str(), gai_strerror(rc));
             continue;
         }
 
-        break;
-    }
+        for (rp = result; rp != NULL; rp = rp->ai_next) {
+            struct sockaddr *saddr = reinterpret_cast<struct sockaddr *>(
+                new uint8_t[rp->ai_addrlen]
+            );
+            if (!saddr)
+                throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+            memcpy(saddr, rp->ai_addr, rp->ai_addrlen);
+            nd_config.host_filter_list.push_back(saddr);
+        }
 
+        freeaddrinfo(result);
+    }
 #if 0
     nd_account_id = reader.GetInteger("account", "id", 0);
     if (nd_account_id == 0) {

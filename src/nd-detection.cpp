@@ -97,6 +97,7 @@ ndDetectionThread::~ndDetectionThread()
     Join();
     if (pcap != NULL) pcap_close(pcap);
     if (ndpi != NULL) ndpi_exit_detection_module(ndpi);
+    if (device_addrs != NULL) delete device_addrs;
 
     nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
 }
@@ -503,9 +504,12 @@ void ndDetectionThread::ProcessPacket(void)
     );
 
     if (new_flow->detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN
-        || (new_flow->ip_protocol != IPPROTO_TCP && new_flow->ip_protocol != IPPROTO_UDP)
-        || (new_flow->ip_protocol == IPPROTO_UDP && new_flow->total_packets > 8)
-        || (new_flow->ip_protocol == IPPROTO_TCP && new_flow->total_packets > 10)) {
+        || (new_flow->ip_protocol != IPPROTO_TCP &&
+            new_flow->ip_protocol != IPPROTO_UDP)
+        || (new_flow->ip_protocol == IPPROTO_UDP &&
+            new_flow->total_packets > nd_config.max_udp_pkts)
+        || (new_flow->ip_protocol == IPPROTO_TCP &&
+            new_flow->total_packets > nd_config.max_tcp_pkts)) {
 
         new_flow->detection_complete = true;
 
@@ -578,7 +582,7 @@ void ndDetectionThread::ProcessPacket(void)
             "%s", new_flow->ndpi_flow->host_server_name
         );
 
-        // Sanitize server name; RFC 952 plus underscore.
+        // Sanitize host server name; RFC 952 plus underscore.
         for (int i = 0; i < HOST_NAME_MAX; i++) {
             if (!isalnum(new_flow->host_server_name[i]) &&
                 new_flow->host_server_name[i] != '-' &&

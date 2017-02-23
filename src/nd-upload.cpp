@@ -441,13 +441,13 @@ void ndUploadThread::ProcessResponse(void)
         json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
 
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH) &&
-            !nd_config.conf_content_match_override == false)
+            nd_config.conf_content_match_override == false)
             ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH) &&
-            !nd_config.conf_custom_match_override == false)
+            nd_config.conf_custom_match_override == false)
             ExportConfig(ndJSON_CFG_TYPE_CUSTOM_MATCH, json_config);
         if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_MATCH) &&
-            !nd_config.conf_host_match_override == false)
+            nd_config.conf_host_match_override == false)
             ExportConfig(ndJSON_CFG_TYPE_HOST_MATCH, json_config);
 
         kill(getpid(), SIGHUP);

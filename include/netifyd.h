@@ -24,6 +24,9 @@
 #define ND_IDLE_SCAN_TIME       10      // Idle flow scan in milliseconds
 #define ND_IDLE_FLOW_TIME       30000   // Purge idle flows older than this (30s)
 
+#define ND_MAX_TCP_PKTS         10      // Maximum number of TCP packets to process.
+#define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
+
 #define ND_PID_FILE_NAME        "/var/run/netifyd/netifyd.pid"
 
 #define ND_CONF_FILE_NAME       "/etc/netifyd.conf"
@@ -74,11 +77,14 @@ typedef struct {
     char *uuid_realm;
     char *url_upload;
     size_t max_backlog;
+    bool disable_conntrack;
     bool enable_netify_sink;
-    bool ssl_verify_peer;
     bool ssl_use_tlsv1;
+    bool ssl_verify_peer;
     char *json_filename;
     unsigned update_interval;
+    unsigned max_tcp_pkts;
+    unsigned max_udp_pkts;
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
     char *conf_content_match;
@@ -91,7 +97,7 @@ typedef struct {
     uint8_t digest_custom_match[SHA1_DIGEST_LENGTH];
     uint8_t digest_host_match[SHA1_DIGEST_LENGTH];
     vector<uint8_t *> mac_filter_list;
-    bool disable_conntrack;
+    vector<struct sockaddr *> host_filter_list;
 } ndGlobalConfig;
 
 typedef struct nd_packet_stats_t
