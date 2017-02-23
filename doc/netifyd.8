@@ -1,0 +1,41 @@
+.TH NETIFYD 8
+.SH NAME
+netifyd \- perform deep-packet inspection on network traffic
+.SH SYNOPSIS
+.B netifyd
+[\fB\-d\fR, \fB\-\-debug\fR]
+[\fB\-t\fR, \fB\-\-disable-conntrack\fR]
+[\fB\-I\fR, \fB\-\-internal\fR \fIINTERFACE\fR]
+[\fB\-E\fR, \fB\-\-external\fR \fIINTERFACE\fR]
+[\fB\-c\fR, \fB\-\-config\fR \fICONFIG\fR]
+.IR
+.SH DESCRIPTION
+.B netifyd
+provides visibility into the traffic on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.
+.SH OPTIONS
+.TP
+.BR \-d ", " \-\-debug
+Enable debug mode.  Remain in the foreground and emit debug messages.
+.TP
+.BR \-t ", " \-\-disable-conntrack
+Disable connection tracking for networks without a NAT configuration.
+.TP
+.BR \-I ", " \-\-internal=\fIINTERFACE\fR
+Capture packets on this internal (LAN) interface.  Can be specified more than once for multiple interfaces.
+.TP
+.BR \-E ", " \-\-external=\fIINTERFACE\fR
+Capture packets on this external (WAN) interface.  Can be specified more than once for multiple interfaces.
+.TP
+.BR \-c ", " \-\-config=\fICONFIG\fR
+Specify an alternate configuration file.  Default: /etc/netifyd.conf
+.SH BUGS
+Report bugs to: https://github.com/eglooca/netify-daemon/issues
+.SH COPYRIGHT
+Copyright (C) 2015-2016 eGloo Incorporated <http://www.egloo.ca>
+.SH LICENSE
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+

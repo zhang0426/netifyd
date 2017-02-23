@@ -108,5 +108,5 @@ AC_DEFINE_UNQUOTED(GIT_RELEASE, "${GIT_RELEASE}", [GIT Release])
 AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
 
 # Output files
-AC_CONFIG_FILES([Makefile deploy/Makefile src/Makefile util/Makefile netifyd.spec])
+AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec])
 AC_OUTPUT
