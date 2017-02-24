@@ -135,8 +135,6 @@ typedef struct nd_packet_stats_t
         pkt_discard_bytes += rhs.pkt_discard_bytes;
         return *this;
     }
-
-    void print(const char *tag = "");
 } nd_packet_stats;
 
 typedef unordered_map<string, vector<string> > nd_device_addrs;

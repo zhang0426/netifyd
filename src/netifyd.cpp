@@ -77,7 +77,7 @@ using namespace std;
 
 bool nd_debug = false;
 pthread_mutex_t *nd_output_mutex = NULL;
-
+static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
 static nd_devices devices;
 static nd_flows flows;
@@ -91,7 +91,6 @@ static ndConntrackThread *thread_conntrack = NULL;
 #endif
 static ndInotify *inotify = NULL;
 static ndNetlink *netlink = NULL;
-
 static char *nd_conf_filename = NULL;
 
 ndGlobalConfig nd_config;
@@ -296,7 +295,7 @@ static int nd_config_load(void)
     return 0;
 }
 
-int nd_start_detection_threads(void)
+static int nd_start_detection_threads(void)
 {
     for (nd_ifaces::iterator i = ifaces.begin();
         i != ifaces.end(); i++) {
@@ -336,7 +335,7 @@ int nd_start_detection_threads(void)
     return 0;
 }
 
-void nd_stop_detection_threads(void)
+static void nd_stop_detection_threads(void)
 {
     for (nd_ifaces::iterator i = ifaces.begin();
         i != ifaces.end(); i++) {
@@ -358,22 +357,42 @@ void nd_stop_detection_threads(void)
     stats.clear();
 }
 
-void nd_packet_stats::print(const char *tag)
+static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
 {
-    nd_printf("          RAW: %llu\n", pkt_raw);
-    nd_printf("          ETH: %llu\n", pkt_eth);
-    nd_printf("           IP: %llu\n", pkt_ip);
-    nd_printf("          TCP: %llu\n", pkt_tcp);
-    nd_printf("          UDP: %llu\n", pkt_udp);
-    nd_printf("         MPLS: %llu\n", pkt_mpls);
-    nd_printf("        PPPoE: %llu\n", pkt_pppoe);
-    nd_printf("         VLAN: %llu\n", pkt_vlan);
-    nd_printf("        Frags: %llu\n", pkt_frags);
-    nd_printf("      Largest: %lu\n", pkt_maxlen);
-    nd_printf("     IP bytes: %llu\n", pkt_ip_bytes);
-    nd_printf("   Wire bytes: %llu\n", pkt_wire_bytes);
-    nd_printf("    Discarded: %llu\n", pkt_discard);
-    nd_printf("Discard bytes: %llu\n", pkt_discard_bytes);
+    struct timespec ts_now;
+    static uint32_t flow_count_previous = 0;
+
+    nd_printf("\nCumulative Totals ");
+
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
+        nd_printf("(clock_gettime: %s):\n", strerror(errno));
+    else {
+        nd_printf("(+%lus):\n",
+            ts_now.tv_sec - nd_ts_epoch.tv_sec);
+    }
+
+    nd_printf("          RAW: %llu\n", stats.pkt_raw);
+    nd_printf("          ETH: %llu\n", stats.pkt_eth);
+    nd_printf("           IP: %llu\n", stats.pkt_ip);
+    nd_printf("          TCP: %llu\n", stats.pkt_tcp);
+    nd_printf("          UDP: %llu\n", stats.pkt_udp);
+    nd_printf("         MPLS: %llu\n", stats.pkt_mpls);
+    nd_printf("        PPPoE: %llu\n", stats.pkt_pppoe);
+    nd_printf("         VLAN: %llu\n", stats.pkt_vlan);
+    nd_printf("        Frags: %llu\n", stats.pkt_frags);
+    nd_printf("    Discarded: %llu\n", stats.pkt_discard);
+
+    nd_printf("      Largest: %lu\n", stats.pkt_maxlen);
+
+    nd_printf("     IP bytes: %llu\n", stats.pkt_ip_bytes);
+    nd_printf("   Wire bytes: %llu\n", stats.pkt_wire_bytes);
+    nd_printf("Discard bytes: %llu\n", stats.pkt_discard_bytes);
+
+    nd_printf(" Active flows: %lu (%s%d)\n\n", flow_count,
+        (flow_count > flow_count_previous) ? "+" : "",
+        int(flow_count - flow_count_previous));
+
+    flow_count_previous = flow_count;
 }
 
 static void nd_json_add_interfaces(json_object *parent)
@@ -620,11 +639,7 @@ static void nd_dump_stats(void)
 
     json.Destroy();
 
-    if (nd_debug) {
-        nd_debug_printf("\nCumulative Totals:\n");
-        totals.print();
-        nd_debug_printf(" Active flows: %lu\n\n", flow_count);
-    }
+    if (nd_debug) nd_print_stats(flow_count, totals);
 }
 
 void nd_generate_uuid(void)
@@ -975,6 +990,11 @@ int main(int argc, char *argv[])
         }
         fprintf(hpid, "%d\n", getpid());
         fclose(hpid);
+    }
+
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &nd_ts_epoch) != 0) {
+        nd_printf("Error getting epoch time: %s\n", strerror(errno));
+        return 1;
     }
 
     nd_printf("Netify Daemon v%s\n", PACKAGE_VERSION);
