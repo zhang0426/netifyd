@@ -663,6 +663,48 @@ void ndDetectionThread::ProcessPacket(void)
 #endif
         }
 #endif
+        for (vector<uint8_t *>::const_iterator i =
+            nd_config.privacy_filter_mac.begin();
+            i != nd_config.privacy_filter_mac.end() &&
+                new_flow->privacy_mask !=
+                (ndFlow::PRIVATE_LOWER | ndFlow::PRIVATE_UPPER); i++) {
+            if (! memcmp((*i), new_flow->lower_mac, ETH_ALEN))
+                new_flow->privacy_mask |= ndFlow::PRIVATE_LOWER;
+            if (! memcmp((*i), new_flow->upper_mac, ETH_ALEN))
+                new_flow->privacy_mask |= ndFlow::PRIVATE_UPPER;
+        }
+
+        for (vector<struct sockaddr *>::const_iterator i =
+            nd_config.privacy_filter_host.begin();
+            i != nd_config.privacy_filter_host.end() &&
+                new_flow->privacy_mask !=
+                (ndFlow::PRIVATE_LOWER | ndFlow::PRIVATE_UPPER); i++) {
+
+            struct sockaddr_in *sa_in;
+            struct sockaddr_in6 *sa_in6;
+
+            switch ((*i)->sa_family) {
+            case AF_INET:
+                sa_in = reinterpret_cast<struct sockaddr_in *>((*i));
+                if (! memcmp(&new_flow->lower_addr, &sa_in->sin_addr,
+                    sizeof(struct in_addr)))
+                    new_flow->privacy_mask |= ndFlow::PRIVATE_LOWER;
+                if (! memcmp(&new_flow->upper_addr, &sa_in->sin_addr,
+                    sizeof(struct in_addr)))
+                    new_flow->privacy_mask |= ndFlow::PRIVATE_UPPER;
+                break;
+            case AF_INET6:
+                sa_in6 = reinterpret_cast<struct sockaddr_in6 *>((*i));
+                if (! memcmp(&new_flow->lower_addr6, &sa_in6->sin6_addr,
+                    sizeof(struct in6_addr)))
+                    new_flow->privacy_mask |= ndFlow::PRIVATE_LOWER;
+                if (! memcmp(&new_flow->upper_addr6, &sa_in6->sin6_addr,
+                    sizeof(struct in6_addr)))
+                    new_flow->privacy_mask |= ndFlow::PRIVATE_UPPER;
+                break;
+            }
+        }
+
         if (nd_debug)
             new_flow->print(tag.c_str(), ndpi);
 

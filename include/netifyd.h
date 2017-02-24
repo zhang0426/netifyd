@@ -96,8 +96,8 @@ typedef struct {
     uint8_t digest_content_match[SHA1_DIGEST_LENGTH];
     uint8_t digest_custom_match[SHA1_DIGEST_LENGTH];
     uint8_t digest_host_match[SHA1_DIGEST_LENGTH];
-    vector<uint8_t *> mac_filter_list;
-    vector<struct sockaddr *> host_filter_list;
+    vector<uint8_t *> privacy_filter_mac;
+    vector<struct sockaddr *> privacy_filter_host;
 } ndGlobalConfig;
 
 typedef struct nd_packet_stats_t

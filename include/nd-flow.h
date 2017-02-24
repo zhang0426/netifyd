@@ -76,6 +76,13 @@ struct ndFlow
         char server_cert[ND_FLOW_SSL_CERTLEN];
     } ssl;
 
+    enum {
+        PRIVATE_LOWER = 0x01,
+        PRIVATE_UPPER = 0x02
+    };
+
+    uint8_t privacy_mask;
+
     void hash(const string &device, string &digest, bool full_hash = false);
 
     inline bool operator==(const ndFlow &f) const {

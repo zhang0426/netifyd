@@ -257,7 +257,7 @@ static int nd_config_load(void)
             sscanf(a + j, "%2hhx", p);
         p = new uint8_t[ETH_ALEN];
         memcpy(p, mac, ETH_ALEN);
-        nd_config.mac_filter_list.push_back(p);
+        nd_config.privacy_filter_mac.push_back(p);
     }
 
     for (int i = 0; ; i++) {
@@ -287,31 +287,12 @@ static int nd_config_load(void)
             if (!saddr)
                 throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
             memcpy(saddr, rp->ai_addr, rp->ai_addrlen);
-            nd_config.host_filter_list.push_back(saddr);
+            nd_config.privacy_filter_host.push_back(saddr);
         }
 
         freeaddrinfo(result);
     }
-#if 0
-    nd_account_id = reader.GetInteger("account", "id", 0);
-    if (nd_account_id == 0) {
-        cerr << "Account ID not set in: " << nd_conf_filename << endl;
-        return 0;
-    }
-    string account_key = reader.Get("account", "key", "");
-    if (account_key.size() > 0)
-        nd_account_key = strdup(account_key.c_str());
-    else {
-        cerr << "Account Key not set in: " << nd_conf_filename << endl;
-        return -1;
-    }
 
-    nd_system_id = reader.GetInteger("system", "id", 0);
-    if (nd_system_id == 0) {
-        cerr << "System ID not set in: " << nd_conf_filename << endl;
-        return -1;
-    }
-#endif
     return 0;
 }
 

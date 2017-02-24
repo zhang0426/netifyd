@@ -112,11 +112,13 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         p = ndpi_get_proto_name(ndpi, detected_protocol.protocol);
 
     nd_printf(
-        "%6s: [%c%c] %s %s:%hu <> %s:%hu%s%s%s%s%s%s%s\n",
+        "%6s: [%c%c%c%c] %s %s:%hu <o> %s:%hu%s%s%s%s%s%s%s\n",
         tag,
         (detection_guessed &&
             detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN) ? 'g' : '-',
         ip_nat ? 'n' : '-',
+        (privacy_mask & PRIVATE_LOWER) ? 'l' : '-',
+        (privacy_mask & PRIVATE_UPPER) ? 'u' : '-',
         p,
         lower_ip, ntohs(lower_port),
         upper_ip, ntohs(upper_port),
@@ -270,20 +272,43 @@ json_object *ndFlow::json_encode(const string &device,
 
     json.AddObject(json_flow, "other_type", other_type);
 
-    snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
-        lower_mac[0], lower_mac[1], lower_mac[2],
-        lower_mac[3], lower_mac[4], lower_mac[5]
-    );
+    if (privacy_mask & PRIVATE_LOWER)
+        snprintf(mac_addr, sizeof(mac_addr), "01:02:03:04:03:04");
+    else {
+        snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
+            lower_mac[0], lower_mac[1], lower_mac[2],
+            lower_mac[3], lower_mac[4], lower_mac[5]
+        );
+    }
     json.AddObject(json_flow, _lower_mac, mac_addr);
 
-    snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
-        upper_mac[0], upper_mac[1], upper_mac[2],
-        upper_mac[3], upper_mac[4], upper_mac[5]
-    );
+    if (privacy_mask & PRIVATE_UPPER)
+        snprintf(mac_addr, sizeof(mac_addr), "0a:0b:0c:0d:0e:0f");
+    else {
+        snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
+            upper_mac[0], upper_mac[1], upper_mac[2],
+            upper_mac[3], upper_mac[4], upper_mac[5]
+        );
+    }
     json.AddObject(json_flow, _upper_mac, mac_addr);
 
-    json.AddObject(json_flow, _lower_ip, lower_ip);
-    json.AddObject(json_flow, _upper_ip, upper_ip);
+    if (privacy_mask & PRIVATE_LOWER) {
+        if (ip_version == 4)
+            json.AddObject(json_flow, _lower_ip, "1.2.3.1");
+        else
+            json.AddObject(json_flow, _lower_ip, "1230::1");
+    }
+    else
+        json.AddObject(json_flow, _lower_ip, lower_ip);
+
+    if (privacy_mask & PRIVATE_UPPER) {
+        if (ip_version == 4)
+            json.AddObject(json_flow, _upper_ip, "1.2.3.2");
+        else
+            json.AddObject(json_flow, _upper_ip, "1230::2");
+    }
+    else
+        json.AddObject(json_flow, _upper_ip, upper_ip);
 
     json.AddObject(json_flow, _lower_port, (int32_t)ntohs(lower_port));
     json.AddObject(json_flow, _upper_port, (int32_t)ntohs(upper_port));
