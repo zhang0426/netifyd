@@ -5,13 +5,26 @@ netifyd \- perform deep-packet inspection on network traffic
 .B netifyd
 [\fB\-d\fR, \fB\-\-debug\fR]
 [\fB\-t\fR, \fB\-\-disable-conntrack\fR]
-[\fB\-I\fR, \fB\-\-internal\fR \fIINTERFACE\fR]
-[\fB\-E\fR, \fB\-\-external\fR \fIINTERFACE\fR]
-[\fB\-c\fR, \fB\-\-config\fR \fICONFIG\fR]
+[\fB\-I\fR, \fB\-\-internal\fR=\fIINTERFACE\fR]
+[\fB\-E\fR, \fB\-\-external\fR=\fIINTERFACE\fR]
+[\fB\-A\fR, \fB\-\-device-address\fR=\fIADDRESS\fR]
+[\fB\-c\fR, \fB\-\-config\fR=\fICONFIG\fR]
+[\fB\-s\fR, \fB\-\-serial\fR=\fIUUID\fR]
+[\fB\-f\fR, \fB\-\-custom-match\fR=\fIFILENAME\fR]
+[\fB\-C\fR, \fB\-\-content-match\fR=\fIFILENAME\fR]
+[\fB\-H\fR, \fB\-\-host-match\fR=\fIFILENAME\fR]
+.IR
+
+.B netifyd
+[\fB\-U\fR, \fB\-\-uuidgen\fR]
+.IR
+
+.B netifyd
+[\fB\-P\fR, \fB\-\-protocols\fR]
 .IR
 .SH DESCRIPTION
 .B netifyd
-provides visibility into the traffic on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.
+provides visibility into the traffic on your network along with the option to take an active role (on supported platforms) in stopping/shaping undesirable traffic from recurring on a local area network.
 .SH OPTIONS
 .TP
 .BR \-d ", " \-\-debug
@@ -26,8 +39,29 @@ Capture packets on this internal (LAN) interface.  Can be specified more than on
 .BR \-E ", " \-\-external=\fIINTERFACE\fR
 Capture packets on this external (WAN) interface.  Can be specified more than once for multiple interfaces.
 .TP
+.BR \-A ", " \-\-device-address=\fIADDRESS\fR
+For interfaces receiving mirrored traffic, use this to specify the addresses local to the previous interface (-I, or -E) parameter.  Can be specified more than once for multiple addresses.
+.TP
 .BR \-c ", " \-\-config=\fICONFIG\fR
 Specify an alternate configuration file.  Default: /etc/netifyd.conf
+.TP
+.BR \-s ", " \-\-serial=\fIUUID\fR
+Specify a client serial number (UUID).  Used for device identification with the Netify Cloud Sync server(s).  Normally, the auto-generated client UUID is used for this purpose.
+.TP
+.BR \-f ", " \-\-custom-match=\fIFILENAME\fR
+Specify an alternate custom-match configuration file.
+.TP
+.BR \-C ", " \-\-content-match=\fIFILENAME\fR
+Specify an alternate content-match configuration (CSV) file.
+.TP
+.BR \-H ", " \-\-host-match=\fIFILENAME\fR
+Specify an alternate host-match configuration (CSV) file.
+.TP
+.BR \-U ", " \-\-uuidgen
+Generate a client UUID.
+.TP
+.BR \-P ", " \-\-protocols
+Display the current protocol and service ID list.
 .SH BUGS
 Report bugs to: https://github.com/eglooca/netify-daemon/issues
 .SH COPYRIGHT
@@ -37,5 +71,4 @@ This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 
