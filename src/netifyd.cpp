@@ -246,7 +246,7 @@ static int nd_config_load(void)
     for (int i = 0; ; i++) {
         ostringstream os;
         os << "mac[" << i << "]";
-        string mac_addr = reader.Get("filter", os.str(), "");
+        string mac_addr = reader.Get("privacy_filter", os.str(), "");
 
         if (mac_addr.size() == 0) break;
         if (mac_addr.size() != _ND_STR_ALEN) continue;
@@ -263,7 +263,7 @@ static int nd_config_load(void)
     for (int i = 0; ; i++) {
         ostringstream os;
         os << "host[" << i << "]";
-        string host_addr = reader.Get("filter", os.str(), "");
+        string host_addr = reader.Get("privacy_filter", os.str(), "");
 
         if (host_addr.size() == 0) break;
 

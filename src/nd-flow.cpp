@@ -273,7 +273,7 @@ json_object *ndFlow::json_encode(const string &device,
     json.AddObject(json_flow, "other_type", other_type);
 
     if (privacy_mask & PRIVATE_LOWER)
-        snprintf(mac_addr, sizeof(mac_addr), "01:02:03:04:03:04");
+        snprintf(mac_addr, sizeof(mac_addr), "01:02:03:04:05:06");
     else {
         snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
             lower_mac[0], lower_mac[1], lower_mac[2],
