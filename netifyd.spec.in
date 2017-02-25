@@ -132,6 +132,7 @@ fi
 %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
+%{_mandir}/man5/*
 %{_mandir}/man8/*
 
 # vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
