@@ -112,7 +112,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         p = ndpi_get_proto_name(ndpi, detected_protocol.protocol);
 
     nd_printf(
-        "%6s: [%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s\n",
+        "%s: [%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s\n",
         tag,
         (detection_guessed &&
             detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN) ? 'g' : '-',

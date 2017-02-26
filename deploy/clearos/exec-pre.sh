@@ -12,7 +12,14 @@ done
 
 for ifn in $EXTIF; do
     [ -z "$ifn" ] && break
-    NETIFYD_OPTS="$NETIFYD_OPTS -E $ifn"
+    [ -f "/etc/sysconfig/network-scripts/ifcfg-${ifn}" ] &&
+        source "/etc/sysconfig/network-scripts/ifcfg-${ifn}"
+    if [ ! -z "$ETH" ]; then
+        NETIFYD_OPTS="$NETIFYD_OPTS -E $ETH -N $ifn"
+        unset ETH
+    else
+        NETIFYD_OPTS="$NETIFYD_OPTS -E $ifn"
+    fi
 done
 
 if [ -z "$NETIFYD_OPTS" ]; then

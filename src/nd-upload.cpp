@@ -50,6 +50,7 @@ using namespace std;
 #include "nd-upload.h"
 
 extern bool nd_debug;
+extern bool nd_debug_upload;
 
 extern ndGlobalConfig nd_config;
 
@@ -57,7 +58,7 @@ static int nd_curl_debug(
     CURL *ch, curl_infotype type, char *data, size_t size, void *param)
 {
     string buffer;
-    if (nd_debug == false) return 0;
+    if (nd_debug_upload == false) return 0;
 
     ndThread *thread = reinterpret_cast<ndThread *>(param);
 
@@ -116,7 +117,7 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_upload);
     curl_easy_setopt(ch, CURLOPT_POST, 1);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (nd_debug) ? ND_COOKIE_JAR : "");
+    curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (nd_debug_upload) ? ND_COOKIE_JAR : "");
     curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndUploadThread_read_data);
     curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
 #if (LIBCURL_VERSION_NUM < 0x072106)
@@ -124,7 +125,7 @@ ndUploadThread::ndUploadThread()
 #else
     curl_easy_setopt(ch, CURLOPT_ACCEPT_ENCODING, "gzip");
 #endif
-    if (nd_debug) {
+    if (nd_debug_upload) {
         curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, nd_curl_debug);
         curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
@@ -164,7 +165,7 @@ void *ndUploadThread::Entry(void)
 {
     int rc;
 
-    nd_printf("%s: thread started.\n", tag.c_str());
+    nd_debug_printf("%s: thread started.\n", tag.c_str());
 
     while (terminate == false) {
         if ((rc = pthread_mutex_lock(&lock)) != 0)
@@ -328,13 +329,15 @@ void ndUploadThread::Upload(void)
             break;
 
         case 400:
-            if (nd_debug) {
+            if (nd_debug || nd_debug_upload) {
                 FILE *hf = fopen("/tmp/rejected.json", "w");
                 if (hf != NULL) {
                     fwrite(pending.front().second.data(),
                         1, pending.front().second.size(), hf);
                     fclose(hf);
-                    nd_debug_printf("Wrote rejected payload to: /tmp/rejected.json\n");
+                    nd_debug_printf(
+                        "%s: wrote rejected payload to: /tmp/rejected.json\n",
+                        tag.c_str());
                 }
             }
             break;
@@ -393,7 +396,7 @@ string ndUploadThread::Deflate(const string &data)
     if (rc != Z_STREAM_END)
         throw ndUploadThreadException("deflate");
 
-    if (nd_debug) {
+    if (nd_debug || nd_debug_upload) {
         nd_debug_printf("%s: payload compressed: %lu -> %lu\n",
             tag.c_str(), data.size(), buffer.size());
     }
@@ -413,13 +416,14 @@ void ndUploadThread::ProcessResponse(void)
         json_type = json_factory.Parse(body_data, &json_obj);
     } catch (ndJsonParseException &e) {
         nd_printf("JSON parse error: %s\n", e.what());
-        if (nd_debug)
-            nd_debug_printf("Payload:\n\"%s\"\n", body_data.c_str());
+        if (nd_debug_upload) nd_debug_printf(
+            "%s: payload:\n\"%s\"\n", tag.c_str(), body_data.c_str());
     }
 
     switch (json_type) {
     case ndJSON_OBJ_TYPE_OK:
-        nd_debug_printf("%s: upload successful.\n", tag.c_str());
+        if (nd_debug || nd_debug_upload)
+            nd_printf("%s: upload successful.\n", tag.c_str());
         break;
     case ndJSON_OBJ_TYPE_RESULT:
         json_result = reinterpret_cast<ndJsonObjectResult *>(json_obj);
@@ -427,6 +431,7 @@ void ndUploadThread::ProcessResponse(void)
             json_result->GetCode(),
             (json_result->GetMessage().length() > 0) ?
                 json_result->GetMessage().c_str() : "(null)");
+
         if (json_result->GetCode() == ndJSON_RES_SET_REALM_UUID) {
             if (json_result->GetMessage().length() == ND_REALM_UUID_LEN
                 && SaveRealmUUID(json_result->GetMessage())) {
@@ -437,7 +442,9 @@ void ndUploadThread::ProcessResponse(void)
         }
         break;
     case ndJSON_OBJ_TYPE_CONFIG:
-        nd_debug_printf("%s: upload successful (w/config).\n", tag.c_str());
+        if (nd_debug || nd_debug_upload)
+            nd_printf("%s: upload successful (w/config).\n", tag.c_str());
+
         json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
 
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH) &&

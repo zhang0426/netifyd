@@ -30,27 +30,32 @@
 #include <unordered_map>
 #include <vector>
 
-#include <arpa/inet.h>
-#include <json.h>
-#include <linux/if_ether.h>
-#include <linux/netlink.h>
-#include <net/if.h>
-#include <netinet/ip6.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-#include <pcap/pcap.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <unistd.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <linux/if_ether.h>
+#include <linux/if_pppox.h>
+#include <linux/netlink.h>
+#include <linux/ppp_defs.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+
+#include <json.h>
+#include <pcap/pcap.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 
 extern "C" {
 #include "ndpi_api.h"
 }
+
+#define _ND_PPP_PROTOCOL(p)	((((__u8 *)(p))[0] << 8) + ((__u8 *)(p))[1])
 
 using namespace std;
 
@@ -70,13 +75,15 @@ extern bool nd_debug;
 extern ndGlobalConfig nd_config;
 
 ndDetectionThread::ndDetectionThread(const string &dev,
+    const string &netlink_dev,
     ndNetlink *netlink, ndSocketThread *thread_socket,
 #ifdef _ND_USE_CONNTRACK
     ndConntrackThread *thread_conntrack,
 #endif
     nd_flow_map *flow_map, nd_packet_stats *stats,
     nd_device_addrs *device_addrs, long cpu)
-    : ndThread(dev, cpu), netlink(netlink), thread_socket(thread_socket),
+    : ndThread(dev, cpu), netlink_dev(netlink_dev), netlink(netlink),
+    thread_socket(thread_socket),
 #ifdef _ND_USE_CONNTRACK
     thread_conntrack(thread_conntrack),
 #endif
@@ -195,7 +202,9 @@ void ndDetectionThread::ProcessPacket(void)
     const uint8_t *layer3 = NULL;
 
     uint64_t ts_pkt;
-    uint16_t type, ip_offset, ip_len, l4_len = 0;
+    uint16_t type;
+    uint16_t ppp_proto;
+    uint16_t ip_offset, ip_len, l4_len = 0;
     uint16_t frag_off = 0;
     uint8_t vlan_packet = 0;
     int addr_cmp = 0;
@@ -237,6 +246,17 @@ void ndDetectionThread::ProcessPacket(void)
         type = ntohs(hdr_eth->h_proto);
         ip_offset = sizeof(struct ethhdr);
         stats->pkt_eth++;
+
+        // STP?
+        if ((hdr_eth->h_source[0] == 0x01 && hdr_eth->h_source[1] == 0x80 &&
+            hdr_eth->h_source[2] == 0xC2) ||
+            hdr_eth->h_dest[0] == 0x01 && hdr_eth->h_dest[1] == 0x80 &&
+            hdr_eth->h_dest[2] == 0xC2) {
+            stats->pkt_discard++;
+            stats->pkt_discard_bytes += ntohs(hdr_eth->h_proto);
+            return;
+        }
+
         break;
 
     case DLT_LINUX_SLL:
@@ -269,7 +289,18 @@ void ndDetectionThread::ProcessPacket(void)
         else if (type == ETH_P_PPP_SES) {
             stats->pkt_pppoe++;
             type = ETH_P_IP;
-            ip_offset += 8;
+            ppp_proto = (uint16_t)(
+                _ND_PPP_PROTOCOL(pkt_data + ip_offset + 6)
+            );
+            if (ppp_proto != PPP_IP && ppp_proto != PPP_IPV6) {
+                stats->pkt_discard++;
+                stats->pkt_discard_bytes += pkt_header->len;
+                //nd_debug_printf("%s: discard: unsupported PPP protocol: 0x%04hx\n",
+                //    tag.c_str(), ppp_proto);
+                return;
+            }
+
+            ip_offset += PPPOE_SES_HLEN;
         }
         else
             break;
@@ -290,36 +321,44 @@ void ndDetectionThread::ProcessPacket(void)
             frag_off = ntohs(hdr_ip->frag_off);
 
         if (pkt_header->len - ip_offset < sizeof(iphdr)) {
-            // XXX: Warning: header too small
+            // XXX: header too small
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
+            //nd_debug_printf("%s: discard: header too small\n", tag.c_str());
             return;
         }
 
         if ((frag_off & 0x3FFF) != 0) {
-            // XXX: Warning: packet fragmentation not supported
+            // XXX: fragmented packets are not supported
             stats->pkt_frags++;
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
+            //nd_debug_printf("%s: discard: fragmented 0x3FFF\n", tag.c_str());
             return;
         }
 
         if ((frag_off & 0x1FFF) != 0) {
+            // XXX: fragmented packets are not supported
             stats->pkt_frags++;
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
+            //nd_debug_printf("%s: discard: fragmented 0x1FFF\n", tag.c_str());
             return;
         }
 
-        if (ip_len > pkt_header->len - ip_offset) {
+        if (ip_len > (pkt_header->len - ip_offset)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
+            //nd_debug_printf("%s: discard: ip_len[%hu] > (pkt_header->len[%hu] - ip_offset[%hu])(%hu)\n",
+            //    tag.c_str(), ip_len, pkt_header->len, ip_offset, pkt_header->len - ip_offset);
             return;
         }
 
-        if (pkt_header->len - ip_offset < ntohs(hdr_ip->tot_len)) {
+        if ((pkt_header->len - ip_offset) < ntohs(hdr_ip->tot_len)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
+            //nd_debug_printf("%s: discard: (pkt_header->len[%hu] - ip_offset[%hu](%hu)) < hdr_ip->tot_len[%hu]\n",
+            //    tag.c_str(), pkt_header->len, ip_offset, pkt_header->len - ip_offset, ntohs(hdr_ip->tot_len));
             return;
         }
 
@@ -389,6 +428,8 @@ void ndDetectionThread::ProcessPacket(void)
         // XXX: Warning: unsupported protocol version (IPv4/6 only)
         stats->pkt_discard++;
         stats->pkt_discard_bytes += pkt_header->len;
+        //nd_debug_printf("%s: discard: invalid IP protocol version: %hhx\n",
+        //    tag.c_str(), pkt_data[ip_offset]);
         return;
     }
 
@@ -435,8 +476,8 @@ void ndDetectionThread::ProcessPacket(void)
         break;
 
     default:
-        // Non-TCP/UDP protocols...
-        //nd_debug_printf(">> Non TCP/UDP protocol: %d\n", flow.ip_protocol);
+        // Non-TCP/UDP protocols, ex: ICMP...
+        //nd_debug_printf("%s: non TCP/UDP protocol: %d\n", tag.c_str(), flow.ip_protocol);
         break;
     }
 
@@ -536,8 +577,8 @@ void ndDetectionThread::ProcessPacket(void)
             upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
         }
 
-        new_flow->lower_type = netlink->ClassifyAddress(tag, lower_addr);
-        new_flow->upper_type = netlink->ClassifyAddress(tag, upper_addr);
+        new_flow->lower_type = netlink->ClassifyAddress(netlink_dev, lower_addr);
+        new_flow->upper_type = netlink->ClassifyAddress(netlink_dev, upper_addr);
 
         if (new_flow->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {

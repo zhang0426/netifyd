@@ -98,6 +98,8 @@ public:
     bool AddNetwork(sa_family_t family,
         const string &type, const string &saddr, uint8_t length);
 
+    bool AddInterface(const string &iface);
+
     bool AddAddress(sa_family_t family, const string &type, const string &saddr);
 
 protected:
@@ -113,8 +115,6 @@ protected:
         string &iface, ndNetlinkNetworkAddr &addr);
     bool ParseMessage(struct ifaddrmsg *addrm, size_t offset,
         string &iface, struct sockaddr_storage &addr);
-
-    bool AddInterface(const string &iface);
 
     bool AddNetwork(struct nlmsghdr *nlh);
     bool RemoveNetwork(struct nlmsghdr *nlh);

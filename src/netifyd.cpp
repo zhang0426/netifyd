@@ -76,6 +76,7 @@ using namespace std;
 #define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
 bool nd_debug = false;
+bool nd_debug_upload = false;
 pthread_mutex_t *nd_output_mutex = NULL;
 static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
@@ -92,6 +93,7 @@ static ndConntrackThread *thread_conntrack = NULL;
 static ndInotify *inotify = NULL;
 static ndNetlink *netlink = NULL;
 static char *nd_conf_filename = NULL;
+static map<string, string> device_netlink;
 
 ndGlobalConfig nd_config;
 
@@ -310,8 +312,15 @@ static int nd_start_detection_threads(void)
 
         for (nd_ifaces::iterator i = ifaces.begin();
             i != ifaces.end(); i++) {
+
+            map<string, string>::const_iterator j;
+            string netlink_dev = (*i).second;
+            if ((j = device_netlink.find(netlink_dev)) != device_netlink.end())
+                netlink_dev = j->second.c_str();
+
             threads[(*i).second] = new ndDetectionThread(
                 (*i).second,
+                netlink_dev,
                 netlink,
                 (i->first) ? thread_socket : NULL,
 #ifdef _ND_USE_CONNTRACK
@@ -362,7 +371,7 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
     struct timespec ts_now;
     static uint32_t flow_count_previous = 0;
 
-    nd_printf("\nCumulative Totals ");
+    nd_printf("\nCumulative Packet Totals ");
 
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
         nd_printf("(clock_gettime: %s):\n", strerror(errno));
@@ -371,24 +380,22 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
             ts_now.tv_sec - nd_ts_epoch.tv_sec);
     }
 
-    nd_printf("          RAW: %llu\n", stats.pkt_raw);
-    nd_printf("          ETH: %llu\n", stats.pkt_eth);
-    nd_printf("           IP: %llu\n", stats.pkt_ip);
-    nd_printf("          TCP: %llu\n", stats.pkt_tcp);
-    nd_printf("          UDP: %llu\n", stats.pkt_udp);
-    nd_printf("         MPLS: %llu\n", stats.pkt_mpls);
-    nd_printf("        PPPoE: %llu\n", stats.pkt_pppoe);
-    nd_printf("         VLAN: %llu\n", stats.pkt_vlan);
-    nd_printf("        Frags: %llu\n", stats.pkt_frags);
-    nd_printf("    Discarded: %llu\n", stats.pkt_discard);
-
-    nd_printf("      Largest: %lu\n", stats.pkt_maxlen);
-
-    nd_printf("     IP bytes: %llu\n", stats.pkt_ip_bytes);
-    nd_printf("   Wire bytes: %llu\n", stats.pkt_wire_bytes);
-    nd_printf("Discard bytes: %llu\n", stats.pkt_discard_bytes);
-
-    nd_printf(" Active flows: %lu (%s%d)\n\n", flow_count,
+    nd_printf("%12s: %9llu ", "RAW", stats.pkt_raw);
+    nd_printf("%12s: %9llu\n", "ETH", stats.pkt_eth);
+    nd_printf("%12s: %9llu ", "IP", stats.pkt_ip);
+    nd_printf("%12s: %9llu ", "UDP", stats.pkt_udp);
+    nd_printf("%12s: %9llu\n", "TCP", stats.pkt_tcp);
+    nd_printf("%12s: %9llu ", "MPLS", stats.pkt_mpls);
+    nd_printf("%12s: %9llu ", "PPPoE", stats.pkt_pppoe);
+    nd_printf("%12s: %9llu\n", "VLAN", stats.pkt_vlan);
+    nd_printf("%12s: %9llu ", "Frags", stats.pkt_frags);
+    nd_printf("%12s: %9llu\n", "Discarded", stats.pkt_discard);
+    nd_printf("%12s: %9lu\n", "Largest", stats.pkt_maxlen);
+    nd_printf("\nCumulative Byte Totals:\n");
+    nd_printf("%12s: %9llu ", "IP", stats.pkt_ip_bytes);
+    nd_printf("%12s: %9llu ", "Wire", stats.pkt_wire_bytes);
+    nd_printf("%12s: %9llu\n", "Discarded", stats.pkt_discard_bytes);
+    nd_printf("%12s: %9lu (%s%d)\n\n", "Active flows", flow_count,
         (flow_count > flow_count_previous) ? "+" : "",
         int(flow_count - flow_count_previous));
 
@@ -843,7 +850,8 @@ int main(int argc, char *argv[])
         { "config", 1, 0, 'c' },
         { "uuidgen", 0, 0, 'U' },
         { "protocols", 0, 0, 'P' },
-        { "device-address", 0, 0, 'A' },
+        { "device-address", 1, 0, 'A' },
+        { "device-netlink", 1, 0, 'N' },
         { "custom-match", 1, 0, 'f' },
         { "content-match", 1, 0, 'C' },
         { "host-match", 1, 0, 'H' },
@@ -856,7 +864,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:E:j:i:c:UPA:f:H:C:S:t",
+            "?hVds:I:E:j:i:c:UPA:N:f:H:C:S:t",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -916,6 +924,13 @@ int main(int argc, char *argv[])
                 exit(1);
             }
             device_addresses.push_back(make_pair(last_device, optarg));
+            break;
+        case 'N':
+            if (last_device.size() == 0) {
+                cerr << "You must specify an interface first." << endl;
+                exit(1);
+            }
+            device_netlink[last_device] = optarg;
             break;
         case 'C':
             free(nd_config.conf_content_match);
@@ -1077,6 +1092,10 @@ int main(int argc, char *argv[])
 
     try {
         netlink = new ndNetlink(ifaces);
+
+        map<string, string>::const_iterator i;
+        for (i = device_netlink.begin(); i != device_netlink.end(); i++)
+            netlink->AddInterface(i->second);
     }
     catch (exception &e) {
         nd_printf("Error creating netlink watch: %s\n", e.what());
