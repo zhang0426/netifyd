@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/usr/local/bin/bash
 
 my_dir=$(dirname "$0")
-src_dir=$(readlink --canonicalize "$my_dir/../src")
+#src_dir=$(readlink --canonicalize "$my_dir/../src")
+src_dir=$(realpath "$my_dir/../src")
 
 if [ ! -x "$src_dir/netifyd" ]; then
 	echo "$src_dir/netifyd: Not found."

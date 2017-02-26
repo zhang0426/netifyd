@@ -17,6 +17,7 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
+PKG_PROG_PKG_CONFIG([0.25])
 
 # Checks for libraries.
 AC_CHECK_LIB([pcap],
@@ -28,15 +29,16 @@ AC_CHECK_LIB([rt],
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
-# Check for optional parameters
-AC_ARG_ENABLE([conntrack],
-    [AS_HELP_STRING([--enable-conntrack], [Enable connection tracking support [default=no]])],
-    [],
-    [enable_conntrack=no])
-
 PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
 PKG_CHECK_MODULES([ZLIB], [zlib])
+
+# Check for optional parameters
+AC_ARG_ENABLE([conntrack],
+    [AS_HELP_STRING([--enable-conntrack], [Enable connection tracking support [default=yes]])],
+    [],
+    [enable_conntrack=yes])
+
 AS_IF([test "x$enable_conntrack" = "xyes"], [
     AC_DEFINE([_ND_USE_CONNTRACK], [1],
         [Define to enable connection tracking support.])
@@ -45,6 +47,32 @@ AS_IF([test "x$enable_conntrack" = "xyes"], [
     PKG_CHECK_MODULES([LIBNETFILTER_CONNTRACK], [libnetfilter_conntrack >= 1.0.4])
 ], [
     AM_CONDITIONAL(USE_CONNTRACK, false)
+])
+
+AC_ARG_ENABLE([inotify],
+    [AS_HELP_STRING([--enable-inotify], [Enable inotify file watch support [default=yes]])],
+    [],
+    [enable_netlink=yes])
+
+AS_IF([test "x$enable_inotify" = "xyes"], [
+    AC_DEFINE([_ND_USE_INOTIFY], [1],
+        [Define to enable inotify file watch support.])
+    AM_CONDITIONAL(USE_INOTIFY, true)
+], [
+    AM_CONDITIONAL(USE_INOTIFY, false)
+])
+
+AC_ARG_ENABLE([netlink],
+    [AS_HELP_STRING([--enable-netlink], [Enable Netlink socket support [default=yes]])],
+    [],
+    [enable_netlink=yes])
+
+AS_IF([test "x$enable_netlink" = "xyes"], [
+    AC_DEFINE([_ND_USE_NETLINK], [1],
+        [Define to enable Netlink socket support.])
+    AM_CONDITIONAL(USE_NETLINK, true)
+], [
+    AM_CONDITIONAL(USE_NETLINK, false)
 ])
 
 # Checks for header files.

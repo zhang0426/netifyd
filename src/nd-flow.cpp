@@ -29,9 +29,10 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-#include <linux/if_ether.h>
+//#include <linux/if_ether.h>
+#ifdef _UD_USE_NETLINK
 #include <linux/netlink.h>
-
+#endif
 #include <json.h>
 
 #include "ndpi_main.h"
@@ -40,7 +41,9 @@ using namespace std;
 
 #include "netifyd.h"
 #include "nd-util.h"
+#ifdef _UD_USE_NETLINK
 #include "nd-netlink.h"
+#endif
 #include "nd-json.h"
 #include "nd-flow.h"
 
@@ -158,7 +161,9 @@ json_object *ndFlow::json_encode(const string &device,
     json.AddObject(json_flow, "ip_protocol", (int32_t)ip_protocol);
 
     json.AddObject(json_flow, "vlan_id", (int32_t)vlan_id);
-
+#ifndef _ND_USE_NETLINK
+    other_type = "unsupported";
+#else
     if (lower_type == ndNETLINK_ATYPE_ERROR ||
         upper_type == ndNETLINK_ATYPE_ERROR) {
         other_type = "error";
@@ -269,7 +274,7 @@ json_object *ndFlow::json_encode(const string &device,
         _upper_bytes = "other_bytes";
         _upper_packets = "other_packets";
     }
-
+#endif
     json.AddObject(json_flow, "other_type", other_type);
 
     if (privacy_mask & PRIVATE_LOWER)

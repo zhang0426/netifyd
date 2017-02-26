@@ -39,9 +39,8 @@
 #include <unistd.h>
 
 #include <arpa/inet.h>
-#include <linux/if_ether.h>
-#include <linux/netlink.h>
 #include <netdb.h>
+#include <netinet/in.h>
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -60,8 +59,12 @@ using namespace std;
 
 #include "netifyd.h"
 #include "nd-util.h"
+#ifdef _UD_USE_INOTIFY
 #include "nd-inotify.h"
+#endif
+#ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
+#endif
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
@@ -87,13 +90,17 @@ static nd_threads threads;
 static nd_packet_stats totals;
 static ndUploadThread *thread_upload = NULL;
 static ndSocketThread *thread_socket = NULL;
+static char *nd_conf_filename = NULL;
 #ifdef _ND_USE_CONNTRACK
 static ndConntrackThread *thread_conntrack = NULL;
 #endif
+#ifdef _ND_USE_INOTIFY
 static ndInotify *inotify = NULL;
+#endif
+#ifdef _ND_USE_NETLINK
 static ndNetlink *netlink = NULL;
-static char *nd_conf_filename = NULL;
 static map<string, string> device_netlink;
+#endif
 
 ndGlobalConfig nd_config;
 
@@ -312,16 +319,18 @@ static int nd_start_detection_threads(void)
 
         for (nd_ifaces::iterator i = ifaces.begin();
             i != ifaces.end(); i++) {
-
+#ifdef _ND_USE_NETLINK
             map<string, string>::const_iterator j;
             string netlink_dev = (*i).second;
             if ((j = device_netlink.find(netlink_dev)) != device_netlink.end())
                 netlink_dev = j->second.c_str();
-
+#endif
             threads[(*i).second] = new ndDetectionThread(
                 (*i).second,
+#ifdef _ND_USE_NETLINK
                 netlink_dev,
                 netlink,
+#endif
                 (i->first) ? thread_socket : NULL,
 #ifdef _ND_USE_CONNTRACK
                 (i->first || nd_config.disable_conntrack) ?
@@ -372,7 +381,6 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
     static uint32_t flow_count_previous = 0;
 
     nd_printf("\nCumulative Packet Totals ");
-
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
         nd_printf("(clock_gettime: %s):\n", strerror(errno));
     else {
@@ -570,11 +578,12 @@ static void nd_json_add_file(
 
 static void nd_json_upload(ndJson *json)
 {
+#ifdef _ND_USE_INOTIFY
     if (inotify->EventOccured(ND_WATCH_HOSTS))
         nd_json_add_file(json->GetRoot(), "hosts", ND_WATCH_HOSTS);
     if (inotify->EventOccured(ND_WATCH_ETHERS))
         nd_json_add_file(json->GetRoot(), "ethers", ND_WATCH_ETHERS);
-
+#endif
     string json_string;
     json->ToString(json_string);
 
@@ -788,10 +797,10 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
             bcast_ip4.sin_addr.s_addr = htonl(word_bcast[0]);
             inet_ntop(AF_INET,
                 &bcast_ip4.sin_addr, bcastaddr, INET_ADDRSTRLEN);
-
+#ifdef _ND_USE_NETLINK
             if (! netlink->AddAddress(family, _ND_NETLINK_BROADCAST, bcastaddr))
                 nd_printf("WARNING: Error adding device address: %s\n", bcastaddr);
-
+#endif
             break;
 
         case AF_INET6:
@@ -803,7 +812,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
                 &network_ip6.sin6_addr, netaddr, INET6_ADDRSTRLEN);
             break;
         }
-
+#ifdef _ND_USE_NETLINK
         if (! netlink->AddNetwork(family, (*i).first, netaddr, _length)) {
             nd_printf("WARNING: Error adding device network: %s\n",
                 (*i).second.c_str());
@@ -812,6 +821,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
         if (! netlink->AddAddress(family, (*i).first, address)) {
             nd_printf("WARNING: Error adding device address: %s\n", address);
         }
+#endif
     }
 
     if (token != NULL) free(token);
@@ -852,7 +862,9 @@ int main(int argc, char *argv[])
         { "uuidgen", 0, 0, 'U' },
         { "protocols", 0, 0, 'P' },
         { "device-address", 1, 0, 'A' },
+#ifdef _ND_USE_NETLINK
         { "device-netlink", 1, 0, 'N' },
+#endif
         { "custom-match", 1, 0, 'f' },
         { "content-match", 1, 0, 'C' },
         { "host-match", 1, 0, 'H' },
@@ -929,6 +941,7 @@ int main(int argc, char *argv[])
             }
             device_addresses.push_back(make_pair(last_device, optarg));
             break;
+#ifdef _ND_USE_NETLINK
         case 'N':
             if (last_device.size() == 0) {
                 cerr << "You must specify an interface first." << endl;
@@ -936,6 +949,7 @@ int main(int argc, char *argv[])
             }
             device_netlink[last_device] = optarg;
             break;
+#endif
         case 'C':
             free(nd_config.conf_content_match);
             nd_config.conf_content_match = strdup(optarg);
@@ -1082,7 +1096,7 @@ int main(int argc, char *argv[])
         nd_printf("Error starting thread: %s\n", e.what());
         return 1;
     }
-
+#ifdef _ND_USE_INOTIFY
     try {
         inotify = new ndInotify();
         inotify->AddWatch(ND_WATCH_HOSTS);
@@ -1093,7 +1107,8 @@ int main(int argc, char *argv[])
         nd_printf("Error creating file watches: %s\n", e.what());
         return 1;
     }
-
+#endif
+#ifdef _ND_USE_NETLINK
     try {
         netlink = new ndNetlink(ifaces);
 
@@ -1105,7 +1120,7 @@ int main(int argc, char *argv[])
         nd_printf("Error creating netlink watch: %s\n", e.what());
         return 1;
     }
-
+#endif
     nd_add_device_addresses(device_addresses);
 
     if (nd_start_detection_threads() < 0)
@@ -1126,9 +1141,9 @@ int main(int argc, char *argv[])
     it_spec.it_interval.tv_nsec = 0;
 
     timer_settime(timer_id, 0, &it_spec, NULL);
-
+#ifdef _ND_USE_NETLINK
     netlink->Refresh();
-
+#endif
     while (!terminate) {
         int sig;
         siginfo_t si;
@@ -1153,12 +1168,15 @@ int main(int argc, char *argv[])
         }
 
         if (sig == sigev.sigev_signo) {
+#ifdef _ND_USE_INOTIFY
             inotify->RefreshWatches();
+#endif
             nd_dump_stats();
             continue;
         }
 
         if (sig == SIGIO) {
+#ifdef _ND_USE_NETLINK
             if (inotify->GetDescriptor() == si.si_fd) {
                 inotify->ProcessEvent();
                 continue;
@@ -1168,6 +1186,10 @@ int main(int argc, char *argv[])
                     if (nd_debug) netlink->Dump();
                 continue;
             }
+#elif _ND_USE_INOTIFY
+            inotify->ProcessEvent();
+            continue;
+#endif
         }
 
         if (sig == SIGHUP) {

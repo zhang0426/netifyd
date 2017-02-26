@@ -39,7 +39,9 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <linux/if_ether.h>
+#ifdef _UD_USE_NETLINK
 #include <linux/netlink.h>
+#endif
 #include <json.h>
 
 #include <libmnl/libmnl.h>
@@ -51,7 +53,9 @@ using namespace std;
 
 #include "netifyd.h"
 #include "nd-util.h"
+#ifdef _UD_USE_NETLINK
 #include "nd-netlink.h"
+#endif
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"

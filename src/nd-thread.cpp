@@ -76,7 +76,7 @@ ndThread::ndThread(const string &tag, long cpu)
         throw ndThreadException(strerror(rc));
 
     if (cpu == -1) return;
-#ifdef HAVE_PTHREAD_ATTR_SETAFFINITY_NP
+#if defined(HAVE_PTHREAD_ATTR_SETAFFINITY_NP) && defined(CPU_ALLOC)
     long cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
     if (cpu >= cpus) cpu = 0;

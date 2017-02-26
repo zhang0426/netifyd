@@ -28,10 +28,10 @@ struct ndFlow
 
     uint16_t vlan_id;
     uint64_t ts_last_seen;
-
+#ifdef _ND_USE_NETLINK
     ndNetlinkAddressType lower_type;
     ndNetlinkAddressType upper_type;
-
+#endif
     uint8_t lower_mac[ETH_ALEN];
     uint8_t upper_mac[ETH_ALEN];
 

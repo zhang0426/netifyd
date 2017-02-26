@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/usr/local/bin/bash
 
 my_dir=$(dirname "$0")
-src_dir=$(readlink --canonicalize "$my_dir/..")
+#src_dir=$(readlink --canonicalize "$my_dir/..")
+src_dir=$(realpath "$my_dir/..")
 
 generate_object_type()
 {
