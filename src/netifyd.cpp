@@ -842,6 +842,7 @@ int main(int argc, char *argv[])
         { "help", 0, 0, 'h' },
         { "version", 0, 0, 'V' },
         { "debug", 0, 0, 'd' },
+        { "debug-upload", 0, 0, 'D' },
         { "serial", 1, 0, 's' },
         { "internal", 1, 0, 'I' },
         { "external", 1, 0, 'E' },
@@ -864,7 +865,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVds:I:E:j:i:c:UPA:N:f:H:C:S:t",
+            "?hVdDs:I:E:j:i:c:UPA:N:f:H:C:S:t",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -877,6 +878,9 @@ int main(int argc, char *argv[])
             nd_usage(0, true);
         case 'd':
             nd_debug = true;
+            break;
+        case 'D':
+            nd_debug_upload = true;
             break;
         case 's':
             nd_config.uuid_serial = strdup(optarg);
