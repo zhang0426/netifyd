@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!@_ND_PROG_BASH@
 
 my_dir=$(dirname "$0")
 #src_dir=$(readlink --canonicalize "$my_dir/..")

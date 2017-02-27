@@ -18,6 +18,13 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG([0.25])
+AC_PATH_PROG([bash], [bash], [false])
+
+AS_IF([test "x$ac_cv_path_bash" != "xfalse"], [
+    AC_SUBST([ND_PATH_BASH], [$ac_cv_path_bash])
+], [
+    AC_MSG_ERROR([bash not found.])
+])
 
 # Checks for libraries.
 AC_CHECK_LIB([pcap],
@@ -76,7 +83,15 @@ AS_IF([test "x$enable_netlink" = "xyes"], [
 ])
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h net/ethernet.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/socket.h sys/types.h sys/time.h sys/un.h syslog.h unistd.h], [], AC_MSG_ERROR([required header(s) not found.]))
+AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC_MSG_ERROR([required netinet header(s) not found.]),
+[[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+]])
 
 # Check compiler flags (gnu++11)
 m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
@@ -136,5 +151,5 @@ AC_DEFINE_UNQUOTED(GIT_RELEASE, "${GIT_RELEASE}", [GIT Release])
 AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
 
 # Output files
-AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec])
+AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec util/generate-json-include.sh util/generate-protocol-csv.sh])
 AC_OUTPUT
