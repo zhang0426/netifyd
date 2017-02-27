@@ -33,23 +33,49 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+
 #include <arpa/inet.h>
+
 #include <net/if.h>
+#include <net/ppp_defs.h>
 #include <net/ethernet.h>
 
 #ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
 #endif
 
-#include <net/ppp_defs.h>
-
+#define __FAVOR_BSD 1
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#undef __FAVOR_BSD
+
+#ifndef ETHERTYPE_MPLS
+#ifdef ETH_P_MPLS_UC
+#define ETHERTYPE_MPLS ETH_P_MPLS_UC
+#else
+#error Unable to find suitable define for ETHERTYPE_MPLS
+#endif
+#endif
+#ifndef ETHERTYPE_PPPOE
+#ifdef ETH_P_PPP_SES
+#define ETHERTYPE_PPPOE ETH_P_PPP_SES
+#else
+#error Unable to find suitable define for ETHERTYPE_PPPOE
+#endif
+#endif
+#ifndef ETHERTYPE_PPPOEDISC
+#ifdef ETH_P_PPP_DISC
+#define ETHERTYPE_PPPOEDISC ETH_P_PPP_DISC
+#else
+#error Unable to find suitable define for ETHERTYPE_PPPOEDISC
+#endif
+#endif
 
 #include <json.h>
 #include <pcap/pcap.h>

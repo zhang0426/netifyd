@@ -59,7 +59,7 @@ AS_IF([test "x$enable_conntrack" = "xyes"], [
 AC_ARG_ENABLE([inotify],
     [AS_HELP_STRING([--enable-inotify], [Enable inotify file watch support [default=yes]])],
     [],
-    [enable_netlink=yes])
+    [enable_inotify=yes])
 
 AS_IF([test "x$enable_inotify" = "xyes"], [
     AC_DEFINE([_ND_USE_INOTIFY], [1],

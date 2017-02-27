@@ -19,7 +19,12 @@
 
 #ifndef ETH_ALEN
 #include <net/ethernet.h>
-#define ETH_ALEN    ETHER_ADDR_LEN
+#if !defined(ETH_ALEN) && defined(ETHER_ADDR_LEN)
+#define ETH_ALEN ETHER_ADDR_LEN
+#endif
+#endif
+#ifndef ETH_ALEN
+#error Unable to define ETH_ALEN.
 #endif
 
 //#include <linux/if_ether.h>

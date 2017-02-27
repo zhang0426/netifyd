@@ -59,7 +59,7 @@ using namespace std;
 
 #include "netifyd.h"
 #include "nd-util.h"
-#ifdef _UD_USE_INOTIFY
+#ifdef _ND_USE_INOTIFY
 #include "nd-inotify.h"
 #endif
 #ifdef _ND_USE_NETLINK

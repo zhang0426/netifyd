@@ -29,8 +29,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-//#include <linux/if_ether.h>
-#ifdef _UD_USE_NETLINK
+#ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
 #endif
 #include <json.h>
@@ -41,7 +40,7 @@ using namespace std;
 
 #include "netifyd.h"
 #include "nd-util.h"
-#ifdef _UD_USE_NETLINK
+#ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
 #endif
 #include "nd-json.h"
