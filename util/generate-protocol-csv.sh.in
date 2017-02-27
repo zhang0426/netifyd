@@ -1,8 +1,6 @@
-#!/usr/local/bin/bash
+#!@ND_PATH_BASH@
 
-my_dir=$(dirname "$0")
-#src_dir=$(readlink --canonicalize "$my_dir/../src")
-src_dir=$(realpath "$my_dir/../src")
+src_dir=@abs_top_builddir@/src
 
 if [ ! -x "$src_dir/netifyd" ]; then
 	echo "$src_dir/netifyd: Not found."

@@ -1,8 +1,6 @@
-#!@_ND_PROG_BASH@
+#!@ND_PATH_BASH@
 
-my_dir=$(dirname "$0")
-#src_dir=$(readlink --canonicalize "$my_dir/..")
-src_dir=$(realpath "$my_dir/..")
+src_dir=@abs_top_builddir@
 
 generate_object_type()
 {
