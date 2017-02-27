@@ -29,8 +29,12 @@ public:
 class ndDetectionThread : public ndThread
 {
 public:
-    ndDetectionThread(const string &dev, const string &netlink_dev,
-        ndNetlink *netlink, ndSocketThread *thread_socket,
+    ndDetectionThread(const string &dev,
+#ifdef _ND_USE_NETLINK
+        const string &netlink_dev,
+        ndNetlink *netlink,
+#endif
+        ndSocketThread *thread_socket,
 #ifdef _ND_USE_CONNTRACK
         ndConntrackThread *thread_conntrack,
 #endif
@@ -46,8 +50,10 @@ public:
     nd_flow_map *GetFlows(void) { return flows; }
 
 protected:
+#ifdef _ND_USE_NETLINK
     string netlink_dev;
     ndNetlink *netlink;
+#endif
     ndSocketThread *thread_socket;
 #ifdef _ND_USE_CONNTRACK
     ndConntrackThread *thread_conntrack;

@@ -32,17 +32,13 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <json.h>
-#include <linux/if_ether.h>
-#include <linux/netlink.h>
-#include <linux/un.h>
+#include <unistd.h>
 #include <netdb.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-#include <pcap/pcap.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
@@ -55,9 +51,21 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <unistd.h>
+#include <sys/un.h>
+#ifdef _ND_USE_NETLINK
+#include <linux/netlink.h>
+#endif
 
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX 108
+#endif
+
+#include <pcap/pcap.h>
+#include <json.h>
+
+#ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+#endif
 
 #include "ndpi_main.h"
 
@@ -65,11 +73,15 @@ using namespace std;
 
 #include "netifyd.h"
 #include "nd-util.h"
+#ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
+#endif
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#ifdef _ND_USE_CONNTRACK
 #include "nd-conntrack.h"
+#endif
 #include "nd-detection.h"
 #include "nd-socket.h"
 

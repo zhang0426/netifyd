@@ -17,6 +17,14 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
+PKG_PROG_PKG_CONFIG([0.25])
+AC_PATH_PROG([bash], [bash], [false])
+
+AS_IF([test "x$ac_cv_path_bash" != "xfalse"], [
+    AC_SUBST([ND_PATH_BASH], [$ac_cv_path_bash])
+], [
+    AC_MSG_ERROR([bash not found.])
+])
 
 # Checks for libraries.
 AC_CHECK_LIB([pcap],
@@ -28,15 +36,16 @@ AC_CHECK_LIB([rt],
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
-# Check for optional parameters
-AC_ARG_ENABLE([conntrack],
-    [AS_HELP_STRING([--enable-conntrack], [Enable connection tracking support [default=no]])],
-    [],
-    [enable_conntrack=no])
-
 PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
 PKG_CHECK_MODULES([ZLIB], [zlib])
+
+# Check for optional parameters
+AC_ARG_ENABLE([conntrack],
+    [AS_HELP_STRING([--enable-conntrack], [Enable connection tracking support [default=yes]])],
+    [],
+    [enable_conntrack=yes])
+
 AS_IF([test "x$enable_conntrack" = "xyes"], [
     AC_DEFINE([_ND_USE_CONNTRACK], [1],
         [Define to enable connection tracking support.])
@@ -47,8 +56,42 @@ AS_IF([test "x$enable_conntrack" = "xyes"], [
     AM_CONDITIONAL(USE_CONNTRACK, false)
 ])
 
+AC_ARG_ENABLE([inotify],
+    [AS_HELP_STRING([--enable-inotify], [Enable inotify file watch support [default=yes]])],
+    [],
+    [enable_inotify=yes])
+
+AS_IF([test "x$enable_inotify" = "xyes"], [
+    AC_DEFINE([_ND_USE_INOTIFY], [1],
+        [Define to enable inotify file watch support.])
+    AM_CONDITIONAL(USE_INOTIFY, true)
+], [
+    AM_CONDITIONAL(USE_INOTIFY, false)
+])
+
+AC_ARG_ENABLE([netlink],
+    [AS_HELP_STRING([--enable-netlink], [Enable Netlink socket support [default=yes]])],
+    [],
+    [enable_netlink=yes])
+
+AS_IF([test "x$enable_netlink" = "xyes"], [
+    AC_DEFINE([_ND_USE_NETLINK], [1],
+        [Define to enable Netlink socket support.])
+    AM_CONDITIONAL(USE_NETLINK, true)
+], [
+    AM_CONDITIONAL(USE_NETLINK, false)
+])
+
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h net/ethernet.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/socket.h sys/types.h sys/time.h sys/un.h syslog.h unistd.h], [], AC_MSG_ERROR([required header(s) not found.]))
+AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC_MSG_ERROR([required netinet header(s) not found.]),
+[[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+]])
 
 # Check compiler flags (gnu++11)
 m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
@@ -109,4 +152,7 @@ AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
 
 # Output files
 AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec])
+#AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec util/generate-json-include.sh util/generate-protocol-csv.sh])
+AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
+AC_CONFIG_FILES([util/generate-protocol-csv.sh], [chmod +x util/generate-protocol-csv.sh])
 AC_OUTPUT

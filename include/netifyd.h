@@ -17,6 +17,35 @@
 #ifndef _ND_H
 #define _ND_H
 
+#ifndef ETH_ALEN
+#include <net/ethernet.h>
+#if !defined(ETH_ALEN) && defined(ETHER_ADDR_LEN)
+#define ETH_ALEN ETHER_ADDR_LEN
+#endif
+#endif
+#ifndef ETH_ALEN
+#error Unable to define ETH_ALEN.
+#endif
+
+//#include <linux/if_ether.h>
+
+#ifdef _ND_USE_NETLINK
+#include <linux/netlink.h>
+#endif
+
+#ifndef CLOCK_MONOTONIC_RAW
+#define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
+#endif
+
+#ifndef s6_addr32
+#define s6_addr32 __u6_addr.__u6_addr32
+#endif
+
+#ifndef HOST_NAME_MAX
+#include <limits.h>
+#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#endif
+
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
                                         // Maximum upload queue size in kB
 #define ND_MAX_BACKLOG_KB       1024

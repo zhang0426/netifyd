@@ -33,39 +33,75 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+
 #include <arpa/inet.h>
+
 #include <net/if.h>
-#include <linux/if_ether.h>
-#include <linux/if_pppox.h>
+#include <net/ppp_defs.h>
+#include <net/ethernet.h>
+
+#ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
-#include <linux/ppp_defs.h>
+#endif
+
+#define __FAVOR_BSD 1
+#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#undef __FAVOR_BSD
+
+#ifndef ETHERTYPE_MPLS
+#ifdef ETH_P_MPLS_UC
+#define ETHERTYPE_MPLS ETH_P_MPLS_UC
+#else
+#error Unable to find suitable define for ETHERTYPE_MPLS
+#endif
+#endif
+#ifndef ETHERTYPE_PPPOE
+#ifdef ETH_P_PPP_SES
+#define ETHERTYPE_PPPOE ETH_P_PPP_SES
+#else
+#error Unable to find suitable define for ETHERTYPE_PPPOE
+#endif
+#endif
+#ifndef ETHERTYPE_PPPOEDISC
+#ifdef ETH_P_PPP_DISC
+#define ETHERTYPE_PPPOEDISC ETH_P_PPP_DISC
+#else
+#error Unable to find suitable define for ETHERTYPE_PPPOEDISC
+#endif
+#endif
 
 #include <json.h>
 #include <pcap/pcap.h>
-
+#ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+#endif
 
 extern "C" {
 #include "ndpi_api.h"
 }
 
-#define _ND_PPP_PROTOCOL(p)	((((__u8 *)(p))[0] << 8) + ((__u8 *)(p))[1])
+#define _ND_PPP_PROTOCOL(p)	((((uint8_t *)(p))[0] << 8) + ((uint8_t *)(p))[1])
 
 using namespace std;
 
 #include "netifyd.h"
 #include "nd-util.h"
+#ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
+#endif
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#ifdef _ND_USE_CONNTRACK
 #include "nd-conntrack.h"
+#endif
 #include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-ndpi.h"
@@ -75,14 +111,20 @@ extern bool nd_debug;
 extern ndGlobalConfig nd_config;
 
 ndDetectionThread::ndDetectionThread(const string &dev,
+#ifdef _ND_USE_NETLINK
     const string &netlink_dev,
-    ndNetlink *netlink, ndSocketThread *thread_socket,
+    ndNetlink *netlink,
+#endif
+    ndSocketThread *thread_socket,
 #ifdef _ND_USE_CONNTRACK
     ndConntrackThread *thread_conntrack,
 #endif
     nd_flow_map *flow_map, nd_packet_stats *stats,
     nd_device_addrs *device_addrs, long cpu)
-    : ndThread(dev, cpu), netlink_dev(netlink_dev), netlink(netlink),
+    : ndThread(dev, cpu),
+#ifdef _ND_USE_NETLINK
+    netlink_dev(netlink_dev), netlink(netlink),
+#endif
     thread_socket(thread_socket),
 #ifdef _ND_USE_CONNTRACK
     thread_conntrack(thread_conntrack),
@@ -195,8 +237,8 @@ void *ndDetectionThread::Entry(void)
 
 void ndDetectionThread::ProcessPacket(void)
 {
-    const struct ethhdr *hdr_eth = NULL;
-    const struct iphdr *hdr_ip = NULL;
+    const struct ether_header *hdr_eth = NULL;
+    const struct ip *hdr_ip = NULL;
     const struct ip6_hdr *hdr_ip6 = NULL;
 
     const uint8_t *layer3 = NULL;
@@ -234,26 +276,26 @@ void ndDetectionThread::ProcessPacket(void)
     switch (pcap_datalink_type) {
     case DLT_NULL:
         if (ntohl(*((uint32_t *)pkt_data)) == 2)
-            type = ETH_P_IP;
+            type = ETHERTYPE_IP;
         else
-            type = ETH_P_IPV6;
+            type = ETHERTYPE_IPV6;
 
         ip_offset = 4;
         break;
 
     case DLT_EN10MB:
-        hdr_eth = reinterpret_cast<const struct ethhdr *>(pkt_data);
-        type = ntohs(hdr_eth->h_proto);
-        ip_offset = sizeof(struct ethhdr);
+        hdr_eth = reinterpret_cast<const struct ether_header *>(pkt_data);
+        type = ntohs(hdr_eth->ether_type);
+        ip_offset = sizeof(struct ether_header);
         stats->pkt_eth++;
 
         // STP?
-        if ((hdr_eth->h_source[0] == 0x01 && hdr_eth->h_source[1] == 0x80 &&
-            hdr_eth->h_source[2] == 0xC2) ||
-            hdr_eth->h_dest[0] == 0x01 && hdr_eth->h_dest[1] == 0x80 &&
-            hdr_eth->h_dest[2] == 0xC2) {
+        if ((hdr_eth->ether_shost[0] == 0x01 && hdr_eth->ether_shost[1] == 0x80 &&
+            hdr_eth->ether_shost[2] == 0xC2) ||
+            hdr_eth->ether_dhost[0] == 0x01 && hdr_eth->ether_dhost[1] == 0x80 &&
+            hdr_eth->ether_dhost[2] == 0xC2) {
             stats->pkt_discard++;
-            stats->pkt_discard_bytes += ntohs(hdr_eth->h_proto);
+            stats->pkt_discard_bytes += ntohs(hdr_eth->ether_type);
             return;
         }
 
@@ -269,16 +311,16 @@ void ndDetectionThread::ProcessPacket(void)
     }
 
     while (true) {
-        if (type == ETH_P_8021Q) {
+        if (type == ETHERTYPE_VLAN) {
             vlan_packet = 1;
             flow.vlan_id = ((pkt_data[ip_offset] << 8) + pkt_data[ip_offset + 1]) & 0xFFF;
             type = (pkt_data[ip_offset + 2] << 8) + pkt_data[ip_offset + 3];
             ip_offset += 4;
         }
-        else if (type == ETH_P_MPLS_UC) {
+        else if (type == ETHERTYPE_MPLS) {
             stats->pkt_mpls++;
             uint32_t label = ntohl(*((uint32_t *)&pkt_data[ip_offset]));
-            type = ETH_P_IP;
+            type = ETHERTYPE_IP;
             ip_offset += 4;
 
             while ((label & 0x100) != 0x100) {
@@ -286,9 +328,9 @@ void ndDetectionThread::ProcessPacket(void)
                 label = ntohl(*((uint32_t *)&pkt_data[ip_offset]));
             }
         }
-        else if (type == ETH_P_PPP_SES) {
+        else if (type == ETHERTYPE_PPPOE) {
             stats->pkt_pppoe++;
-            type = ETH_P_IP;
+            type = ETHERTYPE_IP;
             ppp_proto = (uint16_t)(
                 _ND_PPP_PROTOCOL(pkt_data + ip_offset + 6)
             );
@@ -300,7 +342,13 @@ void ndDetectionThread::ProcessPacket(void)
                 return;
             }
 
-            ip_offset += PPPOE_SES_HLEN;
+            ip_offset += 8;
+        }
+        else if (type == ETHERTYPE_PPPOEDISC) {
+            stats->pkt_pppoe++;
+            stats->pkt_discard++;
+            stats->pkt_discard_bytes += pkt_header->len;
+            return;
         }
         else
             break;
@@ -308,19 +356,19 @@ void ndDetectionThread::ProcessPacket(void)
 
     stats->pkt_vlan += vlan_packet;
 
-    hdr_ip = reinterpret_cast<const struct iphdr *>(&pkt_data[ip_offset]);
-    flow.ip_version = hdr_ip->version;
+    hdr_ip = reinterpret_cast<const struct ip *>(&pkt_data[ip_offset]);
+    flow.ip_version = hdr_ip->ip_v;
 
     if (flow.ip_version == 4) {
-        ip_len = ((uint16_t)hdr_ip->ihl * 4);
-        l4_len = ntohs(hdr_ip->tot_len) - ip_len;
-        flow.ip_protocol = hdr_ip->protocol;
+        ip_len = ((uint16_t)hdr_ip->ip_hl * 4);
+        l4_len = ntohs(hdr_ip->ip_len) - ip_len;
+        flow.ip_protocol = hdr_ip->ip_p;
         layer3 = reinterpret_cast<const uint8_t *>(hdr_ip);
 
         if (pkt_header->caplen >= ip_offset)
-            frag_off = ntohs(hdr_ip->frag_off);
+            frag_off = ntohs(hdr_ip->ip_off);
 
-        if (pkt_header->len - ip_offset < sizeof(iphdr)) {
+        if (pkt_header->len - ip_offset < sizeof(struct ip)) {
             // XXX: header too small
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
@@ -354,30 +402,30 @@ void ndDetectionThread::ProcessPacket(void)
             return;
         }
 
-        if ((pkt_header->len - ip_offset) < ntohs(hdr_ip->tot_len)) {
+        if ((pkt_header->len - ip_offset) < ntohs(hdr_ip->ip_len)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
-            //nd_debug_printf("%s: discard: (pkt_header->len[%hu] - ip_offset[%hu](%hu)) < hdr_ip->tot_len[%hu]\n",
-            //    tag.c_str(), pkt_header->len, ip_offset, pkt_header->len - ip_offset, ntohs(hdr_ip->tot_len));
+            //nd_debug_printf("%s: discard: (pkt_header->len[%hu] - ip_offset[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
+            //    tag.c_str(), pkt_header->len, ip_offset, pkt_header->len - ip_offset, ntohs(hdr_ip->ip_len));
             return;
         }
 
-        addr_cmp = memcmp(&hdr_ip->saddr, &hdr_ip->daddr, 4);
+        addr_cmp = memcmp(&hdr_ip->ip_src, &hdr_ip->ip_dst, 4);
 
         if (addr_cmp < 0) {
-            flow.lower_addr.s_addr = hdr_ip->saddr;
-            flow.upper_addr.s_addr = hdr_ip->daddr;
+            flow.lower_addr.s_addr = hdr_ip->ip_src.s_addr;
+            flow.upper_addr.s_addr = hdr_ip->ip_dst.s_addr;
             if (pcap_datalink_type == DLT_EN10MB) {
-                memcpy(flow.lower_mac, hdr_eth->h_source, ETH_ALEN);
-                memcpy(flow.upper_mac, hdr_eth->h_dest, ETH_ALEN);
+                memcpy(flow.lower_mac, hdr_eth->ether_shost, ETH_ALEN);
+                memcpy(flow.upper_mac, hdr_eth->ether_dhost, ETH_ALEN);
             }
         }
         else {
-            flow.lower_addr.s_addr = hdr_ip->daddr;
-            flow.upper_addr.s_addr = hdr_ip->saddr;
+            flow.lower_addr.s_addr = hdr_ip->ip_dst.s_addr;
+            flow.upper_addr.s_addr = hdr_ip->ip_src.s_addr;
             if (pcap_datalink_type == DLT_EN10MB) {
-                memcpy(flow.lower_mac, hdr_eth->h_dest, ETH_ALEN);
-                memcpy(flow.upper_mac, hdr_eth->h_source, ETH_ALEN);
+                memcpy(flow.lower_mac, hdr_eth->ether_dhost, ETH_ALEN);
+                memcpy(flow.upper_mac, hdr_eth->ether_shost, ETH_ALEN);
             }
         }
     }
@@ -411,16 +459,16 @@ void ndDetectionThread::ProcessPacket(void)
             memcpy(&flow.lower_addr6, &hdr_ip6->ip6_src, sizeof(struct in6_addr));
             memcpy(&flow.upper_addr6, &hdr_ip6->ip6_dst, sizeof(struct in6_addr));
             if (pcap_datalink_type == DLT_EN10MB) {
-                memcpy(flow.lower_mac, hdr_eth->h_source, ETH_ALEN);
-                memcpy(flow.upper_mac, hdr_eth->h_dest, ETH_ALEN);
+                memcpy(flow.lower_mac, hdr_eth->ether_shost, ETH_ALEN);
+                memcpy(flow.upper_mac, hdr_eth->ether_dhost, ETH_ALEN);
             }
         }
         else {
             memcpy(&flow.lower_addr6, &hdr_ip6->ip6_dst, sizeof(struct in6_addr));
             memcpy(&flow.upper_addr6, &hdr_ip6->ip6_src, sizeof(struct in6_addr));
             if (pcap_datalink_type == DLT_EN10MB) {
-                memcpy(flow.lower_mac, hdr_eth->h_dest, ETH_ALEN);
-                memcpy(flow.upper_mac, hdr_eth->h_source, ETH_ALEN);
+                memcpy(flow.lower_mac, hdr_eth->ether_dhost, ETH_ALEN);
+                memcpy(flow.upper_mac, hdr_eth->ether_shost, ETH_ALEN);
             }
         }
     }
@@ -441,17 +489,17 @@ void ndDetectionThread::ProcessPacket(void)
             stats->pkt_tcp++;
 
             if (addr_cmp < 0) {
-                flow.lower_port = hdr_tcp->source;
-                flow.upper_port = hdr_tcp->dest;
+                flow.lower_port = hdr_tcp->th_sport;
+                flow.upper_port = hdr_tcp->th_dport;
             }
             else {
-                flow.lower_port = hdr_tcp->dest;
-                flow.upper_port = hdr_tcp->source;
+                flow.lower_port = hdr_tcp->th_dport;
+                flow.upper_port = hdr_tcp->th_sport;
 
                 if (addr_cmp == 0) {
                     if (flow.lower_port > flow.upper_port) {
                         flow.lower_port = flow.upper_port;
-                        flow.upper_port = hdr_tcp->dest;
+                        flow.upper_port = hdr_tcp->th_dport;
                     }
                 }
             }
@@ -465,12 +513,12 @@ void ndDetectionThread::ProcessPacket(void)
             stats->pkt_udp++;
 
             if (addr_cmp < 0) {
-                flow.lower_port = hdr_udp->source;
-                flow.upper_port = hdr_udp->dest;
+                flow.lower_port = hdr_udp->uh_sport;
+                flow.upper_port = hdr_udp->uh_dport;
             }
             else {
-                flow.lower_port = hdr_udp->dest;
-                flow.upper_port = hdr_udp->source;
+                flow.lower_port = hdr_udp->uh_dport;
+                flow.upper_port = hdr_udp->uh_sport;
             }
         }
         break;
@@ -576,10 +624,10 @@ void ndDetectionThread::ProcessPacket(void)
             lower_addr = reinterpret_cast<struct sockaddr_storage *>(&lower6);
             upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
         }
-
+#ifdef _ND_USE_NETLINK
         new_flow->lower_type = netlink->ClassifyAddress(netlink_dev, lower_addr);
         new_flow->upper_type = netlink->ClassifyAddress(netlink_dev, upper_addr);
-
+#endif
         if (new_flow->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
                 ndpi_set_detected_protocol(
@@ -657,7 +705,7 @@ void ndDetectionThread::ProcessPacket(void)
                 new_flow->upper_ip, INET6_ADDRSTRLEN);
             break;
         }
-
+#ifdef _ND_USE_NETLINK
         if (device_addrs != NULL) {
             string mac, ip;
             uint8_t *umac = NULL;
@@ -687,11 +735,10 @@ void ndDetectionThread::ProcessPacket(void)
                     (*device_addrs)[mac].push_back(ip);
             }
         }
-
+#endif
         new_flow->release();
-#ifdef _ND_USE_CONNTRACK
+#if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
         if (thread_conntrack != NULL) {
-#if 1
             if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
                 new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
                 (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
@@ -699,9 +746,6 @@ void ndDetectionThread::ProcessPacket(void)
 
                 thread_conntrack->ClassifyFlow(new_flow);
             }
-#else
-            thread_conntrack->ClassifyFlow(new_flow);
-#endif
         }
 #endif
         for (vector<uint8_t *>::const_iterator i =

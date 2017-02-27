@@ -1,4 +1,5 @@
-.deps/
-nd-match-export
 *.o
-
+.deps/
+generate-json-include.sh
+generate-protocol-csv.sh
+nd-match-export
