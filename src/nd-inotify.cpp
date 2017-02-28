@@ -124,7 +124,7 @@ void ndInotify::ProcessEvent(void)
                 if (watch != inotify_watch.end()) {
                     if (watch->second->event_occured == false &&
                         ((iev->mask & IN_DELETE_SELF) ||
-                        (iev->mask & IN_MODIFY) || (iev->mask & IN_CLOSE_WRITE)))
+                        (iev->mask & IN_MODIFY) || (iev->mask & IN_CLOSE_WRITE))) {
 
                         nd_debug_printf("File event occured: %s [%s]\n",
                             watch->first.c_str(),
@@ -140,6 +140,7 @@ void ndInotify::ProcessEvent(void)
 
                         watch->second->event_occured = true;
                         watch->second->rehash = true;
+                    }
                 }
 
                 p += sizeof(struct inotify_event) + iev->len;
