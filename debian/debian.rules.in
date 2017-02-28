@@ -20,7 +20,7 @@ build-stamp:
 	dh_testdir
 
 	./autogen.sh
-	./configure
+	./configure --prefix=/usr
 	make all
 
 	touch build-stamp
@@ -41,7 +41,7 @@ install: build
 	dh_installdirs
 
 	make install DESTDIR=/usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@
-	install -D -m 0660 deploy/@PACKAGE_TARNAME@.conf 
+	install -D -m 0660 deploy/@PACKAGE_TARNAME@.conf /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/@PACKAGE_TARNAME@.conf
 	install -D -m 0755 deploy/debian/@PACKAGE_TARNAME@.init /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/init.d/@PACKAGE_TARNAME@
 	install -D -m 0644 deploy/debian/@PACKAGE_TARNAME@.default /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/default/@PACKAGE_TARNAME@
 	mkdir -p /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/var/run

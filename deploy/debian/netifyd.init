@@ -11,21 +11,16 @@
 # Description: Netify daemon
 ### END INIT INFO
 
-# Source function library.
-. /etc/init.d/functions
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/sbin/netifyd
+NAME="netifyd"
+PIDFILE=/var/run/netifyd/netifyd.pid
+DESC="Netify Daemon"
 
-RETVAL=0
-prog="netifyd"
-PID_FILE=/var/run/netifyd/netifyd.pid
+unset TMPDIR
 
 # Exit if the package is not installed
-test -x /usr/sbin/$prog || exit 0
-
-# Read option variables
-if [ -r /etc/default/$prog ]; then
-    . /etc/default/$prog
-else
-fi
+test -x $DAEMON || exit 0
 
 # Define LSB log_* functions.
 # Depend on lsb-base (>= 3.2-14) to ensure that this file is present
@@ -36,22 +31,33 @@ start() {
     /sbin/modprobe -q nfnetlink || true
     /sbin/modprobe -q nf_conntrack_netlink || true
 
-	log_daemon_msg "Starting Netify" "$prog"
+	log_daemon_msg "Starting $DESC" "$NAME"
 
-    daemon $prog $NETIFYD_OPTS
-	start-stop-daemon --start --quiet --oknodo --pidfile "$PID_FILE" --exec $prog $NETIFYD_OPTS
-    success
-    RETVAL=$?
-	log_end_msg $RETVAL
-    return $RETVAL
+    # Read option variables
+    if [ -r /etc/default/$NAME ]; then
+        . /etc/default/$NAME
+    else
+        log_failure_msg "Required configuration not found: /etc/default/$NAME"
+        return 1
+    fi
+
+    if [ -z "$NETIFYD_OPTS" ]; then
+        log_failure_msg "Please configure $DESC in: /etc/default/$NAME"
+        return 1
+    fi
+
+	start-stop-daemon --start --quiet --oknodo --pidfile "$PIDFILE" --exec $DAEMON $NETIFYD_OPTS
+    status=$?
+	log_end_msg $status
+    return $status
 }   
 
 stop() {
-	log_daemon_msg "Stopping Netify" "$prog"
-	start-stop-daemon --stop --quiet --retry 5 --oknodo --pidfile "$PID_FILE" --name $prog
-    RETVAL=$?
-    log_end_msg $RETVAL
-    return $RETVAL
+	log_daemon_msg "Stopping $DESC" "$NAME"
+	start-stop-daemon --stop --quiet --retry 5 --oknodo --pidfile "$PIDFILE" --name $NAME
+    status=$?
+    log_end_msg $status
+    return $status
 }
 
 case "$1" in
@@ -62,14 +68,14 @@ case "$1" in
         stop
     ;;
     status)
-	    status_of_proc -p "$PID_FILE" "$prog" "$prog" && exit 0 || exit $?
+	    status_of_proc -p "$PIDFILE" "$DAEMON" "$NAME" && exit 0 || exit $?
     ;;
     restart)
         stop
         start
     ;;
     *)
-    echo "Usage: $prog {start|stop|status|restart}"
+    echo "Usage: $NAME {start|stop|status|restart}"
     exit 3
     ;;
 esac

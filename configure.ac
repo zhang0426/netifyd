@@ -99,8 +99,6 @@ m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
 AX_CXX_COMPILE_STDCXX_11([ext], [optional])
 AS_IF([test "$HAVE_CXX11" = "0"], [AX_CXX_COMPILE_STDCXX_0X])
 
-#CXXFLAGS="$CXXFLAGS -std=gnu++0x"
-
 # Check for optional parameters
 
 # Checks for typedefs, structures, and compiler characteristics.
