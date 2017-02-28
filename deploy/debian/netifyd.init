@@ -46,7 +46,7 @@ start() {
         return 1
     fi
 
-	start-stop-daemon --start --quiet --oknodo --pidfile "$PIDFILE" --exec $DAEMON $NETIFYD_OPTS
+	start-stop-daemon --start --quiet --oknodo --pidfile "$PIDFILE" --exec $DAEMON -- $NETIFYD_OPTS
     status=$?
 	log_end_msg $status
     return $status
