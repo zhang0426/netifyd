@@ -1,0 +1,5 @@
+@PACKAGE_TARNAME@ (@PACKAGE_VERSION@-1) stable; urgency=low
+
+  * Initial Release
+
+ -- Darryl Sokoloski <darryl@egloo.ca>  Jan, 1 Dec 2017 00:00:00 +0100

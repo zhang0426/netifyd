@@ -1,0 +1,4 @@
+# Netify options
+
+# NETIFYD_OPTS --external eth0 --internal eth1
+

@@ -1,0 +1,12 @@
+Source: @PACKAGE_TARNAME@
+Section: net
+Priority: optional
+Maintainer: Darryl Sokoloski <darryl@egloo.ca>
+Build-Depends: debhelper (>= 4.1.16), autoconf, automake, bc, build-essential, libcurl4-openssl-dev, libjson-c-dev, libmnl-dev, libnetfilter-conntrack-dev, libpcap-dev, libtool, zlib1g-dev
+
+Package: @PACKAGE_TARNAME@
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: Netify DPI Daemon
+ Netify provides visibility into the traffic on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.
+ Report bugs to: @PACKAGE_BUGREPORT@

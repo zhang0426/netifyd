@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.5
-Release: 15%{dist}
+Release: 16%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -31,14 +31,14 @@ BuildRequires: systemd
 Summary: Netify DPI Daemon
 
 %description
-Netify DPI Daemon
+Netify provides visibility into the traffic on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.
 Report bugs to: https://github.com/eglooca/netify-daemon/issues
 
 # Prepare
 %prep
 %setup -q
 ./autogen.sh
-%{configure} --with-pic=inih,ndpi --enable-conntrack
+%{configure}
 
 # Build
 %build
