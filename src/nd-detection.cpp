@@ -43,10 +43,6 @@
 #include <net/ppp_defs.h>
 #include <net/ethernet.h>
 
-#ifdef _ND_USE_NETLINK
-#include <linux/netlink.h>
-#endif
-
 #define __FAVOR_BSD 1
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -79,6 +75,11 @@
 
 #include <json.h>
 #include <pcap/pcap.h>
+
+#ifdef _ND_USE_NETLINK
+#include <linux/netlink.h>
+#endif
+
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #endif
