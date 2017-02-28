@@ -1,9 +1,11 @@
 #!/bin/bash
-# Build netifyd command-line with all configured LAN/WAN interfaces (ClearOS)
+# Set Netify Daemon command-line options
 
-source /etc/clearos/network.conf
-
+# See man netifyd(8) for all options.
 NETIFYD_OPTS=
+
+# Dynamically add all configured LAN/WAN interfaces.
+source /etc/clearos/network.conf
 
 for ifn in $LANIF; do
     [ -z "$ifn" ] && break
