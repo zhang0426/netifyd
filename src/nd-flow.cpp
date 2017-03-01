@@ -195,6 +195,34 @@ json_object *ndFlow::json_encode(const string &device,
         _upper_bytes = "other_bytes";
         _upper_packets = "other_packets";
     }
+    else if (lower_type == ndNETLINK_ATYPE_PRIVATE &&
+        upper_type == ndNETLINK_ATYPE_LOCALNET) {
+        other_type = "local";
+        _lower_mac = "other_mac";
+        _lower_ip = "other_ip";
+        _lower_port = "other_port";
+        _lower_bytes = "other_bytes";
+        _lower_packets = "other_packets";
+        _upper_mac = "local_mac";
+        _upper_ip = "local_ip";
+        _upper_port = "local_port";
+        _upper_bytes = "local_bytes";
+        _upper_packets = "local_packets";
+    }
+    else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
+        upper_type == ndNETLINK_ATYPE_PRIVATE) {
+        other_type = "local";
+        _lower_mac = "local_mac";
+        _lower_ip = "local_ip";
+        _lower_port = "local_port";
+        _lower_bytes = "local_bytes";
+        _lower_packets = "local_packets";
+        _upper_mac = "other_mac";
+        _upper_ip = "other_ip";
+        _upper_port = "other_port";
+        _upper_bytes = "other_bytes";
+        _upper_packets = "other_packets";
+    }
     else if (lower_type == ndNETLINK_ATYPE_MULTICAST) {
         other_type = "multicast";
         _lower_mac = "other_mac";
