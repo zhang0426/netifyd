@@ -88,6 +88,18 @@ void ndpi_debug_printf(
     }
 }
 
+void nd_print_binary(uint32_t byte)
+{
+    uint32_t i;
+    char b[sizeof(byte) * 8 + 1];
+
+    b[0] = '\0';
+    for (i = 0x80000000; i > 0; i >>= 1)
+        strcat(b, ((byte & i) == i) ? "1" : "0");
+
+    nd_printf(b);
+}
+
 int nd_sha1_file(const string &filename, uint8_t *digest)
 {
     sha1 ctx;

@@ -47,20 +47,6 @@ using namespace std;
 
 extern bool nd_debug;
 
-#if 0
-static void print_binary(uint32_t byte)
-{
-    uint32_t i;
-    static char b[9];
-
-    b[0] = '\0';
-    for (i = 0x80000000; i > 0; i >>= 1) {
-        strcat(b, ((byte & i) == i) ? "1" : "0");
-    }
-
-    nd_printf(b);
-}
-#endif
 static void print_address(const struct sockaddr_storage *addr)
 {
     int rc;
@@ -369,6 +355,59 @@ bool ndNetlink::ProcessEvent(void)
 }
 
 ndNetlinkAddressType ndNetlink::ClassifyAddress(
+    const struct sockaddr_storage *addr)
+{
+    ndNetlinkInterfaces::const_iterator iface;
+    ndNetlinkAddressType type = ndNETLINK_ATYPE_UNKNOWN;
+
+    for (iface = ifaces.begin();
+        type == ndNETLINK_ATYPE_UNKNOWN &&
+        iface != ifaces.end(); iface++) {
+        type = ClassifyAddress(iface->first, addr);
+    }
+
+    vector<ndNetlinkNetworkAddr *>::const_iterator n;
+    ndNetlinkNetworks::const_iterator net_list;
+
+    vector<struct sockaddr_storage *>::const_iterator a;
+    ndNetlinkAddresses::const_iterator addr_list;
+
+    // Is addr a member of a multicast network?
+    net_list = networks.find(_ND_NETLINK_MULTICAST);
+    if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
+
+    for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
+
+        if ((*n)->network.ss_family != addr->ss_family) continue;
+
+        if (! InNetwork(
+            (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
+
+        type = ndNETLINK_ATYPE_MULTICAST;
+        break;
+    }
+
+    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
+
+    // Final guess: Is addr a member of a private (reserved/non-routable) network?
+    net_list = networks.find(_ND_NETLINK_PRIVATE);
+    if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
+
+    for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
+
+        if ((*n)->network.ss_family != addr->ss_family) continue;
+
+        if (! InNetwork(
+            (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
+
+        type = ndNETLINK_ATYPE_PRIVATE;
+        break;
+    }
+
+    return type;
+}
+
+ndNetlinkAddressType ndNetlink::ClassifyAddress(
     const string &iface, const struct sockaddr_storage *addr)
 {
     ndNetlinkAddressType type = ndNETLINK_ATYPE_UNKNOWN;
@@ -431,23 +470,6 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
     }
     if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
 
-    // Is addr a member of a multicast network?
-    net_list = networks.find(_ND_NETLINK_MULTICAST);
-    if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
-
-    for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
-
-        if ((*n)->network.ss_family != addr->ss_family) continue;
-
-        if (! InNetwork(
-            (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
-
-        type = ndNETLINK_ATYPE_MULTICAST;
-        break;
-    }
-
-    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
-
     // Is addr a member of a local network to this interface?
     net_list = networks.find(iface);
     if (net_list != networks.end()) {
@@ -466,22 +488,6 @@ ndNetlinkAddressType ndNetlink::ClassifyAddress(
         }
 
         pthread_mutex_unlock(lock->second);
-    }
-    if (type != ndNETLINK_ATYPE_UNKNOWN) return type;
-
-    // Final guess: Is addr a member of a private (reserved/non-routable) network?
-    net_list = networks.find(_ND_NETLINK_PRIVATE);
-    if (net_list == networks.end()) return ndNETLINK_ATYPE_ERROR;
-
-    for (n = net_list->second.begin(); n != net_list->second.end(); n++) {
-
-        if ((*n)->network.ss_family != addr->ss_family) continue;
-
-        if (! InNetwork(
-            (*n)->network.ss_family, (*n)->length, &(*n)->network, addr)) continue;
-
-        type = ndNETLINK_ATYPE_PRIVATE;
-        break;
     }
 
     return type;
@@ -545,13 +551,13 @@ bool ndNetlink::InNetwork(sa_family_t family, uint8_t length,
 
     nd_printf("Network: ");
     for (word = 0; word < words; word++) {
-        print_binary(word_net[word]);
+        nd_print_binary(word_net[word]);
         if (word + 1 < words) nd_printf(".");
     }
     nd_printf(" (%s)\n", net);
     nd_printf("   Host: ");
     for (word = 0; word < words; word++) {
-        print_binary(word_host[word]);
+        nd_print_binary(word_host[word]);
         if (word + 1 < words) nd_printf(".");
     }
     nd_printf(" (%s)\n\n", host);
@@ -561,22 +567,24 @@ bool ndNetlink::InNetwork(sa_family_t family, uint8_t length,
         for (i = 0x80000000; i > 0 && bit > 0; i >>= 1) {
 #if 0
             nd_printf("%3d: ", bit);
-            print_binary(i);
+            nd_print_binary(i);
             nd_printf(": ");
-            print_binary((word_host[word] & i));
+            nd_print_binary((word_host[word] & i));
             nd_printf(" ?= ");
-            print_binary((word_net[word] & i));
+            nd_print_binary((word_net[word] & i));
             nd_printf("\n");
 #endif
             if ((word_host[word] & i) != (word_net[word] & i)) {
                 //nd_printf("Mis-match at prefix bit: %d\n", bit);
-                //nd_printf("word_host[%d] & %lu: %lu, word_net[%d] & %lu: %lu\n",
+                //nd_printf("word_host[%d] & %lu: %lu, word_net[%d] & %lu: %lu\n\n",
                 //  word, i, word_host[word] & i, word, i, word_net[word] & i);
                 return false;
             }
             bit--;
         }
     }
+
+//    nd_debug_printf("%s: true\n\n", __PRETTY_FUNCTION__);
 
     return true;
 }

@@ -91,6 +91,8 @@ public:
     bool ProcessEvent(void);
 
     ndNetlinkAddressType ClassifyAddress(
+        const struct sockaddr_storage *addr);
+    ndNetlinkAddressType ClassifyAddress(
         const string &iface, const struct sockaddr_storage *addr);
 
     void Dump(void);
