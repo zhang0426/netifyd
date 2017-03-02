@@ -293,8 +293,8 @@ void ndDetectionThread::ProcessPacket(void)
         // STP?
         if ((hdr_eth->ether_shost[0] == 0x01 && hdr_eth->ether_shost[1] == 0x80 &&
             hdr_eth->ether_shost[2] == 0xC2) ||
-            hdr_eth->ether_dhost[0] == 0x01 && hdr_eth->ether_dhost[1] == 0x80 &&
-            hdr_eth->ether_dhost[2] == 0xC2) {
+            (hdr_eth->ether_dhost[0] == 0x01 && hdr_eth->ether_dhost[1] == 0x80 &&
+            hdr_eth->ether_dhost[2] == 0xC2)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += ntohs(hdr_eth->ether_type);
             return;
