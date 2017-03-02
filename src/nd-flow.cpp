@@ -315,13 +315,13 @@ json_object *ndFlow::json_encode(const string &device,
         _upper_bytes = "other_bytes";
         _upper_packets = "other_packets";
     }
-
+#if 0
     if (other_type == "unknown") {
         ndNetlink::PrintType(lower_ip, lower_type);
         ndNetlink::PrintType(upper_ip, upper_type);
         exit(1);
     }
-
+#endif
 #endif
     json.AddObject(json_flow, "other_type", other_type);
 
