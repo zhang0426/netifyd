@@ -47,31 +47,6 @@ using namespace std;
 
 extern bool nd_debug;
 
-static void print_address(const struct sockaddr_storage *addr)
-{
-    int rc;
-    char _addr[NI_MAXHOST];
-
-    switch (addr->ss_family) {
-    case AF_INET:
-        rc = getnameinfo((const struct sockaddr *)addr, sizeof(struct sockaddr_in),
-            _addr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-        break;
-    case AF_INET6:
-        rc = getnameinfo((const struct sockaddr *)addr, sizeof(struct sockaddr_in6),
-            _addr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-        break;
-    default:
-        nd_printf("(unsupported AF:%x)", addr->ss_family);
-        return;
-    }
-
-    if (rc == 0)
-        nd_printf(_addr);
-    else
-        nd_printf("???");
-}
-
 inline bool ndNetlinkNetworkAddr::operator==(const ndNetlinkNetworkAddr &n) const
 {
     int rc = -1;
@@ -942,7 +917,7 @@ bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
 //    if (nd_debug) {
 //        nd_debug_printf("WARNING: Couldn't find network address in map: %s, ",
 //            iface.c_str());
-//        print_address(&addr.network);
+//        nd_print_address(&addr.network);
 //        nd_debug_printf("/%hhu\n", addr.length);
 //    }
 
@@ -1070,7 +1045,7 @@ void ndNetlink::Dump(void)
         for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
             j != i->second.end(); j++) {
             nd_printf("%s: net ", i->first.c_str());
-            print_address(&(*j)->network);
+            nd_print_address(&(*j)->network);
             nd_printf("/%hhu\n", (*j)->length);
         }
     }
@@ -1080,7 +1055,7 @@ void ndNetlink::Dump(void)
         for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
             j != i->second.end(); j++) {
             nd_printf("%s: addr ", i->first.c_str());
-            print_address((*j));
+            nd_print_address((*j));
             nd_printf("\n");
         }
     }

@@ -30,6 +30,8 @@ void nd_debug_printf(const char *format, ...);
 void ndpi_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...);
 
+void nd_print_address(const struct sockaddr_storage *addr);
+
 void nd_print_binary(uint32_t byte);
 
 int nd_sha1_file(const string &filename, uint8_t *digest);

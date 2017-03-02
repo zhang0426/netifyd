@@ -85,7 +85,7 @@ public:
 
     int GetDescriptor(void) { return nd; }
 
-    void PrintType(const string &prefix, const ndNetlinkAddressType &type);
+    static void PrintType(const string &prefix, const ndNetlinkAddressType &type);
 
     void Refresh(void);
     bool ProcessEvent(void);
