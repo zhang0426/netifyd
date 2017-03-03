@@ -80,7 +80,7 @@ using namespace std;
 
 bool nd_debug = false;
 bool nd_debug_upload = false;
-bool nd_debug_ether_names = true;
+bool nd_debug_ether_names = false;
 pthread_mutex_t *nd_output_mutex = NULL;
 static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
@@ -607,21 +607,22 @@ static void nd_load_ethers(void)
             *p = '\0';
             if (!strlen(name)) continue;
 
-            nd_printf("%2lu: name: %s\n",line, name);
-
             const char *a = ether;
             uint8_t mac[ETH_ALEN], *m = mac;
-            for (int j = 0; j < _ND_STR_ALEN; j += 3, p++)
+            for (int j = 0; j < _ND_STR_ALEN; j += 3, m++)
                 sscanf(a + j, "%2hhx", m);
             string key;
             key.assign((const char *)mac, ETH_ALEN);
             device_ethers[key] = name;
+            //nd_printf("%2lu: %02x:%02x:%02x:%02x:%02x:%02x (%s): %s\n", line,
+            //    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], ether, name);
         }
     }
 
     fclose(fh);
 
-    nd_debug_printf("Loaded %lu entries from: %s\n", device_ethers.size(), ND_WATCH_ETHERS);
+    nd_debug_printf("Loaded %lu entries from: %s\n",
+        device_ethers.size(), ND_WATCH_ETHERS);
 }
 
 static void nd_json_upload(ndJson *json)
@@ -630,10 +631,11 @@ static void nd_json_upload(ndJson *json)
     if (inotify->EventOccured(ND_WATCH_HOSTS))
         nd_json_add_file(json->GetRoot(), "hosts", ND_WATCH_HOSTS);
     if (inotify->EventOccured(ND_WATCH_ETHERS)) {
-        if (nd_debug && nd_debug_ether_names)
-            nd_load_ethers();
+        if (nd_debug && nd_debug_ether_names) nd_load_ethers();
         nd_json_add_file(json->GetRoot(), "ethers", ND_WATCH_ETHERS);
     }
+#else
+    if (nd_debug && nd_debug_ether_names) nd_load_ethers();
 #endif
     string json_string;
     json->ToString(json_string);
@@ -904,6 +906,7 @@ int main(int argc, char *argv[])
         { "version", 0, 0, 'V' },
         { "debug", 0, 0, 'd' },
         { "debug-upload", 0, 0, 'D' },
+        { "debug-ether-names", 0, 0, 'e' },
         { "serial", 1, 0, 's' },
         { "internal", 1, 0, 'I' },
         { "external", 1, 0, 'E' },
@@ -928,7 +931,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDs:I:E:j:i:c:UPA:N:f:H:C:S:t",
+            "?hVdDes:I:E:j:i:c:UPA:N:f:H:C:S:t",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -944,6 +947,9 @@ int main(int argc, char *argv[])
             break;
         case 'D':
             nd_debug_upload = true;
+            break;
+        case 'e':
+            nd_debug_ether_names = true;
             break;
         case 's':
             nd_config.uuid_serial = strdup(optarg);

@@ -4,6 +4,7 @@ netifyd \- perform deep-packet inspection on network traffic
 .SH SYNOPSIS
 .B netifyd
 [\fB\-d\fR, \fB\-\-debug\fR]
+[\fB\-e\fR, \fB\-\-debug-ether-names\fR]
 [\fB\-t\fR, \fB\-\-disable-conntrack\fR]
 [\fB\-I\fR, \fB\-\-internal\fR=\fIINTERFACE\fR]
 [\fB\-E\fR, \fB\-\-external\fR=\fIINTERFACE\fR]
@@ -29,6 +30,9 @@ provides visibility into the traffic on your network along with the option to ta
 .TP
 .BR \-d ", " \-\-debug
 Enable debug mode.  Remain in the foreground and emit debug messages.
+.TP
+.BR \-e ", " \-\-debug-ether-names
+Try to resolve MAC addresses to names using contents of /etc/ethers if available.
 .TP
 .BR \-t ", " \-\-disable-conntrack
 Disable connection tracking for networks without a NAT configuration.
