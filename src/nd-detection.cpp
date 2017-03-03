@@ -293,8 +293,8 @@ void ndDetectionThread::ProcessPacket(void)
         // STP?
         if ((hdr_eth->ether_shost[0] == 0x01 && hdr_eth->ether_shost[1] == 0x80 &&
             hdr_eth->ether_shost[2] == 0xC2) ||
-            hdr_eth->ether_dhost[0] == 0x01 && hdr_eth->ether_dhost[1] == 0x80 &&
-            hdr_eth->ether_dhost[2] == 0xC2) {
+            (hdr_eth->ether_dhost[0] == 0x01 && hdr_eth->ether_dhost[1] == 0x80 &&
+            hdr_eth->ether_dhost[2] == 0xC2)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += ntohs(hdr_eth->ether_type);
             return;
@@ -626,8 +626,10 @@ void ndDetectionThread::ProcessPacket(void)
             upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
         }
 #ifdef _ND_USE_NETLINK
-        new_flow->lower_type = netlink->ClassifyAddress(netlink_dev, lower_addr);
-        new_flow->upper_type = netlink->ClassifyAddress(netlink_dev, upper_addr);
+//        new_flow->lower_type = netlink->ClassifyAddress(netlink_dev, lower_addr);
+//        new_flow->upper_type = netlink->ClassifyAddress(netlink_dev, upper_addr);
+        new_flow->lower_type = netlink->ClassifyAddress(lower_addr);
+        new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
 #endif
         if (new_flow->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {

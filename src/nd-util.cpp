@@ -29,6 +29,9 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include "ndpi_main.h"
 
 using namespace std;
@@ -86,6 +89,43 @@ void ndpi_debug_printf(
         vfprintf(stderr, format, ap);
         va_end(ap);
     }
+}
+
+void nd_print_address(const struct sockaddr_storage *addr)
+{
+    int rc;
+    char _addr[NI_MAXHOST];
+
+    switch (addr->ss_family) {
+    case AF_INET:
+        rc = getnameinfo((const struct sockaddr *)addr, sizeof(struct sockaddr_in),
+            _addr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+        break;
+    case AF_INET6:
+        rc = getnameinfo((const struct sockaddr *)addr, sizeof(struct sockaddr_in6),
+            _addr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+        break;
+    default:
+        nd_printf("(unsupported AF:%x)", addr->ss_family);
+        return;
+    }
+
+    if (rc == 0)
+        nd_printf(_addr);
+    else
+        nd_printf("???");
+}
+
+void nd_print_binary(uint32_t byte)
+{
+    uint32_t i;
+    char b[sizeof(byte) * 8 + 1];
+
+    b[0] = '\0';
+    for (i = 0x80000000; i > 0; i >>= 1)
+        strcat(b, ((byte & i) == i) ? "1" : "0");
+
+    nd_printf(b);
 }
 
 int nd_sha1_file(const string &filename, uint8_t *digest)
