@@ -80,10 +80,12 @@ using namespace std;
 
 bool nd_debug = false;
 bool nd_debug_upload = false;
+bool nd_debug_ether_names = true;
 pthread_mutex_t *nd_output_mutex = NULL;
 static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
 static nd_devices devices;
+nd_device_ethers device_ethers;
 static nd_flows flows;
 static nd_stats stats;
 static nd_threads threads;
@@ -552,9 +554,9 @@ static void nd_json_add_file(
     json_object *parent, const string &type, const string &filename)
 {
     char *c, *p, buffer[ND_FILE_BUFSIZ];
-    FILE *hf = fopen(filename.c_str(), "r");
+    FILE *fh = fopen(filename.c_str(), "r");
 
-    if (hf == NULL) {
+    if (fh == NULL) {
         nd_printf("Error opening file for upload: %s: %s\n",
             filename.c_str(), strerror(errno));
         return;
@@ -564,7 +566,7 @@ static void nd_json_add_file(
     json_object *json_lines = json.CreateArray(NULL, type.c_str());
 
     p = buffer;
-    while (fgets(buffer, ND_FILE_BUFSIZ, hf) != NULL) {
+    while (fgets(buffer, ND_FILE_BUFSIZ, fh) != NULL) {
         while (*p == ' ' || *p == '\t') p++;
         if (*p == '#' || *p == '\n' || *p == '\r') continue;
         c = (char *)memchr((void *)p, '\n', ND_FILE_BUFSIZ - (p - buffer));
@@ -573,7 +575,53 @@ static void nd_json_add_file(
         json.PushObject(json_lines, p);
     }
 
-    fclose(hf);
+    fclose(fh);
+}
+
+static void nd_load_ethers(void)
+{
+    char buffer[1024 + _ND_STR_ALEN + 17];
+    FILE *fh = fopen(ND_WATCH_ETHERS, "r");
+
+    if (fh == NULL) return;
+
+    device_ethers.clear();
+
+    size_t line = 0;
+    while (!feof(fh)) {
+        if (fgets(buffer, sizeof(buffer), fh)) {
+            line++;
+            char *p = buffer;
+            while (isspace(*p) && *p != '\0') p++;
+
+            char *ether = p;
+            if (!isxdigit(*p)) continue;
+            while (*p != '\0' && (isxdigit(*p) || *p == ':')) p++;
+            *p = '\0';
+            if (strlen(ether) != _ND_STR_ALEN) continue;
+
+            while (isspace(*(++p)) && *p != '\0');
+
+            char *name = p;
+            while (*p != '\n' && *p != '\0') p++;
+            *p = '\0';
+            if (!strlen(name)) continue;
+
+            nd_printf("%2lu: name: %s\n",line, name);
+
+            const char *a = ether;
+            uint8_t mac[ETH_ALEN], *m = mac;
+            for (int j = 0; j < _ND_STR_ALEN; j += 3, p++)
+                sscanf(a + j, "%2hhx", m);
+            string key;
+            key.assign((const char *)mac, ETH_ALEN);
+            device_ethers[key] = name;
+        }
+    }
+
+    fclose(fh);
+
+    nd_debug_printf("Loaded %lu entries from: %s\n", device_ethers.size(), ND_WATCH_ETHERS);
 }
 
 static void nd_json_upload(ndJson *json)
@@ -581,8 +629,11 @@ static void nd_json_upload(ndJson *json)
 #ifdef _ND_USE_INOTIFY
     if (inotify->EventOccured(ND_WATCH_HOSTS))
         nd_json_add_file(json->GetRoot(), "hosts", ND_WATCH_HOSTS);
-    if (inotify->EventOccured(ND_WATCH_ETHERS))
+    if (inotify->EventOccured(ND_WATCH_ETHERS)) {
+        if (nd_debug && nd_debug_ether_names)
+            nd_load_ethers();
         nd_json_add_file(json->GetRoot(), "ethers", ND_WATCH_ETHERS);
+    }
 #endif
     string json_string;
     json->ToString(json_string);
@@ -1052,6 +1103,8 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGRTMIN);
     sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
+
+    nd_load_ethers();
 
     try {
 #ifdef _ND_USE_CONNTRACK

@@ -46,6 +46,11 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 
+#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
+
+extern bool nd_debug_ether_names;
+extern nd_device_ethers device_ethers;
+
 void ndFlow::hash(const string &device, string &digest, bool full_hash)
 {
     sha1 ctx;
@@ -104,6 +109,24 @@ void ndFlow::hash(const string &device, string &digest, bool full_hash)
 void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 {
     char *p = NULL, buffer[64];
+    const char *lower_name = lower_ip, *upper_name = upper_ip;
+
+    if (nd_debug_ether_names) {
+        string key;
+        nd_device_ethers::const_iterator i;
+
+        key.assign((const char *)lower_mac, ETH_ALEN);
+
+        i = device_ethers.find(key);
+        if (i != device_ethers.end())
+            lower_name = i->second.c_str();
+
+        key.assign((const char *)upper_mac, ETH_ALEN);
+
+        i = device_ethers.find(key);
+        if (i != device_ethers.end())
+            upper_name = i->second.c_str();
+    }
 
     if (detected_protocol.master_protocol) {
         ndpi_protocol2name(ndpi,
@@ -122,8 +145,8 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         (privacy_mask & PRIVATE_LOWER) ? 'l' : '-',
         (privacy_mask & PRIVATE_UPPER) ? 'u' : '-',
         p,
-        lower_ip, ntohs(lower_port),
-        upper_ip, ntohs(upper_port),
+        lower_name, ntohs(lower_port),
+        upper_name, ntohs(upper_port),
         (host_server_name[0] != '\0') ? " H: " : "",
         (host_server_name[0] != '\0') ? host_server_name : "",
         (ssl.client_cert[0] != '\0' || ssl.server_cert[0] != '\0') ? " SSL" : "",
@@ -137,7 +160,6 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 json_object *ndFlow::json_encode(const string &device,
     ndJson &json, struct ndpi_detection_module_struct *ndpi, bool include_stats)
 {
-#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
     char mac_addr[_ND_STR_ALEN + 1];
     string other_type = "unknown";
     string _lower_mac = "local_mac", _upper_mac = "other_mac";
