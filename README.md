@@ -32,6 +32,16 @@ Download Source
 When cloning the source tree, ensure you use `--recursive` to include all
 sub-modules.
 
+Download Packages
+-----------------
+
+Currently you can find packages for the following OS distributions:
+- [ClearOS](http://clearos.com)
+- [CentOS](http://software.opensuse.org/download.html?project=home%3Adsokoloski&package=netifyd)
+- [Debian](http://software.opensuse.org/download.html?project=home%3Adsokoloski&package=netifyd)
+- [Fedora](http://software.opensuse.org/download.html?project=home%3Adsokoloski&package=netifyd)
+- [Ubuntu](http://software.opensuse.org/download.html?project=home%3Adsokoloski&package=netifyd)
+
 Configuring Source
 ------------------
 
