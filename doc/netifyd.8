@@ -5,6 +5,7 @@ netifyd \- perform deep-packet inspection on network traffic
 .B netifyd
 [\fB\-d\fR, \fB\-\-debug\fR]
 [\fB\-e\fR, \fB\-\-debug-ether-names\fR]
+[\fB\-D\fR, \fB\-\-debug-uploads\fR]
 [\fB\-t\fR, \fB\-\-disable-conntrack\fR]
 [\fB\-I\fR, \fB\-\-internal\fR=\fIINTERFACE\fR]
 [\fB\-E\fR, \fB\-\-external\fR=\fIINTERFACE\fR]
@@ -33,6 +34,9 @@ Enable debug mode.  Remain in the foreground and emit debug messages.
 .TP
 .BR \-e ", " \-\-debug-ether-names
 Try to resolve MAC addresses to names using contents of /etc/ethers if available.
+.TP
+.BR \-D ", " \-\-debug-uploads
+Emit JSON upload debug messages (client/server HTTP headers, etc).
 .TP
 .BR \-t ", " \-\-disable-conntrack
 Disable connection tracking for networks without a NAT configuration.
@@ -68,6 +72,8 @@ Generate a client UUID.
 Display the current protocol and service ID list.
 .SH BUGS
 Report bugs to: https://github.com/eglooca/netify-daemon/issues
+.SH SEE ALSO
+netifyd.conf(5)
 .SH COPYRIGHT
 Copyright (C) 2015-2017 eGloo Incorporated <http://www.egloo.ca>
 .SH LICENSE
