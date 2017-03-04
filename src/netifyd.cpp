@@ -390,22 +390,28 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
             ts_now.tv_sec - nd_ts_epoch.tv_sec);
     }
 
-    nd_printf("%12s: %9llu ", "RAW", stats.pkt_raw);
-    nd_printf("%12s: %9llu\n", "ETH", stats.pkt_eth);
+    nd_printf("%12s: %9llu ", "Wire", stats.pkt_raw);
+    nd_printf("%12s: %9llu ", "ETH", stats.pkt_eth);
+    nd_printf("%12s: %9llu\n", "VLAN", stats.pkt_vlan);
     nd_printf("%12s: %9llu ", "IP", stats.pkt_ip);
+    nd_printf("%12s: %9llu ", "IPv4", stats.pkt_ip4);
+    nd_printf("%12s: %9llu\n", "IPv6", stats.pkt_ip6);
+    nd_printf("%12s: %9llu ", "ICMP", 0);
     nd_printf("%12s: %9llu ", "UDP", stats.pkt_udp);
     nd_printf("%12s: %9llu\n", "TCP", stats.pkt_tcp);
     nd_printf("%12s: %9llu ", "MPLS", stats.pkt_mpls);
-    nd_printf("%12s: %9llu ", "PPPoE", stats.pkt_pppoe);
-    nd_printf("%12s: %9llu\n", "VLAN", stats.pkt_vlan);
+    nd_printf("%12s: %9llu\n", "PPPoE", stats.pkt_pppoe);
     nd_printf("%12s: %9llu ", "Frags", stats.pkt_frags);
-    nd_printf("%12s: %9llu\n", "Discarded", stats.pkt_discard);
+    nd_printf("%12s: %9llu ", "Discarded", stats.pkt_discard);
     nd_printf("%12s: %9lu\n", "Largest", stats.pkt_maxlen);
     nd_printf("\nCumulative Byte Totals:\n");
+    nd_printf("%12s: %9llu\n", "Wire", stats.pkt_wire_bytes);
     nd_printf("%12s: %9llu ", "IP", stats.pkt_ip_bytes);
-    nd_printf("%12s: %9llu ", "Wire", stats.pkt_wire_bytes);
-    nd_printf("%12s: %9llu\n", "Discarded", stats.pkt_discard_bytes);
-    nd_printf("%12s: %9lu (%s%d)\n\n", "Active flows", flow_count,
+    nd_printf("%12s: %9llu ", "IPv4", stats.pkt_ip4_bytes);
+    nd_printf("%12s: %9llu\n", "IPv6", stats.pkt_ip6_bytes);
+    nd_printf("%24s", "");
+    nd_printf("%12s: %9llu ", "Discarded", stats.pkt_discard_bytes);
+    nd_printf("%12s: %9lu (%s%d)\n\n", "Flows", flow_count,
         (flow_count > flow_count_previous) ? "+" : "",
         int(flow_count - flow_count_previous));
 

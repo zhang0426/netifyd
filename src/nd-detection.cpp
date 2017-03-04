@@ -564,9 +564,20 @@ void ndDetectionThread::ProcessPacket(void)
             id_src = new_flow->id_dst, id_dst = new_flow->id_src;
     }
 
+    stats->pkt_wire_bytes += pkt_header->len + 24;
+
     stats->pkt_ip++;
     stats->pkt_ip_bytes += pkt_header->len;
-    stats->pkt_wire_bytes += pkt_header->len + 24;
+
+    if (new_flow->ip_version == 4) {
+        stats->pkt_ip4++;
+        stats->pkt_ip4_bytes += pkt_header->len;
+    }
+    else {
+        stats->pkt_ip6++;
+        stats->pkt_ip6_bytes += pkt_header->len;
+    }
+
     new_flow->total_packets++;
     new_flow->total_bytes += pkt_header->len;
     new_flow->ts_last_seen = ts_pkt;

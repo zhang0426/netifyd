@@ -140,9 +140,13 @@ typedef struct nd_packet_stats_t
     uint64_t pkt_discard;
     uint32_t pkt_maxlen;
     uint64_t pkt_ip;
+    uint64_t pkt_ip4;
+    uint64_t pkt_ip6;
     uint64_t pkt_tcp;
     uint64_t pkt_udp;
     uint64_t pkt_ip_bytes;
+    uint64_t pkt_ip4_bytes;
+    uint64_t pkt_ip6_bytes;
     uint64_t pkt_wire_bytes;
     uint64_t pkt_discard_bytes;
 
@@ -157,9 +161,13 @@ typedef struct nd_packet_stats_t
         if (rhs.pkt_maxlen > pkt_maxlen)
             pkt_maxlen = rhs.pkt_maxlen;
         pkt_ip += rhs.pkt_ip;
+        pkt_ip4 += rhs.pkt_ip4;
+        pkt_ip6 += rhs.pkt_ip6;
         pkt_tcp += rhs.pkt_tcp;
         pkt_udp += rhs.pkt_udp;
         pkt_ip_bytes += rhs.pkt_ip_bytes;
+        pkt_ip4_bytes += rhs.pkt_ip4_bytes;
+        pkt_ip6_bytes += rhs.pkt_ip6_bytes;
         pkt_wire_bytes += rhs.pkt_wire_bytes;
         pkt_discard_bytes += rhs.pkt_discard_bytes;
         return *this;
