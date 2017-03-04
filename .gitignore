@@ -11,4 +11,5 @@ ltmain.sh
 Makefile
 Makefile.in
 missing
+osc
 stamp-h1
