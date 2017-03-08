@@ -406,6 +406,7 @@ string ndUploadThread::Deflate(const string &data)
 
 void ndUploadThread::ProcessResponse(void)
 {
+    bool detection_module_reload = false;
     ndJsonObject *json_obj = NULL;
     ndJsonObjectType json_type = ndJSON_OBJ_TYPE_NULL;
     ndJsonObjectResult *json_result = NULL;
@@ -448,19 +449,22 @@ void ndUploadThread::ProcessResponse(void)
         json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
 
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH) &&
-            nd_config.conf_content_match_override == false)
+            nd_config.conf_content_match_override == false) {
             ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
+            detection_module_reload = true;
+        }
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH) &&
-            nd_config.conf_custom_match_override == false)
+            nd_config.conf_custom_match_override == false) {
             ExportConfig(ndJSON_CFG_TYPE_CUSTOM_MATCH, json_config);
+            detection_module_reload = true;
+        }
         if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_MATCH) &&
-            nd_config.conf_host_match_override == false)
+            nd_config.conf_host_match_override == false) {
             ExportConfig(ndJSON_CFG_TYPE_HOST_MATCH, json_config);
+            detection_module_reload = true;
+        }
 
-        if (nd_config.conf_content_match_override == false ||
-            nd_config.conf_custom_match_override == false ||
-            nd_config.conf_host_match_override == false)
-            kill(getpid(), SIGHUP);
+        if (detection_module_reload) kill(getpid(), SIGHUP);
 
         break;
     case ndJSON_OBJ_TYPE_NULL:
