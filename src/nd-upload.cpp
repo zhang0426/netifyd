@@ -457,7 +457,10 @@ void ndUploadThread::ProcessResponse(void)
             nd_config.conf_host_match_override == false)
             ExportConfig(ndJSON_CFG_TYPE_HOST_MATCH, json_config);
 
-        kill(getpid(), SIGHUP);
+        if (nd_config.conf_content_match_override == false ||
+            nd_config.conf_custom_match_override == false ||
+            nd_config.conf_host_match_override == false)
+            kill(getpid(), SIGHUP);
 
         break;
     case ndJSON_OBJ_TYPE_NULL:
