@@ -409,7 +409,7 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
     nd_printf("%12s: %12llu ", "IP", stats.pkt_ip_bytes);
     nd_printf("%12s: %12llu ", "IPv4", stats.pkt_ip4_bytes);
     nd_printf("%12s: %12llu\n", "IPv6", stats.pkt_ip6_bytes);
-    nd_printf("%24s", "");
+    nd_printf("%27s", "");
     nd_printf("%12s: %12llu ", "Discarded", stats.pkt_discard_bytes);
     nd_printf("%12s: %12lu (%s%d)\n\n", "Flows", flow_count,
         (flow_count > flow_count_previous) ? "+" : "",
