@@ -19,11 +19,18 @@
 
 #define ND_SHA1_BUFFER    4096
 
+#ifdef _ND_USE_NCURSES
+#include <ncurses.h>
+#endif
+
 void *nd_mem_alloc(size_t size);
 
 void nd_mem_free(void *ptr);
 
 void nd_printf(const char *format, ...);
+#ifdef _ND_USE_NCURSES
+void nd_printw(WINDOW *win, const char *format, ...);
+#endif
 
 void nd_debug_printf(const char *format, ...);
 

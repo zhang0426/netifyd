@@ -41,6 +41,10 @@ using namespace std;
 
 extern bool nd_debug;
 
+#ifdef _ND_USE_NCURSES
+extern WINDOW *win_output;
+#endif
+
 void *nd_mem_alloc(size_t size)
 {
     return malloc(size);
@@ -60,8 +64,14 @@ void nd_printf(const char *format, ...)
     va_list ap;
     va_start(ap, format);
 
-    if (nd_debug)
+    if (nd_debug) {
+#ifndef _ND_USE_NCURSES
         vfprintf(stdout, format, ap);
+#else
+        vwprintw(win_output, format, ap);
+        wrefresh(win_output);
+#endif
+    }
     else
         vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
 
@@ -70,13 +80,40 @@ void nd_printf(const char *format, ...)
     pthread_mutex_unlock(nd_output_mutex);
 }
 
+#ifdef _ND_USE_NCURSES
+void nd_printw(WINDOW *win, const char *format, ...)
+{
+    if (nd_debug) {
+        pthread_mutex_lock(nd_output_mutex);
+
+        va_list ap;
+        va_start(ap, format);
+        vwprintw(win, format, ap);
+        wrefresh(win);
+        va_end(ap);
+
+        pthread_mutex_unlock(nd_output_mutex);
+    }
+}
+#endif
+
 void nd_debug_printf(const char *format, ...)
 {
     if (nd_debug) {
+
+        pthread_mutex_lock(nd_output_mutex);
+
         va_list ap;
         va_start(ap, format);
+#ifndef _ND_USE_NCURSES
         vfprintf(stderr, format, ap);
+#else
+        vwprintw(win_output, format, ap);
+        wrefresh(win_output);
+#endif
         va_end(ap);
+
+        pthread_mutex_unlock(nd_output_mutex);
     }
 }
 
@@ -84,10 +121,20 @@ void ndpi_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...)
 {
     if (nd_debug) {
+
+        pthread_mutex_lock(nd_output_mutex);
+
         va_list ap;
         va_start(ap, format);
+#ifndef _ND_USE_NCURSES
         vfprintf(stderr, format, ap);
+#else
+        vwprintw(win_output, format, ap);
+        wrefresh(win_output);
+#endif
         va_end(ap);
+
+        pthread_mutex_unlock(nd_output_mutex);
     }
 }
 
