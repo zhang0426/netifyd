@@ -137,13 +137,17 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         p = ndpi_get_proto_name(ndpi, detected_protocol.protocol);
 
     nd_printf(
-        "%s: [%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s\n",
+        "%s: [%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s\n",
         tag,
+        (internal) ? 'i' : 'e',
+        (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         (detection_guessed &&
             detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN) ? 'g' : '-',
         ip_nat ? 'n' : '-',
-        (privacy_mask & PRIVATE_LOWER) ? 'l' : '-',
-        (privacy_mask & PRIVATE_UPPER) ? 'u' : '-',
+        (privacy_mask & PRIVATE_LOWER) ? 'p' :
+            (privacy_mask & PRIVATE_UPPER) ? 'P' :
+            (privacy_mask & (PRIVATE_LOWER | PRIVATE_UPPER)) ? 'X' :
+            '-',
         p,
         lower_name, ntohs(lower_port),
         upper_name, ntohs(upper_port),

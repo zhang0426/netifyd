@@ -22,6 +22,9 @@
 #include <cstdlib>
 #include <cstdarg>
 #include <string>
+#include <iostream>
+#include <locale>
+#include <iomanip>
 #include <sstream>
 
 #include <unistd.h>
@@ -40,6 +43,11 @@ using namespace std;
 #include "nd-sha1.h"
 
 extern bool nd_debug;
+extern bool nd_debug_ncurses;
+
+#ifdef _ND_USE_NCURSES
+extern WINDOW *win_output;
+#endif
 
 void *nd_mem_alloc(size_t size)
 {
@@ -52,7 +60,17 @@ void nd_mem_free(void *ptr)
 }
 
 extern pthread_mutex_t *nd_output_mutex;
+#ifdef _ND_USE_NCURSES
+void nd_output_lock(void)
+{
+    pthread_mutex_lock(nd_output_mutex);
+}
 
+void nd_output_unlock(void)
+{
+    pthread_mutex_unlock(nd_output_mutex);
+}
+#endif
 void nd_printf(const char *format, ...)
 {
     pthread_mutex_lock(nd_output_mutex);
@@ -60,8 +78,18 @@ void nd_printf(const char *format, ...)
     va_list ap;
     va_start(ap, format);
 
-    if (nd_debug)
+    if (nd_debug) {
+#ifndef _ND_USE_NCURSES
         vfprintf(stdout, format, ap);
+#else
+        if (!nd_debug_ncurses || win_output == NULL)
+            vfprintf(stdout, format, ap);
+        else {
+            vwprintw(win_output, format, ap);
+            wrefresh(win_output);
+        }
+#endif
+    }
     else
         vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
 
@@ -70,13 +98,44 @@ void nd_printf(const char *format, ...)
     pthread_mutex_unlock(nd_output_mutex);
 }
 
+#ifdef _ND_USE_NCURSES
+void nd_printw(WINDOW *win, const char *format, ...)
+{
+    if (nd_debug) {
+        pthread_mutex_lock(nd_output_mutex);
+
+        va_list ap;
+        va_start(ap, format);
+        vwprintw(win, format, ap);
+        wrefresh(win);
+        va_end(ap);
+
+        pthread_mutex_unlock(nd_output_mutex);
+    }
+}
+#endif
+
 void nd_debug_printf(const char *format, ...)
 {
     if (nd_debug) {
+
+        pthread_mutex_lock(nd_output_mutex);
+
         va_list ap;
         va_start(ap, format);
+#ifndef _ND_USE_NCURSES
         vfprintf(stderr, format, ap);
+#else
+        if (!nd_debug_ncurses)
+            vfprintf(stderr, format, ap);
+        else {
+            vwprintw(win_output, format, ap);
+            wrefresh(win_output);
+        }
+#endif
         va_end(ap);
+
+        pthread_mutex_unlock(nd_output_mutex);
     }
 }
 
@@ -84,10 +143,20 @@ void ndpi_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...)
 {
     if (nd_debug) {
+
+        pthread_mutex_lock(nd_output_mutex);
+
         va_list ap;
         va_start(ap, format);
+#ifndef _ND_USE_NCURSES
         vfprintf(stderr, format, ap);
+#else
+        vwprintw(win_output, format, ap);
+        wrefresh(win_output);
+#endif
         va_end(ap);
+
+        pthread_mutex_unlock(nd_output_mutex);
     }
 }
 
@@ -126,6 +195,58 @@ void nd_print_binary(uint32_t byte)
         strcat(b, ((byte & i) == i) ? "1" : "0");
 
     nd_printf(b);
+}
+
+void nd_print_number(ostringstream &os, uint64_t value, bool units_binary)
+{
+    float fvalue = value;
+
+    os.str("");
+    //os << setiosflags(ios::fixed) << setw(14) << setprecision(3);
+    os << setw(8) << setprecision(3);
+
+    if (units_binary) {
+        if (fvalue >= 1099511627776.0f) {
+            fvalue /= 1099511627776.0f;
+            os << fvalue << setw(4) << " TiB";
+        }
+        else if (fvalue >= 1073741824.0f) {
+            fvalue /= 1073741824.0f;
+            os << fvalue << setw(4) << " GiB";
+        }
+        else if (fvalue >= 1048576.0f) {
+            fvalue /= 1048576.0f;
+            os << fvalue << setw(4) << " MiB";
+        }
+        else if (fvalue >= 1024.0f) {
+            fvalue /= 1024.0f;
+            os << fvalue << setw(4) << " KiB";
+        }
+        else {
+            os << fvalue << setw(4) << " ";
+        }
+    }
+    else {
+        if (fvalue >= 1000000000000.0f) {
+            fvalue /= 1000000000000.0f;
+            os << fvalue << setw(4) << " TP ";
+        }
+        else if (fvalue >= 1000000000.0f) {
+            fvalue /= 1000000000.0f;
+            os << fvalue << setw(4) << " GP ";
+        }
+        else if (fvalue >= 1000000.0f) {
+            fvalue /= 1000000.0f;
+            os << fvalue << setw(4) << " MP ";
+        }
+        else if (fvalue >= 1000.0f) {
+            fvalue /= 1000.0f;
+            os << fvalue << setw(4) << " KP ";
+        }
+        else {
+            os << fvalue << setw(4) << " ";
+        }
+    }
 }
 
 int nd_sha1_file(const string &filename, uint8_t *digest)

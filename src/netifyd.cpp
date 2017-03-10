@@ -27,6 +27,7 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
+#include <locale>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -37,22 +38,26 @@
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
+#include <locale.h>
 
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
-
-#ifdef _ND_USE_CONNTRACK
-#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
-#endif
 
 #include <curl/curl.h>
 #include <json.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
 
-#include "INIReader.h"
+#ifdef _ND_USE_CONNTRACK
+#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+#endif
 
+#ifdef _ND_USE_NCURSES
+#include <ncurses.h>
+#endif
+
+#include "INIReader.h"
 #include "ndpi_main.h"
 
 using namespace std;
@@ -81,6 +86,7 @@ using namespace std;
 bool nd_debug = false;
 bool nd_debug_upload = false;
 bool nd_debug_ether_names = false;
+bool nd_debug_ncurses = false;
 pthread_mutex_t *nd_output_mutex = NULL;
 static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
@@ -90,6 +96,7 @@ static nd_flows flows;
 static nd_stats stats;
 static nd_threads threads;
 static nd_packet_stats totals;
+static ostringstream *nd_stats_os = NULL;
 static ndUploadThread *thread_upload = NULL;
 static ndSocketThread *thread_socket = NULL;
 static char *nd_conf_filename = NULL;
@@ -98,6 +105,10 @@ static ndConntrackThread *thread_conntrack = NULL;
 #endif
 #ifdef _ND_USE_INOTIFY
 static ndInotify *inotify = NULL;
+#endif
+#ifdef _ND_USE_NCURSES
+static WINDOW *win_stats = NULL;
+WINDOW *win_output = NULL;
 #endif
 #ifdef _ND_USE_NETLINK
 static ndNetlink *netlink = NULL;
@@ -382,39 +393,168 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
     struct timespec ts_now;
     static uint32_t flow_count_previous = 0;
 
-    nd_printf("\nCumulative Packet Totals ");
-    if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
-        nd_printf("(clock_gettime: %s):\n", strerror(errno));
-    else {
-        nd_printf("(+%lus):\n",
-            ts_now.tv_sec - nd_ts_epoch.tv_sec);
+    if (nd_debug_ncurses == false) {
+        nd_printf("\n");
+        nd_printf("Cumulative Packet Totals ");
+        if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
+            nd_printf("(clock_gettime: %s):\n", strerror(errno));
+        else {
+            nd_printf("(+%lus):\n",
+                ts_now.tv_sec - nd_ts_epoch.tv_sec);
+        }
+
+        nd_print_number(*nd_stats_os, stats.pkt_raw, false);
+        nd_printf("%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_eth, false);
+        nd_printf("%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_vlan, false);
+        nd_printf("%12s: %s\n", "VLAN", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip, false);
+        nd_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip4, false);
+        nd_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip6, false);
+        nd_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, 0, false);
+        nd_printf("%12s: %s ", "ICMP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_udp, false);
+        nd_printf("%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_tcp, false);
+        nd_printf("%12s: %s\n", "TCP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_mpls, false);
+        nd_printf("%12s: %s ", "MPLS", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_pppoe, false);
+        nd_printf("%12s: %s\n", "PPPoE", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_frags, false);
+        nd_printf("%12s: %s ", "Frags", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_discard, false);
+        nd_printf("%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_maxlen);
+        nd_printf("%12s: %s\n", "Largest", (*nd_stats_os).str().c_str());
+
+        nd_printf("\nCumulative Byte Totals:\n");
+
+        nd_print_number(*nd_stats_os, stats.pkt_wire_bytes);
+        nd_printf("%12s: %s\n", "Wire", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip_bytes);
+        nd_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip4_bytes);
+        nd_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip6_bytes);
+        nd_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_discard_bytes);
+        nd_printf("%39s: %s ", "Discarded", (*nd_stats_os).str().c_str());
+
+        (*nd_stats_os).str("");
+        (*nd_stats_os) << setw(8) << flow_count;
+
+        nd_printf("%12s: %s (%s%d)", "Flows", (*nd_stats_os).str().c_str(),
+            (flow_count > flow_count_previous) ? "+" : "",
+            int(flow_count - flow_count_previous));
+        nd_printf("\n\n");
     }
+    else {
+#ifdef _ND_USE_NCURSES
+        wclear(win_stats);
+        wmove(win_stats, 0, 0);
 
-    nd_printf("%12s: %12llu ", "Wire", stats.pkt_raw);
-    nd_printf("%12s: %12llu ", "ETH", stats.pkt_eth);
-    nd_printf("%12s: %12llu\n", "VLAN", stats.pkt_vlan);
-    nd_printf("%12s: %12llu ", "IP", stats.pkt_ip);
-    nd_printf("%12s: %12llu ", "IPv4", stats.pkt_ip4);
-    nd_printf("%12s: %12llu\n", "IPv6", stats.pkt_ip6);
-    nd_printf("%12s: %12llu ", "ICMP", 0);
-    nd_printf("%12s: %12llu ", "UDP", stats.pkt_udp);
-    nd_printf("%12s: %12llu\n", "TCP", stats.pkt_tcp);
-    nd_printf("%12s: %12llu ", "MPLS", stats.pkt_mpls);
-    nd_printf("%12s: %12llu\n", "PPPoE", stats.pkt_pppoe);
-    nd_printf("%12s: %12llu ", "Frags", stats.pkt_frags);
-    nd_printf("%12s: %12llu ", "Discarded", stats.pkt_discard);
-    nd_printf("%12s: %12lu\n", "Largest", stats.pkt_maxlen);
-    nd_printf("\nCumulative Byte Totals:\n");
-    nd_printf("%12s: %12llu\n", "Wire", stats.pkt_wire_bytes);
-    nd_printf("%12s: %12llu ", "IP", stats.pkt_ip_bytes);
-    nd_printf("%12s: %12llu ", "IPv4", stats.pkt_ip4_bytes);
-    nd_printf("%12s: %12llu\n", "IPv6", stats.pkt_ip6_bytes);
-    nd_printf("%27s", "");
-    nd_printf("%12s: %12llu ", "Discarded", stats.pkt_discard_bytes);
-    nd_printf("%12s: %12lu (%s%d)\n\n", "Flows", flow_count,
-        (flow_count > flow_count_previous) ? "+" : "",
-        int(flow_count - flow_count_previous));
+        nd_printw(win_stats, "Netify Daemon v%s\n", PACKAGE_VERSION);
+        wattrset(win_stats, A_BOLD | A_REVERSE);
+        nd_printw(win_stats, "Cumulative Packet Totals ");
+        if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
+            nd_printw(win_stats, "(clock_gettime: %s):\n", strerror(errno));
+        else {
+            nd_printw(win_stats, "(+%lus):\n",
+                ts_now.tv_sec - nd_ts_epoch.tv_sec);
+        }
+        wattrset(win_stats, A_NORMAL);
 
+        nd_print_number(*nd_stats_os, stats.pkt_raw, false);
+        nd_printw(win_stats, "%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_eth, false);
+        nd_printw(win_stats, "%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_vlan, false);
+        nd_printw(win_stats, "%12s: %s\n", "VLAN", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip, false);
+        nd_printw(win_stats, "%12s: %s ", "IP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip4, false);
+        nd_printw(win_stats, "%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip6, false);
+        nd_printw(win_stats, "%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, 0, false);
+        nd_printw(win_stats, "%12s: %s ", "ICMP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_udp, false);
+        nd_printw(win_stats, "%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_tcp, false);
+        nd_printw(win_stats, "%12s: %s\n", "TCP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_mpls, false);
+        nd_printw(win_stats, "%12s: %s ", "MPLS", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_pppoe, false);
+        nd_printw(win_stats, "%12s: %s\n", "PPPoE", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_frags, false);
+        nd_printw(win_stats, "%12s: %s ", "Frags", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_discard, false);
+        nd_printw(win_stats, "%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_maxlen);
+        nd_printw(win_stats, "%12s: %s\n", "Largest", (*nd_stats_os).str().c_str());
+
+        wattrset(win_stats, A_BOLD | A_REVERSE);
+        nd_printw(win_stats, "Cumulative Byte Totals:\n");
+        wattrset(win_stats, A_NORMAL);
+
+        nd_print_number(*nd_stats_os, stats.pkt_wire_bytes);
+        nd_printw(win_stats, "%12s: %s\n", "Wire", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip_bytes);
+        nd_printw(win_stats, "%12s: %s ", "IP", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip4_bytes);
+        nd_printw(win_stats, "%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_ip6_bytes);
+        nd_printw(win_stats, "%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
+
+        nd_print_number(*nd_stats_os, stats.pkt_discard_bytes);
+        nd_printw(win_stats, "%39s: %s ", "Discarded", (*nd_stats_os).str().c_str());
+
+        (*nd_stats_os).str("");
+        (*nd_stats_os) << setw(8) << flow_count;
+
+        nd_printw(win_stats, "%12s: %s (%s%d)", "Flows", (*nd_stats_os).str().c_str(),
+            (flow_count > flow_count_previous) ? "+" : "",
+            int(flow_count - flow_count_previous));
+    }
+#endif
     flow_count_previous = flow_count;
 }
 
@@ -885,7 +1025,15 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
 
     if (token != NULL) free(token);
 }
-
+#ifdef _ND_USE_NCURSES
+static void nd_create_windows(void)
+{
+    win_stats = newwin(11, COLS, 0, 0);
+    win_output = newwin(LINES - 11, COLS, 11 + 1, 0);
+    scrollok(win_output, true);
+    curs_set(0);
+}
+#endif
 int main(int argc, char *argv[])
 {
     int rc = 0;
@@ -896,6 +1044,17 @@ int main(int argc, char *argv[])
     struct itimerspec it_spec;
     string last_device;
     vector<pair<string, string> > device_addresses;
+
+    setlocale(LC_ALL, "");
+
+    struct nd_numpunct : numpunct<char> {
+        string do_grouping() const { return "\03"; }
+    };
+
+    ostringstream os;
+    nd_stats_os = &os;
+    locale lc(cout.getloc(), new nd_numpunct);
+    os.imbue(lc);
 
     memset(&nd_config, 0, sizeof(ndGlobalConfig));
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
@@ -930,6 +1089,7 @@ int main(int argc, char *argv[])
         { "host-match", 1, 0, 'H' },
         { "hash-file", 1, 0, 'S' },
         { "disable-conntrack", 1, 0, 't' },
+        { "enable-ncurses", 0, 0, 'n' },
 
         { NULL, 0, 0, 0 }
     };
@@ -937,7 +1097,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDes:I:E:j:i:c:UPA:N:f:H:C:S:t",
+            "?hVdDens:I:E:j:i:c:UPA:N:f:H:C:S:t",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -1046,6 +1206,14 @@ int main(int argc, char *argv[])
         case 't':
             nd_config.disable_conntrack = true;
             break;
+        case 'n':
+#if _ND_USE_NCURSES
+            nd_debug_ncurses = true;
+#else
+            nd_printf("Sorry, ncurses was not enabled for this build.\n");
+            return 1;
+#endif
+            break;
         default:
             nd_usage(1);
         }
@@ -1093,6 +1261,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+#ifdef _ND_USE_NCURSES
+    if (nd_debug_ncurses) {
+        initscr();
+        nd_create_windows();
+    }
+#endif
     nd_printf("Netify Daemon v%s\n", PACKAGE_VERSION);
 
     memset(&totals, 0, sizeof(nd_packet_stats));
@@ -1115,7 +1289,10 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGRTMIN);
     sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
-
+#ifdef _ND_USE_NCURSES
+    if (nd_debug_ncurses)
+        sigaddset(&sigset, SIGWINCH);
+#endif
     nd_load_ethers();
 
     try {
@@ -1206,6 +1383,9 @@ int main(int argc, char *argv[])
     it_spec.it_interval.tv_nsec = 0;
 
     timer_settime(timer_id, 0, &it_spec, NULL);
+#ifdef _ND_USE_NCURSES
+    nd_print_stats(0, totals);
+#endif
 #ifdef _ND_USE_NETLINK
     netlink->Refresh();
 #endif
@@ -1263,7 +1443,19 @@ int main(int argc, char *argv[])
 
             continue;
         }
-
+#ifdef _ND_USE_NCURSES
+        if (sig == SIGWINCH) {
+            nd_output_lock();
+            delwin(win_stats);
+            delwin(win_output);
+            endwin();
+            refresh();
+            nd_create_windows();
+            nd_output_unlock();
+            nd_print_stats(0, totals);
+            continue;
+        }
+#endif
         nd_printf("Unhandled signal: %s\n", strsignal(sig));
     }
 
@@ -1286,7 +1478,12 @@ int main(int argc, char *argv[])
     delete nd_output_mutex;
 
     curl_global_cleanup();
-
+#ifdef _ND_USE_NCURSES
+    delwin(win_stats);
+    delwin(win_output);
+    refresh();
+    endwin();
+#endif
     return 0;
 }
 

@@ -23,6 +23,10 @@ if USE_INOTIFY
 netifyd_SOURCES += nd-inotify.cpp
 endif
 
+if USE_NCURSES
+netifyd_LDADD += $(LIBNCURSES_LIBS)
+endif
+
 if USE_NETLINK
 netifyd_SOURCES += nd-netlink.cpp
 endif

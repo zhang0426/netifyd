@@ -22,6 +22,7 @@
 
 struct ndFlow
 {
+    bool internal;
     uint8_t ip_version;
     uint8_t ip_protocol;
     bool ip_nat;

@@ -142,6 +142,8 @@ typedef struct nd_packet_stats_t
     uint64_t pkt_ip;
     uint64_t pkt_ip4;
     uint64_t pkt_ip6;
+    uint64_t pkt_icmp;
+    uint64_t pkt_igmp;
     uint64_t pkt_tcp;
     uint64_t pkt_udp;
     uint64_t pkt_ip_bytes;
@@ -163,6 +165,8 @@ typedef struct nd_packet_stats_t
         pkt_ip += rhs.pkt_ip;
         pkt_ip4 += rhs.pkt_ip4;
         pkt_ip6 += rhs.pkt_ip6;
+        pkt_icmp += rhs.pkt_icmp;
+        pkt_igmp += rhs.pkt_igmp;
         pkt_tcp += rhs.pkt_tcp;
         pkt_udp += rhs.pkt_udp;
         pkt_ip_bytes += rhs.pkt_ip_bytes;

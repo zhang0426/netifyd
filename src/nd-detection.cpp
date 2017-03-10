@@ -254,6 +254,7 @@ void ndDetectionThread::ProcessPacket(void)
 
     struct ndFlow flow;
     memset(&flow, 0, sizeof(struct ndFlow));
+    flow.internal = (thread_socket != NULL) ? true : false;
 
     string digest;
 

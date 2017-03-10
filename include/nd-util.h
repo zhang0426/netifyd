@@ -19,12 +19,21 @@
 
 #define ND_SHA1_BUFFER    4096
 
+#ifdef _ND_USE_NCURSES
+#include <ncurses.h>
+#endif
+
 void *nd_mem_alloc(size_t size);
 
 void nd_mem_free(void *ptr);
 
 void nd_printf(const char *format, ...);
+#ifdef _ND_USE_NCURSES
+void nd_printw(WINDOW *win, const char *format, ...);
 
+void nd_output_lock(void);
+void nd_output_unlock(void);
+#endif
 void nd_debug_printf(const char *format, ...);
 
 void ndpi_debug_printf(
@@ -33,6 +42,8 @@ void ndpi_debug_printf(
 void nd_print_address(const struct sockaddr_storage *addr);
 
 void nd_print_binary(uint32_t byte);
+
+void nd_print_number(ostringstream &os, uint64_t value, bool units_binary = true);
 
 int nd_sha1_file(const string &filename, uint8_t *digest);
 
