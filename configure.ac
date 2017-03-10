@@ -70,9 +70,9 @@ AS_IF([test "x$enable_inotify" = "xyes"], [
 ])
 
 AC_ARG_ENABLE([ncurses],
-    [AS_HELP_STRING([--enable-ncurses], [Enable ncurses debug screen [default=no]])],
+    [AS_HELP_STRING([--enable-ncurses], [Enable ncurses debug screen [default=yes]])],
     [],
-    [enable_ncurses=no])
+    [enable_ncurses=yes])
 
 AS_IF([test "x$enable_ncurses" = "xyes"], [
     AC_DEFINE([_ND_USE_NCURSES], [1],

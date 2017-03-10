@@ -19,6 +19,7 @@ BuildRequires: libmnl-devel
 BuildRequires: libnetfilter_conntrack-devel
 BuildRequires: libpcap-devel
 BuildRequires: libtool
+BuildRequires: ncurses-devel
 BuildRequires: pkgconfig
 BuildRequires: zlib-devel
 %if "0%{dist}" == "0.v7"
