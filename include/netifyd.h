@@ -108,7 +108,6 @@ typedef struct {
     size_t max_backlog;
     bool disable_conntrack;
     bool enable_netify_sink;
-    bool enable_ncurses;
     bool ssl_use_tlsv1;
     bool ssl_verify_peer;
     char *json_filename;

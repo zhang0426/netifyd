@@ -43,6 +43,7 @@ using namespace std;
 #include "nd-sha1.h"
 
 extern bool nd_debug;
+extern bool nd_debug_ncurses;
 
 #ifdef _ND_USE_NCURSES
 extern WINDOW *win_output;
@@ -81,8 +82,12 @@ void nd_printf(const char *format, ...)
 #ifndef _ND_USE_NCURSES
         vfprintf(stdout, format, ap);
 #else
-        vwprintw(win_output, format, ap);
-        wrefresh(win_output);
+        if (!nd_debug_ncurses || win_output == NULL)
+            vfprintf(stdout, format, ap);
+        else {
+            vwprintw(win_output, format, ap);
+            wrefresh(win_output);
+        }
 #endif
     }
     else
@@ -121,8 +126,12 @@ void nd_debug_printf(const char *format, ...)
 #ifndef _ND_USE_NCURSES
         vfprintf(stderr, format, ap);
 #else
-        vwprintw(win_output, format, ap);
-        wrefresh(win_output);
+        if (!nd_debug_ncurses)
+            vfprintf(stderr, format, ap);
+        else {
+            vwprintw(win_output, format, ap);
+            wrefresh(win_output);
+        }
 #endif
         va_end(ap);
 
