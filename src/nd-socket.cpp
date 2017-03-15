@@ -578,6 +578,9 @@ const uint8_t *ndSocketBuffer::GetBuffer(ssize_t &length)
 
 void ndSocketBuffer::Push(const string &data)
 {
+    ostringstream header;
+    header << "{\"length\": " << data.size() << "}\n";
+    buffer.push_back(header.str());
     buffer.push_back(data);
     length += data.size();
 }
@@ -665,6 +668,10 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
 
     buffers[client->GetDescriptor()] = buffer;
     clients[client->GetDescriptor()] = client;
+
+    string json_protos;
+    nd_json_protocols(json_protos);
+    buffer->Push(json_protos);
 }
 
 void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)

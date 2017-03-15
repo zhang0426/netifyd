@@ -184,5 +184,7 @@ typedef unordered_map<string, string> nd_device_ethers;
 typedef vector<pair<bool, string> > nd_ifaces;
 typedef map<string, nd_packet_stats *> nd_stats;
 
+void nd_json_protocols(string &json_string);
+
 #endif // _ND_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

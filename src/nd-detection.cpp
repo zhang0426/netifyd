@@ -811,6 +811,7 @@ void ndDetectionThread::ProcessPacket(void)
         if (thread_socket) {
             ndJson json;
 
+            json.AddObject(NULL, "type", "flow");
             json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
             json.AddObject(NULL, "interface", tag);
             json_object *json_flow = new_flow->json_encode(
