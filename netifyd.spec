@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.7
-Release: 2%{dist}
+Release: 3%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -104,7 +104,7 @@ if [ ! -z "$uuid" ]; then
     echo "Follow this link to provision your site: https://www.egloo.ca/login"
 fi
 
-rm -f %{_libexecdir}/%{name}/*.csv
+rm -f %{_sharedstatedir}/%{name}/*.csv
 
 # Pre uninstall
 %preun
@@ -131,7 +131,8 @@ rm -f %{_libexecdir}/%{name}/*.csv
 %attr(755,root,root) %{_libexecdir}/%{name}/
 %dir /run/%{name}
 %endif
-%attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
+%dir %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
+%attr(644,root,webconfig) %{_sharedstatedir}/%{name}/app-custom-match.conf
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
 %{_mandir}/man5/*
