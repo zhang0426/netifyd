@@ -1,7 +1,8 @@
+*.conf
 *.core
 *.cpp-e
-*.o
 .deps/
 Makefile
 nd-json-*.h
 netifyd
+*.o

@@ -13,3 +13,4 @@ Makefile.in
 missing
 osc
 stamp-h1
+.ycm_extra_conf*
