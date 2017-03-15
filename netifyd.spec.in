@@ -2,7 +2,7 @@
 
 Name: @PACKAGE_TARNAME@
 Version: @PACKAGE_VERSION@
-Release: 1%{dist}
+Release: 2%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -70,8 +70,7 @@ mkdir -p %{buildroot}/var/run
 install -d -m 0755 %{buildroot}/var/run/%{name}
 %endif
 
-install -D -m 0644 deploy/app-content-match.csv %{buildroot}/%{_sharedstatedir}/%{name}/app-content-match.csv
-install -D -m 0644 deploy/app-host-match.csv %{buildroot}/%{_sharedstatedir}/%{name}/app-host-match.csv
+install -D -m 0644 deploy/app-custom-match.conf %{buildroot}/%{_sharedstatedir}/%{name}/app-custom-match.conf
 
 #install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 #install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
@@ -104,6 +103,8 @@ if [ ! -z "$uuid" ]; then
     echo "Your Netify Site UUID is: $(tput smso)$uuid$(tput rmso)"
     echo "Follow this link to provision your site: https://www.egloo.ca/login"
 fi
+
+rm -f %{_libexecdir}/%{name}/*.csv
 
 # Pre uninstall
 %preun

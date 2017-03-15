@@ -95,7 +95,7 @@
 #endif
 
 #define ND_CONF_CONTENT_MATCH   "/var/lib/netifyd/app-content-match.csv"
-#define ND_CONF_CUSTOM_MATCH    "/var/lib/netifyd/custom-match.conf"
+#define ND_CONF_CUSTOM_MATCH    "/var/lib/netifyd/app-custom-match.conf"
 #define ND_CONF_HOST_MATCH      "/var/lib/netifyd/app-host-match.csv"
 
 #include "nd-sha1.h"
