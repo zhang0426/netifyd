@@ -1425,7 +1425,7 @@ int main(int argc, char *argv[])
 
     timer_settime(timer_id, 0, &it_spec, NULL);
 #ifdef _ND_USE_NCURSES
-    nd_print_stats(0, totals);
+    if (nd_debug) nd_print_stats(0, totals);
 #endif
 #ifdef _ND_USE_NETLINK
     netlink->Refresh();

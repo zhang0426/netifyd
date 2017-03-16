@@ -2,7 +2,7 @@
 
 Name: netifyd
 Version: 1.7
-Release: 3%{dist}
+Release: 4%{dist}
 Vendor: eGloo Incorporated
 License: GPL
 Group: System/Daemons
@@ -132,7 +132,7 @@ rm -f %{_sharedstatedir}/%{name}/*.csv
 %dir /run/%{name}
 %endif
 %dir %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
-%attr(644,root,webconfig) %{_sharedstatedir}/%{name}/app-custom-match.conf
+%attr(640,root,webconfig) %{_sharedstatedir}/%{name}/app-custom-match.conf
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
 %{_mandir}/man5/*
