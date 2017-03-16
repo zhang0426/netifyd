@@ -81,7 +81,7 @@ using namespace std;
 #include "nd-upload.h"
 #include "nd-ndpi.h"
 
-#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
+#define ND_STR_ETHALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
 bool nd_debug = false;
 bool nd_debug_upload = false;
@@ -270,11 +270,11 @@ static int nd_config_load(void)
         string mac_addr = reader.Get("privacy_filter", os.str(), "");
 
         if (mac_addr.size() == 0) break;
-        if (mac_addr.size() != _ND_STR_ALEN) continue;
+        if (mac_addr.size() != ND_STR_ETHALEN) continue;
 
         uint8_t mac[ETH_ALEN], *p = mac;
         const char *a = mac_addr.c_str();
-        for (int j = 0; j < _ND_STR_ALEN; j += 3, p++)
+        for (int j = 0; j < ND_STR_ETHALEN; j += 3, p++)
             sscanf(a + j, "%2hhx", p);
         p = new uint8_t[ETH_ALEN];
         memcpy(p, mac, ETH_ALEN);
@@ -678,7 +678,7 @@ static void nd_json_add_devices(json_object *parent)
 
         uint8_t mac_src[ETH_ALEN];
         memcpy(mac_src, i->first.c_str(), ETH_ALEN);
-        char mac_dst[_ND_STR_ALEN + 1];
+        char mac_dst[ND_STR_ETHALEN + 1];
 
         sprintf(mac_dst, "%02x:%02x:%02x:%02x:%02x:%02x",
             mac_src[0], mac_src[1], mac_src[2],
@@ -769,7 +769,7 @@ static void nd_json_add_file(
 
 static void nd_load_ethers(void)
 {
-    char buffer[1024 + _ND_STR_ALEN + 17];
+    char buffer[1024 + ND_STR_ETHALEN + 17];
     FILE *fh = fopen(ND_WATCH_ETHERS, "r");
 
     if (fh == NULL) return;
@@ -787,7 +787,7 @@ static void nd_load_ethers(void)
             if (!isxdigit(*p)) continue;
             while (*p != '\0' && (isxdigit(*p) || *p == ':')) p++;
             *p = '\0';
-            if (strlen(ether) != _ND_STR_ALEN) continue;
+            if (strlen(ether) != ND_STR_ETHALEN) continue;
 
             while (isspace(*(++p)) && *p != '\0');
 
@@ -798,7 +798,7 @@ static void nd_load_ethers(void)
 
             const char *a = ether;
             uint8_t mac[ETH_ALEN], *m = mac;
-            for (int j = 0; j < _ND_STR_ALEN; j += 3, m++)
+            for (int j = 0; j < ND_STR_ETHALEN; j += 3, m++)
                 sscanf(a + j, "%2hhx", m);
             string key;
             key.assign((const char *)mac, ETH_ALEN);

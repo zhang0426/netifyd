@@ -46,8 +46,6 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 
-#define _ND_STR_ALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
-
 extern bool nd_debug_ether_names;
 extern nd_device_ethers device_ethers;
 
@@ -164,7 +162,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 json_object *ndFlow::json_encode(const string &device,
     ndJson &json, struct ndpi_detection_module_struct *ndpi, bool include_stats)
 {
-    char mac_addr[_ND_STR_ALEN + 1];
+    char mac_addr[ND_STR_ETHALEN + 1];
     string other_type = "unknown";
     string _lower_mac = "local_mac", _upper_mac = "other_mac";
     string _lower_ip = "local_ip", _upper_ip = "other_ip";

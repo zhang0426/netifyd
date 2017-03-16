@@ -98,6 +98,8 @@
 #define ND_CONF_CUSTOM_MATCH    "/var/lib/netifyd/app-custom-match.conf"
 #define ND_CONF_HOST_MATCH      "/var/lib/netifyd/app-host-match.csv"
 
+#define ND_STR_ETHALEN          (ETH_ALEN * 2 + ETH_ALEN - 1)
+
 #include "nd-sha1.h"
 
 typedef struct {
