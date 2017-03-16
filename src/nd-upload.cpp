@@ -546,7 +546,6 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
 
     switch (type) {
     case ndJSON_CFG_TYPE_CONTENT_MATCH:
-        fprintf(fp, "\"match\",\"application_name\",\"application_id\"\n");
         content_match = config->GetFirstContentMatchEntry();
         while (content_match != NULL) {
             fprintf(fp, "\"%s\",\"%s\",%u\n",
@@ -571,7 +570,6 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
             nd_config.conf_custom_match, nd_config.digest_custom_match);
         break;
     case ndJSON_CFG_TYPE_HOST_MATCH:
-        fprintf(fp, "\"ip_address\",\"ip_prefix\",\"application_id\"\n");
         host_match = config->GetFirstHostMatchEntry();
         while (host_match != NULL) {
             memset(ip_addr, '\0', INET6_ADDRSTRLEN);
