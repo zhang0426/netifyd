@@ -39,7 +39,7 @@ Report bugs to: https://github.com/eglooca/netify-daemon/issues
 %prep
 %setup -q
 ./autogen.sh
-%{configure} --disable-conntrack
+%{configure}
 
 # Build
 %build
