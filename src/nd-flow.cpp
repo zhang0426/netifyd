@@ -132,7 +132,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         p = buffer;
     }
     else
-        p = ndpi_get_proto_name(ndpi, detected_protocol.protocol);
+        p = ndpi_get_proto_name(ndpi, detected_protocol.app_protocol);
 
     nd_printf(
         "%s: [%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s\n",
@@ -140,7 +140,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         (internal) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         (detection_guessed &&
-            detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN) ? 'g' : '-',
+            detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN) ? 'g' : '-',
         ip_nat ? 'n' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
@@ -410,15 +410,15 @@ json_object *ndFlow::json_encode(const string &device,
             ndpi_get_proto_name(ndpi, detected_protocol.master_protocol));
 
         json.AddObject(json_flow, "detected_service",
-            (int32_t)detected_protocol.protocol);
+            (int32_t)detected_protocol.app_protocol);
         json.AddObject(json_flow, "detected_service_name",
-            ndpi_get_proto_name(ndpi, detected_protocol.protocol));
+            ndpi_get_proto_name(ndpi, detected_protocol.app_protocol));
     }
     else {
         json.AddObject(json_flow, "detected_protocol",
-            (int32_t)detected_protocol.protocol);
+            (int32_t)detected_protocol.app_protocol);
         json.AddObject(json_flow, "detected_protocol_name",
-            ndpi_get_proto_name(ndpi, detected_protocol.protocol));
+            ndpi_get_proto_name(ndpi, detected_protocol.app_protocol));
 
         json.AddObject(json_flow, "detected_service", 0);
         json.AddObject(json_flow, "detected_service_name",

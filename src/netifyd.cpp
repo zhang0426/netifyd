@@ -726,7 +726,7 @@ static void nd_json_add_flows(
         if (i->second->detection_complete == false)
             continue;
         if (unknown == false &&
-            i->second->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN)
+            i->second->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN)
             continue;
         if (i->second->lower_packets == 0 && i->second->upper_packets == 0)
             continue;

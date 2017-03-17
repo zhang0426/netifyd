@@ -605,7 +605,7 @@ void ndDetectionThread::ProcessPacket(void)
         id_dst
     );
 
-    if (new_flow->detected_protocol.protocol != NDPI_PROTOCOL_UNKNOWN
+    if (new_flow->detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN
         || (new_flow->ip_protocol != IPPROTO_TCP &&
             new_flow->ip_protocol != IPPROTO_UDP)
         || (new_flow->ip_protocol == IPPROTO_UDP &&
@@ -643,7 +643,7 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->lower_type = netlink->ClassifyAddress(lower_addr);
         new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
 #endif
-        if (new_flow->detected_protocol.protocol == NDPI_PROTOCOL_UNKNOWN) {
+        if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
                 ndpi_set_detected_protocol(
                     ndpi,
@@ -698,7 +698,7 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         if (new_flow->ip_protocol == IPPROTO_TCP
-            && new_flow->detected_protocol.protocol != NDPI_PROTOCOL_DNS) {
+            && new_flow->detected_protocol.app_protocol != NDPI_PROTOCOL_DNS) {
             snprintf(new_flow->ssl.client_cert, ND_FLOW_SSL_CERTLEN,
                 "%s", new_flow->ndpi_flow->protos.ssl.client_certificate);
             snprintf(new_flow->ssl.server_cert, ND_FLOW_SSL_CERTLEN,
