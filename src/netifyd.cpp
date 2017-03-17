@@ -1088,15 +1088,16 @@ int main(int argc, char *argv[])
 
     setlocale(LC_ALL, "");
 
+    ostringstream os;
+    nd_stats_os = &os;
+#ifdef HAVE_CXX11
     struct nd_numpunct : numpunct<char> {
         string do_grouping() const { return "\03"; }
     };
 
-    ostringstream os;
-    nd_stats_os = &os;
     locale lc(cout.getloc(), new nd_numpunct);
     os.imbue(lc);
-
+#endif
     memset(&nd_config, 0, sizeof(ndGlobalConfig));
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
     nd_config.conf_content_match = strdup(ND_CONF_CONTENT_MATCH);
