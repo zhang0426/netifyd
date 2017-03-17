@@ -17,7 +17,7 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
-PKG_PROG_PKG_CONFIG([0.25])
+PKG_PROG_PKG_CONFIG([0.23])
 AC_PATH_PROG([bash], [bash], [false])
 
 AS_IF([test "x$ac_cv_path_bash" != "xfalse"], [
