@@ -494,8 +494,8 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
             int(flow_count - flow_count_previous));
         nd_printf("\n\n");
     }
-    else {
 #ifdef _ND_USE_NCURSES
+    else {
         //wclear(win_stats);
         nd_output_lock();
         wmove(win_stats, 0, 0);
