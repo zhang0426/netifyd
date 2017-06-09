@@ -65,6 +65,7 @@ AS_IF([test "x$enable_inotify" = "xyes"], [
     AC_DEFINE([_ND_USE_INOTIFY], [1],
         [Define to enable inotify file watch support.])
     AM_CONDITIONAL(USE_INOTIFY, true)
+    AC_CHECK_HEADERS([sys/inotify.h], [], AC_MSG_ERROR([inotify header(s) not found.]))
 ], [
     AM_CONDITIONAL(USE_INOTIFY, false)
 ])
@@ -92,6 +93,7 @@ AS_IF([test "x$enable_netlink" = "xyes"], [
     AC_DEFINE([_ND_USE_NETLINK], [1],
         [Define to enable Netlink socket support.])
     AM_CONDITIONAL(USE_NETLINK, true)
+    AC_CHECK_HEADERS([linux/netlink.h], [], AC_MSG_ERROR([netlink header(s) not found.]))
 ], [
     AM_CONDITIONAL(USE_NETLINK, false)
 ])
