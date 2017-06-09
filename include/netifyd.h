@@ -69,7 +69,7 @@
 #define ND_PCAP_SNAPLEN         1536    // Capture snap length
 #define ND_PCAP_READ_TIMEOUT    500     // Milliseconds
 
-#define ND_URL_UPLOAD           "https://v1-netify-sink.egloo.ca/"
+#define ND_URL_UPLOAD           "https://v2-netify-sink.egloo.ca/"
 #define ND_COOKIE_JAR           "/var/lib/netifyd/netifyd.cookies"
 
 #define ND_REALM_UUID_PATH      "/var/lib/netifyd/netify-realm.uuid"

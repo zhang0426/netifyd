@@ -729,25 +729,33 @@ void ndDetectionThread::ProcessPacket(void)
             umac = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
                 new_flow->lower_mac : new_flow->upper_mac;
 
-            mac.assign((const char *)umac, ETH_ALEN);
+            // Filter out reserved MAC prefixes...
+            // ...IANA RFC7042, IPv4 uni/multicast:
+            if (! ((umac[0] == 0x00 || umac[0] == 0x01) &&
+                umac[1] == 0x00 && umac[2] == 0x5e) &&
+                // IPv6 multicast:
+                ! (umac[0] == 0x33 && umac[1] == 0x33)) {
 
-            ip = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
-                new_flow->lower_ip : new_flow->upper_ip;
+                mac.assign((const char *)umac, ETH_ALEN);
 
-            if ((i = device_addrs->find(mac)) == device_addrs->end())
-                (*device_addrs)[mac].push_back(ip);
-            else {
-                bool duplicate = false;
-                vector<string>::iterator j;
-                for (j = (*device_addrs)[mac].begin();
-                    j != (*device_addrs)[mac].end(); j++) {
-                    if (ip != (*j)) continue;
-                    duplicate = true;
-                    break;
-                }
+                ip = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
+                    new_flow->lower_ip : new_flow->upper_ip;
 
-                if (!duplicate)
+                if ((i = device_addrs->find(mac)) == device_addrs->end())
                     (*device_addrs)[mac].push_back(ip);
+                else {
+                    bool duplicate = false;
+                    vector<string>::iterator j;
+                    for (j = (*device_addrs)[mac].begin();
+                        j != (*device_addrs)[mac].end(); j++) {
+                        if (ip != (*j)) continue;
+                        duplicate = true;
+                        break;
+                    }
+
+                    if (!duplicate)
+                        (*device_addrs)[mac].push_back(ip);
+                }
             }
         }
 #endif
