@@ -61,7 +61,7 @@ static void nd_ndpi_load_content_match(
 
     content_match.protocol_breed = NDPI_PROTOCOL_UNRATED;
 
-    if (fgets(header, 1024, fp) == NULL) return;
+    if (fgets(header, 1024, fp) == NULL) { fclose(fp); return; }
 
     while (!feof(fp)) {
         line++;
@@ -110,7 +110,7 @@ static void nd_ndpi_load_host_match(
         return;
     }
 
-    if (fgets(header, 1024, fp) == NULL) return;
+    if (fgets(header, 1024, fp) == NULL) { fclose(fp); return; }
 
     while (!feof(fp)) {
         line++;
