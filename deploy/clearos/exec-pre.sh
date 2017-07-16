@@ -12,6 +12,11 @@ for ifn in $LANIF; do
     NETIFYD_OPTS="$NETIFYD_OPTS -I $ifn"
 done
 
+for ifn in $HOTIF; do
+    [ -z "$ifn" ] && break
+    NETIFYD_OPTS="$NETIFYD_OPTS -I $ifn"
+done
+
 for ifn in $EXTIF; do
     [ -z "$ifn" ] && break
     [ -f "/etc/sysconfig/network-scripts/ifcfg-${ifn}" ] &&
