@@ -323,7 +323,10 @@ static int nd_start_detection_threads(void)
         i != ifaces.end(); i++) {
         flows[(*i).second] = new nd_flow_map;
         stats[(*i).second] = new nd_packet_stats;
-        devices[(*i).second] = ((*i).first) ? new nd_device_addrs : NULL;
+
+        // XXX: Only collect device MAC/addresses on LAN interfaces?
+        //devices[(*i).second] = ((*i).first) ? new nd_device_addrs : NULL;
+        devices[(*i).second] = new nd_device_addrs;
     }
 
     try {

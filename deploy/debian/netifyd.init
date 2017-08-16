@@ -31,7 +31,7 @@ start() {
     /sbin/modprobe -q nfnetlink || true
     /sbin/modprobe -q nf_conntrack_netlink || true
 
-	log_daemon_msg "Starting $DESC" "$NAME"
+    log_daemon_msg "Starting $DESC" "$NAME"
 
     # Read option variables
     if [ -r /etc/default/$NAME ]; then
@@ -46,15 +46,15 @@ start() {
         return 1
     fi
 
-	start-stop-daemon --start --quiet --oknodo --pidfile "$PIDFILE" --exec $DAEMON -- $NETIFYD_OPTS
+    start-stop-daemon --start --quiet --oknodo --pidfile "$PIDFILE" --exec $DAEMON -- $NETIFYD_OPTS
     status=$?
-	log_end_msg $status
+    log_end_msg $status
     return $status
 }   
 
 stop() {
-	log_daemon_msg "Stopping $DESC" "$NAME"
-	start-stop-daemon --stop --quiet --retry 5 --oknodo --pidfile "$PIDFILE" --name $NAME
+    log_daemon_msg "Stopping $DESC" "$NAME"
+    start-stop-daemon --stop --quiet --retry 5 --oknodo --pidfile "$PIDFILE" --name $NAME
     status=$?
     log_end_msg $status
     return $status
@@ -68,7 +68,7 @@ case "$1" in
         stop
     ;;
     status)
-	    status_of_proc -p "$PIDFILE" "$DAEMON" "$NAME" && exit 0 || exit $?
+        status_of_proc -p "$PIDFILE" "$DAEMON" "$NAME" && exit 0 || exit $?
     ;;
     restart)
         stop
