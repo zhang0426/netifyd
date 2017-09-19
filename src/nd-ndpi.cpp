@@ -66,7 +66,7 @@ static void nd_ndpi_load_content_match(
     while (!feof(fp)) {
         line++;
         if ((rc = fscanf(fp,
-            " \"%m[0-9A-z*.-]\" , \"%m[0-9A-z_.()-]\" , %u\n",
+            " \"%m[0-9A-z*$^.-]\" , \"%m[0-9A-z_.()-]\" , %u\n",
             &match, &name, &content_match.protocol_id)) != 3) {
             nd_printf("%s: %s: parse error at line #%u [%d]\n",
                 tag.c_str(), nd_config.conf_content_match, line, rc);
