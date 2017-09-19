@@ -1,7 +1,7 @@
 # Netify DPI Daemon
 
 Name: netifyd
-Version: 1.20
+Version: 1.21
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPL
