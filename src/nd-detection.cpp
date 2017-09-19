@@ -678,7 +678,7 @@ void ndDetectionThread::ProcessPacket(void)
 
         snprintf(
             new_flow->detected_os, ND_FLOW_OS_LEN,
-            "%s", new_flow->ndpi_flow->detected_os
+            "%s", new_flow->ndpi_flow->protos.http.detected_os
         );
 
         snprintf(
