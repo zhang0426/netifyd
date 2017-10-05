@@ -125,7 +125,7 @@ static void nd_usage(int rc = 0, bool version = false)
          <<  endl << "[" << GIT_RELEASE << " " << GIT_DATE << "]" << endl;
     if (version) {
         cerr << endl <<
-            "This application uses nDPI v" <<  ndpi_revision() << endl << 
+            "This application uses nDPI v" <<  ndpi_revision() << endl <<
             "http://www.ntop.org/products/deep-packet-inspection/ndpi/" << endl;
         cerr << endl;
         cerr <<
@@ -187,7 +187,7 @@ static int nd_config_load(void)
             ": " << strerror(errno) << endl;
         return -1;
     }
-            
+
     INIReader reader(nd_conf_filename);
 
     if (reader.ParseError() != 0) {
@@ -909,7 +909,7 @@ void nd_generate_uuid(void)
     deque<char> result;
     uint64_t input = 623714775;
     unsigned int seed = (unsigned int)time(NULL);
-	const char *clist = { "0123456789abcdefghijklmnpqrstuvwxyz" };
+    const char *clist = { "0123456789abcdefghijklmnpqrstuvwxyz" };
     FILE *fh = fopen("/dev/urandom", "r");
 
     if (fh == NULL)
@@ -924,10 +924,10 @@ void nd_generate_uuid(void)
     input = (uint64_t)rand();
     input += (uint64_t)rand() << 32;
 
-	while (input != 0) {
-		result.push_front(toupper(clist[input % strlen(clist)]));
-		input /= strlen(clist);
-	}
+    while (input != 0) {
+        result.push_front(toupper(clist[input % strlen(clist)]));
+        input /= strlen(clist);
+    }
 
     for (size_t i = result.size(); i < 8; i++)
         result.push_back('0');

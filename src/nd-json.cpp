@@ -320,7 +320,7 @@ void ndJson::SaveToFile(const string &filename)
 
 ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject **result)
 {
-	json_object *jver, *jtype, *jdata;
+    json_object *jver, *jtype, *jdata;
 
     json_tokener_reset(jtok);
 

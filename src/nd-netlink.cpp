@@ -628,7 +628,7 @@ bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
             "WARNING: Ignorning non-IPv4/6 route message: %04hx\n", rtm->rtm_family);
         return false;
     }
-        
+
     addr.length = rtm->rtm_dst_len;
 #if 0
     if (nd_debug) {

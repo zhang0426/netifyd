@@ -1,4 +1,4 @@
-// This code is public-domain - it is based on libcrypt 
+// This code is public-domain - it is based on libcrypt
 // Placed in the public domain by Wei Dai and other contributors.
 
 #ifndef _SHA1_H

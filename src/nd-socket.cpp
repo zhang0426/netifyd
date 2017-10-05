@@ -208,7 +208,7 @@ ndSocket *ndSocketServer::Accept(void)
     ndSocket *peer = NULL;
     int peer_sd = -1;
     socklen_t peer_sa_size = 0;
-	sockaddr *peer_sa = NULL;
+    sockaddr *peer_sa = NULL;
 
     if (base->sa_size == sizeof(struct sockaddr_un)) {
         peer_sa = (sockaddr *)new struct sockaddr_un;
@@ -248,7 +248,7 @@ ndSocket *ndSocketServer::Accept(void)
             peer = new ndSocket(node, service);
             if (peer == NULL)
                 throw ndSocketSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
-    
+
             nd_debug_printf("%s: peer: %s:%s\n", __PRETTY_FUNCTION__, node, service);
         }
 
@@ -461,7 +461,7 @@ void ndSocket::Create(void)
         hints.ai_canonname = NULL;
         hints.ai_addr = NULL;
         hints.ai_next = NULL;
-        
+
         int rc;
         const char *_node = (node.length()) ? node.c_str() : NULL;
         if ((rc = getaddrinfo(_node, service.c_str(), &hints, &result)) != 0) {

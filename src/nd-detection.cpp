@@ -450,7 +450,7 @@ void ndDetectionThread::ProcessPacket(void)
         if (memcmp(&hdr_ip6->ip6_src, &hdr_ip6->ip6_dst, sizeof(struct in6_addr))) {
             do {
                 addr_cmp = memcmp(
-                    &hdr_ip6->ip6_src.s6_addr32[i], 
+                    &hdr_ip6->ip6_src.s6_addr32[i],
                     &hdr_ip6->ip6_dst.s6_addr32[i], 4);
                 i++;
             }

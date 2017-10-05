@@ -129,7 +129,7 @@ void ndInotify::ProcessEvent(void)
                         nd_debug_printf("File event occured: %s [%s]\n",
                             watch->first.c_str(),
                             (iev->mask & IN_DELETE_SELF) ? "DELETE_SELF" :
-                            (iev->mask & IN_MODIFY) ? "MODIFY" : 
+                            (iev->mask & IN_MODIFY) ? "MODIFY" :
                             (iev->mask & IN_CLOSE_WRITE) ?
                                 "CLOSE_WRITE" : "IGNORE");
 
@@ -191,7 +191,7 @@ bool ndInotify::EventOccured(const string &filename)
         return true;
     }
 
-    return false; 
+    return false;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

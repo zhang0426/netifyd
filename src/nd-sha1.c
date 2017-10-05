@@ -1,4 +1,4 @@
-// This code is public-domain - it is based on libcrypt 
+// This code is public-domain - it is based on libcrypt
 // Placed in the public domain by Wei Dai and other contributors.
 
 #include <stdint.h>
@@ -116,7 +116,7 @@ uint8_t *sha1_result(sha1 *s)
     int i;
     // Pad to complete the last block
     sha1_pad(s);
-  
+
     // Swap byte order back
     for (i = 0; i < 5; i++) {
         uint32_t a, b;
@@ -127,7 +127,7 @@ uint8_t *sha1_result(sha1 *s)
         b |= a >> 24;
         s->state.w[i] = b;
     }
-  
+
     // Return pointer to hash (20 characters)
     return s->state.b;
 }

@@ -437,7 +437,7 @@ void ndConntrackThread::PrintFlow(ndFlow *flow, string &text)
         family = AF_INET;
     else
         family = AF_INET6;
-  
+
     sprintf(buffer,
         "l3_proto: %hu, l4_proto: %hhu",
         family, flow->ip_protocol);
