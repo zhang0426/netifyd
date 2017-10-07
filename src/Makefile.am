@@ -5,7 +5,7 @@ AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
 	-I ../ndpi/src/include -I ../inih/cpp \
 	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS)
 
-#EXTRA_DIST = 
+#EXTRA_DIST =
 
 sbin_PROGRAMS = netifyd
 netifyd_SOURCES = netifyd.cpp nd-detection.cpp nd-flow.cpp \
