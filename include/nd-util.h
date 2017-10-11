@@ -31,10 +31,11 @@ void nd_printf(const char *format, ...);
 #ifdef _ND_USE_NCURSES
 void nd_printw(WINDOW *win, const char *format, ...);
 
-void nd_output_lock(void);
-void nd_output_unlock(void);
+void nd_printf_lock(void);
+void nd_printf_unlock(void);
 #endif
 void nd_debug_printf(const char *format, ...);
+void nd_verbose_printf(const char *format, ...);
 
 void ndpi_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...);

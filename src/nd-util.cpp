@@ -62,21 +62,21 @@ void nd_mem_free(void *ptr)
     free(ptr);
 }
 
-extern pthread_mutex_t *nd_output_mutex;
+extern pthread_mutex_t *nd_printf_mutex;
 #ifdef _ND_USE_NCURSES
-void nd_output_lock(void)
+void nd_printf_lock(void)
 {
-    pthread_mutex_lock(nd_output_mutex);
+    pthread_mutex_lock(nd_printf_mutex);
 }
 
-void nd_output_unlock(void)
+void nd_printf_unlock(void)
 {
-    pthread_mutex_unlock(nd_output_mutex);
+    pthread_mutex_unlock(nd_printf_mutex);
 }
 #endif
 void nd_printf(const char *format, ...)
 {
-    pthread_mutex_lock(nd_output_mutex);
+    pthread_mutex_lock(nd_printf_mutex);
 
     va_list ap;
     va_start(ap, format);
@@ -98,14 +98,14 @@ void nd_printf(const char *format, ...)
 
     va_end(ap);
 
-    pthread_mutex_unlock(nd_output_mutex);
+    pthread_mutex_unlock(nd_printf_mutex);
 }
 
 #ifdef _ND_USE_NCURSES
 void nd_printw(WINDOW *win, const char *format, ...)
 {
     if (ND_DEBUG) {
-        pthread_mutex_lock(nd_output_mutex);
+        pthread_mutex_lock(nd_printf_mutex);
 
         va_list ap;
         va_start(ap, format);
@@ -113,7 +113,7 @@ void nd_printw(WINDOW *win, const char *format, ...)
         wrefresh(win);
         va_end(ap);
 
-        pthread_mutex_unlock(nd_output_mutex);
+        pthread_mutex_unlock(nd_printf_mutex);
     }
 }
 #endif
@@ -122,7 +122,7 @@ void nd_debug_printf(const char *format, ...)
 {
     if (ND_DEBUG) {
 
-        pthread_mutex_lock(nd_output_mutex);
+        pthread_mutex_lock(nd_printf_mutex);
 
         va_list ap;
         va_start(ap, format);
@@ -138,7 +138,31 @@ void nd_debug_printf(const char *format, ...)
 #endif
         va_end(ap);
 
-        pthread_mutex_unlock(nd_output_mutex);
+        pthread_mutex_unlock(nd_printf_mutex);
+    }
+}
+
+void nd_verbose_printf(const char *format, ...)
+{
+    if (ND_VERBOSE) {
+
+        pthread_mutex_lock(nd_printf_mutex);
+
+        va_list ap;
+        va_start(ap, format);
+#ifndef _ND_USE_NCURSES
+        vfprintf(stderr, format, ap);
+#else
+        if (! ND_USE_NCURSES)
+            vfprintf(stderr, format, ap);
+        else {
+            vwprintw(win_output, format, ap);
+            wrefresh(win_output);
+        }
+#endif
+        va_end(ap);
+
+        pthread_mutex_unlock(nd_printf_mutex);
     }
 }
 
@@ -147,7 +171,7 @@ void ndpi_debug_printf(
 {
     if (ND_DEBUG) {
 
-        pthread_mutex_lock(nd_output_mutex);
+        pthread_mutex_lock(nd_printf_mutex);
 
         va_list ap;
         va_start(ap, format);
@@ -159,7 +183,7 @@ void ndpi_debug_printf(
 #endif
         va_end(ap);
 
-        pthread_mutex_unlock(nd_output_mutex);
+        pthread_mutex_unlock(nd_printf_mutex);
     }
 }
 

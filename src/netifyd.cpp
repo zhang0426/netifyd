@@ -83,7 +83,7 @@ using namespace std;
 
 #define ND_STR_ETHALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
-pthread_mutex_t *nd_output_mutex = NULL;
+pthread_mutex_t *nd_printf_mutex = NULL;
 static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
 static nd_devices devices;
@@ -518,12 +518,12 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
 #ifdef _ND_USE_NCURSES
     else {
         //wclear(win_stats);
-        nd_output_lock();
+        nd_printf_lock();
         wmove(win_stats, 0, 0);
         wattrset(win_stats, A_BOLD | A_REVERSE);
         for (int i = 0; i < COLS; i++) waddch(win_stats, ' ');
         wmove(win_stats, 0, 0);
-        nd_output_unlock();
+        nd_printf_unlock();
         nd_printw(win_stats, "Netify Daemon v%s", PACKAGE_VERSION);
         wattrset(win_stats, A_NORMAL);
         wmove(win_stats, 1, 0);
@@ -1123,8 +1123,8 @@ int main(int argc, char *argv[])
     nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH),
     nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH),
 
-    nd_output_mutex = new pthread_mutex_t;
-    pthread_mutex_init(nd_output_mutex, NULL);
+    nd_printf_mutex = new pthread_mutex_t;
+    pthread_mutex_init(nd_printf_mutex, NULL);
 
     static struct option options[] =
     {
@@ -1510,13 +1510,13 @@ int main(int argc, char *argv[])
         }
 #ifdef _ND_USE_NCURSES
         if (sig == SIGWINCH) {
-            nd_output_lock();
+            nd_printf_lock();
             delwin(win_stats);
             delwin(win_output);
             endwin();
             refresh();
             nd_create_windows();
-            nd_output_unlock();
+            nd_printf_unlock();
             nd_print_stats(0, totals);
             continue;
         }
@@ -1539,8 +1539,8 @@ int main(int argc, char *argv[])
         delete thread_conntrack;
     }
 #endif
-    pthread_mutex_destroy(nd_output_mutex);
-    delete nd_output_mutex;
+    pthread_mutex_destroy(nd_printf_mutex);
+    delete nd_printf_mutex;
 
     curl_global_cleanup();
 #ifdef _ND_USE_NCURSES
