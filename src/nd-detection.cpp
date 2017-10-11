@@ -813,7 +813,7 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 
-        if (nd_debug)
+        if (ND_DEBUG)
             new_flow->print(tag.c_str(), ndpi);
 
         if (thread_socket) {

@@ -45,7 +45,7 @@ using namespace std;
 #include "nd-util.h"
 #include "nd-netlink.h"
 
-extern bool nd_debug;
+extern ndGlobalConfig nd_config;
 
 inline bool ndNetlinkNetworkAddr::operator==(const ndNetlinkNetworkAddr &n) const
 {
@@ -315,7 +315,7 @@ bool ndNetlink::ProcessEvent(void)
         }
     }
 
-    if (nd_debug) {
+    if (ND_DEBUG) {
         if (added_net || removed_net) {
             nd_debug_printf("Networks added: %d, removed: %d\n", added_net, removed_net);
         }

@@ -83,10 +83,6 @@ using namespace std;
 
 #define ND_STR_ETHALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
-bool nd_debug = false;
-bool nd_debug_upload = false;
-bool nd_debug_ether_names = false;
-bool nd_debug_ncurses = false;
 pthread_mutex_t *nd_output_mutex = NULL;
 static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
@@ -115,7 +111,29 @@ static ndNetlink *netlink = NULL;
 static map<string, string> device_netlink;
 #endif
 
-ndGlobalConfig nd_config;
+ndGlobalConfig nd_config = {
+    .path_config = NULL,
+    .path_content_match = NULL,
+    .path_custom_match = NULL,
+    .path_host_match = NULL,
+    .path_json = NULL,
+    .url_upload = NULL,
+    .uuid = NULL,
+    .uuid_realm = NULL,
+    .uuid_serial = NULL,
+    .max_backlog = ND_MAX_BACKLOG_KB * 1024,
+#ifdef _ND_USE_CONNTRACK
+    .flags = ndGF_USE_CONNTRACK,
+#else
+    .flags = 0x0,
+#endif
+    .digest_content_match = {},
+    .digest_custom_match = {},
+    .digest_host_match = {},
+    .max_tcp_pkts = ND_MAX_TCP_PKTS,
+    .max_udp_pkts = ND_MAX_UDP_PKTS,
+    .update_interval = ND_STATS_INTERVAL,
+};
 
 static void nd_usage(int rc = 0, bool version = false)
 {
@@ -219,14 +237,14 @@ static int nd_config_load(void)
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
 
-    nd_config.enable_netify_sink = reader.GetBoolean(
-        "netifyd", "enable_netify_sink", false);
+    nd_config.flags |= (reader.GetBoolean(
+        "netifyd", "enable_netify_sink", false)) ? ndGF_USE_SINK : 0;
 
-    nd_config.ssl_verify_peer = reader.GetBoolean(
-        "netifyd", "ssl_verify_peer", true);
+    nd_config.flags |= (reader.GetBoolean(
+        "netifyd", "ssl_verify_peer", true)) ? ndGF_SSL_VERIFY_PEER : 0;
 
-    nd_config.ssl_use_tlsv1 = reader.GetBoolean(
-        "netifyd", "ssl_use_tlsv1", false);
+    nd_config.flags |= (reader.GetBoolean(
+        "netifyd", "ssl_use_tlsv1", false)) ? ndGF_SSL_USE_TLSv1 : 0;
 
     string uuid_realm = reader.Get(
         "netifyd", "uuid_realm", ND_REALM_UUID_NULL);
@@ -349,7 +367,7 @@ static int nd_start_detection_threads(void)
 #endif
                 (i->first) ? thread_socket : NULL,
 #ifdef _ND_USE_CONNTRACK
-                (i->first || nd_config.disable_conntrack) ?
+                (i->first || ! ND_USE_CONNTRACK) ?
                     NULL : thread_conntrack,
 #endif
                 flows[(*i).second],
@@ -420,7 +438,7 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
     struct timespec ts_now;
     static uint32_t flow_count_previous = 0;
 
-    if (nd_debug_ncurses == false) {
+    if (! ND_USE_NCURSES) {
         nd_printf("\n");
         nd_printf("Cumulative Packet Totals ");
         if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
@@ -823,11 +841,11 @@ static void nd_json_upload(ndJson *json)
     if (inotify->EventOccured(ND_WATCH_HOSTS))
         nd_json_add_file(json->GetRoot(), "hosts", ND_WATCH_HOSTS);
     if (inotify->EventOccured(ND_WATCH_ETHERS)) {
-        if (nd_debug && nd_debug_ether_names) nd_load_ethers();
+        if (ND_DEBUG && ND_DEBUG_USE_ETHERS) nd_load_ethers();
         nd_json_add_file(json->GetRoot(), "ethers", ND_WATCH_ETHERS);
     }
 #else
-    if (nd_debug && nd_debug_ether_names) nd_load_ethers();
+    if (ND_DEBUG && ND_DEBUG_USE_ETHERS) nd_load_ethers();
 #endif
     string json_string;
     json->ToString(json_string);
@@ -882,14 +900,14 @@ static void nd_dump_stats(void)
     }
 
     try {
-        json.SaveToFile(nd_config.json_filename);
+        json.SaveToFile(nd_config.path_json);
     }
     catch (runtime_error &e) {
         nd_printf("Error writing JSON file: %s: %s\n",
-            nd_config.json_filename, e.what());
+            nd_config.path_json, e.what());
     }
 
-    if (nd_config.enable_netify_sink) {
+    if (ND_USE_SINK) {
         try {
             nd_json_upload(&json);
         }
@@ -900,7 +918,7 @@ static void nd_dump_stats(void)
 
     json.Destroy();
 
-    if (nd_debug) nd_print_stats(flow_count, totals);
+    if (ND_DEBUG) nd_print_stats(flow_count, totals);
 }
 
 void nd_generate_uuid(void)
@@ -1101,11 +1119,9 @@ int main(int argc, char *argv[])
     locale lc(cout.getloc(), new nd_numpunct);
     os.imbue(lc);
 #endif
-    memset(&nd_config, 0, sizeof(ndGlobalConfig));
-    nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
-    nd_config.conf_content_match = strdup(ND_CONF_CONTENT_MATCH);
-    nd_config.conf_custom_match = strdup(ND_CONF_CUSTOM_MATCH);
-    nd_config.conf_host_match = strdup(ND_CONF_HOST_MATCH);
+    nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH),
+    nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH),
+    nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH),
 
     nd_output_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_output_mutex, NULL);
@@ -1154,13 +1170,13 @@ int main(int argc, char *argv[])
         case 'V':
             nd_usage(0, true);
         case 'd':
-            nd_debug = true;
+            nd_config.flags |= ndGF_DEBUG;
             break;
         case 'D':
-            nd_debug_upload = true;
+            nd_config.flags |= ndGF_DEBUG_UPLOAD;
             break;
         case 'e':
-            nd_debug_ether_names = true;
+            nd_config.flags |= ndGF_DEBUG_USE_ETHERS;
             break;
         case 's':
             nd_config.uuid_serial = strdup(optarg);
@@ -1188,7 +1204,7 @@ int main(int argc, char *argv[])
             ifaces.push_back(make_pair(false, optarg));
             break;
         case 'j':
-            nd_config.json_filename = strdup(optarg);
+            nd_config.path_json = strdup(optarg);
             break;
         case 'i':
             nd_config.update_interval = atoi(optarg);
@@ -1219,25 +1235,25 @@ int main(int argc, char *argv[])
             break;
 #endif
         case 'C':
-            free(nd_config.conf_content_match);
-            nd_config.conf_content_match = strdup(optarg);
-            nd_config.conf_content_match_override = true;
+            free(nd_config.path_content_match);
+            nd_config.path_content_match = strdup(optarg);
+            nd_config.flags |= ndGF_OVERRIDE_CONTENT_MATCH;
             break;
         case 'f':
-            free(nd_config.conf_custom_match);
-            nd_config.conf_custom_match = strdup(optarg);
-            nd_config.conf_custom_match_override = true;
+            free(nd_config.path_custom_match);
+            nd_config.path_custom_match = strdup(optarg);
+            nd_config.flags |= ndGF_OVERRIDE_CUSTOM_MATCH;
             break;
         case 'H':
-            free(nd_config.conf_host_match);
-            nd_config.conf_host_match = strdup(optarg);
-            nd_config.conf_host_match_override = true;
+            free(nd_config.path_host_match);
+            nd_config.path_host_match = strdup(optarg);
+            nd_config.flags |= ndGF_OVERRIDE_HOST_MATCH;
             break;
         case 'S':
             {
                 uint8_t digest[SHA1_DIGEST_LENGTH];
 
-                nd_debug = true;
+                nd_config.flags |= ndGF_DEBUG;
 
                 if (nd_sha1_file(optarg, digest) < 0) return 1;
                 else {
@@ -1249,11 +1265,11 @@ int main(int argc, char *argv[])
             }
             break;
         case 't':
-            nd_config.disable_conntrack = true;
+            nd_config.flags &= ~ndGF_USE_CONNTRACK;
             break;
         case 'n':
 #if _ND_USE_NCURSES
-            nd_debug_ncurses = true;
+            nd_config.flags |= ndGF_DEBUG;
 #else
             nd_printf("Sorry, ncurses was not enabled for this build.\n");
             return 1;
@@ -1264,8 +1280,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (nd_config.json_filename == NULL)
-        nd_config.json_filename = strdup(ND_JSON_FILE_NAME);
+    if (nd_config.path_json == NULL)
+        nd_config.path_json = strdup(ND_JSON_FILE_NAME);
     if (nd_conf_filename == NULL)
         nd_conf_filename = strdup(ND_CONF_FILE_NAME);
 
@@ -1285,7 +1301,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (nd_debug == false) {
+    if (! ND_DEBUG) {
         if (daemon(1, 0) != 0) {
             nd_printf("daemon: %s\n", strerror(errno));
             return 1;
@@ -1307,7 +1323,7 @@ int main(int argc, char *argv[])
     }
 
 #ifdef _ND_USE_NCURSES
-    if (nd_debug_ncurses) {
+    if (ND_USE_NCURSES) {
         initscr();
         nd_create_windows();
     }
@@ -1317,11 +1333,11 @@ int main(int argc, char *argv[])
     memset(&totals, 0, sizeof(nd_packet_stats));
 
     nd_sha1_file(
-        nd_config.conf_content_match, nd_config.digest_content_match);
+        nd_config.path_content_match, nd_config.digest_content_match);
     nd_sha1_file(
-        nd_config.conf_custom_match, nd_config.digest_custom_match);
+        nd_config.path_custom_match, nd_config.digest_custom_match);
     nd_sha1_file(
-        nd_config.conf_host_match, nd_config.digest_host_match);
+        nd_config.path_host_match, nd_config.digest_host_match);
 
     sigfillset(&sigset);
     //sigdelset(&sigset, SIGPROF);
@@ -1335,14 +1351,14 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
 #ifdef _ND_USE_NCURSES
-    if (nd_debug_ncurses)
+    if (ND_USE_NCURSES)
         sigaddset(&sigset, SIGWINCH);
 #endif
     nd_load_ethers();
 
     try {
 #ifdef _ND_USE_CONNTRACK
-        if (nd_config.disable_conntrack == false) {
+        if (ND_USE_CONNTRACK) {
             thread_conntrack = new ndConntrackThread();
             thread_conntrack->Create();
         }
@@ -1429,7 +1445,7 @@ int main(int argc, char *argv[])
 
     timer_settime(timer_id, 0, &it_spec, NULL);
 #ifdef _ND_USE_NCURSES
-    if (nd_debug) nd_print_stats(0, totals);
+    if (ND_USE_NCURSES) nd_print_stats(0, totals);
 #endif
 #ifdef _ND_USE_NETLINK
     netlink->Refresh();
@@ -1473,7 +1489,7 @@ int main(int argc, char *argv[])
             }
             else if (netlink->GetDescriptor() == si.si_fd) {
                 if (netlink->ProcessEvent())
-                    if (nd_debug) netlink->Dump();
+                    if (ND_DEBUG) netlink->Dump();
                 continue;
             }
 #elif _ND_USE_INOTIFY
@@ -1518,7 +1534,7 @@ int main(int argc, char *argv[])
     thread_socket->Terminate();
     delete thread_socket;
 #ifdef _ND_USE_CONNTRACK
-    if (nd_config.disable_conntrack == false) {
+    if (ND_USE_CONNTRACK) {
         thread_conntrack->Terminate();
         delete thread_conntrack;
     }

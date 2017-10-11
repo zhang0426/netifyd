@@ -49,16 +49,13 @@ using namespace std;
 #include "nd-thread.h"
 #include "nd-upload.h"
 
-extern bool nd_debug;
-extern bool nd_debug_upload;
-
 extern ndGlobalConfig nd_config;
 
 static int nd_curl_debug(
     CURL *ch, curl_infotype type, char *data, size_t size, void *param)
 {
     string buffer;
-    if (nd_debug_upload == false) return 0;
+    if (! ND_DEBUG_UPLOAD) return 0;
 
     ndThread *thread = reinterpret_cast<ndThread *>(param);
 
@@ -117,7 +114,7 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_upload);
     curl_easy_setopt(ch, CURLOPT_POST, 1);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (nd_debug_upload) ? ND_COOKIE_JAR : "");
+    curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (ND_DEBUG_UPLOAD) ? ND_COOKIE_JAR : "");
     curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndUploadThread_read_data);
     curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
 #if (LIBCURL_VERSION_NUM < 0x072106)
@@ -125,19 +122,19 @@ ndUploadThread::ndUploadThread()
 #else
     curl_easy_setopt(ch, CURLOPT_ACCEPT_ENCODING, "gzip");
 #endif
-    if (nd_debug_upload) {
+    if (ND_DEBUG_UPLOAD) {
         curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, nd_curl_debug);
         curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
         curl_easy_setopt(ch, CURLOPT_COOKIEJAR, ND_COOKIE_JAR);
     }
 
-    if (nd_config.ssl_verify_peer == false) {
+    if (! ND_SSL_VERIFY_PEER) {
         curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(ch, CURLOPT_SSL_VERIFYHOST, 0);
     }
 
-    if (nd_config.ssl_use_tlsv1)
+    if (ND_SSL_USE_TLSv1)
         curl_easy_setopt(ch, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1);
 
     CreateHeaders();
@@ -329,7 +326,7 @@ void ndUploadThread::Upload(void)
             break;
 
         case 400:
-            if (nd_debug || nd_debug_upload) {
+            if (ND_DEBUG || ND_DEBUG_UPLOAD) {
                 FILE *hf = fopen("/tmp/rejected.json", "w");
                 if (hf != NULL) {
                     fwrite(pending.front().second.data(),
@@ -396,7 +393,7 @@ string ndUploadThread::Deflate(const string &data)
     if (rc != Z_STREAM_END)
         throw ndUploadThreadException("deflate");
 
-    if (nd_debug || nd_debug_upload) {
+    if (ND_DEBUG || ND_DEBUG_UPLOAD) {
         nd_debug_printf("%s: payload compressed: %lu -> %lu\n",
             tag.c_str(), data.size(), buffer.size());
     }
@@ -417,13 +414,13 @@ void ndUploadThread::ProcessResponse(void)
         json_type = json_factory.Parse(body_data, &json_obj);
     } catch (ndJsonParseException &e) {
         nd_printf("JSON parse error: %s\n", e.what());
-        if (nd_debug_upload) nd_debug_printf(
+        if (ND_DEBUG_UPLOAD) nd_debug_printf(
             "%s: payload:\n\"%s\"\n", tag.c_str(), body_data.c_str());
     }
 
     switch (json_type) {
     case ndJSON_OBJ_TYPE_OK:
-        if (nd_debug || nd_debug_upload)
+        if (ND_DEBUG || ND_DEBUG_UPLOAD)
             nd_printf("%s: upload successful.\n", tag.c_str());
         break;
     case ndJSON_OBJ_TYPE_RESULT:
@@ -443,23 +440,23 @@ void ndUploadThread::ProcessResponse(void)
         }
         break;
     case ndJSON_OBJ_TYPE_CONFIG:
-        if (nd_debug || nd_debug_upload)
+        if (ND_DEBUG || ND_DEBUG_UPLOAD)
             nd_printf("%s: upload successful (w/config).\n", tag.c_str());
 
         json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
 
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH) &&
-            nd_config.conf_content_match_override == false) {
+            ! ND_OVERRIDE_CONTENT_MATCH) {
             ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
             detection_module_reload = true;
         }
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH) &&
-            nd_config.conf_custom_match_override == false) {
+            ! ND_OVERRIDE_CUSTOM_MATCH) {
             ExportConfig(ndJSON_CFG_TYPE_CUSTOM_MATCH, json_config);
             detection_module_reload = true;
         }
         if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_MATCH) &&
-            nd_config.conf_host_match_override == false) {
+            ! ND_OVERRIDE_HOST_MATCH) {
             ExportConfig(ndJSON_CFG_TYPE_HOST_MATCH, json_config);
             detection_module_reload = true;
         }
@@ -523,17 +520,17 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
 
     switch (type) {
     case ndJSON_CFG_TYPE_CONTENT_MATCH:
-        fp = fopen(nd_config.conf_content_match, "w");
+        fp = fopen(nd_config.path_content_match, "w");
         config_type_string = "content match";
         entries = config->GetContentMatchCount();
         break;
     case ndJSON_CFG_TYPE_CUSTOM_MATCH:
-        fp = fopen(nd_config.conf_custom_match, "w");
+        fp = fopen(nd_config.path_custom_match, "w");
         config_type_string = "custom protos";
         entries = config->GetCustomMatchCount();
         break;
     case ndJSON_CFG_TYPE_HOST_MATCH:
-        fp = fopen(nd_config.conf_host_match, "w");
+        fp = fopen(nd_config.path_host_match, "w");
         config_type_string = "host protocol";
         entries = config->GetHostMatchCount();
         break;
@@ -556,7 +553,7 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         }
         fclose(fp);
         nd_sha1_file(
-            nd_config.conf_content_match, nd_config.digest_content_match);
+            nd_config.path_content_match, nd_config.digest_content_match);
         break;
     case ndJSON_CFG_TYPE_CUSTOM_MATCH:
         custom_match = config->GetFirstCustomMatchEntry();
@@ -567,7 +564,7 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         }
         fclose(fp);
         nd_sha1_file(
-            nd_config.conf_custom_match, nd_config.digest_custom_match);
+            nd_config.path_custom_match, nd_config.digest_custom_match);
         break;
     case ndJSON_CFG_TYPE_HOST_MATCH:
         host_match = config->GetFirstHostMatchEntry();
@@ -593,14 +590,14 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         }
         fclose(fp);
         nd_sha1_file(
-            nd_config.conf_host_match, nd_config.digest_host_match);
+            nd_config.path_host_match, nd_config.digest_host_match);
         break;
     default:
         fclose(fp);
         break;
     }
 
-    if (nd_debug) {
+    if (ND_DEBUG) {
         if (entries == 0) {
             nd_debug_printf("%s: cleared %s configuration\n", tag.c_str(),
                 config_type_string.c_str());

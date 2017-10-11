@@ -36,8 +36,6 @@ using namespace std;
 #include "nd-util.h"
 #include "nd-thread.h"
 
-extern bool nd_debug;
-
 extern ndGlobalConfig nd_config;
 
 static void *nd_thread_entry(void *param)

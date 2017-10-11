@@ -26,6 +26,9 @@
 #include <locale>
 #include <iomanip>
 #include <sstream>
+#include <vector>
+#include <map>
+#include <unordered_map>
 
 #include <unistd.h>
 #include <syslog.h>
@@ -39,11 +42,11 @@
 
 using namespace std;
 
+#include "netifyd.h"
 #include "nd-util.h"
 #include "nd-sha1.h"
 
-extern bool nd_debug;
-extern bool nd_debug_ncurses;
+extern ndGlobalConfig nd_config;
 
 #ifdef _ND_USE_NCURSES
 extern WINDOW *win_output;
@@ -78,11 +81,11 @@ void nd_printf(const char *format, ...)
     va_list ap;
     va_start(ap, format);
 
-    if (nd_debug) {
+    if (ND_DEBUG) {
 #ifndef _ND_USE_NCURSES
         vfprintf(stdout, format, ap);
 #else
-        if (!nd_debug_ncurses || win_output == NULL)
+        if (! ND_USE_NCURSES || win_output == NULL)
             vfprintf(stdout, format, ap);
         else {
             vwprintw(win_output, format, ap);
@@ -101,7 +104,7 @@ void nd_printf(const char *format, ...)
 #ifdef _ND_USE_NCURSES
 void nd_printw(WINDOW *win, const char *format, ...)
 {
-    if (nd_debug) {
+    if (ND_DEBUG) {
         pthread_mutex_lock(nd_output_mutex);
 
         va_list ap;
@@ -117,7 +120,7 @@ void nd_printw(WINDOW *win, const char *format, ...)
 
 void nd_debug_printf(const char *format, ...)
 {
-    if (nd_debug) {
+    if (ND_DEBUG) {
 
         pthread_mutex_lock(nd_output_mutex);
 
@@ -126,7 +129,7 @@ void nd_debug_printf(const char *format, ...)
 #ifndef _ND_USE_NCURSES
         vfprintf(stderr, format, ap);
 #else
-        if (!nd_debug_ncurses)
+        if (! ND_USE_NCURSES)
             vfprintf(stderr, format, ap);
         else {
             vwprintw(win_output, format, ap);
@@ -142,7 +145,7 @@ void nd_debug_printf(const char *format, ...)
 void ndpi_debug_printf(
     unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...)
 {
-    if (nd_debug) {
+    if (ND_DEBUG) {
 
         pthread_mutex_lock(nd_output_mutex);
 

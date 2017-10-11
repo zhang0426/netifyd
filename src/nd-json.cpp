@@ -43,7 +43,7 @@ using namespace std;
 #include "nd-util.h"
 #include "nd-json.h"
 
-extern bool nd_debug;
+extern ndGlobalConfig nd_config;
 
 ndJson::ndJson()
     : root(NULL)
@@ -273,7 +273,7 @@ void ndJson::ToString(string &output, bool pretty)
 {
     output = json_object_to_json_string_ext(
         root,
-        (nd_debug && pretty) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
+        (ND_DEBUG && pretty) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
     );
 }
 

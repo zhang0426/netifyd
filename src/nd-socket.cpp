@@ -87,8 +87,6 @@ using namespace std;
 
 #define _ND_SOCKET_PROC_NET_UNIX    "/proc/net/unix"
 
-extern bool nd_debug;
-
 extern ndGlobalConfig nd_config;
 
 ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)

@@ -46,7 +46,7 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 
-extern bool nd_debug_ether_names;
+extern ndGlobalConfig nd_config;
 extern nd_device_ethers device_ethers;
 
 void ndFlow::hash(const string &device, string &digest, bool full_hash)
@@ -109,7 +109,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     char *p = NULL, buffer[64];
     const char *lower_name = lower_ip, *upper_name = upper_ip;
 
-    if (nd_debug_ether_names) {
+    if (ND_DEBUG_USE_ETHERS) {
         string key;
         nd_device_ethers::const_iterator i;
 

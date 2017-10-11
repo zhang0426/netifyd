@@ -27,8 +27,6 @@
 #error Unable to define ETH_ALEN.
 #endif
 
-//#include <linux/if_ether.h>
-
 #ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
 #endif
@@ -47,8 +45,7 @@
 #endif
 
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
-                                        // Maximum upload queue size in kB
-#define ND_MAX_BACKLOG_KB       1024
+#define ND_MAX_BACKLOG_KB       1024    // Maximum upload queue size in kB
 #define ND_DETECTION_TICKS      1000    // Ticks-per-second (1000 = milliseconds)
 #define ND_IDLE_SCAN_TIME       10      // Idle flow scan in milliseconds
 #define ND_IDLE_FLOW_TIME       30000   // Purge idle flows older than this (30s)
@@ -102,33 +99,56 @@
 
 #include "nd-sha1.h"
 
+enum {
+    ndGF_DEBUG = 0x1,
+    ndGF_DEBUG_UPLOAD = 0x2,
+    ndGF_DEBUG_USE_ETHERS = 0x4,
+    ndGF_OVERRIDE_CONTENT_MATCH = 0x8,
+    ndGF_OVERRIDE_CUSTOM_MATCH = 0x10,
+    ndGF_OVERRIDE_HOST_MATCH = 0x20,
+    ndGF_SSL_USE_TLSv1 = 0x40,
+    ndGF_SSL_VERIFY_PEER = 0x80,
+    ndGF_USE_CONNTRACK = 0x100,
+    ndGF_USE_NCURSES = 0x200,
+    ndGF_USE_SINK = 0x400,
+    ndGF_VERBOSE = 0x800
+} ndGlobalFlags;
+
+#define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
+#define ND_DEBUG_UPLOAD (nd_config.flags & ndGF_DEBUG_UPLOAD)
+#define ND_DEBUG_USE_ETHERS (nd_config.flags & ndGF_DEBUG_USE_ETHERS)
+#define ND_OVERRIDE_CONTENT_MATCH (nd_config.flags & ndGF_OVERRIDE_CONTENT_MATCH)
+#define ND_OVERRIDE_CUSTOM_MATCH (nd_config.flags & ndGF_OVERRIDE_CUSTOM_MATCH)
+#define ND_OVERRIDE_HOST_MATCH (nd_config.flags & ndGF_OVERRIDE_HOST_MATCH)
+#define ND_SSL_USE_TLSv1 (nd_config.flags & ndGF_SSL_USE_TLSv1)
+#define ND_SSL_VERIFY_PEER (nd_config.flags & ndGF_SSL_VERIFY_PEER)
+#define ND_USE_CONNTRACK (nd_config.flags & ndGF_USE_CONNTRACK)
+#define ND_USE_NCURSES (nd_config.flags & ndGF_USE_NCURSES)
+#define ND_USE_SINK (nd_config.flags & ndGF_USE_SINK)
+#define ND_VERBOSE (nd_config.flags & ndGF_VERBOSE)
+
 typedef struct {
-    char *uuid;
-    char *uuid_serial;
-    char *uuid_realm;
+    char *path_config;
+    char *path_content_match;
+    char *path_custom_match;
+    char *path_host_match;
+    char *path_json;
     char *url_upload;
+    char *uuid;
+    char *uuid_realm;
+    char *uuid_serial;
     size_t max_backlog;
-    bool disable_conntrack;
-    bool enable_netify_sink;
-    bool ssl_use_tlsv1;
-    bool ssl_verify_peer;
-    char *json_filename;
-    unsigned update_interval;
-    unsigned max_tcp_pkts;
-    unsigned max_udp_pkts;
-    vector<pair<string, string> > socket_host;
-    vector<string> socket_path;
-    char *conf_content_match;
-    bool conf_content_match_override;
-    char *conf_custom_match;
-    bool conf_custom_match_override;
-    char *conf_host_match;
-    bool conf_host_match_override;
+    uint32_t flags;
     uint8_t digest_content_match[SHA1_DIGEST_LENGTH];
     uint8_t digest_custom_match[SHA1_DIGEST_LENGTH];
     uint8_t digest_host_match[SHA1_DIGEST_LENGTH];
-    vector<uint8_t *> privacy_filter_mac;
+    unsigned max_tcp_pkts;
+    unsigned max_udp_pkts;
+    unsigned update_interval;
+    vector<pair<string, string> > socket_host;
+    vector<string> socket_path;
     vector<struct sockaddr *> privacy_filter_host;
+    vector<uint8_t *> privacy_filter_mac;
 } ndGlobalConfig;
 
 typedef struct nd_packet_stats_t

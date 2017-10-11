@@ -37,8 +37,6 @@ using namespace std;
 #include "nd-inotify.h"
 #include "nd-sha1.h"
 
-extern bool nd_debug;
-
 ndInotify::ndInotify()
 {
     int flags;

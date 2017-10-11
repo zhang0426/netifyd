@@ -61,8 +61,6 @@ using namespace std;
 #include "nd-thread.h"
 #include "nd-conntrack.h"
 
-extern bool nd_debug;
-
 static int nd_ct_event_callback(
     enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data)
 {
