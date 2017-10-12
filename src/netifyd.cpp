@@ -1363,8 +1363,10 @@ int main(int argc, char *argv[])
             thread_conntrack->Create();
         }
 #endif
-        thread_socket = new ndSocketThread();
-        thread_socket->Create();
+        if (nd_config.socket_host.size() || nd_config.socket_path.size()) {
+            thread_socket = new ndSocketThread();
+            thread_socket->Create();
+        }
 
         thread_upload = new ndUploadThread();
         thread_upload->Create();
