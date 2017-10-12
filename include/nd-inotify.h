@@ -32,12 +32,12 @@ public:
     ndInotify();
     virtual ~ndInotify();
 
-    void AddWatch(const string &filename);
+    void AddWatch(const string &tag, const string &filename);
     void RefreshWatches(void);
 
     void ProcessEvent(void);
 
-    bool EventOccured(const string &filename);
+    bool EventOccured(const string &tag);
 
     int GetDescriptor(void) { return fd; }
 
@@ -47,6 +47,7 @@ protected:
     struct nd_inotify_watch
     {
         int wd;
+        const char *filename;
         bool event_occured;
         bool rehash;
         uint8_t *digest;

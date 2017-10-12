@@ -73,8 +73,7 @@
 #define ND_REALM_UUID_NULL      "-"
 #define ND_REALM_UUID_LEN       36
 
-#define ND_WATCH_HOSTS          "/etc/hosts"
-#define ND_WATCH_ETHERS         "/etc/ethers"
+#define ND_ETHERS_FILE_NAME     "/etc/ethers"
 
 // Compress data if it's over this size (bytes)
 #define ND_COMPRESS_SIZE       (1024 * 10)

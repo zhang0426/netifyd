@@ -101,6 +101,7 @@ static ndConntrackThread *thread_conntrack = NULL;
 #endif
 #ifdef _ND_USE_INOTIFY
 static ndInotify *inotify = NULL;
+static map<string, string> inotify_watches;
 #endif
 #ifdef _ND_USE_NCURSES
 static WINDOW *win_stats = NULL;
@@ -331,7 +332,9 @@ static int nd_config_load(void)
 
         freeaddrinfo(result);
     }
-
+#ifdef _ND_USE_INOTIFY
+    reader.GetSection("watches", inotify_watches);
+#endif
     return 0;
 }
 
@@ -791,7 +794,7 @@ static void nd_json_add_file(
 static void nd_load_ethers(void)
 {
     char buffer[1024 + ND_STR_ETHALEN + 17];
-    FILE *fh = fopen(ND_WATCH_ETHERS, "r");
+    FILE *fh = fopen(ND_ETHERS_FILE_NAME, "r");
 
     if (fh == NULL) return;
 
@@ -832,17 +835,16 @@ static void nd_load_ethers(void)
     fclose(fh);
 
     nd_debug_printf("Loaded %lu entries from: %s\n",
-        device_ethers.size(), ND_WATCH_ETHERS);
+        device_ethers.size(), ND_ETHERS_FILE_NAME);
 }
 
 static void nd_json_upload(ndJson *json)
 {
 #ifdef _ND_USE_INOTIFY
-    if (inotify->EventOccured(ND_WATCH_HOSTS))
-        nd_json_add_file(json->GetRoot(), "hosts", ND_WATCH_HOSTS);
-    if (inotify->EventOccured(ND_WATCH_ETHERS)) {
-        if (ND_DEBUG && ND_DEBUG_USE_ETHERS) nd_load_ethers();
-        nd_json_add_file(json->GetRoot(), "ethers", ND_WATCH_ETHERS);
+    for (map<string, string>::const_iterator i = inotify_watches.begin();
+        i != inotify_watches.end(); i++) {
+        if (! inotify->EventOccured(i->first)) continue;
+        nd_json_add_file(json->GetRoot(), i->first, i->second);
     }
 #else
     if (ND_DEBUG && ND_DEBUG_USE_ETHERS) nd_load_ethers();
@@ -1404,9 +1406,10 @@ int main(int argc, char *argv[])
 #ifdef _ND_USE_INOTIFY
     try {
         inotify = new ndInotify();
-        inotify->AddWatch(ND_WATCH_HOSTS);
-        inotify->AddWatch(ND_WATCH_ETHERS);
-        inotify->RefreshWatches();
+        for (map<string, string>::const_iterator i = inotify_watches.begin();
+            i != inotify_watches.end(); i++)
+            inotify->AddWatch(i->first, i->second);
+        if (inotify_watches.size()) inotify->RefreshWatches();
     }
     catch (exception &e) {
         nd_printf("Error creating file watches: %s\n", e.what());

@@ -67,14 +67,17 @@ ndInotify::~ndInotify()
         close(fd);
 }
 
-void ndInotify::AddWatch(const string &filename)
+void ndInotify::AddWatch(const string &tag, const string &filename)
 {
-    if (inotify_watch.find(filename) == inotify_watch.end()) {
+    if (inotify_watch.find(tag) == inotify_watch.end()) {
         struct nd_inotify_watch *watch = new struct nd_inotify_watch;
+
         if (watch == NULL)
             throw ndInotifyException(strerror(ENOMEM));
+
         memset(watch, 0, sizeof(struct nd_inotify_watch));
         watch->wd = -1;
+        watch->filename = filename.c_str();
 
         inotify_watch[filename] = watch;
     }
@@ -88,7 +91,8 @@ void ndInotify::RefreshWatches(void)
         if (i->second->wd >= 0) continue;
 
         i->second->wd = inotify_add_watch(
-            fd, i->first.c_str(), IN_DELETE_SELF | IN_CLOSE_WRITE | IN_MODIFY);
+            fd, i->second->filename,
+            IN_DELETE_SELF | IN_CLOSE_WRITE | IN_MODIFY);
 
         if (i->second->wd < 0) {
             nd_debug_printf("Error creating inotify watch: %s: %s\n",
@@ -160,7 +164,7 @@ void ndInotify::ProcessEvent(void)
 
         uint8_t digest[SHA1_DIGEST_LENGTH];
 
-        if (nd_sha1_file(i->first, digest) < 0)
+        if (nd_sha1_file(i->second->filename, digest) < 0)
             continue;
 
         if (i->second->digest == NULL) {
@@ -178,9 +182,9 @@ void ndInotify::ProcessEvent(void)
     }
 }
 
-bool ndInotify::EventOccured(const string &filename)
+bool ndInotify::EventOccured(const string &tag)
 {
-    nd_inotify_map::const_iterator i = inotify_watch.find(filename);
+    nd_inotify_map::const_iterator i = inotify_watch.find(tag);
 
     if (i == inotify_watch.end()) return false;
 
