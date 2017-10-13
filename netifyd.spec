@@ -133,9 +133,15 @@ rm -f %{_sharedstatedir}/%{name}/*.csv
 %attr(644,root,root) %{_unitdir}/%{name}.service
 %attr(755,root,root) %{_libexecdir}/%{name}/
 %endif
+%if %{with clearos}
 %dir %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
 %attr(640,root,webconfig) %{_sharedstatedir}/%{name}/app-custom-match.conf
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
+%else
+%dir %attr(750,root,root) %{_sharedstatedir}/%{name}/
+%attr(640,root,root) %{_sharedstatedir}/%{name}/app-custom-match.conf
+%config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
+%endif
 %{_sbindir}/%{name}
 %{_mandir}/man5/*
 %{_mandir}/man8/*
