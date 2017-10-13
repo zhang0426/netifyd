@@ -98,7 +98,7 @@
 
 #include "nd-sha1.h"
 
-enum {
+enum ndGlobalFlags {
     ndGF_DEBUG = 0x1,
     ndGF_DEBUG_UPLOAD = 0x2,
     ndGF_DEBUG_USE_ETHERS = 0x4,
@@ -111,7 +111,7 @@ enum {
     ndGF_USE_NCURSES = 0x200,
     ndGF_USE_SINK = 0x400,
     ndGF_VERBOSE = 0x800
-} ndGlobalFlags;
+};
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
 #define ND_DEBUG_UPLOAD (nd_config.flags & ndGF_DEBUG_UPLOAD)
