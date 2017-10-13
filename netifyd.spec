@@ -1,7 +1,24 @@
 # Netify DPI Daemon
 
+%bcond_without clearos
+%bcond_without systemd
+
+%define netify_conf deploy/%{name}.conf
+%define netify_init deploy/%{name}.init
+%define netify_tmpf deploy/%{name}.tmpf
+%define netify_systemd_exec deploy/exec-pre.sh
+%define netify_systemd_unit deploy/%{name}.service
+
+%if %{with clearos}
+%define netify_conf deploy/clearos/%{name}.conf
+%define netify_init deploy/clearos/%{name}.init
+%define netify_tmpf deploy/clearos/%{name}.tmpf
+%define netify_systemd_exec deploy/clearos/exec-pre.sh
+%endif
+
 Name: netifyd
-Version: 1.21
+Summary: Netify DPI Daemon
+Version: 1.22
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPL
@@ -9,7 +26,6 @@ Group: System/Daemons
 Packager: eGloo Incorporated
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-%{version}
-Obsoletes: cdpid
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: bc
@@ -22,14 +38,15 @@ BuildRequires: libtool
 BuildRequires: ncurses-devel
 BuildRequires: pkgconfig
 BuildRequires: zlib-devel
-%if "0%{dist}" == "0.v7"
+%if %{with clearos}
 Requires: app-network-core
 Requires: ncurses
 Requires: webconfig-httpd
+%endif
+%if %{with systemd}
 %{?systemd_requires}
 BuildRequires: systemd
 %endif
-Summary: Netify DPI Daemon
 
 %description
 Netify provides visibility into the traffic on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.
@@ -48,36 +65,23 @@ make %{?_smp_mflags}
 # Install
 %install
 make install DESTDIR=%{buildroot}
-rm -rf %{buildroot}/%{_libdir}
-rm -rf %{buildroot}/%{_includedir}
 rm -rf %{buildroot}/%{_bindir}
+rm -rf %{buildroot}/%{_includedir}
+rm -rf %{buildroot}/%{_libdir}
 mkdir -p %{buildroot}/%{_sharedstatedir}/%{name}
 mkdir -p %{buildroot}/%{_sysconfdir}
-
-%if "0%{dist}" == "0.v7"
-install -D -m 0644 deploy/clearos/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
-install -D -m 0660 deploy/clearos/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
-install -D -m 0755 deploy/clearos/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
-install -D -m 644 deploy/%{name}.service %{buildroot}/%{_unitdir}/%{name}.service
-mkdir -p %{buildroot}/run
-install -d -m 0755 %{buildroot}/run/%{name}
-%endif
-
-%if "0%{dist}" == "0.v6"
-install -D -m 0660 deploy/clearos/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
-install -D -m 0755 deploy/clearos/%{name}.init %{buildroot}/%{_sysconfdir}/init.d/%{name}
 mkdir -p %{buildroot}/var/run
-install -d -m 0755 %{buildroot}/var/run/%{name}
-%endif
-
 install -D -m 0644 deploy/app-custom-match.conf %{buildroot}/%{_sharedstatedir}/%{name}/app-custom-match.conf
+install -D -m 0660 %{netify_conf} %{buildroot}/%{_sysconfdir}/%{name}.conf
+install -d -m 0755 %{buildroot}/var/run/%{name}
 
-#install -D -m 0644 deploy/%{name}.tmpf %{buildroot}/%{_tmpfilesdir}/%{name}.conf
-#install -D -m 0660 deploy/%{name}.conf %{buildroot}/%{_sysconfdir}/%{name}.conf
-#install -D -m 0755 deploy/exec-pre.sh %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
-#install -D -m 644 deploy/%{name}.service %{buildroot}/%{_unitdir}/%{name}.service
-#mkdir -p %{buildroot}/run
-#install -d -m 0755 %{buildroot}/run/%{name}
+%if %{without systemd}
+install -D -m 0755 %{netify_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
+%else
+install -D -m 0644 %{netify_tmpf} %{buildroot}/%{_tmpfilesdir}/%{name}.conf
+install -D -m 0644 %{netify_systemd_unit} %{buildroot}/%{_unitdir}/%{name}.service
+install -D -m 0755 %{netify_systemd_exec} %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
+%endif
 
 # Clean-up
 %clean
@@ -85,7 +89,7 @@ install -D -m 0644 deploy/app-custom-match.conf %{buildroot}/%{_sharedstatedir}/
 
 # Post install
 %post
-%if "0%{dist}" == "0.v7"
+%if %{with systemd}
 %systemd_post %{name}.service
 %endif
 
@@ -108,28 +112,26 @@ rm -f %{_sharedstatedir}/%{name}/*.csv
 
 # Pre uninstall
 %preun
-%if "0%{dist}" == "0.v7"
+%if %{with systemd}
 %systemd_preun %{name}.service
 %endif
 
 # Post uninstall
 %postun
-%if "0%{dist}" == "0.v7"
+%if %{with systemd}
 %systemd_postun_with_restart %{name}.service
 %endif
 
 # Files
 %files
 %defattr(-,root,root)
-%if "0%{dist}" == "0.v6"
+%if %{without systemd}
 %dir /var/run/%{name}
 %attr(755,root,root) %{_sysconfdir}/init.d/%{name}
-%endif
-%if "0%{dist}" == "0.v7"
+%else
 %attr(644,root,root) %{_tmpfilesdir}/%{name}.conf
 %attr(644,root,root) %{_unitdir}/%{name}.service
 %attr(755,root,root) %{_libexecdir}/%{name}/
-%dir /run/%{name}
 %endif
 %dir %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
 %attr(640,root,webconfig) %{_sharedstatedir}/%{name}/app-custom-match.conf
