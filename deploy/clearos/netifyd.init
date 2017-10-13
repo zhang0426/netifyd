@@ -6,7 +6,7 @@
 # description: Netify daemon
 #
 # processname: netifyd
-# config: /etc/clearsync.conf
+# config: /etc/netifyd.conf
 # pidfile: /var/run/clearsync/netifyd.pid
 
 ### BEGIN INIT INFO
