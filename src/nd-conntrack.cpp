@@ -195,7 +195,7 @@ void *ndConntrackThread::Entry(void)
     int rc;
     struct timeval tv;
 
-    while (!terminate) {
+    while (! terminate) {
         fd_set fds_read;
 
         FD_ZERO(&fds_read);
@@ -280,14 +280,14 @@ void ndConntrackThread::ProcessConntrackEvent(
         char buffer[1024];
         nfct_snprintf(buffer, sizeof(buffer), ct, type, NFCT_O_PLAIN, NFCT_OF_TIME);
 
-        if (ct_new_or_update && !ct_exists)
+        if (ct_new_or_update && ! ct_exists)
             nd_debug_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
-//        if (!ct_new_or_update && !ct_exists)
+//        if (! ct_new_or_update && ! ct_exists)
 //            nd_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
 //        nd_printf("%s: [%s %u] %s\n", tag.c_str(),
-//            (ct_new_or_update && !ct_exists) ?
+//            (ct_new_or_update && ! ct_exists) ?
 //                "INSERT" : (ct_new_or_update && ct_exists) ?
-//                "UPDATE" : (ct_exists && !ct_new_or_update) ?
+//                "UPDATE" : (ct_exists && ! ct_new_or_update) ?
 //                "ERASE" : "UNKNOWN", id, buffer);
     }
 #endif
@@ -390,8 +390,8 @@ void ndConntrackThread::PrintFlow(
         os << ", dst_port: " << ntohs(flow->orig_port[ndCT_DIR_DST]);
     }
 
-    if (!withreply ||
-        !flow->repl_addr[ndCT_DIR_SRC] || !flow->repl_addr[ndCT_DIR_DST]) {
+    if (! withreply ||
+        ! flow->repl_addr[ndCT_DIR_SRC] || ! flow->repl_addr[ndCT_DIR_DST]) {
         text = os.str();
         return;
     }
@@ -580,22 +580,22 @@ void ndConntrackFlow::Update(struct nf_conntrack *ct)
 {
     struct sockaddr_storage *ss_addr = NULL;
 
-    if (!nfct_attr_is_set(ct, ATTR_ORIG_L3PROTO))
+    if (! nfct_attr_is_set(ct, ATTR_ORIG_L3PROTO))
         throw ndConntrackFlowException("ATTR_ORIG_L3PROTO not set");
 
     sa_family_t af = l3_proto = nfct_get_attr_u8(ct, ATTR_ORIG_L3PROTO);
     if (af != AF_INET && af != AF_INET6)
         throw ndConntrackFlowException("Unsupported address family");
 
-    if (!nfct_attr_is_set(ct, ATTR_ORIG_L4PROTO))
+    if (! nfct_attr_is_set(ct, ATTR_ORIG_L4PROTO))
         throw ndConntrackFlowException("ATTR_ORIG_L4PROTO not set");
 
     l4_proto = nfct_get_attr_u8(ct, ATTR_ORIG_L4PROTO);
 
-    if ((!nfct_attr_is_set(ct, ATTR_ORIG_IPV4_SRC) &&
-         !nfct_attr_is_set(ct, ATTR_ORIG_IPV6_SRC)) ||
-        (!nfct_attr_is_set(ct, ATTR_ORIG_IPV4_DST) &&
-         !nfct_attr_is_set(ct, ATTR_ORIG_IPV6_DST)))
+    if ((! nfct_attr_is_set(ct, ATTR_ORIG_IPV4_SRC) &&
+         ! nfct_attr_is_set(ct, ATTR_ORIG_IPV6_SRC)) ||
+        (! nfct_attr_is_set(ct, ATTR_ORIG_IPV4_DST) &&
+         ! nfct_attr_is_set(ct, ATTR_ORIG_IPV6_DST)))
         throw ndConntrackFlowException("ATTR_ORIG_SRC/DST not set");
 
     switch (af) {
