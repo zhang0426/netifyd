@@ -19,6 +19,7 @@
 
 #define ND_FLOW_OS_LEN      32      // Detected OS length
 #define ND_FLOW_SSL_CERTLEN 48      // SSL certificate length
+#define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
 
 struct ndFlow
 {
@@ -63,6 +64,8 @@ struct ndFlow
     bool detection_guessed;
 
     char detected_os[ND_FLOW_OS_LEN];
+
+    char dhcp_fingerprint[ND_FLOW_DHCPFP_LEN];
 
     ndpi_protocol detected_protocol;
 
