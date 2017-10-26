@@ -403,6 +403,10 @@ json_object *ndFlow::json_encode(const string &device,
         json.AddObject(json_flow, "detected_os", detected_os);
     }
 
+    if (dhcp_fingerprint[0] != '\0') {
+        json.AddObject(json_flow, "dhcp_fingerprint", dhcp_fingerprint);
+    }
+
     if (detected_protocol.master_protocol) {
         json.AddObject(json_flow, "detected_protocol",
             (int32_t)detected_protocol.master_protocol);
