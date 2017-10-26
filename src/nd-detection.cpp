@@ -137,6 +137,13 @@ ndDetectionThread::ndDetectionThread(const string &dev,
 {
     memset(stats, 0, sizeof(nd_packet_stats));
 
+    size_t p = string::npos;
+    if ((p = tag.find_first_of(",")) != string::npos) {
+        pcap_file = tag.substr(p + 1);
+        tag = tag.substr(0, p);
+        nd_debug_printf("%s: capture file: %s\n", tag.c_str(), pcap_file.c_str());
+    }
+
     ndpi = nd_ndpi_init(tag);
 
     nd_debug_printf("%s: detection thread created.\n", tag.c_str());
@@ -178,25 +185,26 @@ void *ndDetectionThread::Entry(void)
                 continue;
             }
 
-            if (!(ifr.ifr_flags & IFF_UP)) {
+            if (! (ifr.ifr_flags & IFF_UP)) {
                 nd_debug_printf("%s: WARNING: interface is down.\n", tag.c_str());
                 sleep(1);
                 continue;
             }
 
             memset(pcap_errbuf, 0, PCAP_ERRBUF_SIZE);
-            pcap = pcap_open_live(
-                tag.c_str(),
-                pcap_snaplen,
-                1, // Promisc?
-                ND_PCAP_READ_TIMEOUT,
-                pcap_errbuf
-            );
+
+            pcap = OpenCapture();
 
             if (pcap == NULL) {
                 nd_printf("%s.\n", pcap_errbuf);
                 sleep(1);
                 continue;
+            }
+
+            if (pcap_file.size()) {
+            nd_printf("%s: using capture file: %s: v%d.%d\n",
+                tag.c_str(), pcap_file.c_str(),
+                pcap_major_version(pcap), pcap_minor_version(pcap));
             }
 
             if (strlen(pcap_errbuf))
@@ -227,13 +235,40 @@ void *ndDetectionThread::Entry(void)
             pcap_close(pcap);
             pcap = NULL;
             break;
+        case -2:
+            nd_printf("%s: end of capture file: %s\n", tag.c_str(), pcap_file.c_str());
+            pcap_close(pcap);
+            pcap = NULL;
+            terminate = true;
+            break;
         }
     }
     while (terminate == false);
 
     close(ifr_fd);
 
+    nd_printf("%s: capture ended on CPU: %lu\n",
+        tag.c_str(), cpu >= 0 ? cpu : 0);
+
     return NULL;
+}
+
+pcap_t *ndDetectionThread::OpenCapture(void)
+{
+    if (pcap_file.size()) {
+        return pcap_open_offline(
+            pcap_file.c_str(),
+            pcap_errbuf
+        );
+    }
+
+    return pcap_open_live(
+        tag.c_str(),
+        pcap_snaplen,
+        1, // Promisc?
+        ND_PCAP_READ_TIMEOUT,
+        pcap_errbuf
+    );
 }
 
 void ndDetectionThread::ProcessPacket(void)
@@ -244,7 +279,6 @@ void ndDetectionThread::ProcessPacket(void)
 
     const uint8_t *layer3 = NULL;
 
-    uint64_t ts_pkt;
     uint16_t type;
     uint16_t ppp_proto;
     uint16_t ip_offset, ip_len, l4_len = 0;
@@ -260,6 +294,23 @@ void ndDetectionThread::ProcessPacket(void)
 
     struct ndpi_id_struct *id_src, *id_dst;
 
+    uint64_t ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) * ND_DETECTION_TICKS +
+    pkt_header->ts.tv_usec / (1000000 / ND_DETECTION_TICKS);
+
+    if (ts_pkt_last > ts_pkt) ts_pkt = ts_pkt_last;
+
+    if (ND_REPLAY_DELAY && ts_pkt_last && pcap_file.size()) {
+        useconds_t delay = useconds_t(ts_pkt - ts_pkt_last) * 1000;
+        //nd_debug_printf("%s: pkt delay: %lu\n", tag.c_str(), delay);
+        if (delay) {
+            pthread_mutex_unlock(&lock);
+            usleep(delay);
+            pthread_mutex_lock(&lock);
+        }
+    }
+
+    ts_pkt_last = ts_pkt;
+
     stats->pkt_raw++;
     if (pkt_header->len > stats->pkt_maxlen)
         stats->pkt_maxlen = pkt_header->len;
@@ -269,11 +320,6 @@ void ndDetectionThread::ProcessPacket(void)
         // XXX: Increase capture size (detection may not work)...
     }
 #endif
-    ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) * ND_DETECTION_TICKS +
-        pkt_header->ts.tv_usec / (1000000 / ND_DETECTION_TICKS);
-
-    if (ts_pkt_last > ts_pkt) ts_pkt = ts_pkt_last;
-    ts_pkt_last = ts_pkt;
 
     switch (pcap_datalink_type) {
     case DLT_NULL:
@@ -638,8 +684,6 @@ void ndDetectionThread::ProcessPacket(void)
             upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
         }
 #ifdef _ND_USE_NETLINK
-//        new_flow->lower_type = netlink->ClassifyAddress(netlink_dev, lower_addr);
-//        new_flow->upper_type = netlink->ClassifyAddress(netlink_dev, upper_addr);
         new_flow->lower_type = netlink->ClassifyAddress(lower_addr);
         new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
 #endif
@@ -672,23 +716,49 @@ void ndDetectionThread::ProcessPacket(void)
                     ),
                     ntohs(new_flow->upper_port)
                 );
-                new_flow->detected_protocol.master_protocol = NDPI_PROTOCOL_UNKNOWN;
+                //new_flow->detected_protocol.master_protocol = NDPI_PROTOCOL_UNKNOWN;
             }
         }
 
-        snprintf(
-            new_flow->detected_os, ND_FLOW_OS_LEN,
-            "%s", new_flow->ndpi_flow->protos.http.detected_os
-        );
+        // XXX: There has to be a better way to extract the HTTP UA and DHCP Fingerprint?
+        uint16_t _proto = (
+            new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN) ?
+                new_flow->detected_protocol.master_protocol : new_flow->detected_protocol.app_protocol;
 
+        switch (_proto) {
+        case NDPI_PROTOCOL_FACEBOOK:
+        case NDPI_PROTOCOL_HTTP:
+        case NDPI_PROTOCOL_IQIYI:
+        case NDPI_PROTOCOL_MOVE:
+        case NDPI_PROTOCOL_NETFLIX:
+        case NDPI_PROTOCOL_OOKLA:
+        case NDPI_PROTOCOL_PPSTREAM:
+        case NDPI_PROTOCOL_QQ:
+        case NDPI_PROTOCOL_RTSP:
+        case NDPI_PROTOCOL_STEAM:
+        case NDPI_PROTOCOL_TEAMVIEWER:
+        case NDPI_PROTOCOL_XBOX:
+            snprintf(
+                new_flow->detected_os, ND_FLOW_OS_LEN,
+                "%s", new_flow->ndpi_flow->protos.http.detected_os
+            );
+            break;
+        case NDPI_PROTOCOL_DHCP:
+            snprintf(
+                new_flow->dhcp_fingerprint, ND_FLOW_DHCPFP_LEN,
+                "%s", new_flow->ndpi_flow->protos.dhcp.fingerprint
+            );
+            break;
+        }
+
+        // Sanitize host server name; RFC 952 plus underscore.
         snprintf(
             new_flow->host_server_name, HOST_NAME_MAX,
             "%s", new_flow->ndpi_flow->host_server_name
         );
 
-        // Sanitize host server name; RFC 952 plus underscore.
         for (int i = 0; i < HOST_NAME_MAX; i++) {
-            if (!isalnum(new_flow->host_server_name[i]) &&
+            if (! isalnum(new_flow->host_server_name[i]) &&
                 new_flow->host_server_name[i] != '-' &&
                 new_flow->host_server_name[i] != '_' &&
                 new_flow->host_server_name[i] != '.') {
@@ -753,7 +823,7 @@ void ndDetectionThread::ProcessPacket(void)
                         break;
                     }
 
-                    if (!duplicate)
+                    if (! duplicate)
                         (*device_addrs)[mac].push_back(ip);
                 }
             }
