@@ -110,7 +110,8 @@ enum ndGlobalFlags {
     ndGF_USE_CONNTRACK = 0x100,
     ndGF_USE_NCURSES = 0x200,
     ndGF_USE_SINK = 0x400,
-    ndGF_VERBOSE = 0x800
+    ndGF_VERBOSE = 0x800,
+    ndGF_REPLAY_DELAY = 0x1000
 };
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
@@ -125,6 +126,7 @@ enum ndGlobalFlags {
 #define ND_USE_NCURSES (nd_config.flags & ndGF_USE_NCURSES)
 #define ND_USE_SINK (nd_config.flags & ndGF_USE_SINK)
 #define ND_VERBOSE (nd_config.flags & ndGF_VERBOSE)
+#define ND_REPLAY_DELAY (nd_config.flags & ndGF_REPLAY_DELAY)
 
 typedef struct {
     char *path_config;
