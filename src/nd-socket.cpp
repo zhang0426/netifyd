@@ -139,7 +139,7 @@ int ndSocketLocal::IsValid(void)
         if (max_path_len == -1) return errno;
 
         FILE *fh = fopen(_ND_SOCKET_PROC_NET_UNIX, "r");
-        if (!fh) return errno;
+        if (! fh) return errno;
 
         for ( ;; ) {
             char filename[max_path_len];
@@ -147,11 +147,11 @@ int ndSocketLocal::IsValid(void)
             int count = fscanf(fh, "%x: %u %u %u %u %u %u ",
                 &a, &b, &c, &d, &e, &f, &g);
             if (count == 0) {
-                if (!fgets(filename, max_path_len, fh)) break;
+                if (! fgets(filename, max_path_len, fh)) break;
                 continue;
             }
             else if (count == -1) break;
-            else if (!fgets(filename, max_path_len, fh)) break;
+            else if (! fgets(filename, max_path_len, fh)) break;
             else if (strncmp(filename, base->node.c_str(), base->node.size()) == 0) {
                 rc = EADDRINUSE;
                 break;
@@ -703,7 +703,7 @@ void *ndSocketThread::Entry(void)
 
     nd_debug_printf("%s: started\n", __PRETTY_FUNCTION__);
 
-    while (!terminate) {
+    while (! terminate) {
         max_fd = -1;
 
         FD_ZERO(&fds_read);

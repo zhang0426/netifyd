@@ -292,7 +292,7 @@ void ndUploadThread::Upload(void)
         nd_debug_printf("%s: payload %lu/%lu (%d of %d bytes)...\n",
             tag.c_str(), ++xfer, total, pending.front().second.size(), pending_size);
 
-        if (!pending.front().first)
+        if (! pending.front().first)
             curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers);
         else
             curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers_gz);
@@ -355,7 +355,7 @@ void ndUploadThread::Upload(void)
         if ((rc = pthread_mutex_unlock(&lock)) != 0)
             throw ndUploadThreadException(strerror(rc));
     }
-    while (pending.size() > 0 && !terminate);
+    while (pending.size() > 0 && ! terminate);
 }
 
 string ndUploadThread::Deflate(const string &data)

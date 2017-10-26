@@ -61,7 +61,7 @@ static void nd_ndpi_load_content_match(
 
     if (fgets(header, 1024, fp) == NULL) { fclose(fp); return; }
 
-    while (!feof(fp)) {
+    while (! feof(fp)) {
         line++;
         if ((rc = fscanf(fp,
             " \"%m[0-9A-z*$^.-]\" , \"%m[0-9A-z_.()-]\" , %u\n",
@@ -110,7 +110,7 @@ static void nd_ndpi_load_host_match(
 
     if (fgets(header, 1024, fp) == NULL) { fclose(fp); return; }
 
-    while (!feof(fp)) {
+    while (! feof(fp)) {
         line++;
         if ((rc = fscanf(fp,
             " \"%m[0-9A-f:.]\" , %hhu , %hhu\n",
