@@ -59,6 +59,7 @@ protected:
     ndConntrackThread *thread_conntrack;
 #endif
     pcap_t *pcap;
+    string pcap_file;
     char pcap_errbuf[PCAP_ERRBUF_SIZE];
     int pcap_snaplen;
     int pcap_datalink_type;
@@ -72,8 +73,7 @@ protected:
     nd_packet_stats *stats;
     nd_device_addrs *device_addrs;
 
-    void LoadContentMatch(void);
-    void LoadHostProtocol(void);
+    pcap_t *OpenCapture(void);
 
     void ProcessPacket(void);
 };
