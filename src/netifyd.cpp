@@ -324,7 +324,7 @@ static int nd_config_load(void)
             struct sockaddr *saddr = reinterpret_cast<struct sockaddr *>(
                 new uint8_t[rp->ai_addrlen]
             );
-            if (!saddr)
+            if (! saddr)
                 throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
             memcpy(saddr, rp->ai_addr, rp->ai_addrlen);
             nd_config.privacy_filter_host.push_back(saddr);
@@ -689,7 +689,7 @@ static void nd_json_add_devices(json_object *parent)
                     }
                 }
 
-                if (!duplicate)
+                if (! duplicate)
                     device_addrs[j->first].push_back((*k));
             }
         }
@@ -801,14 +801,14 @@ static void nd_load_ethers(void)
     device_ethers.clear();
 
     size_t line = 0;
-    while (!feof(fh)) {
+    while (! feof(fh)) {
         if (fgets(buffer, sizeof(buffer), fh)) {
             line++;
             char *p = buffer;
             while (isspace(*p) && *p != '\0') p++;
 
             char *ether = p;
-            if (!isxdigit(*p)) continue;
+            if (! isxdigit(*p)) continue;
             while (*p != '\0' && (isxdigit(*p) || *p == ':')) p++;
             *p = '\0';
             if (strlen(ether) != ND_STR_ETHALEN) continue;
@@ -818,7 +818,7 @@ static void nd_load_ethers(void)
             char *name = p;
             while (*p != '\n' && *p != '\0') p++;
             *p = '\0';
-            if (!strlen(name)) continue;
+            if (! strlen(name)) continue;
 
             const char *a = ether;
             uint8_t mac[ETH_ALEN], *m = mac;
@@ -1135,6 +1135,7 @@ int main(int argc, char *argv[])
         { "debug", 0, 0, 'd' },
         { "debug-ether-names", 0, 0, 'e' },
         { "debug-uploads", 0, 0, 'D' },
+        { "replay-delay", 0, 0, 'r' },
         { "serial", 1, 0, 's' },
         { "internal", 1, 0, 'I' },
         { "external", 1, 0, 'E' },
@@ -1160,7 +1161,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDens:I:E:j:i:c:UPA:N:f:H:C:S:t",
+            "?hVdDenrs:I:E:j:i:c:UPA:N:f:H:C:S:t",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -1179,6 +1180,9 @@ int main(int argc, char *argv[])
             break;
         case 'e':
             nd_config.flags |= ndGF_DEBUG_USE_ETHERS;
+            break;
+        case 'r':
+            nd_config.flags |= ndGF_REPLAY_DELAY;
             break;
         case 's':
             nd_config.uuid_serial = strdup(optarg);
@@ -1455,7 +1459,7 @@ int main(int argc, char *argv[])
 #ifdef _ND_USE_NETLINK
     netlink->Refresh();
 #endif
-    while (!terminate) {
+    while (! terminate) {
         int sig;
         siginfo_t si;
 
@@ -1483,6 +1487,9 @@ int main(int argc, char *argv[])
             inotify->RefreshWatches();
 #endif
             nd_dump_stats();
+#ifdef HAVE_PTHREAD_TRYJOIN_NP
+
+#endif
             continue;
         }
 
