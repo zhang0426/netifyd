@@ -333,10 +333,10 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
         if ((jterr = json_tokener_get_error(jtok)) != json_tokener_success)
             throw ndJsonParseException(json_tokener_error_desc(jterr));
 
-        if (!json_object_is_type(jobj, json_type_object))
+        if (! json_object_is_type(jobj, json_type_object))
             throw ndJsonParseException("Unexpected JSON type");
 
-        if (!json_object_object_get_ex(jobj, "version", &jver))
+        if (! json_object_object_get_ex(jobj, "version", &jver))
             throw ndJsonParseException("Missing version field");
 
         if (json_object_get_type(jver) != json_type_double)
@@ -348,7 +348,7 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
             throw ndJsonParseException("Unsupported remote JSON version");
         }
 
-        if (!json_object_object_get_ex(jobj, "type", &jtype))
+        if (! json_object_object_get_ex(jobj, "type", &jtype))
             throw ndJsonParseException("Missing type field");
 
         if (json_object_get_type(jtype) != json_type_int)
@@ -365,18 +365,18 @@ ndJsonObjectType ndJsonObjectFactory::Parse(const string &jstring, ndJsonObject 
             return ndJSON_OBJ_TYPE_OK;
 
         case ndJSON_OBJ_TYPE_RESULT:
-            if (!json_object_object_get_ex(jobj, "data", &jdata))
+            if (! json_object_object_get_ex(jobj, "data", &jdata))
                 throw ndJsonParseException("Missing data field");
-            if (!json_object_is_type(jdata, json_type_object))
+            if (! json_object_is_type(jdata, json_type_object))
                 throw ndJsonParseException("Unexpected data type");
             *result = reinterpret_cast<ndJsonObject *>(new ndJsonObjectResult(jdata));
             json_object_put(jobj);
             return ndJSON_OBJ_TYPE_RESULT;
 
         case ndJSON_OBJ_TYPE_CONFIG:
-            if (!json_object_object_get_ex(jobj, "config", &jdata))
+            if (! json_object_object_get_ex(jobj, "config", &jdata))
                 throw ndJsonParseException("Missing config field");
-            if (!json_object_is_type(jdata, json_type_object))
+            if (! json_object_is_type(jdata, json_type_object))
                 throw ndJsonParseException("Unexpected config type");
             *result = reinterpret_cast<ndJsonObject *>(new ndJsonObjectConfig(jdata));
             json_object_put(jobj);
@@ -402,7 +402,7 @@ ndJsonObjectResult::ndJsonObjectResult(json_object *jdata)
 {
     json_object *jcode, *jmessage;
 
-    if (!json_object_object_get_ex(jdata, "code", &jcode))
+    if (! json_object_object_get_ex(jdata, "code", &jcode))
         throw ndJsonParseException("Missing code field");
 
     if (json_object_get_type(jcode) != json_type_int)
@@ -414,7 +414,7 @@ ndJsonObjectResult::ndJsonObjectResult(json_object *jdata)
 
     code = (ndJsonObjectResultCode)icode;
 
-    if (!json_object_object_get_ex(jdata, "message", &jmessage))
+    if (! json_object_object_get_ex(jdata, "message", &jmessage))
         throw ndJsonParseException("Missing message field");
 
     if (json_object_get_type(jmessage) != json_type_string)
@@ -576,7 +576,7 @@ void ndJsonObjectConfig::UnserializeContentMatch(json_object *jentry)
     json_object *jobj;
     ndJsonConfigContentMatch entry;
 
-    if (!json_object_object_get_ex(jentry, "match", &jobj))
+    if (! json_object_object_get_ex(jentry, "match", &jobj))
         throw ndJsonParseException("Missing match field");
 
     if (json_object_get_type(jobj) != json_type_string)
@@ -584,7 +584,7 @@ void ndJsonObjectConfig::UnserializeContentMatch(json_object *jentry)
 
     entry.match = json_object_get_string(jobj);
 
-    if (!json_object_object_get_ex(jentry, "app_name", &jobj))
+    if (! json_object_object_get_ex(jentry, "app_name", &jobj))
         throw ndJsonParseException("Missing application name field");
 
     if (json_object_get_type(jobj) != json_type_string)
@@ -592,7 +592,7 @@ void ndJsonObjectConfig::UnserializeContentMatch(json_object *jentry)
 
     entry.app_name = json_object_get_string(jobj);
 
-    if (!json_object_object_get_ex(jentry, "app_id", &jobj))
+    if (! json_object_object_get_ex(jentry, "app_id", &jobj))
         throw ndJsonParseException("Missing application ID field");
 
     if (json_object_get_type(jobj) != json_type_int)
@@ -608,7 +608,7 @@ void ndJsonObjectConfig::UnserializeCustomMatch(json_object *jentry)
     json_object *jobj;
     ndJsonConfigCustomMatch entry;
 
-    if (!json_object_object_get_ex(jentry, "rule", &jobj))
+    if (! json_object_object_get_ex(jentry, "rule", &jobj))
         throw ndJsonParseException("Missing rule field");
 
     if (json_object_get_type(jobj) != json_type_string)
@@ -628,7 +628,7 @@ void ndJsonObjectConfig::UnserializeHostMatch(json_object *jentry)
     saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&entry.ip_addr);
     saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&entry.ip_addr);
 
-    if (!json_object_object_get_ex(jentry, "ip_address", &jobj))
+    if (! json_object_object_get_ex(jentry, "ip_address", &jobj))
         throw ndJsonParseException("Missing IP address field");
 
     if (json_object_get_type(jobj) != json_type_string)
@@ -648,7 +648,7 @@ void ndJsonObjectConfig::UnserializeHostMatch(json_object *jentry)
     else
             entry.ip_addr.ss_family = AF_INET6;
 
-    if (!json_object_object_get_ex(jentry, "ip_prefix", &jobj))
+    if (! json_object_object_get_ex(jentry, "ip_prefix", &jobj))
         throw ndJsonParseException("Missing IP prefix field");
 
     if (json_object_get_type(jobj) != json_type_int)
@@ -656,7 +656,7 @@ void ndJsonObjectConfig::UnserializeHostMatch(json_object *jentry)
 
     entry.ip_prefix = json_object_get_int(jobj);
 
-    if (!json_object_object_get_ex(jentry, "app_id", &jobj))
+    if (! json_object_object_get_ex(jentry, "app_id", &jobj))
         throw ndJsonParseException("Missing application ID field");
 
     if (json_object_get_type(jobj) != json_type_int)
