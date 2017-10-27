@@ -17,9 +17,17 @@
 #ifndef _ND_FLOW_H
 #define _ND_FLOW_H
 
-#define ND_FLOW_OS_LEN      32      // Detected OS length
+// XXX: These lengths are extracted from:
+//      ndpi/src/include/ndpi_typedefs.h
+//
+// Unfortunately they don't define such constants so we have to define
+// them here.  If they change in nDPI, they'll need to be updated
+// manually.
+#define ND_FLOW_UA_LEN      512     // User agent length
+#define ND_FLOW_SSH_UALEN   48      // SSH user-agent (signature) length
 #define ND_FLOW_SSL_CERTLEN 48      // SSL certificate length
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
+#define ND_FLOW_DHCPCI_LEN  48      // DHCP class identifier
 
 struct ndFlow
 {
@@ -63,9 +71,10 @@ struct ndFlow
     bool detection_complete;
     bool detection_guessed;
 
-    char detected_os[ND_FLOW_OS_LEN];
+    char user_agent[ND_FLOW_UA_LEN];
 
     char dhcp_fingerprint[ND_FLOW_DHCPFP_LEN];
+    char dhcp_class_ident[ND_FLOW_DHCPCI_LEN];
 
     ndpi_protocol detected_protocol;
 
@@ -75,6 +84,12 @@ struct ndFlow
     struct ndpi_id_struct *id_dst;
 
     char host_server_name[HOST_NAME_MAX];
+
+    struct {
+        char client_agent[ND_FLOW_SSH_UALEN];
+        char server_agent[ND_FLOW_SSH_UALEN];
+    } ssh;
+
     struct {
         char client_cert[ND_FLOW_SSL_CERTLEN];
         char server_cert[ND_FLOW_SSL_CERTLEN];

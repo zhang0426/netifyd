@@ -716,6 +716,7 @@ void ndDetectionThread::ProcessPacket(void)
                     ),
                     ntohs(new_flow->upper_port)
                 );
+                // XXX: Necessary?
                 //new_flow->detected_protocol.master_protocol = NDPI_PROTOCOL_UNKNOWN;
             }
         }
@@ -726,8 +727,11 @@ void ndDetectionThread::ProcessPacket(void)
                 new_flow->detected_protocol.master_protocol : new_flow->detected_protocol.app_protocol;
 
         switch (_proto) {
+        case NDPI_PROTOCOL_1KXUN:
         case NDPI_PROTOCOL_FACEBOOK:
         case NDPI_PROTOCOL_HTTP:
+        case NDPI_PROTOCOL_HTTP_CONNECT:
+        case NDPI_PROTOCOL_HTTP_PROXY:
         case NDPI_PROTOCOL_IQIYI:
         case NDPI_PROTOCOL_MOVE:
         case NDPI_PROTOCOL_NETFLIX:
@@ -739,14 +743,39 @@ void ndDetectionThread::ProcessPacket(void)
         case NDPI_PROTOCOL_TEAMVIEWER:
         case NDPI_PROTOCOL_XBOX:
             snprintf(
-                new_flow->detected_os, ND_FLOW_OS_LEN,
+                new_flow->user_agent, ND_FLOW_UA_LEN,
                 "%s", new_flow->ndpi_flow->protos.http.detected_os
             );
+            break;
+        case NDPI_PROTOCOL_GMAIL:
+        case NDPI_PROTOCOL_MAIL_IMAP:
+        case NDPI_PROTOCOL_MAIL_IMAPS:
+        case NDPI_PROTOCOL_MAIL_POPS:
+        case NDPI_PROTOCOL_MAIL_SMTPS:
+        case NDPI_PROTOCOL_OSCAR:
+        case NDPI_PROTOCOL_SSL:
+        case NDPI_PROTOCOL_SSL_NO_CERT:
+        case NDPI_PROTOCOL_TOR:
+        case NDPI_PROTOCOL_UNENCRYPTED_JABBER:
+            snprintf(new_flow->ssl.client_cert, ND_FLOW_SSL_CERTLEN,
+                "%s", new_flow->ndpi_flow->protos.ssl.client_certificate);
+            snprintf(new_flow->ssl.server_cert, ND_FLOW_SSL_CERTLEN,
+                "%s", new_flow->ndpi_flow->protos.ssl.server_certificate);
+            break;
+        case NDPI_PROTOCOL_SSH:
+            snprintf(new_flow->ssh.client_agent, ND_FLOW_SSH_UALEN,
+                "%s", new_flow->ndpi_flow->protos.ssh.client_signature);
+            snprintf(new_flow->ssh.server_agent, ND_FLOW_SSH_UALEN,
+                "%s", new_flow->ndpi_flow->protos.ssh.server_signature);
             break;
         case NDPI_PROTOCOL_DHCP:
             snprintf(
                 new_flow->dhcp_fingerprint, ND_FLOW_DHCPFP_LEN,
                 "%s", new_flow->ndpi_flow->protos.dhcp.fingerprint
+            );
+            snprintf(
+                new_flow->dhcp_class_ident, ND_FLOW_DHCPCI_LEN,
+                "%s", new_flow->ndpi_flow->protos.dhcp.class_ident
             );
             break;
         }
@@ -765,14 +794,6 @@ void ndDetectionThread::ProcessPacket(void)
                 new_flow->host_server_name[i] = '\0';
                 break;
             }
-        }
-
-        if (new_flow->ip_protocol == IPPROTO_TCP
-            && new_flow->detected_protocol.app_protocol != NDPI_PROTOCOL_DNS) {
-            snprintf(new_flow->ssl.client_cert, ND_FLOW_SSL_CERTLEN,
-                "%s", new_flow->ndpi_flow->protos.ssl.client_certificate);
-            snprintf(new_flow->ssl.server_cert, ND_FLOW_SSL_CERTLEN,
-                "%s", new_flow->ndpi_flow->protos.ssl.server_certificate);
         }
 
         switch (new_flow->ip_version) {

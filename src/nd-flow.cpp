@@ -399,12 +399,16 @@ json_object *ndFlow::json_encode(const string &device,
         json.AddObject(json_flow, "total_bytes", total_bytes);
     }
 
-    if (detected_os[0] != '\0') {
-        json.AddObject(json_flow, "detected_os", detected_os);
+    if (user_agent[0] != '\0') {
+        json.AddObject(json_flow, "user_agent", user_agent);
     }
 
     if (dhcp_fingerprint[0] != '\0') {
         json.AddObject(json_flow, "dhcp_fingerprint", dhcp_fingerprint);
+    }
+
+    if (dhcp_class_ident[0] != '\0') {
+        json.AddObject(json_flow, "dhcp_class_ident", dhcp_class_ident);
     }
 
     if (detected_protocol.master_protocol) {
@@ -434,6 +438,17 @@ json_object *ndFlow::json_encode(const string &device,
     if (host_server_name[0] != '\0') {
         json.AddObject(json_flow,
             "host_server_name", host_server_name);
+    }
+
+    if (ssh.client_agent[0] != '\0' || ssh.server_agent[0] != '\0') {
+
+        json_object *ssh = json.CreateObject(json_flow, "ssh");
+
+        if (this->ssh.client_agent[0] != '\0')
+            json.AddObject(ssh, "client", this->ssh.client_agent);
+
+        if (this->ssh.server_agent[0] != '\0')
+            json.AddObject(ssh, "server", this->ssh.server_agent);
     }
 
     if (ssl.client_cert[0] != '\0' || ssl.server_cert[0] != '\0') {
