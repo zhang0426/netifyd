@@ -722,44 +722,17 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         // XXX: There has to be a better way to extract the HTTP UA and DHCP Fingerprint?
-        uint16_t _proto = (
-            new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN) ?
-                new_flow->detected_protocol.master_protocol : new_flow->detected_protocol.app_protocol;
-
-        switch (_proto) {
-        case NDPI_PROTOCOL_1KXUN:
-        case NDPI_PROTOCOL_FACEBOOK:
+        switch (new_flow->master_protocol()) {
         case NDPI_PROTOCOL_HTTP:
-        case NDPI_PROTOCOL_HTTP_CONNECT:
-        case NDPI_PROTOCOL_HTTP_PROXY:
-        case NDPI_PROTOCOL_IQIYI:
-        case NDPI_PROTOCOL_MOVE:
-        case NDPI_PROTOCOL_NETFLIX:
-        case NDPI_PROTOCOL_OOKLA:
-        case NDPI_PROTOCOL_PPSTREAM:
-        case NDPI_PROTOCOL_QQ:
-        case NDPI_PROTOCOL_RTSP:
-        case NDPI_PROTOCOL_STEAM:
-        case NDPI_PROTOCOL_TEAMVIEWER:
-        case NDPI_PROTOCOL_XBOX:
             snprintf(
-                new_flow->user_agent, ND_FLOW_UA_LEN,
+                new_flow->http.user_agent, ND_FLOW_UA_LEN,
                 "%s", new_flow->ndpi_flow->protos.http.detected_os
             );
             break;
-        case NDPI_PROTOCOL_GMAIL:
-        case NDPI_PROTOCOL_MAIL_IMAP:
-        case NDPI_PROTOCOL_MAIL_IMAPS:
-        case NDPI_PROTOCOL_MAIL_POPS:
-        case NDPI_PROTOCOL_MAIL_SMTPS:
-        case NDPI_PROTOCOL_OSCAR:
         case NDPI_PROTOCOL_SSL:
-        case NDPI_PROTOCOL_SSL_NO_CERT:
-        case NDPI_PROTOCOL_TOR:
-        case NDPI_PROTOCOL_UNENCRYPTED_JABBER:
-            snprintf(new_flow->ssl.client_cert, ND_FLOW_SSL_CERTLEN,
+            snprintf(new_flow->ssl.client_certcn, ND_FLOW_SSL_CNLEN,
                 "%s", new_flow->ndpi_flow->protos.ssl.client_certificate);
-            snprintf(new_flow->ssl.server_cert, ND_FLOW_SSL_CERTLEN,
+            snprintf(new_flow->ssl.server_certcn, ND_FLOW_SSL_CNLEN,
                 "%s", new_flow->ndpi_flow->protos.ssl.server_certificate);
             break;
         case NDPI_PROTOCOL_SSH:
@@ -770,11 +743,11 @@ void ndDetectionThread::ProcessPacket(void)
             break;
         case NDPI_PROTOCOL_DHCP:
             snprintf(
-                new_flow->dhcp_fingerprint, ND_FLOW_DHCPFP_LEN,
+                new_flow->dhcp.fingerprint, ND_FLOW_DHCPFP_LEN,
                 "%s", new_flow->ndpi_flow->protos.dhcp.fingerprint
             );
             snprintf(
-                new_flow->dhcp_class_ident, ND_FLOW_DHCPCI_LEN,
+                new_flow->dhcp.class_ident, ND_FLOW_DHCPCI_LEN,
                 "%s", new_flow->ndpi_flow->protos.dhcp.class_ident
             );
             break;

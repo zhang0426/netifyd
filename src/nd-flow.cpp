@@ -90,18 +90,114 @@ void ndFlow::hash(const string &device, string &digest, bool full_hash)
             sha1_write(&ctx,
                 host_server_name, strnlen(host_server_name, HOST_NAME_MAX));
         }
-        if (ssl.client_cert[0] != '\0') {
+        if (has_ssl_client_certcn()) {
             sha1_write(&ctx,
-                ssl.client_cert, strnlen(ssl.client_cert, ND_FLOW_SSL_CERTLEN));
+                ssl.client_certcn, strnlen(ssl.client_certcn, ND_FLOW_SSL_CNLEN));
         }
-        if (ssl.server_cert[0] != '\0') {
+        if (has_ssl_server_certcn()) {
             sha1_write(&ctx,
-                ssl.server_cert, strnlen(ssl.server_cert, ND_FLOW_SSL_CERTLEN));
+                ssl.server_certcn, strnlen(ssl.server_certcn, ND_FLOW_SSL_CNLEN));
         }
     }
 
     _digest = sha1_result(&ctx);
     digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
+}
+
+uint16_t ndFlow::master_protocol(void)
+{
+    uint16_t proto = (detected_protocol.master_protocol !=
+        NDPI_PROTOCOL_UNKNOWN) ?
+            detected_protocol.master_protocol :
+            detected_protocol.app_protocol;
+
+    switch (proto) {
+    case NDPI_PROTOCOL_1KXUN:
+    case NDPI_PROTOCOL_FACEBOOK:
+    case NDPI_PROTOCOL_HTTP:
+    case NDPI_PROTOCOL_HTTP_CONNECT:
+    case NDPI_PROTOCOL_HTTP_PROXY:
+    case NDPI_PROTOCOL_IQIYI:
+    case NDPI_PROTOCOL_MOVE:
+    case NDPI_PROTOCOL_NETFLIX:
+    case NDPI_PROTOCOL_OOKLA:
+    case NDPI_PROTOCOL_PPSTREAM:
+    case NDPI_PROTOCOL_QQ:
+    case NDPI_PROTOCOL_RTSP:
+    case NDPI_PROTOCOL_STEAM:
+    case NDPI_PROTOCOL_TEAMVIEWER:
+    case NDPI_PROTOCOL_XBOX:
+        return NDPI_PROTOCOL_HTTP;
+    case NDPI_PROTOCOL_GMAIL:
+    case NDPI_PROTOCOL_MAIL_IMAP:
+    case NDPI_PROTOCOL_MAIL_IMAPS:
+    case NDPI_PROTOCOL_MAIL_POPS:
+    case NDPI_PROTOCOL_MAIL_SMTPS:
+    case NDPI_PROTOCOL_OSCAR:
+    case NDPI_PROTOCOL_SSL:
+    case NDPI_PROTOCOL_SSL_NO_CERT:
+    case NDPI_PROTOCOL_TOR:
+    case NDPI_PROTOCOL_UNENCRYPTED_JABBER:
+        return NDPI_PROTOCOL_SSL;
+    }
+
+    return proto;
+}
+
+bool ndFlow::has_dhcp_fingerprint(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_DHCP &&
+        dhcp.fingerprint[0] != '\0'
+    );
+}
+
+bool ndFlow::has_dhcp_class_ident(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_DHCP &&
+        dhcp.class_ident[0] != '\0'
+    );
+}
+
+bool ndFlow::has_http_user_agent(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_HTTP &&
+        http.user_agent[0] != '\0'
+    );
+}
+
+bool ndFlow::has_ssh_client_agent(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_SSH &&
+        ssh.client_agent[0] != '\0'
+    );
+}
+
+bool ndFlow::has_ssh_server_agent(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_SSH &&
+        ssh.server_agent[0] != '\0'
+    );
+}
+
+bool ndFlow::has_ssl_client_certcn(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_SSL &&
+        ssl.client_certcn[0] != '\0'
+    );
+}
+
+bool ndFlow::has_ssl_server_certcn(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_SSL &&
+        ssl.server_certcn[0] != '\0'
+    );
 }
 
 void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
@@ -151,11 +247,11 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         upper_name, ntohs(upper_port),
         (host_server_name[0] != '\0') ? " H: " : "",
         (host_server_name[0] != '\0') ? host_server_name : "",
-        (ssl.client_cert[0] != '\0' || ssl.server_cert[0] != '\0') ? " SSL" : "",
-        (ssl.client_cert[0] != '\0') ? " C: " : "",
-        (ssl.client_cert[0] != '\0') ? ssl.client_cert : "",
-        (ssl.server_cert[0] != '\0') ? " S: " : "",
-        (ssl.server_cert[0] != '\0') ? ssl.server_cert : ""
+        (has_ssl_client_certcn() || has_ssl_server_certcn()) ? " SSL" : "",
+        (has_ssl_client_certcn()) ? " C: " : "",
+        (has_ssl_client_certcn()) ? ssl.client_certcn : "",
+        (has_ssl_server_certcn()) ? " S: " : "",
+        (has_ssl_server_certcn()) ? ssl.server_certcn : ""
     );
 }
 
@@ -399,18 +495,6 @@ json_object *ndFlow::json_encode(const string &device,
         json.AddObject(json_flow, "total_bytes", total_bytes);
     }
 
-    if (user_agent[0] != '\0') {
-        json.AddObject(json_flow, "user_agent", user_agent);
-    }
-
-    if (dhcp_fingerprint[0] != '\0') {
-        json.AddObject(json_flow, "dhcp_fingerprint", dhcp_fingerprint);
-    }
-
-    if (dhcp_class_ident[0] != '\0') {
-        json.AddObject(json_flow, "dhcp_class_ident", dhcp_class_ident);
-    }
-
     if (detected_protocol.master_protocol) {
         json.AddObject(json_flow, "detected_protocol",
             (int32_t)detected_protocol.master_protocol);
@@ -440,26 +524,44 @@ json_object *ndFlow::json_encode(const string &device,
             "host_server_name", host_server_name);
     }
 
-    if (ssh.client_agent[0] != '\0' || ssh.server_agent[0] != '\0') {
+    if (has_http_user_agent()) {
 
-        json_object *ssh = json.CreateObject(json_flow, "ssh");
+        json_object *_http = json.CreateObject(json_flow, "http");
 
-        if (this->ssh.client_agent[0] != '\0')
-            json.AddObject(ssh, "client", this->ssh.client_agent);
-
-        if (this->ssh.server_agent[0] != '\0')
-            json.AddObject(ssh, "server", this->ssh.server_agent);
+        json.AddObject(_http, "user_agent", http.user_agent);
     }
 
-    if (ssl.client_cert[0] != '\0' || ssl.server_cert[0] != '\0') {
+    if (has_dhcp_fingerprint() || has_dhcp_class_ident()) {
 
-        json_object *ssl = json.CreateObject(json_flow, "ssl");
+        json_object *_dhcp = json.CreateObject(json_flow, "dhcp");
 
-        if (this->ssl.client_cert[0] != '\0')
-            json.AddObject(ssl, "client", this->ssl.client_cert);
+        if (has_dhcp_fingerprint())
+            json.AddObject(_dhcp, "fingerprint", dhcp.fingerprint);
 
-        if (this->ssl.server_cert[0] != '\0')
-            json.AddObject(ssl, "server", this->ssl.server_cert);
+        if (has_dhcp_class_ident())
+            json.AddObject(_dhcp, "class_ident", dhcp.class_ident);
+    }
+
+    if (has_ssh_client_agent() || has_ssh_server_agent()) {
+
+        json_object *_ssh = json.CreateObject(json_flow, "ssh");
+
+        if (has_ssh_client_agent())
+            json.AddObject(_ssh, "client", ssh.client_agent);
+
+        if (has_ssh_server_agent())
+            json.AddObject(_ssh, "server", ssh.server_agent);
+    }
+
+    if (has_ssl_client_certcn() || has_ssl_server_certcn()) {
+
+        json_object *_ssl = json.CreateObject(json_flow, "ssl");
+
+        if (has_ssl_client_certcn())
+            json.AddObject(_ssl, "client", ssl.client_certcn);
+
+        if (has_ssl_server_certcn())
+            json.AddObject(_ssl, "server", ssl.server_certcn);
     }
 
     json.AddObject(json_flow, "last_seen_at", ts_last_seen);

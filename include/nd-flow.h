@@ -25,7 +25,7 @@
 // manually.
 #define ND_FLOW_UA_LEN      512     // User agent length
 #define ND_FLOW_SSH_UALEN   48      // SSH user-agent (signature) length
-#define ND_FLOW_SSL_CERTLEN 48      // SSL certificate length
+#define ND_FLOW_SSL_CNLEN   48      // SSL certificate common-name length
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
 #define ND_FLOW_DHCPCI_LEN  48      // DHCP class identifier
 
@@ -71,11 +71,6 @@ struct ndFlow
     bool detection_complete;
     bool detection_guessed;
 
-    char user_agent[ND_FLOW_UA_LEN];
-
-    char dhcp_fingerprint[ND_FLOW_DHCPFP_LEN];
-    char dhcp_class_ident[ND_FLOW_DHCPCI_LEN];
-
     ndpi_protocol detected_protocol;
 
     struct ndpi_flow_struct *ndpi_flow;
@@ -85,15 +80,26 @@ struct ndFlow
 
     char host_server_name[HOST_NAME_MAX];
 
-    struct {
-        char client_agent[ND_FLOW_SSH_UALEN];
-        char server_agent[ND_FLOW_SSH_UALEN];
-    } ssh;
+    union {
+        struct {
+            char user_agent[ND_FLOW_UA_LEN];
+        } http;
 
-    struct {
-        char client_cert[ND_FLOW_SSL_CERTLEN];
-        char server_cert[ND_FLOW_SSL_CERTLEN];
-    } ssl;
+        struct {
+            char fingerprint[ND_FLOW_DHCPFP_LEN];
+            char class_ident[ND_FLOW_DHCPCI_LEN];
+        } dhcp;
+
+        struct {
+            char client_agent[ND_FLOW_SSH_UALEN];
+            char server_agent[ND_FLOW_SSH_UALEN];
+        } ssh;
+
+        struct {
+            char client_certcn[ND_FLOW_SSL_CNLEN];
+            char server_certcn[ND_FLOW_SSL_CNLEN];
+        } ssl;
+    };
 
     enum {
         PRIVATE_LOWER = 0x01,
@@ -126,6 +132,16 @@ struct ndFlow
         if (id_src != NULL) { delete id_src; id_src = NULL; }
         if (id_dst != NULL) { delete id_dst; id_dst = NULL; }
     }
+
+    uint16_t master_protocol(void);
+
+    bool has_dhcp_fingerprint(void);
+    bool has_dhcp_class_ident(void);
+    bool has_http_user_agent(void);
+    bool has_ssh_client_agent(void);
+    bool has_ssh_server_agent(void);
+    bool has_ssl_client_certcn(void);
+    bool has_ssl_server_certcn(void);
 
     void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
 
