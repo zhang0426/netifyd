@@ -37,10 +37,10 @@ Download Packages
 
 Currently you can download binary packages for the following OS distributions:
 - [ClearOS](http://clearos.com)
-- [CentOS](http://software.opensuse.org/download.html?project=home%3Adsokoloski&package=netifyd)
-- [Debian](http://software.opensuse.org/download.html?project=home%3Adsokoloski&package=netifyd)
-- [Fedora](http://software.opensuse.org/download.html?project=home%3Adsokoloski&package=netifyd)
-- [Ubuntu](http://software.opensuse.org/download.html?project=home%3Adsokoloski&package=netifyd)
+- [CentOS](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
+- [Debian](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
+- [Fedora](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
+- [Ubuntu](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
 
 Configuring Source
 ------------------
