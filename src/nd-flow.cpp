@@ -112,6 +112,17 @@ uint16_t ndFlow::master_protocol(void)
             detected_protocol.app_protocol;
 
     switch (proto) {
+    case NDPI_PROTOCOL_GMAIL:
+    case NDPI_PROTOCOL_MAIL_IMAP:
+    case NDPI_PROTOCOL_MAIL_IMAPS:
+    case NDPI_PROTOCOL_MAIL_POPS:
+    case NDPI_PROTOCOL_MAIL_SMTPS:
+    case NDPI_PROTOCOL_OSCAR:
+    case NDPI_PROTOCOL_SSL:
+    case NDPI_PROTOCOL_SSL_NO_CERT:
+    case NDPI_PROTOCOL_TOR:
+    case NDPI_PROTOCOL_UNENCRYPTED_JABBER:
+        return NDPI_PROTOCOL_SSL;
     case NDPI_PROTOCOL_1KXUN:
     case NDPI_PROTOCOL_FACEBOOK:
     case NDPI_PROTOCOL_HTTP:
@@ -128,17 +139,6 @@ uint16_t ndFlow::master_protocol(void)
     case NDPI_PROTOCOL_TEAMVIEWER:
     case NDPI_PROTOCOL_XBOX:
         return NDPI_PROTOCOL_HTTP;
-    case NDPI_PROTOCOL_GMAIL:
-    case NDPI_PROTOCOL_MAIL_IMAP:
-    case NDPI_PROTOCOL_MAIL_IMAPS:
-    case NDPI_PROTOCOL_MAIL_POPS:
-    case NDPI_PROTOCOL_MAIL_SMTPS:
-    case NDPI_PROTOCOL_OSCAR:
-    case NDPI_PROTOCOL_SSL:
-    case NDPI_PROTOCOL_SSL_NO_CERT:
-    case NDPI_PROTOCOL_TOR:
-    case NDPI_PROTOCOL_UNENCRYPTED_JABBER:
-        return NDPI_PROTOCOL_SSL;
     }
 
     return proto;
@@ -147,7 +147,8 @@ uint16_t ndFlow::master_protocol(void)
 bool ndFlow::has_dhcp_fingerprint(void)
 {
     return (
-        master_protocol() == NDPI_PROTOCOL_DHCP &&
+        (detected_protocol.master_protocol == NDPI_PROTOCOL_DHCP ||
+        detected_protocol.app_protocol == NDPI_PROTOCOL_DHCP) &&
         dhcp.fingerprint[0] != '\0'
     );
 }
@@ -155,7 +156,8 @@ bool ndFlow::has_dhcp_fingerprint(void)
 bool ndFlow::has_dhcp_class_ident(void)
 {
     return (
-        master_protocol() == NDPI_PROTOCOL_DHCP &&
+        (detected_protocol.master_protocol == NDPI_PROTOCOL_DHCP ||
+        detected_protocol.app_protocol == NDPI_PROTOCOL_DHCP) &&
         dhcp.class_ident[0] != '\0'
     );
 }
@@ -171,7 +173,8 @@ bool ndFlow::has_http_user_agent(void)
 bool ndFlow::has_ssh_client_agent(void)
 {
     return (
-        master_protocol() == NDPI_PROTOCOL_SSH &&
+        (detected_protocol.master_protocol == NDPI_PROTOCOL_SSH ||
+        detected_protocol.app_protocol == NDPI_PROTOCOL_SSH) &&
         ssh.client_agent[0] != '\0'
     );
 }
@@ -179,7 +182,8 @@ bool ndFlow::has_ssh_client_agent(void)
 bool ndFlow::has_ssh_server_agent(void)
 {
     return (
-        master_protocol() == NDPI_PROTOCOL_SSH &&
+        (detected_protocol.master_protocol == NDPI_PROTOCOL_SSH ||
+        detected_protocol.app_protocol == NDPI_PROTOCOL_SSH) &&
         ssh.server_agent[0] != '\0'
     );
 }
