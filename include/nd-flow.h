@@ -27,7 +27,7 @@
 #define ND_FLOW_SSH_UALEN   48      // SSH user-agent (signature) length
 #define ND_FLOW_SSL_CNLEN   48      // SSL certificate common-name length
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
-#define ND_FLOW_DHCPCI_LEN  48      // DHCP class identifier
+#define ND_FLOW_DHCPCI_LEN  64      // DHCP class identifier
 
 struct ndFlow
 {
