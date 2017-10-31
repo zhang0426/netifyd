@@ -19,12 +19,31 @@
 %define netify_systemd_exec deploy/exec-pre.sh
 %define netify_systemd_unit deploy/%{name}.service
 
+# Disable ClearOS config for Fedora and CentOS
+%if 0%{?fedora} || 0%{?centos_version}
+%undefine _with_clearos
+%define _without_clearos 1
+%endif
+
 # ClearOS configuration file overrides
 %if %{?_with_clearos:1}%{!?_with_clearos:0}
 %define netify_conf deploy/clearos/%{name}.conf
 %define netify_init deploy/clearos/%{name}.init
 %define netify_tmpf deploy/clearos/%{name}.tmpf
 %define netify_systemd_exec deploy/clearos/exec-pre.sh
+
+# Disable systemd for ClearOS v6.x
+%if "0%{dist}" == "0.v6"
+%undefine _with_systemd
+%define _without_systemd 1
+%endif
+
+%endif
+
+# Disable systemd for CentOS v6.x
+%if 0%{?centos_version} == 600
+%undefine _with_systemd
+%define _without_systemd 1
 %endif
 
 # RPM package details
