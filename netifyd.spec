@@ -30,7 +30,7 @@
 # RPM package details
 Name: netifyd
 Summary: Netify DPI Daemon
-Version: 1.22
+Version: 2.0
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPL

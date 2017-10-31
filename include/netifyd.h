@@ -57,7 +57,7 @@
 
 #define ND_CONF_FILE_NAME       "/etc/netifyd.conf"
 
-#define ND_JSON_VERSION         1.4     // JSON format version
+#define ND_JSON_VERSION         1.5     // JSON format version
 #define ND_JSON_FILE_NAME       "/var/lib/netifyd/netifyd.json"
 #define ND_JSON_FILE_USER       "root"
 #define ND_JSON_FILE_GROUP      "webconfig"
