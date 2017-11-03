@@ -1514,9 +1514,11 @@ int main(int argc, char *argv[])
             nd_stop_detection_threads();
             if (nd_start_detection_threads() < 0) break;
 
-            string json;
-            nd_json_protocols(json);
-            thread_socket->QueueWrite(json);
+            if (thread_socket) {
+                string json;
+                nd_json_protocols(json);
+                thread_socket->QueueWrite(json);
+            }
 
             continue;
         }
@@ -1543,8 +1545,10 @@ int main(int argc, char *argv[])
     thread_upload->Terminate();
     delete thread_upload;
 
-    thread_socket->Terminate();
-    delete thread_socket;
+    if (thread_socket) {
+        thread_socket->Terminate();
+        delete thread_socket;
+    }
 #ifdef _ND_USE_CONNTRACK
     if (ND_USE_CONNTRACK) {
         thread_conntrack->Terminate();
