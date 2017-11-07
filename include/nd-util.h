@@ -50,6 +50,8 @@ int nd_sha1_file(const string &filename, uint8_t *digest);
 
 void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
 
+void nd_iface_name(const string &iface, string &result);
+
 class ndException : public runtime_error
 {
 public:

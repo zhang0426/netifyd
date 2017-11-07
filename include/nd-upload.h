@@ -35,6 +35,7 @@ public:
     virtual void Terminate(void) { QueuePush("terminate"); }
 
     void QueuePush(const string &json);
+    size_t QueuePendingSize(void);
 
     void AppendData(const char *data, size_t length) {
         try {

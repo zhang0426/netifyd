@@ -154,7 +154,6 @@ ndDetectionThread::~ndDetectionThread()
     Join();
     if (pcap != NULL) pcap_close(pcap);
     if (ndpi != NULL) ndpi_exit_detection_module(ndpi);
-    if (device_addrs != NULL) delete device_addrs;
 
     nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
 }
@@ -249,6 +248,8 @@ void *ndDetectionThread::Entry(void)
 
     nd_printf("%s: capture ended on CPU: %lu\n",
         tag.c_str(), cpu >= 0 ? cpu : 0);
+
+    terminated = true;
 
     return NULL;
 }

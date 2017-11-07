@@ -2,7 +2,7 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify DPI Daemon], [2.1],
+AC_INIT([Netify DPI Daemon], [2.2],
     [https://github.com/eglooca/netify-daemon/issues],
     [netifyd], [http://www.egloo.ca/])
 AM_INIT_AUTOMAKE
@@ -141,9 +141,6 @@ AC_CHECK_FUNC([pthread_setname_np], [
 ])
 AC_CHECK_FUNC([pthread_attr_setaffinity_np], [
     AC_DEFINE([HAVE_PTHREAD_ATTR_SETAFFINITY_NP], [1], [Define if pthread_attr_setaffinity_np is available.])
-])
-AC_CHECK_FUNC([pthread_tryjoin_np], [
-    AC_DEFINE([HAVE_PTHREAD_TRYJOIN_NP], [1], [Define if pthread_tryjoin_np is available.])
 ])
 
 # Compiler optimizations

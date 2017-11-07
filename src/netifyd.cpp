@@ -405,11 +405,61 @@ static void nd_stop_detection_threads(void)
 
         delete flows[(*i).second];
         delete stats[(*i).second];
+        if (devices.find((*i).second) != devices.end())
+            delete devices[(*i).second];
     }
 
     threads.clear();
     flows.clear();
     stats.clear();
+    devices.clear();
+}
+
+static void nd_reap_detection_threads(void)
+{
+    nd_threads::iterator thread_iter;
+    nd_flows::iterator flow_iter;
+    nd_stats::iterator stat_iter;
+    nd_devices::iterator device_iter;
+    nd_ifaces::iterator iface_iter = ifaces.begin();
+
+    while (iface_iter != ifaces.end()) {
+
+        thread_iter = threads.find(iface_iter->second);
+        if (thread_iter == threads.end() ||
+            ! thread_iter->second->HasTerminated()) {
+            iface_iter++;
+            continue;
+        }
+
+        flow_iter = flows.find(iface_iter->second);
+        if (flow_iter != flows.end()) {
+            for (nd_flow_map::iterator f = flow_iter->second->begin();
+                f != flow_iter->second->end(); f++) {
+                f->second->release();
+                delete f->second;
+            }
+
+            delete flow_iter->second;
+            flows.erase(flow_iter);
+        }
+
+        stat_iter = stats.find(iface_iter->second);
+        if (stat_iter != stats.end()) {
+            delete stat_iter->second;
+            stats.erase(stat_iter);
+        }
+
+        device_iter = devices.find(iface_iter->second);
+        if (device_iter != devices.end()) {
+            delete device_iter->second;
+            devices.erase(device_iter);
+        }
+
+        delete thread_iter->second;
+        threads.erase(thread_iter);
+        iface_iter = ifaces.erase(iface_iter);
+    }
 }
 
 void nd_json_protocols(string &json_string)
@@ -434,6 +484,175 @@ void nd_json_protocols(string &json_string)
     json_string.append("\n");
 
     json.Destroy();
+}
+
+static void nd_json_add_interfaces(json_object *parent)
+{
+    json_object *jobj;
+    ndJson json(parent);
+/*
+    char addr[INET6_ADDRSTRLEN];
+    struct ifaddrs *ifap = NULL, *p = NULL;
+
+    if (getifaddrs(&ifap) < 0) {
+        nd_printf("Error collecting interface addresses: %s\n",
+            strerror(errno));
+    }
+*/
+    for (nd_ifaces::const_iterator i = ifaces.begin(); i != ifaces.end(); i++) {
+/*
+        for (p = ifap; p != NULL; p = p->ifa_next) {
+            if (strncmp(p->ifa_name, i->second.c_str(), IFNAMSIZ)) continue;
+            break;
+        }
+*/
+        string iface_name;
+        nd_iface_name(i->second, iface_name);
+
+        jobj = json.CreateObject(NULL, iface_name);
+        json.AddObject(jobj, "role", (i->first) ? "LAN" : "WAN");
+/*
+        if (p == NULL) continue;
+
+        inet_ntop(p->ifa_addr, &new_flow->lower_addr.s_addr,
+            new_flow->lower_ip, INET_ADDRSTRLEN);
+
+        inet_ntop(AF_INET6, &new_flow->lower_addr6.s6_addr,
+            new_flow->lower_ip, INET6_ADDRSTRLEN);
+*/
+    }
+
+//    if (ifap) freeifaddrs(ifap);
+}
+
+static void nd_json_add_devices(json_object *parent)
+{
+    ndJson json(parent);
+    json_object *jarray;
+    nd_device_addrs device_addrs;
+
+    for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++) {
+        if (i->second == NULL) continue;
+
+        for (nd_device_addrs::const_iterator j = i->second->begin();
+            j != i->second->end(); j++) {
+
+            for (vector<string>::const_iterator k = j->second.begin();
+                k != j->second.end(); k++) {
+
+                bool duplicate = false;
+
+                if (device_addrs.find(j->first) != device_addrs.end()) {
+
+                    vector<string>::const_iterator l;
+                    for (l = device_addrs[j->first].begin();
+                        l != device_addrs[j->first].end(); l++) {
+                        if ((*k) != (*l)) continue;
+                        duplicate = true;
+                        break;
+                    }
+                }
+
+                if (! duplicate)
+                    device_addrs[j->first].push_back((*k));
+            }
+        }
+
+        i->second->clear();
+    }
+
+    for (nd_device_addrs::const_iterator i = device_addrs.begin();
+        i != device_addrs.end(); i++) {
+
+        uint8_t mac_src[ETH_ALEN];
+        memcpy(mac_src, i->first.c_str(), ETH_ALEN);
+        char mac_dst[ND_STR_ETHALEN + 1];
+
+        sprintf(mac_dst, "%02x:%02x:%02x:%02x:%02x:%02x",
+            mac_src[0], mac_src[1], mac_src[2],
+            mac_src[3], mac_src[4], mac_src[5]);
+
+        jarray = json.CreateArray(NULL, mac_dst);
+
+        for (vector<string>::const_iterator j = i->second.begin();
+            j != i->second.end(); j++) {
+            json.PushObject(jarray, (*j));
+        }
+    }
+}
+
+static void nd_json_add_stats(json_object *parent, const nd_packet_stats *stats)
+{
+    ndJson json(parent);
+
+    json.AddObject(NULL, "raw", stats->pkt_raw);
+    json.AddObject(NULL, "ethernet", stats->pkt_eth);
+    json.AddObject(NULL, "mpls", stats->pkt_mpls);
+    json.AddObject(NULL, "pppoe", stats->pkt_pppoe);
+    json.AddObject(NULL, "vlan", stats->pkt_vlan);
+    json.AddObject(NULL, "fragmented", stats->pkt_frags);
+    json.AddObject(NULL, "discarded", stats->pkt_discard);
+    json.AddObject(NULL, "discarded_bytes", stats->pkt_discard_bytes);
+    json.AddObject(NULL, "largest_bytes", stats->pkt_maxlen);
+    json.AddObject(NULL, "ip", stats->pkt_ip);
+    json.AddObject(NULL, "tcp", stats->pkt_tcp);
+    json.AddObject(NULL, "udp", stats->pkt_udp);
+    json.AddObject(NULL, "ip_bytes", stats->pkt_ip_bytes);
+    json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
+}
+
+static void nd_json_add_flows(
+    const string &device, json_object *parent,
+    struct ndpi_detection_module_struct *ndpi,
+    const nd_flow_map *flows, bool unknown = true)
+{
+    ndJson json(parent);
+
+    for (nd_flow_map::const_iterator i = flows->begin();
+        i != flows->end(); i++) {
+
+        if (i->second->detection_complete == false)
+            continue;
+        if (unknown == false &&
+            i->second->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN)
+            continue;
+        if (i->second->lower_packets == 0 && i->second->upper_packets == 0)
+            continue;
+
+        json_object *json_flow = i->second->json_encode(device, json, ndpi);
+        json.PushObject(NULL, json_flow);
+
+        i->second->lower_bytes = i->second->upper_bytes = 0;
+        i->second->lower_packets = i->second->upper_packets = 0;
+    }
+}
+
+static void nd_json_add_file(
+    json_object *parent, const string &type, const string &filename)
+{
+    char *c, *p, buffer[ND_FILE_BUFSIZ];
+    FILE *fh = fopen(filename.c_str(), "r");
+
+    if (fh == NULL) {
+        nd_printf("Error opening file for upload: %s: %s\n",
+            filename.c_str(), strerror(errno));
+        return;
+    }
+
+    ndJson json(parent);
+    json_object *json_lines = json.CreateArray(NULL, type.c_str());
+
+    p = buffer;
+    while (fgets(buffer, ND_FILE_BUFSIZ, fh) != NULL) {
+        while (*p == ' ' || *p == '\t') p++;
+        if (*p == '#' || *p == '\n' || *p == '\r') continue;
+        c = (char *)memchr((void *)p, '\n', ND_FILE_BUFSIZ - (p - buffer));
+        if (c != NULL) *c = '\0';
+
+        json.PushObject(json_lines, p);
+    }
+
+    fclose(fh);
 }
 
 static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
@@ -625,172 +844,6 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
     flow_count_previous = flow_count;
 }
 
-static void nd_json_add_interfaces(json_object *parent)
-{
-    json_object *jobj;
-    ndJson json(parent);
-/*
-    char addr[INET6_ADDRSTRLEN];
-    struct ifaddrs *ifap = NULL, *p = NULL;
-
-    if (getifaddrs(&ifap) < 0) {
-        nd_printf("Error collecting interface addresses: %s\n",
-            strerror(errno));
-    }
-*/
-    for (nd_ifaces::const_iterator i = ifaces.begin(); i != ifaces.end(); i++) {
-/*
-        for (p = ifap; p != NULL; p = p->ifa_next) {
-            if (strncmp(p->ifa_name, i->second.c_str(), IFNAMSIZ)) continue;
-            break;
-        }
-*/
-        jobj = json.CreateObject(NULL, i->second);
-        json.AddObject(jobj, "role", (i->first) ? "LAN" : "WAN");
-/*
-        if (p == NULL) continue;
-
-        inet_ntop(p->ifa_addr, &new_flow->lower_addr.s_addr,
-            new_flow->lower_ip, INET_ADDRSTRLEN);
-
-        inet_ntop(AF_INET6, &new_flow->lower_addr6.s6_addr,
-            new_flow->lower_ip, INET6_ADDRSTRLEN);
-*/
-    }
-
-//    if (ifap) freeifaddrs(ifap);
-}
-
-static void nd_json_add_devices(json_object *parent)
-{
-    ndJson json(parent);
-    json_object *jarray;
-    nd_device_addrs device_addrs;
-
-    for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++) {
-        if (i->second == NULL) continue;
-
-        for (nd_device_addrs::const_iterator j = i->second->begin();
-            j != i->second->end(); j++) {
-
-            for (vector<string>::const_iterator k = j->second.begin();
-                k != j->second.end(); k++) {
-
-                bool duplicate = false;
-
-                if (device_addrs.find(j->first) != device_addrs.end()) {
-
-                    vector<string>::const_iterator l;
-                    for (l = device_addrs[j->first].begin();
-                        l != device_addrs[j->first].end(); l++) {
-                        if ((*k) != (*l)) continue;
-                        duplicate = true;
-                        break;
-                    }
-                }
-
-                if (! duplicate)
-                    device_addrs[j->first].push_back((*k));
-            }
-        }
-
-        i->second->clear();
-    }
-
-    for (nd_device_addrs::const_iterator i = device_addrs.begin();
-        i != device_addrs.end(); i++) {
-
-        uint8_t mac_src[ETH_ALEN];
-        memcpy(mac_src, i->first.c_str(), ETH_ALEN);
-        char mac_dst[ND_STR_ETHALEN + 1];
-
-        sprintf(mac_dst, "%02x:%02x:%02x:%02x:%02x:%02x",
-            mac_src[0], mac_src[1], mac_src[2],
-            mac_src[3], mac_src[4], mac_src[5]);
-
-        jarray = json.CreateArray(NULL, mac_dst);
-
-        for (vector<string>::const_iterator j = i->second.begin();
-            j != i->second.end(); j++) {
-            json.PushObject(jarray, (*j));
-        }
-    }
-}
-
-static void nd_json_add_stats(json_object *parent, const nd_packet_stats *stats)
-{
-    ndJson json(parent);
-
-    json.AddObject(NULL, "raw", stats->pkt_raw);
-    json.AddObject(NULL, "ethernet", stats->pkt_eth);
-    json.AddObject(NULL, "mpls", stats->pkt_mpls);
-    json.AddObject(NULL, "pppoe", stats->pkt_pppoe);
-    json.AddObject(NULL, "vlan", stats->pkt_vlan);
-    json.AddObject(NULL, "fragmented", stats->pkt_frags);
-    json.AddObject(NULL, "discarded", stats->pkt_discard);
-    json.AddObject(NULL, "discarded_bytes", stats->pkt_discard_bytes);
-    json.AddObject(NULL, "largest_bytes", stats->pkt_maxlen);
-    json.AddObject(NULL, "ip", stats->pkt_ip);
-    json.AddObject(NULL, "tcp", stats->pkt_tcp);
-    json.AddObject(NULL, "udp", stats->pkt_udp);
-    json.AddObject(NULL, "ip_bytes", stats->pkt_ip_bytes);
-    json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
-}
-
-static void nd_json_add_flows(
-    const string &device, json_object *parent,
-    struct ndpi_detection_module_struct *ndpi,
-    const nd_flow_map *flows, bool unknown = true)
-{
-    ndJson json(parent);
-
-    for (nd_flow_map::const_iterator i = flows->begin();
-        i != flows->end(); i++) {
-
-        if (i->second->detection_complete == false)
-            continue;
-        if (unknown == false &&
-            i->second->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN)
-            continue;
-        if (i->second->lower_packets == 0 && i->second->upper_packets == 0)
-            continue;
-
-        json_object *json_flow = i->second->json_encode(device, json, ndpi);
-        json.PushObject(NULL, json_flow);
-
-        i->second->lower_bytes = i->second->upper_bytes = 0;
-        i->second->lower_packets = i->second->upper_packets = 0;
-    }
-}
-
-static void nd_json_add_file(
-    json_object *parent, const string &type, const string &filename)
-{
-    char *c, *p, buffer[ND_FILE_BUFSIZ];
-    FILE *fh = fopen(filename.c_str(), "r");
-
-    if (fh == NULL) {
-        nd_printf("Error opening file for upload: %s: %s\n",
-            filename.c_str(), strerror(errno));
-        return;
-    }
-
-    ndJson json(parent);
-    json_object *json_lines = json.CreateArray(NULL, type.c_str());
-
-    p = buffer;
-    while (fgets(buffer, ND_FILE_BUFSIZ, fh) != NULL) {
-        while (*p == ' ' || *p == '\t') p++;
-        if (*p == '#' || *p == '\n' || *p == '\r') continue;
-        c = (char *)memchr((void *)p, '\n', ND_FILE_BUFSIZ - (p - buffer));
-        if (c != NULL) *c = '\0';
-
-        json.PushObject(json_lines, p);
-    }
-
-    fclose(fh);
-}
-
 static void nd_load_ethers(void)
 {
     char buffer[1024 + ND_STR_ETHALEN + 17];
@@ -852,7 +905,7 @@ static void nd_json_upload(ndJson *json)
     string json_string;
     json->ToString(json_string);
 
-    thread_upload->QueuePush(json_string);
+    if (ND_USE_SINK) thread_upload->QueuePush(json_string);
 }
 
 static void nd_dump_stats(void)
@@ -890,12 +943,15 @@ static void nd_dump_stats(void)
 
         json_obj = json.CreateObject();
         nd_json_add_stats(json_obj, stats[i->first]);
-        json_object_object_add(json_stats, i->first.c_str(), json_obj);
+
+        string iface_name;
+        nd_iface_name(i->first, iface_name);
+        json_object_object_add(json_stats, iface_name.c_str(), json_obj);
 
         memset(stats[i->first], 0, sizeof(nd_packet_stats));
 
-        json_obj = json.CreateArray(json_flows, i->first);
-        nd_json_add_flows(i->first, json_obj,
+        json_obj = json.CreateArray(json_flows, iface_name);
+        nd_json_add_flows(iface_name, json_obj,
             i->second->GetDetectionModule(), flows[i->first]);
 
         i->second->Unlock();
@@ -1374,8 +1430,10 @@ int main(int argc, char *argv[])
             thread_socket->Create();
         }
 
-        thread_upload = new ndUploadThread();
-        thread_upload->Create();
+        if (ND_USE_SINK) {
+            thread_upload = new ndUploadThread();
+            thread_upload->Create();
+        }
     }
     catch (ndUploadThreadException &e) {
         nd_printf("Error starting upload thread: %s\n", e.what());
@@ -1487,9 +1545,18 @@ int main(int argc, char *argv[])
             inotify->RefreshWatches();
 #endif
             nd_dump_stats();
-#ifdef HAVE_PTHREAD_TRYJOIN_NP
 
-#endif
+            nd_reap_detection_threads();
+
+            if (threads.size() == 0) {
+                if (thread_upload == NULL ||
+                    thread_upload->QueuePendingSize() == 0) {
+                    nd_printf("Exiting, no remaining detection threads.\n");
+                    terminate = true;
+                    continue;
+                }
+            }
+
             continue;
         }
 
@@ -1542,8 +1609,10 @@ int main(int argc, char *argv[])
 
     nd_stop_detection_threads();
 
-    thread_upload->Terminate();
-    delete thread_upload;
+    if (thread_upload) {
+        thread_upload->Terminate();
+        delete thread_upload;
+    }
 
     if (thread_socket) {
         thread_socket->Terminate();

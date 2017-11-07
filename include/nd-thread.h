@@ -41,6 +41,7 @@ public:
     virtual void *Entry(void) = 0;
 
     virtual void Terminate(void) { terminate = true; }
+    bool HasTerminated(void) { return terminated; }
 
     void Lock(void);
     void Unlock(void);
@@ -51,6 +52,7 @@ protected:
     pthread_attr_t attr;
     long cpu;
     bool terminate;
+    bool terminated;
     pthread_mutex_t lock;
 
     int Join(void);

@@ -208,6 +208,8 @@ void *ndUploadThread::Entry(void)
         if (terminate == false && pending.size() > 0) Upload();
     }
 
+    terminated = true;
+
     return NULL;
 }
 
@@ -224,6 +226,22 @@ void ndUploadThread::QueuePush(const string &json)
         throw ndUploadThreadException(strerror(rc));
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
         throw ndUploadThreadException(strerror(rc));
+}
+
+size_t ndUploadThread::QueuePendingSize(void)
+{
+    int rc;
+    size_t bytes;
+
+    if ((rc = pthread_mutex_lock(&lock)) != 0)
+        throw ndUploadThreadException(strerror(rc));
+
+    bytes = pending_size;
+
+    if ((rc = pthread_mutex_unlock(&lock)) != 0)
+        throw ndUploadThreadException(strerror(rc));
+
+    return bytes;
 }
 
 void ndUploadThread::CreateHeaders(void)

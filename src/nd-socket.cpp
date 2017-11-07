@@ -806,6 +806,8 @@ void *ndSocketThread::Entry(void)
         }
     }
 
+    terminated = true;
+
     return NULL;
 }
 

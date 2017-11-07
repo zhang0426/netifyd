@@ -322,6 +322,14 @@ void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str)
     digest_str.assign(_digest);
 }
 
+void nd_iface_name(const string &iface, string &result)
+{
+    result = iface;
+    size_t p = string::npos;
+    if ((p = iface.find_first_of(",")) != string::npos)
+        result = iface.substr(0, p);
+}
+
 ndException::ndException(const string &where_arg, const string &what_arg) throw()
     : runtime_error(what_arg), where_arg(where_arg), what_arg(what_arg), message(NULL)
 {

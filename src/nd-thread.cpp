@@ -63,7 +63,7 @@ static void *nd_thread_entry(void *param)
 }
 
 ndThread::ndThread(const string &tag, long cpu)
-    : tag(tag), id(0), cpu(cpu), terminate(false)
+    : tag(tag), id(0), cpu(cpu), terminate(false), terminated(false)
 {
     int rc;
 
