@@ -586,6 +586,8 @@ void ndDetectionThread::ProcessPacket(void)
     nd_flow_insert rc = flows->insert(nd_flow_pair(digest, new_flow));
 
     if (rc.second) {
+        new_flow->ts_first_seen = ts_pkt;
+
         new_flow->ndpi_flow = (ndpi_flow_struct *)ndpi_malloc(sizeof(ndpi_flow_struct));
         if (new_flow->ndpi_flow == NULL)
             throw ndDetectionThreadException(strerror(ENOMEM));

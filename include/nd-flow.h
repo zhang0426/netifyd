@@ -37,6 +37,7 @@ struct ndFlow
     bool ip_nat;
 
     uint16_t vlan_id;
+    uint64_t ts_first_seen;
     uint64_t ts_last_seen;
 #ifdef _ND_USE_NETLINK
     ndNetlinkAddressType lower_type;

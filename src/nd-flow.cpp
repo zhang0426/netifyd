@@ -568,6 +568,7 @@ json_object *ndFlow::json_encode(const string &device,
             json.AddObject(_ssl, "server", ssl.server_certcn);
     }
 
+    json.AddObject(json_flow, "first_seen_at", ts_first_seen);
     json.AddObject(json_flow, "last_seen_at", ts_last_seen);
 
     return json_flow;
