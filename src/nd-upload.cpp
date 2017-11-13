@@ -345,14 +345,14 @@ void ndUploadThread::Upload(void)
 
         case 400:
             if (ND_DEBUG || ND_DEBUG_UPLOAD) {
-                FILE *hf = fopen("/tmp/rejected.json", "w");
+                FILE *hf = fopen(ND_JSON_FILE_BAD_SEND, "w");
                 if (hf != NULL) {
                     fwrite(pending.front().second.data(),
                         1, pending.front().second.size(), hf);
                     fclose(hf);
                     nd_debug_printf(
-                        "%s: wrote rejected payload to: /tmp/rejected.json\n",
-                        tag.c_str());
+                        "%s: wrote rejected payload to: %s\n",
+                        tag.c_str(), ND_JSON_FILE_BAD_SEND);
                 }
             }
             break;
@@ -485,6 +485,16 @@ void ndUploadThread::ProcessResponse(void)
     case ndJSON_OBJ_TYPE_NULL:
     default:
         nd_printf("%s: unexpected JSON result type.\n", tag.c_str());
+        if (ND_DEBUG || ND_DEBUG_UPLOAD) {
+            FILE *hf = fopen(ND_JSON_FILE_BAD_RECV, "w");
+            if (hf != NULL) {
+                fwrite(body_data.c_str(), 1, body_data.size(), hf);
+                fclose(hf);
+                nd_debug_printf(
+                    "%s: wrote rejected payload to: %s\n",
+                    tag.c_str(), ND_JSON_FILE_BAD_RECV);
+            }
+        }
     }
 
     if (json_obj != NULL) delete json_obj;

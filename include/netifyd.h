@@ -62,6 +62,8 @@
 #define ND_JSON_FILE_USER       "root"
 #define ND_JSON_FILE_GROUP      "webconfig"
 #define ND_JSON_FILE_MODE       0640
+#define ND_JSON_FILE_BAD_SEND   "/var/lib/netifyd/netifyd-bad-send.json"
+#define ND_JSON_FILE_BAD_RECV   "/var/lib/netifyd/netifyd-bad-recv.json"
 
 #define ND_PCAP_SNAPLEN         1536    // Capture snap length
 #define ND_PCAP_READ_TIMEOUT    500     // Milliseconds
