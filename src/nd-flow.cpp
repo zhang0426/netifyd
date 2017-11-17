@@ -98,6 +98,9 @@ void ndFlow::hash(const string &device, string &digest, bool full_hash)
             sha1_write(&ctx,
                 ssl.server_certcn, strnlen(ssl.server_certcn, ND_FLOW_SSL_CNLEN));
         }
+        if (has_bt_info_hash()) {
+            sha1_write(&ctx, bt.info_hash, ND_FLOW_BTIHASH_LEN);
+        }
     }
 
     _digest = sha1_result(&ctx);
@@ -201,6 +204,15 @@ bool ndFlow::has_ssl_server_certcn(void)
     return (
         master_protocol() == NDPI_PROTOCOL_SSL &&
         ssl.server_certcn[0] != '\0'
+    );
+}
+
+bool ndFlow::has_bt_info_hash(void)
+{
+    return (
+        (detected_protocol.master_protocol == NDPI_PROTOCOL_BITTORRENT ||
+        detected_protocol.app_protocol == NDPI_PROTOCOL_BITTORRENT) &&
+        bt.info_hash[0] != '\0'
     );
 }
 
@@ -566,6 +578,14 @@ json_object *ndFlow::json_encode(const string &device,
 
         if (has_ssl_server_certcn())
             json.AddObject(_ssl, "server", ssl.server_certcn);
+    }
+
+    if (has_bt_info_hash()) {
+
+        json_object *_bt = json.CreateObject(json_flow, "bt");
+
+        nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
+        json.AddObject(_bt, "info_hash", digest);
     }
 
     json.AddObject(json_flow, "first_seen_at", ts_first_seen);
