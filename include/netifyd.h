@@ -70,6 +70,7 @@
 
 #define ND_URL_UPLOAD           "https://v2-netify-sink.egloo.ca/"
 #define ND_COOKIE_JAR           "/var/lib/netifyd/netifyd.cookies"
+#define ND_UPLOAD_TIMEOUT       300     // Default 5-minute upload timeout
 
 #define ND_REALM_UUID_PATH      "/var/lib/netifyd/netify-realm.uuid"
 #define ND_REALM_UUID_NULL      "-"
@@ -148,6 +149,7 @@ typedef struct {
     unsigned max_tcp_pkts;
     unsigned max_udp_pkts;
     unsigned update_interval;
+    unsigned upload_timeout;
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
     vector<struct sockaddr *> privacy_filter_host;

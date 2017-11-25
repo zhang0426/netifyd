@@ -102,6 +102,21 @@ static size_t ndUploadThread_read_data(
     return length;
 }
 
+#if (LIBCURL_VERSION_NUM < 0x073200)
+static int ndUploadThread_progress(void *user,
+    double dltotal, double dlnow, double ultotal, double ulnow)
+#else
+static int ndUploadThread_progress(void *user,
+    curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+#endif
+{
+    ndUploadThread *thread_upload = reinterpret_cast<ndUploadThread *>(user);
+
+    if (thread_upload->ShouldTerminate()) return 1;
+
+    return 0;
+}
+
 ndUploadThread::ndUploadThread()
     : ndThread("nd-sink", -1),
     headers(NULL), headers_gz(NULL), pending_size(0)
@@ -114,9 +129,20 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_upload);
     curl_easy_setopt(ch, CURLOPT_POST, 1);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)nd_config.upload_timeout);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (ND_DEBUG_UPLOAD) ? ND_COOKIE_JAR : "");
+
     curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndUploadThread_read_data);
     curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
+
+    curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 0);
+#if (LIBCURL_VERSION_NUM < 0x073200)
+    curl_easy_setopt(ch, CURLOPT_PROGRESSFUNCTION, ndUploadThread_progress);
+    curl_easy_setopt(ch, CURLOPT_PROGRESSDATA, static_cast<void *>(this));
+#else
+    curl_easy_setopt(ch, CURLOPT_XFERINFOFUNCTION, ndUploadThread_progress);
+    curl_easy_setopt(ch, CURLOPT_XFERINFODATA, static_cast<void *>(this));
+#endif
 #if (LIBCURL_VERSION_NUM < 0x072106)
     curl_easy_setopt(ch, CURLOPT_ENCODING, "gzip");
 #else

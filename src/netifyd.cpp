@@ -134,6 +134,7 @@ ndGlobalConfig nd_config = {
     .max_tcp_pkts = ND_MAX_TCP_PKTS,
     .max_udp_pkts = ND_MAX_UDP_PKTS,
     .update_interval = ND_STATS_INTERVAL,
+    .upload_timeout = ND_UPLOAD_TIMEOUT,
 };
 
 static void nd_usage(int rc = 0, bool version = false)
@@ -234,6 +235,9 @@ static int nd_config_load(void)
 
     nd_config.update_interval = (unsigned)reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);
+
+    nd_config.upload_timeout = (unsigned)reader.GetInteger(
+        "netifyd", "upload_timeout", ND_UPLOAD_TIMEOUT);
 
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;

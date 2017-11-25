@@ -41,6 +41,7 @@ public:
     virtual void *Entry(void) = 0;
 
     virtual void Terminate(void) { terminate = true; }
+    bool ShouldTerminate(void) { return terminate; }
     bool HasTerminated(void) { return terminated; }
 
     void Lock(void);
