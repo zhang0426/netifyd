@@ -175,6 +175,9 @@ struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
         ndpi_load_protocols_file(ndpi, nd_config.path_custom_match);
     }
 
+    // Enable DNS response dissection
+    ndpi->dns_dissect_response = 1;
+
     return ndpi;
 }
 
