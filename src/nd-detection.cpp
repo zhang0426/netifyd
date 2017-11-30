@@ -107,6 +107,9 @@ using namespace std;
 #include "nd-socket.h"
 #include "nd-ndpi.h"
 
+// Enable to log discarded packets
+#undef _ND_LOG_PKT_DISCARD
+
 extern bool nd_debug;
 
 extern ndGlobalConfig nd_config;
@@ -345,6 +348,9 @@ void ndDetectionThread::ProcessPacket(void)
             hdr_eth->ether_dhost[2] == 0xC2)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += ntohs(hdr_eth->ether_type);
+#ifdef _ND_LOG_PKT_DISCARD
+            nd_debug_printf("%s: discard: STP protocol.\n", tag.c_str());
+#endif
             return;
         }
 
@@ -386,8 +392,10 @@ void ndDetectionThread::ProcessPacket(void)
             if (ppp_proto != PPP_IP && ppp_proto != PPP_IPV6) {
                 stats->pkt_discard++;
                 stats->pkt_discard_bytes += pkt_header->len;
-                //nd_debug_printf("%s: discard: unsupported PPP protocol: 0x%04hx\n",
-                //    tag.c_str(), ppp_proto);
+#ifdef _ND_LOG_PKT_DISCARD
+                nd_debug_printf("%s: discard: unsupported PPP protocol: 0x%04hx\n",
+                    tag.c_str(), ppp_proto);
+#endif
                 return;
             }
 
@@ -397,6 +405,9 @@ void ndDetectionThread::ProcessPacket(void)
             stats->pkt_pppoe++;
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
+#ifdef _ND_LOG_PKT_DISCARD
+            nd_debug_printf("%s: discard: PPPoE discovery protocol.\n", tag.c_str());
+#endif
             return;
         }
         else
@@ -421,7 +432,9 @@ void ndDetectionThread::ProcessPacket(void)
             // XXX: header too small
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
-            //nd_debug_printf("%s: discard: header too small\n", tag.c_str());
+#ifdef _ND_LOG_PKT_DISCARD
+            nd_debug_printf("%s: discard: header too small\n", tag.c_str());
+#endif
             return;
         }
 
@@ -430,7 +443,9 @@ void ndDetectionThread::ProcessPacket(void)
             stats->pkt_frags++;
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
-            //nd_debug_printf("%s: discard: fragmented 0x3FFF\n", tag.c_str());
+#ifdef _ND_LOG_PKT_DISCARD
+            nd_debug_printf("%s: discard: fragmented 0x3FFF\n", tag.c_str());
+#endif
             return;
         }
 
@@ -439,23 +454,29 @@ void ndDetectionThread::ProcessPacket(void)
             stats->pkt_frags++;
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
-            //nd_debug_printf("%s: discard: fragmented 0x1FFF\n", tag.c_str());
+#ifdef _ND_LOG_PKT_DISCARD
+            nd_debug_printf("%s: discard: fragmented 0x1FFF\n", tag.c_str());
+#endif
             return;
         }
 
         if (ip_len > (pkt_header->len - ip_offset)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
-            //nd_debug_printf("%s: discard: ip_len[%hu] > (pkt_header->len[%hu] - ip_offset[%hu])(%hu)\n",
-            //    tag.c_str(), ip_len, pkt_header->len, ip_offset, pkt_header->len - ip_offset);
+#ifdef _ND_LOG_PKT_DISCARD
+            nd_debug_printf("%s: discard: ip_len[%hu] > (pkt_header->len[%hu] - ip_offset[%hu])(%hu)\n",
+                tag.c_str(), ip_len, pkt_header->len, ip_offset, pkt_header->len - ip_offset);
+#endif
             return;
         }
 
         if ((pkt_header->len - ip_offset) < ntohs(hdr_ip->ip_len)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
-            //nd_debug_printf("%s: discard: (pkt_header->len[%hu] - ip_offset[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
-            //    tag.c_str(), pkt_header->len, ip_offset, pkt_header->len - ip_offset, ntohs(hdr_ip->ip_len));
+#ifdef _ND_LOG_PKT_DISCARD
+            nd_debug_printf("%s: discard: (pkt_header->len[%hu] - ip_offset[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
+                tag.c_str(), pkt_header->len, ip_offset, pkt_header->len - ip_offset, ntohs(hdr_ip->ip_len));
+#endif
             return;
         }
 
@@ -525,8 +546,10 @@ void ndDetectionThread::ProcessPacket(void)
         // XXX: Warning: unsupported protocol version (IPv4/6 only)
         stats->pkt_discard++;
         stats->pkt_discard_bytes += pkt_header->len;
-        //nd_debug_printf("%s: discard: invalid IP protocol version: %hhx\n",
-        //    tag.c_str(), pkt_data[ip_offset]);
+#ifdef _ND_LOG_PKT_DISCARD
+        nd_debug_printf("%s: discard: invalid IP protocol version: %hhx\n",
+            tag.c_str(), pkt_data[ip_offset]);
+#endif
         return;
     }
 
@@ -690,42 +713,53 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->lower_type = netlink->ClassifyAddress(lower_addr);
         new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
 #endif
-        if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
+        if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
+                new_flow->detection_guessed = true;
                 ndpi_set_detected_protocol(
                     ndpi,
                     new_flow->ndpi_flow,
                     NDPI_PROTOCOL_STUN,
-                    NDPI_PROTOCOL_UNKNOWN
+                    new_flow->detected_protocol.app_protocol
                 );
             }
-            else {
-                new_flow->detection_guessed = true;
-                new_flow->detected_protocol = ndpi_guess_undetected_protocol(
-                    ndpi,
-                    new_flow->ip_protocol,
-                    ntohl(
-                        (new_flow->ip_version == 4) ?
-                            new_flow->lower_addr.s_addr :
-                                new_flow->lower_addr6.s6_addr32[2] +
-                                new_flow->lower_addr6.s6_addr32[3]
-                    ),
-                    ntohs(new_flow->lower_port),
-                    ntohl(
-                        (new_flow->ip_version == 4) ?
-                            new_flow->upper_addr.s_addr :
-                                new_flow->upper_addr6.s6_addr32[2] +
-                                new_flow->upper_addr6.s6_addr32[3]
-                    ),
-                    ntohs(new_flow->upper_port)
-                );
-                // XXX: Necessary?
-                //new_flow->detected_protocol.master_protocol = NDPI_PROTOCOL_UNKNOWN;
-            }
+        }
+
+        if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
+            new_flow->detection_guessed = true;
+            new_flow->detected_protocol = ndpi_guess_undetected_protocol(
+                ndpi,
+                new_flow->ip_protocol,
+                ntohl(
+                    (new_flow->ip_version == 4) ?
+                        new_flow->lower_addr.s_addr :
+                            new_flow->lower_addr6.s6_addr32[2] +
+                            new_flow->lower_addr6.s6_addr32[3]
+                ),
+                ntohs(new_flow->lower_port),
+                ntohl(
+                    (new_flow->ip_version == 4) ?
+                        new_flow->upper_addr.s_addr :
+                            new_flow->upper_addr6.s6_addr32[2] +
+                            new_flow->upper_addr6.s6_addr32[3]
+                ),
+                ntohs(new_flow->upper_port)
+            );
         }
 
         // XXX: There has to be a better way to extract the HTTP UA and DHCP Fingerprint?
         switch (new_flow->master_protocol()) {
+        case NDPI_PROTOCOL_DNS:
+            nd_debug_printf(
+                "%s: dns queries: %hhu, answers: %hhu, query type: 0x%04x, class: 0x%04x, reply code: %hhu, reply type: 0x%04x\n", tag.c_str(),
+                new_flow->ndpi_flow->protos.dns.num_queries,
+                new_flow->ndpi_flow->protos.dns.num_answers,
+                new_flow->ndpi_flow->protos.dns.query_type,
+                new_flow->ndpi_flow->protos.dns.query_class,
+                new_flow->ndpi_flow->protos.dns.reply_code,
+                new_flow->ndpi_flow->protos.dns.rsp_type
+                );
+            break;
         case NDPI_PROTOCOL_HTTP:
             snprintf(
                 new_flow->http.user_agent, ND_FLOW_UA_LEN,
@@ -754,6 +788,15 @@ void ndDetectionThread::ProcessPacket(void)
                 "%s", new_flow->ndpi_flow->protos.dhcp.class_ident
             );
             break;
+        case NDPI_PROTOCOL_BITTORRENT:
+            if (new_flow->ndpi_flow->protos.bittorrent.hash_valid) {
+                new_flow->bt.info_hash_valid = true;
+                memcpy(
+                    new_flow->bt.info_hash,
+                    new_flow->ndpi_flow->protos.bittorrent.hash,
+                    ND_FLOW_BTIHASH_LEN
+                );
+            }
         }
 
         // Sanitize host server name; RFC 952 plus underscore.
