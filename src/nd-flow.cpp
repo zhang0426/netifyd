@@ -212,7 +212,7 @@ bool ndFlow::has_bt_info_hash(void)
     return (
         (detected_protocol.master_protocol == NDPI_PROTOCOL_BITTORRENT ||
         detected_protocol.app_protocol == NDPI_PROTOCOL_BITTORRENT) &&
-        bt.info_hash[0] != '\0'
+        bt.info_hash_valid
     );
 }
 
@@ -246,8 +246,11 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     else
         p = ndpi_get_proto_name(ndpi, detected_protocol.app_protocol);
 
+    string digest;
+    nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
+
     nd_printf(
-        "%s: [%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s\n",
+        "%s: [%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s%s%s\n",
         tag,
         (internal) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
@@ -267,7 +270,9 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         (has_ssl_client_certcn()) ? " C: " : "",
         (has_ssl_client_certcn()) ? ssl.client_certcn : "",
         (has_ssl_server_certcn()) ? " S: " : "",
-        (has_ssl_server_certcn()) ? ssl.server_certcn : ""
+        (has_ssl_server_certcn()) ? ssl.server_certcn : "",
+        (has_bt_info_hash()) ? " BT-IH: " : "",
+        (has_bt_info_hash()) ? digest.c_str() : ""
     );
 }
 
