@@ -1,8 +1,8 @@
-# Netify DPI Daemon
+# Netify Agent
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify DPI Daemon], [2.3],
+AC_INIT([Netify Agent], [2.3],
     [https://github.com/eglooca/netify-daemon/issues],
     [netifyd], [http://www.egloo.ca/])
 AM_INIT_AUTOMAKE
@@ -25,7 +25,6 @@ AS_IF([test "x$ac_cv_path_bash" != "xfalse"], [
 ], [
     AC_MSG_ERROR([bash not found.])
 ])
-
 # Checks for libraries.
 AC_CHECK_LIB([pcap],
     [pcap_open_live], [], [AC_MSG_ERROR([libpcap not found.])])
@@ -40,7 +39,23 @@ PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 
-# Check for optional parameters
+# Parameters: --with/without
+AC_ARG_WITH([systemdsystemunitdir],
+     [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
+     [with_systemdsystemunitdir=auto])
+AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
+     def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+
+     AS_IF([test "x$def_systemdsystemunitdir" = "x"],
+   [AS_IF([test "x$with_systemdsystemunitdir" = "xyes"],
+    [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
+    with_systemdsystemunitdir=no],
+   [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
+AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
+      [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
+AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])
+
+# Parameters: --enable/disable
 AC_ARG_ENABLE([conntrack],
     [AS_HELP_STRING([--enable-conntrack], [Enable connection tracking support [default=yes]])],
     [],
