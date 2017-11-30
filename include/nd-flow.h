@@ -28,7 +28,8 @@
 #define ND_FLOW_SSL_CNLEN   48      // SSL certificate common-name length
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
 #define ND_FLOW_DHCPCI_LEN  96      // DHCP class identifier
-#define ND_FLOW_BTIHASH_LEN 20      // BitTorrent info hash length
+// BitTorrent info hash length
+#define ND_FLOW_BTIHASH_LEN SHA1_DIGEST_LENGTH
 
 struct ndFlow
 {
@@ -103,6 +104,7 @@ struct ndFlow
         } ssl;
 
         struct {
+            uint8_t info_hash_valid:1;
             char info_hash[ND_FLOW_BTIHASH_LEN];
         } bt;
     };
