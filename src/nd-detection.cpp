@@ -33,11 +33,15 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <netdb.h>
+#include <resolv.h>
 
+#include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
 #include <arpa/inet.h>
+#include <arpa/nameser.h>
 
 #include <net/if.h>
 #include <net/ppp_defs.h>
@@ -108,11 +112,14 @@ using namespace std;
 #include "nd-ndpi.h"
 
 // Enable to log discarded packets
-#undef _ND_LOG_PKT_DISCARD
+//#define _ND_LOG_PKT_DISCARD     1
+
+// Enable log log DNS Response processing
+#define _ND_LOG_DNS_RESPONSE    1
 
 extern bool nd_debug;
 
-extern ndGlobalConfig nd_config;
+extern nd_global_config nd_config;
 
 ndDetectionThread::ndDetectionThread(const string &dev,
 #ifdef _ND_USE_NETLINK
@@ -188,7 +195,8 @@ void *ndDetectionThread::Entry(void)
             }
 
             if (! (ifr.ifr_flags & IFF_UP)) {
-                nd_debug_printf("%s: WARNING: interface is down.\n", tag.c_str());
+                nd_debug_printf("%s: WARNING: interface is down.\n",
+                    tag.c_str());
                 sleep(1);
                 continue;
             }
@@ -238,7 +246,8 @@ void *ndDetectionThread::Entry(void)
             pcap = NULL;
             break;
         case -2:
-            nd_printf("%s: end of capture file: %s\n", tag.c_str(), pcap_file.c_str());
+            nd_printf("%s: end of capture file: %s\n",
+                tag.c_str(), pcap_file.c_str());
             pcap_close(pcap);
             pcap = NULL;
             terminate = true;
@@ -281,11 +290,11 @@ void ndDetectionThread::ProcessPacket(void)
     const struct ip *hdr_ip = NULL;
     const struct ip6_hdr *hdr_ip6 = NULL;
 
-    const uint8_t *layer3 = NULL;
+    const uint8_t *l3 = NULL, *l4 = NULL, *pkt = NULL;
+    uint16_t l2_len, l3_len, l4_len = 0, pkt_len = 0;
 
     uint16_t type;
     uint16_t ppp_proto;
-    uint16_t ip_offset, ip_len, l4_len = 0;
     uint16_t frag_off = 0;
     uint8_t vlan_packet = 0;
     int addr_cmp = 0;
@@ -298,8 +307,10 @@ void ndDetectionThread::ProcessPacket(void)
 
     struct ndpi_id_struct *id_src, *id_dst;
 
-    uint64_t ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) * ND_DETECTION_TICKS +
-    pkt_header->ts.tv_usec / (1000000 / ND_DETECTION_TICKS);
+    uint64_t ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) *
+            ND_DETECTION_TICKS +
+            pkt_header->ts.tv_usec /
+            (1000000 / ND_DETECTION_TICKS);
 
     if (ts_pkt_last > ts_pkt) ts_pkt = ts_pkt_last;
 
@@ -332,13 +343,13 @@ void ndDetectionThread::ProcessPacket(void)
         else
             type = ETHERTYPE_IPV6;
 
-        ip_offset = 4;
+        l2_len = 4;
         break;
 
     case DLT_EN10MB:
         hdr_eth = reinterpret_cast<const struct ether_header *>(pkt_data);
         type = ntohs(hdr_eth->ether_type);
-        ip_offset = sizeof(struct ether_header);
+        l2_len = sizeof(struct ether_header);
         stats->pkt_eth++;
 
         // STP?
@@ -358,7 +369,7 @@ void ndDetectionThread::ProcessPacket(void)
 
     case DLT_LINUX_SLL:
         type = (pkt_data[14] << 8) + pkt_data[15];
-        ip_offset = 16;
+        l2_len = 16;
         break;
 
     default:
@@ -368,26 +379,26 @@ void ndDetectionThread::ProcessPacket(void)
     while (true) {
         if (type == ETHERTYPE_VLAN) {
             vlan_packet = 1;
-            flow.vlan_id = ((pkt_data[ip_offset] << 8) + pkt_data[ip_offset + 1]) & 0xFFF;
-            type = (pkt_data[ip_offset + 2] << 8) + pkt_data[ip_offset + 3];
-            ip_offset += 4;
+            flow.vlan_id = ((pkt_data[l2_len] << 8) + pkt_data[l2_len + 1]) & 0xFFF;
+            type = (pkt_data[l2_len + 2] << 8) + pkt_data[l2_len + 3];
+            l2_len += 4;
         }
         else if (type == ETHERTYPE_MPLS) {
             stats->pkt_mpls++;
-            uint32_t label = ntohl(*((uint32_t *)&pkt_data[ip_offset]));
+            uint32_t label = ntohl(*((uint32_t *)&pkt_data[l2_len]));
             type = ETHERTYPE_IP;
-            ip_offset += 4;
+            l2_len += 4;
 
             while ((label & 0x100) != 0x100) {
-                ip_offset += 4;
-                label = ntohl(*((uint32_t *)&pkt_data[ip_offset]));
+                l2_len += 4;
+                label = ntohl(*((uint32_t *)&pkt_data[l2_len]));
             }
         }
         else if (type == ETHERTYPE_PPPOE) {
             stats->pkt_pppoe++;
             type = ETHERTYPE_IP;
             ppp_proto = (uint16_t)(
-                _ND_PPP_PROTOCOL(pkt_data + ip_offset + 6)
+                _ND_PPP_PROTOCOL(pkt_data + l2_len + 6)
             );
             if (ppp_proto != PPP_IP && ppp_proto != PPP_IPV6) {
                 stats->pkt_discard++;
@@ -399,7 +410,7 @@ void ndDetectionThread::ProcessPacket(void)
                 return;
             }
 
-            ip_offset += 8;
+            l2_len += 8;
         }
         else if (type == ETHERTYPE_PPPOEDISC) {
             stats->pkt_pppoe++;
@@ -416,19 +427,19 @@ void ndDetectionThread::ProcessPacket(void)
 
     stats->pkt_vlan += vlan_packet;
 
-    hdr_ip = reinterpret_cast<const struct ip *>(&pkt_data[ip_offset]);
+    hdr_ip = reinterpret_cast<const struct ip *>(&pkt_data[l2_len]);
     flow.ip_version = hdr_ip->ip_v;
 
     if (flow.ip_version == 4) {
-        ip_len = ((uint16_t)hdr_ip->ip_hl * 4);
-        l4_len = ntohs(hdr_ip->ip_len) - ip_len;
+        l3_len = ((uint16_t)hdr_ip->ip_hl * 4);
+        l4_len = ntohs(hdr_ip->ip_len) - l3_len;
         flow.ip_protocol = hdr_ip->ip_p;
-        layer3 = reinterpret_cast<const uint8_t *>(hdr_ip);
+        l3 = reinterpret_cast<const uint8_t *>(hdr_ip);
 
-        if (pkt_header->caplen >= ip_offset)
+        if (pkt_header->caplen >= l2_len)
             frag_off = ntohs(hdr_ip->ip_off);
 
-        if (pkt_header->len - ip_offset < sizeof(struct ip)) {
+        if (pkt_header->len - l2_len < sizeof(struct ip)) {
             // XXX: header too small
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
@@ -460,22 +471,22 @@ void ndDetectionThread::ProcessPacket(void)
             return;
         }
 
-        if (ip_len > (pkt_header->len - ip_offset)) {
+        if (l3_len > (pkt_header->len - l2_len)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
-            nd_debug_printf("%s: discard: ip_len[%hu] > (pkt_header->len[%hu] - ip_offset[%hu])(%hu)\n",
-                tag.c_str(), ip_len, pkt_header->len, ip_offset, pkt_header->len - ip_offset);
+            nd_debug_printf("%s: discard: l3_len[%hu] > (pkt_header->len[%hu] - l2_len[%hu])(%hu)\n",
+                tag.c_str(), l3_len, pkt_header->len, l2_len, pkt_header->len - l2_len);
 #endif
             return;
         }
 
-        if ((pkt_header->len - ip_offset) < ntohs(hdr_ip->ip_len)) {
+        if ((pkt_header->len - l2_len) < ntohs(hdr_ip->ip_len)) {
             stats->pkt_discard++;
             stats->pkt_discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
-            nd_debug_printf("%s: discard: (pkt_header->len[%hu] - ip_offset[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
-                tag.c_str(), pkt_header->len, ip_offset, pkt_header->len - ip_offset, ntohs(hdr_ip->ip_len));
+            nd_debug_printf("%s: discard: (pkt_header->len[%hu] - l2_len[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
+                tag.c_str(), pkt_header->len, l2_len, pkt_header->len - l2_len, ntohs(hdr_ip->ip_len));
 #endif
             return;
         }
@@ -500,18 +511,18 @@ void ndDetectionThread::ProcessPacket(void)
         }
     }
     else if (flow.ip_version == 6) {
-        hdr_ip6 = reinterpret_cast<const struct ip6_hdr *>(&pkt_data[ip_offset]);
-        ip_len = sizeof(struct ip6_hdr);
+        hdr_ip6 = reinterpret_cast<const struct ip6_hdr *>(&pkt_data[l2_len]);
+        l3_len = sizeof(struct ip6_hdr);
         l4_len = ntohs(hdr_ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
         flow.ip_protocol = hdr_ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
-        layer3 = reinterpret_cast<const uint8_t *>(hdr_ip6);
+        l3 = reinterpret_cast<const uint8_t *>(hdr_ip6);
 
         if (flow.ip_protocol == IPPROTO_DSTOPTS) {
             const uint8_t *options = reinterpret_cast<const uint8_t *>(
                 hdr_ip6 + sizeof(const struct ip6_hdr)
             );
             flow.ip_protocol = options[0];
-            ip_len += 8 * (options[1] + 1);
+            l3_len += 8 * (options[1] + 1);
         }
 
         int i = 0;
@@ -548,16 +559,18 @@ void ndDetectionThread::ProcessPacket(void)
         stats->pkt_discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
         nd_debug_printf("%s: discard: invalid IP protocol version: %hhx\n",
-            tag.c_str(), pkt_data[ip_offset]);
+            tag.c_str(), pkt_data[l2_len]);
 #endif
         return;
     }
+
+    l4 = reinterpret_cast<const uint8_t *>(l3 + l3_len);
 
     switch (flow.ip_protocol) {
     case IPPROTO_TCP:
         if (l4_len >= 20) {
             const struct tcphdr *hdr_tcp;
-            hdr_tcp = reinterpret_cast<const struct tcphdr *>(layer3 + ip_len);
+            hdr_tcp = reinterpret_cast<const struct tcphdr *>(l4);
             stats->pkt_tcp++;
 
             if (addr_cmp < 0) {
@@ -575,13 +588,16 @@ void ndDetectionThread::ProcessPacket(void)
                     }
                 }
             }
+
+            pkt = reinterpret_cast<const uint8_t *>(l4 + (hdr_tcp->th_off * 4));
+            pkt_len = l4_len - (hdr_tcp->th_off * 4);
         }
         break;
 
     case IPPROTO_UDP:
         if (l4_len >= 8) {
             const struct udphdr *hdr_udp;
-            hdr_udp = reinterpret_cast<const struct udphdr *>(layer3 + ip_len);
+            hdr_udp = reinterpret_cast<const struct udphdr *>(l4);
             stats->pkt_udp++;
 
             if (addr_cmp < 0) {
@@ -592,6 +608,9 @@ void ndDetectionThread::ProcessPacket(void)
                 flow.lower_port = hdr_udp->uh_dport;
                 flow.upper_port = hdr_udp->uh_sport;
             }
+
+            pkt = reinterpret_cast<const uint8_t *>(l4 + sizeof(struct udphdr));
+            pkt_len = ntohs(hdr_udp->uh_ulen) - sizeof(struct udphdr);
         }
         break;
 
@@ -606,9 +625,9 @@ void ndDetectionThread::ProcessPacket(void)
     ndFlow *new_flow = new ndFlow(flow);
     if (new_flow == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
 
-    nd_flow_insert rc = flows->insert(nd_flow_pair(digest, new_flow));
+    nd_flow_insert flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
 
-    if (rc.second) {
+    if (flow_iter.second) {
         new_flow->ts_first_seen = ts_pkt;
 
         new_flow->ndpi_flow = (ndpi_flow_struct *)ndpi_malloc(sizeof(ndpi_flow_struct));
@@ -629,7 +648,7 @@ void ndDetectionThread::ProcessPacket(void)
     }
     else {
         delete new_flow;
-        new_flow = rc.first->second;
+        new_flow = flow_iter.first->second;
 
         if (flow == *new_flow)
             id_src = new_flow->id_src, id_dst = new_flow->id_dst;
@@ -671,7 +690,7 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->ndpi_flow,
         (new_flow->ip_version == 4) ?
             (const uint8_t *)hdr_ip : (const uint8_t *)hdr_ip6,
-        pkt_header->len - ip_offset,
+        pkt_header->len - l2_len,
         pkt_header->len,
         id_src,
         id_dst
@@ -747,18 +766,49 @@ void ndDetectionThread::ProcessPacket(void)
             );
         }
 
-        // XXX: There has to be a better way to extract the HTTP UA and DHCP Fingerprint?
+        // Sanitize host server name; RFC 952 plus underscore.
+        snprintf(
+            new_flow->host_server_name, HOST_NAME_MAX,
+            "%s", new_flow->ndpi_flow->host_server_name
+        );
+
+        for (int i = 0; i < HOST_NAME_MAX; i++) {
+            if (! isalnum(new_flow->host_server_name[i]) &&
+                new_flow->host_server_name[i] != '-' &&
+                new_flow->host_server_name[i] != '_' &&
+                new_flow->host_server_name[i] != '.') {
+                new_flow->host_server_name[i] = '\0';
+                break;
+            }
+        }
+
+        // Additional protocol-specific processing...
         switch (new_flow->master_protocol()) {
+
         case NDPI_PROTOCOL_DNS:
-            nd_debug_printf(
-                "%s: dns queries: %hhu, answers: %hhu, query type: 0x%04x, class: 0x%04x, reply code: %hhu, reply type: 0x%04x\n", tag.c_str(),
-                new_flow->ndpi_flow->protos.dns.num_queries,
-                new_flow->ndpi_flow->protos.dns.num_answers,
-                new_flow->ndpi_flow->protos.dns.query_type,
-                new_flow->ndpi_flow->protos.dns.query_class,
-                new_flow->ndpi_flow->protos.dns.reply_code,
-                new_flow->ndpi_flow->protos.dns.rsp_type
-                );
+            if (pkt != NULL && pkt_len > 12 && ProcessDNSResponse(
+                new_flow->host_server_name, pkt, pkt_len)) {
+
+                new_flow->hash(tag, digest, false,
+                    (const uint8_t *)new_flow->host_server_name,
+                    strnlen(new_flow->host_server_name, HOST_NAME_MAX));
+
+                // XXX: To be optimized.
+                flows->erase(flow_iter.first);
+                flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
+
+                if (! flow_iter.second) {
+                    nd_debug_printf("%s: dns old flow re-inserted.\n",
+                        tag.c_str());
+
+                    delete new_flow;
+                    new_flow = flow_iter.first->second;
+                }
+                else {
+                    nd_debug_printf("%s: dns new flow re-inserted.\n",
+                        tag.c_str());
+                }
+            }
             break;
         case NDPI_PROTOCOL_HTTP:
             snprintf(
@@ -796,22 +846,6 @@ void ndDetectionThread::ProcessPacket(void)
                     new_flow->ndpi_flow->protos.bittorrent.hash,
                     ND_FLOW_BTIHASH_LEN
                 );
-            }
-        }
-
-        // Sanitize host server name; RFC 952 plus underscore.
-        snprintf(
-            new_flow->host_server_name, HOST_NAME_MAX,
-            "%s", new_flow->ndpi_flow->host_server_name
-        );
-
-        for (int i = 0; i < HOST_NAME_MAX; i++) {
-            if (! isalnum(new_flow->host_server_name[i]) &&
-                new_flow->host_server_name[i] != '-' &&
-                new_flow->host_server_name[i] != '_' &&
-                new_flow->host_server_name[i] != '.') {
-                new_flow->host_server_name[i] = '\0';
-                break;
             }
         }
 
@@ -968,6 +1002,65 @@ void ndDetectionThread::ProcessPacket(void)
         }
 #endif
     }
+}
+
+bool ndDetectionThread::ProcessDNSResponse(
+    const char *host, const uint8_t *pkt, uint16_t length)
+{
+    ns_rr rr;
+    int rc = ns_initparse(pkt, length, &ns_h);
+
+    if (rc < 0) {
+        nd_debug_printf(
+            "%s: dns initparse error: %s\n", tag.c_str(), strerror(errno));
+        return false;
+    }
+
+    if (ns_msg_getflag(ns_h, ns_f_rcode) != ns_r_noerror) {
+        nd_debug_printf(
+            "%s: dns response code: %hu\n", tag.c_str(),
+            ns_msg_getflag(ns_h, ns_f_rcode));
+        return false;
+    }
+#ifdef _ND_LOG_DNS_RESPONSE
+    nd_debug_printf(
+        "%s: dns queries: %hu, answers: %hu\n",
+        tag.c_str(),
+        ns_msg_count(ns_h, ns_s_qd), ns_msg_count(ns_h, ns_s_an));
+#endif
+    for (uint16_t i = 0; i < ns_msg_count(ns_h, ns_s_an); i++) {
+        if (ns_parserr(&ns_h, ns_s_an, i, &rr)) {
+            nd_debug_printf(
+                "%s: dns error parsing RR %hu of %hu.\n", tag.c_str(),
+                i + 1, ns_msg_count(ns_h, ns_s_an));
+            continue;
+        }
+
+        if (ns_rr_type(rr) != ns_t_a && ns_rr_type(rr) != ns_t_aaaa)
+            continue;
+#ifdef _ND_LOG_DNS_RESPONSE
+        char addr[INET6_ADDRSTRLEN];
+        struct in_addr addr4;
+        struct in6_addr addr6;
+
+        if (ns_rr_type(rr) == ns_t_a) {
+            memcpy(&addr4, ns_rr_rdata(rr), sizeof(struct in_addr));
+            inet_ntop(AF_INET, &addr4, addr, INET_ADDRSTRLEN);
+        }
+        else {
+            memcpy(&addr6, ns_rr_rdata(rr), sizeof(struct in6_addr));
+            inet_ntop(AF_INET6, &addr6, addr, INET6_ADDRSTRLEN);
+        }
+
+        nd_debug_printf(
+            "%s: dns RR %s address: %s, ttl: %u, rlen: %hu: %s\n",
+            tag.c_str(), host,
+            (ns_rr_type(rr) == ns_t_a) ? "A" : "AAAA",
+            ns_rr_ttl(rr), ns_rr_rdlen(rr), addr);
+#endif
+    }
+
+    return true;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

@@ -73,9 +73,14 @@ protected:
     nd_packet_stats *stats;
     nd_device_addrs *device_addrs;
 
+    ns_msg ns_h;
+
     pcap_t *OpenCapture(void);
 
     void ProcessPacket(void);
+
+    bool ProcessDNSResponse(
+        const char *host, const uint8_t *pkt, uint16_t length);
 };
 
 typedef map<string, ndDetectionThread *> nd_threads;
