@@ -27,11 +27,13 @@ AS_IF([test "x$ac_cv_path_bash" != "xfalse"], [
 ])
 # Checks for libraries.
 AC_CHECK_LIB([pcap],
-    [pcap_open_live], [], [AC_MSG_ERROR([libpcap not found.])])
+    [pcap_open_live], [], [AC_MSG_ERROR([libpcap/pcap_open_live() not found.])])
 AC_CHECK_LIB([pthread],
-    [pthread_create], [], [AC_MSG_ERROR([libpthread not found.])])
+    [pthread_create], [], [AC_MSG_ERROR([libpthread/pthread_create() not found.])])
 AC_CHECK_LIB([rt],
-    [timer_create], [], [AC_MSG_ERROR([librt not found.])])
+    [timer_create], [], [AC_MSG_ERROR([librt/timer_create() not found.])])
+AC_CHECK_LIB([resolv],
+    [ns_initparse], [], [AC_MSG_ERROR([libresolv/ns_initparse() not found.])])
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
