@@ -116,7 +116,8 @@ struct ndFlow
 
     uint8_t privacy_mask;
 
-    void hash(const string &device, string &digest, bool full_hash = false);
+    void hash(const string &device, string &digest,
+        bool full_hash = false, const uint8_t *key = NULL, size_t key_length = 0);
 
     inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;

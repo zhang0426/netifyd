@@ -46,10 +46,11 @@ using namespace std;
 #include "nd-json.h"
 #include "nd-flow.h"
 
-extern ndGlobalConfig nd_config;
+extern nd_global_config nd_config;
 extern nd_device_ethers device_ethers;
 
-void ndFlow::hash(const string &device, string &digest, bool full_hash)
+void ndFlow::hash(const string &device, string &digest,
+    bool full_hash, const uint8_t *key, size_t key_length)
 {
     sha1 ctx;
     uint8_t *_digest;
@@ -102,6 +103,9 @@ void ndFlow::hash(const string &device, string &digest, bool full_hash)
             sha1_write(&ctx, bt.info_hash, ND_FLOW_BTIHASH_LEN);
         }
     }
+
+    if (key != NULL && key_length > 0)
+        sha1_write(&ctx, (const char *)key, key_length);
 
     _digest = sha1_result(&ctx);
     digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
