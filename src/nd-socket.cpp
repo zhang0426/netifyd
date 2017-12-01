@@ -82,12 +82,11 @@ using namespace std;
 #ifdef _ND_USE_CONNTRACK
 #include "nd-conntrack.h"
 #endif
-#include "nd-detection.h"
 #include "nd-socket.h"
 
 #define _ND_SOCKET_PROC_NET_UNIX    "/proc/net/unix"
 
-extern ndGlobalConfig nd_config;
+extern nd_global_config nd_config;
 
 ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)
     : base(base), valid(false)
