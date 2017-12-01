@@ -43,7 +43,7 @@ using namespace std;
 #include "nd-util.h"
 #include "nd-json.h"
 
-extern ndGlobalConfig nd_config;
+extern nd_global_config nd_config;
 
 ndJson::ndJson()
     : root(NULL)

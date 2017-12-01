@@ -49,7 +49,7 @@ using namespace std;
 #include "nd-thread.h"
 #include "nd-upload.h"
 
-extern ndGlobalConfig nd_config;
+extern nd_global_config nd_config;
 
 static int nd_curl_debug(
     CURL *ch, curl_infotype type, char *data, size_t size, void *param)

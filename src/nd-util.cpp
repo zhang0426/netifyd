@@ -46,7 +46,7 @@ using namespace std;
 #include "nd-util.h"
 #include "nd-sha1.h"
 
-extern ndGlobalConfig nd_config;
+extern nd_global_config nd_config;
 
 #ifdef _ND_USE_NCURSES
 extern WINDOW *win_output;

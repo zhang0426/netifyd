@@ -45,7 +45,7 @@ using namespace std;
 #include "nd-util.h"
 #include "nd-netlink.h"
 
-extern ndGlobalConfig nd_config;
+extern nd_global_config nd_config;
 
 inline bool ndNetlinkNetworkAddr::operator==(const ndNetlinkNetworkAddr &n) const
 {
