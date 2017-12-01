@@ -49,6 +49,7 @@
 #define ND_DETECTION_TICKS      1000    // Ticks-per-second (1000 = milliseconds)
 #define ND_IDLE_SCAN_TIME       10      // Idle flow scan in milliseconds
 #define ND_IDLE_FLOW_TIME       30000   // Purge idle flows older than this (30s)
+#define ND_IDLE_DNS_CACHE_TTL   300     // Purge TTL for idle DNS cache entries.
 
 #define ND_MAX_TCP_PKTS         10      // Maximum number of TCP packets to process.
 #define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
@@ -101,7 +102,7 @@
 
 #include "nd-sha1.h"
 
-enum ndGlobalFlags {
+enum nd_global_flags {
     ndGF_DEBUG = 0x1,
     ndGF_DEBUG_UPLOAD = 0x2,
     ndGF_DEBUG_USE_ETHERS = 0x4,
@@ -131,7 +132,7 @@ enum ndGlobalFlags {
 #define ND_VERBOSE (nd_config.flags & ndGF_VERBOSE)
 #define ND_REPLAY_DELAY (nd_config.flags & ndGF_REPLAY_DELAY)
 
-typedef struct {
+typedef struct nd_global_config_t {
     char *path_config;
     char *path_content_match;
     char *path_custom_match;
@@ -150,11 +151,12 @@ typedef struct {
     unsigned max_udp_pkts;
     unsigned update_interval;
     unsigned upload_timeout;
+    unsigned dns_cache_ttl;
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
     vector<struct sockaddr *> privacy_filter_host;
     vector<uint8_t *> privacy_filter_mac;
-} ndGlobalConfig;
+} nd_global_config;
 
 typedef struct nd_packet_stats_t
 {
@@ -204,6 +206,25 @@ typedef struct nd_packet_stats_t
         return *this;
     }
 } nd_packet_stats;
+
+typedef pair<time_t, string> nd_dns_tuple;
+typedef unordered_map<string, nd_dns_tuple> nd_dns_ar;
+typedef pair<nd_dns_ar::iterator, bool> nd_dns_cache_insert;
+typedef pair<string, nd_dns_tuple> nd_dns_cache_insert_pair;
+
+typedef struct nd_dns_cache_t
+{
+    pthread_mutex_t lock;
+    nd_dns_ar map_ar;
+
+    void insert(sa_family_t af, const uint8_t *addr, const string &hostname);
+
+    bool lookup(const struct in_addr &addr, string &hostname);
+    bool lookup(const struct in6_addr &addr, string &hostname);
+    bool lookup(const string &digest, string &hostname);
+
+    size_t purge(void);
+} nd_dns_cache;
 
 typedef unordered_map<string, vector<string> > nd_device_addrs;
 typedef map<string, nd_device_addrs *> nd_devices;

@@ -41,6 +41,8 @@
 #include <locale.h>
 
 #include <arpa/inet.h>
+#include <arpa/nameser.h>
+
 #include <netdb.h>
 #include <netinet/in.h>
 
@@ -48,6 +50,7 @@
 #include <json.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
+#include <resolv.h>
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -83,6 +86,32 @@ using namespace std;
 
 #define ND_STR_ETHALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
+nd_global_config nd_config = {
+    .path_config = NULL,
+    .path_content_match = NULL,
+    .path_custom_match = NULL,
+    .path_host_match = NULL,
+    .path_json = NULL,
+    .url_upload = NULL,
+    .uuid = NULL,
+    .uuid_realm = NULL,
+    .uuid_serial = NULL,
+    .max_backlog = ND_MAX_BACKLOG_KB * 1024,
+#ifdef _ND_USE_CONNTRACK
+    .flags = ndGF_USE_CONNTRACK,
+#else
+    .flags = 0x0,
+#endif
+    .digest_content_match = {},
+    .digest_custom_match = {},
+    .digest_host_match = {},
+    .max_tcp_pkts = ND_MAX_TCP_PKTS,
+    .max_udp_pkts = ND_MAX_UDP_PKTS,
+    .update_interval = ND_STATS_INTERVAL,
+    .upload_timeout = ND_UPLOAD_TIMEOUT,
+    .dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL,
+};
+
 pthread_mutex_t *nd_printf_mutex = NULL;
 static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
@@ -112,30 +141,96 @@ static ndNetlink *netlink = NULL;
 static map<string, string> device_netlink;
 #endif
 
-ndGlobalConfig nd_config = {
-    .path_config = NULL,
-    .path_content_match = NULL,
-    .path_custom_match = NULL,
-    .path_host_match = NULL,
-    .path_json = NULL,
-    .url_upload = NULL,
-    .uuid = NULL,
-    .uuid_realm = NULL,
-    .uuid_serial = NULL,
-    .max_backlog = ND_MAX_BACKLOG_KB * 1024,
-#ifdef _ND_USE_CONNTRACK
-    .flags = ndGF_USE_CONNTRACK,
-#else
-    .flags = 0x0,
-#endif
-    .digest_content_match = {},
-    .digest_custom_match = {},
-    .digest_host_match = {},
-    .max_tcp_pkts = ND_MAX_TCP_PKTS,
-    .max_udp_pkts = ND_MAX_UDP_PKTS,
-    .update_interval = ND_STATS_INTERVAL,
-    .upload_timeout = ND_UPLOAD_TIMEOUT,
-};
+void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hostname)
+{
+    sha1 ctx;
+    string digest;
+
+    sha1_init(&ctx);
+    sha1_write(&ctx, (const char *)addr, (af == AF_INET) ?
+        sizeof(struct in_addr) : sizeof(struct in6_addr));
+    digest.assign((const char *)sha1_result(&ctx), SHA1_DIGEST_LENGTH);
+
+    pthread_mutex_lock(&lock);
+
+    nd_dns_tuple ar(time_t(time(NULL) + nd_config.dns_cache_ttl), hostname);
+    nd_dns_cache_insert i = map_ar.insert(nd_dns_cache_insert_pair(digest, ar));
+
+    if (! i.second)
+        i.first->second.first = time(NULL) + nd_config.dns_cache_ttl;
+
+    pthread_mutex_unlock(&lock);
+}
+
+bool nd_dns_cache::lookup(const struct in_addr &addr, string &hostname)
+{
+    sha1 ctx;
+    string digest;
+
+    sha1_init(&ctx);
+    sha1_write(&ctx, (const char *)&addr, sizeof(struct in_addr));
+    digest.assign((const char *)sha1_result(&ctx), SHA1_DIGEST_LENGTH);
+
+    return lookup(digest, hostname);
+}
+
+bool nd_dns_cache::lookup(const struct in6_addr &addr, string &hostname)
+{
+    sha1 ctx;
+    string digest;
+
+    sha1_init(&ctx);
+    sha1_write(&ctx, (const char *)&addr, sizeof(struct in6_addr));
+    digest.assign((const char *)sha1_result(&ctx), SHA1_DIGEST_LENGTH);
+
+    return lookup(digest, hostname);
+}
+
+bool nd_dns_cache::lookup(const string &digest, string &hostname)
+{
+    bool found = false;
+
+    pthread_mutex_lock(&lock);
+
+    nd_dns_ar::iterator i = map_ar.find(digest);
+    if (i != map_ar.end()) {
+        found = true;
+        hostname = i->second.second;
+        i->second.first = time(NULL) + nd_config.dns_cache_ttl;
+    }
+
+    pthread_mutex_unlock(&lock);
+
+    return found;
+}
+
+size_t nd_dns_cache::purge(void)
+{
+    size_t purged = 0, remaining = 0;
+
+    pthread_mutex_lock(&lock);
+
+    nd_dns_ar::iterator i = map_ar.begin();
+    while (i != map_ar.end()) {
+        if (i->second.first < time(NULL)) {
+            i = map_ar.erase(i);
+            purged++;
+        }
+        else
+            i++;
+    }
+
+    remaining = map_ar.size();
+
+    pthread_mutex_unlock(&lock);
+
+    if (purged > 0 && remaining > 0)
+        nd_debug_printf("Purged %u DNS cache entries, %u active.\n", purged, remaining);
+
+    return purged;
+}
+
+static nd_dns_cache dns_cache;
 
 static void nd_usage(int rc = 0, bool version = false)
 {
@@ -238,6 +333,9 @@ static int nd_config_load(void)
 
     nd_config.upload_timeout = (unsigned)reader.GetInteger(
         "netifyd", "upload_timeout", ND_UPLOAD_TIMEOUT);
+
+    nd_config.dns_cache_ttl = (unsigned)reader.GetInteger(
+        "netifyd", "dns_cache_ttl", ND_IDLE_DNS_CACHE_TTL);
 
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
@@ -380,6 +478,7 @@ static int nd_start_detection_threads(void)
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
+                &dns_cache,
                 (ifaces.size() > 1) ? cpu++ : -1
             );
             threads[(*i).second]->Create();
@@ -1188,6 +1287,8 @@ int main(int argc, char *argv[])
     nd_printf_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_printf_mutex, NULL);
 
+    pthread_mutex_init(&dns_cache.lock, NULL);
+
     static struct option options[] =
     {
         { "help", 0, 0, 'h' },
@@ -1552,6 +1653,8 @@ int main(int argc, char *argv[])
 
             nd_reap_detection_threads();
 
+            dns_cache.purge();
+
             if (threads.size() == 0) {
                 if (thread_upload == NULL ||
                     thread_upload->QueuePendingSize() == 0) {
@@ -1628,6 +1731,8 @@ int main(int argc, char *argv[])
         delete thread_conntrack;
     }
 #endif
+    pthread_mutex_destroy(&dns_cache.lock);
+
     pthread_mutex_destroy(nd_printf_mutex);
     delete nd_printf_mutex;
 

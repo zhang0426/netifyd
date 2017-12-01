@@ -131,7 +131,9 @@ ndDetectionThread::ndDetectionThread(const string &dev,
     ndConntrackThread *thread_conntrack,
 #endif
     nd_flow_map *flow_map, nd_packet_stats *stats,
-    nd_device_addrs *device_addrs, long cpu)
+    nd_device_addrs *device_addrs,
+    nd_dns_cache *dns_cache,
+    long cpu)
     : ndThread(dev, cpu),
 #ifdef _ND_USE_NETLINK
     netlink_dev(netlink_dev), netlink(netlink),
@@ -143,7 +145,7 @@ ndDetectionThread::ndDetectionThread(const string &dev,
     pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
     ts_last_idle_scan(0), ndpi(NULL), flows(flow_map), stats(stats),
-    device_addrs(device_addrs)
+    device_addrs(device_addrs), dns_cache(dns_cache)
 {
     memset(stats, 0, sizeof(nd_packet_stats));
 
@@ -745,7 +747,39 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
+
             new_flow->detection_guessed = true;
+
+            if (new_flow->ndpi_flow->host_server_name[0] == '\0') {
+                string hostname;
+
+                if (new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
+                    new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
+                    if (new_flow->ip_version == 4)
+                        dns_cache->lookup(new_flow->upper_addr, hostname);
+                    else
+                        dns_cache->lookup(new_flow->upper_addr6, hostname);
+                }
+                else if(new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
+                    new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP) {
+                    if (new_flow->ip_version == 4)
+                        dns_cache->lookup(new_flow->lower_addr, hostname);
+                    else
+                        dns_cache->lookup(new_flow->lower_addr6, hostname);
+                }
+
+                if (hostname.size()) {
+                    nd_debug_printf("%s: Found hostname for unknown flow: %s\n",
+                        tag.c_str(), hostname.c_str());
+
+                    snprintf(
+                        (char *)new_flow->ndpi_flow->host_server_name,
+                        sizeof(new_flow->ndpi_flow->host_server_name) - 1,
+                        "%s", hostname.c_str()
+                    );
+                }
+            }
+
             new_flow->detected_protocol = ndpi_guess_undetected_protocol(
                 ndpi,
                 new_flow->ip_protocol,
@@ -1038,6 +1072,11 @@ bool ndDetectionThread::ProcessDNSResponse(
 
         if (ns_rr_type(rr) != ns_t_a && ns_rr_type(rr) != ns_t_aaaa)
             continue;
+
+        dns_cache->insert(
+            (ns_rr_type(rr) == ns_t_a) ? AF_INET : AF_INET6,
+            ns_rr_rdata(rr), host
+        );
 #ifdef _ND_LOG_DNS_RESPONSE
         char addr[INET6_ADDRSTRLEN];
         struct in_addr addr4;

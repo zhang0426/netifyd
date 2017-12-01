@@ -39,7 +39,9 @@ public:
         ndConntrackThread *thread_conntrack,
 #endif
         nd_flow_map *flow_map, nd_packet_stats *stats,
-        nd_device_addrs *device_addrs = NULL, long cpu = -1);
+        nd_device_addrs *device_addrs = NULL,
+        nd_dns_cache *dns_cache = NULL,
+        long cpu = -1);
     virtual ~ndDetectionThread();
 
     struct ndpi_detection_module_struct *GetDetectionModule(void) {
@@ -72,7 +74,7 @@ protected:
     nd_flow_map *flows;
     nd_packet_stats *stats;
     nd_device_addrs *device_addrs;
-
+    nd_dns_cache *dns_cache;
     ns_msg ns_h;
 
     pcap_t *OpenCapture(void);
