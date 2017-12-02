@@ -1,14 +1,13 @@
-Netify Daemon
-=============
+Netify Agent
+============
 [![Build Status](https://travis-ci.org/eglooca/netify-daemon.png?branch=master)](https://travis-ci.org/eglooca/netify-daemon)
 
 Deep Packet Inspection Server
 -----------------------------
 
-[Netify](https://www.egloo.ca/products/netify) is a deep packet inspection server.  [nDPI](http://www.ntop.org/products/deep-packet-inspection/ndpi/) (OpenDPI) is used to detect protocols and services (applications).
+The [Netify](https://www.egloo.ca/products/netify) Agent is a deep packet inspection service.  [nDPI](http://www.ntop.org/products/deep-packet-inspection/ndpi/) (formerly OpenDPI) is the engine used to detect network protocols and applications.
 
-Netify provides visibility into the traffic on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.
-
+The Netify Agent coupled with Netify Cloud processing improves network traffic visibility along with the option (on supported platforms) to take an active role in policing and bandwidth shaping specific network protocols and applications.
 
 Build Requirements
 ------------------

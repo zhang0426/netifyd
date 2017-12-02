@@ -1,4 +1,4 @@
-// Netify Daemon
+// Netify Agent
 // Copyright (C) 2015-2017 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -234,7 +234,7 @@ static nd_dns_cache dns_cache;
 
 static void nd_usage(int rc = 0, bool version = false)
 {
-    cerr << "Netify Daemon v" << PACKAGE_VERSION << "/";
+    cerr << PACKAGE_NAME << " v" << PACKAGE_VERSION << "/";
     cerr << fixed << showpoint << setprecision(1) << ND_JSON_VERSION << endl;
     cerr << "Copyright (C) 2015-2017 eGloo Incorporated"
          <<  endl << "[" << GIT_RELEASE << " " << GIT_DATE << "]" << endl;
@@ -849,7 +849,7 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
         for (int i = 0; i < COLS; i++) waddch(win_stats, ' ');
         wmove(win_stats, 0, 0);
         nd_printf_unlock();
-        nd_printw(win_stats, "Netify Daemon v%s", PACKAGE_VERSION);
+        nd_printw(win_stats, "%s v%s", PACKAGE_NAME, PACKAGE_VERSION);
         wattrset(win_stats, A_NORMAL);
         wmove(win_stats, 1, 0);
 
@@ -1495,7 +1495,7 @@ int main(int argc, char *argv[])
         nd_create_windows();
     }
 #endif
-    nd_printf("Netify Daemon v%s\n", PACKAGE_VERSION);
+    nd_printf("%s v%s\n", PACKAGE_NAME, PACKAGE_VERSION);
 
     memset(&totals, 0, sizeof(nd_packet_stats));
 
@@ -1651,9 +1651,9 @@ int main(int argc, char *argv[])
 #endif
             nd_dump_stats();
 
-            nd_reap_detection_threads();
-
             dns_cache.purge();
+
+            nd_reap_detection_threads();
 
             if (threads.size() == 0) {
                 if (thread_upload == NULL ||

@@ -1,4 +1,4 @@
-// Netify Daemon
+// Netify Agent
 // Copyright (C) 2015-2017 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify

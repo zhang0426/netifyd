@@ -1,5 +1,5 @@
 #!/bin/bash
-# Set Netify Daemon command-line options
+# Set Netify Agent command-line options
 
 # See man netifyd(8) for all options.
 NETIFYD_OPTS=

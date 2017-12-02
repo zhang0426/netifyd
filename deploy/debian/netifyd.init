@@ -15,7 +15,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/sbin/netifyd
 NAME="netifyd"
 PIDFILE=/var/run/netifyd/netifyd.pid
-DESC="Netify Daemon"
+DESC="Netify Agent"
 
 unset TMPDIR
 

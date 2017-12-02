@@ -1,5 +1,5 @@
 #!/bin/bash
-# Set Netify Daemon command-line options:
+# Set Netify Agent command-line options:
 # At least one -I, --internal and/or -E, --external parameters are required.
 # See man netifyd(8) for all options.
 
