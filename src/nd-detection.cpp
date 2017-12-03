@@ -735,8 +735,11 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
 #endif
         if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
+
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
-                new_flow->detection_guessed = true;
+
+                new_flow->detection_guessed = 1;
+
                 ndpi_set_detected_protocol(
                     ndpi,
                     new_flow->ndpi_flow,
@@ -748,7 +751,7 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            new_flow->detection_guessed = true;
+            new_flow->detection_guessed = 1;
 
             if (new_flow->ndpi_flow->host_server_name[0] == '\0') {
                 string hostname;
@@ -769,7 +772,10 @@ void ndDetectionThread::ProcessPacket(void)
                 }
 
                 if (hostname.size()) {
-                    nd_debug_printf("%s: Found hostname for unknown flow: %s\n",
+
+                    new_flow->detection_guessed = 2;
+
+                    nd_debug_printf("%s: Found hostname for undetected app proto: %s\n",
                         tag.c_str(), hostname.c_str());
 
                     snprintf(

@@ -72,7 +72,7 @@ struct ndFlow
     uint32_t total_packets;
 
     bool detection_complete;
-    bool detection_guessed;
+    uint8_t detection_guessed;
 
     ndpi_protocol detected_protocol;
 

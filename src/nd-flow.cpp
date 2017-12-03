@@ -258,8 +258,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         tag,
         (internal) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
-        (detection_guessed &&
-            detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN) ? 'g' : '-',
+        (detection_guessed == 1) ? 'g' : (detection_guessed == 2) ? 'G' : '-',
         ip_nat ? 'n' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
