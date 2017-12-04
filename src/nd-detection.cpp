@@ -144,8 +144,8 @@ ndDetectionThread::ndDetectionThread(const string &dev,
 #endif
     pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
-    ts_last_idle_scan(0), ndpi(NULL), flows(flow_map), stats(stats),
-    device_addrs(device_addrs), dns_cache(dns_cache)
+    ts_last_idle_scan(0), ndpi(NULL), custom_proto_base(0), flows(flow_map),
+    stats(stats), device_addrs(device_addrs), dns_cache(dns_cache)
 {
     memset(stats, 0, sizeof(nd_packet_stats));
 
@@ -156,9 +156,10 @@ ndDetectionThread::ndDetectionThread(const string &dev,
         nd_debug_printf("%s: capture file: %s\n", tag.c_str(), pcap_file.c_str());
     }
 
-    ndpi = nd_ndpi_init(tag);
+    ndpi = nd_ndpi_init(tag, custom_proto_base);
 
-    nd_debug_printf("%s: detection thread created.\n", tag.c_str());
+    nd_debug_printf("%s: detection thread created, custom_proto_base: %u.\n",
+        tag.c_str(), custom_proto_base);
 }
 
 ndDetectionThread::~ndDetectionThread()
@@ -767,6 +768,12 @@ void ndDetectionThread::ProcessPacket(void)
                     ntohs(new_flow->upper_port)
                 );
             }
+        }
+
+        if (new_flow->detected_protocol.app_protocol < custom_proto_base) {
+            new_flow->detected_protocol.master_protocol =
+                new_flow->detected_protocol.app_protocol;
+            new_flow->detected_protocol.app_protocol = NDPI_PROTOCOL_UNKNOWN;
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {

@@ -70,6 +70,7 @@ protected:
     uint64_t ts_pkt_last;
     uint64_t ts_last_idle_scan;
     struct ndpi_detection_module_struct *ndpi;
+    uint32_t custom_proto_base;
 
     nd_flow_map *flows;
     nd_packet_stats *stats;

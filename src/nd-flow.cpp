@@ -242,13 +242,13 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
             upper_name = i->second.c_str();
     }
 
-    if (detected_protocol.master_protocol) {
+    if (detected_protocol.app_protocol) {
         ndpi_protocol2name(ndpi,
             detected_protocol, buffer, sizeof(buffer));
         p = buffer;
     }
     else
-        p = ndpi_get_proto_name(ndpi, detected_protocol.app_protocol);
+        p = ndpi_get_proto_name(ndpi, detected_protocol.master_protocol);
 
     string digest;
     nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
@@ -258,7 +258,8 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         tag,
         (internal) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
-        (detection_guessed == 1) ? 'g' : (detection_guessed == 2) ? 'G' : '-',
+        (detection_guessed & 0x01 && !(detection_guessed & 0x02)) ? 'g' :
+            (detection_guessed & 0x02) ? 'G' : '-',
         ip_nat ? 'n' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :

@@ -142,7 +142,8 @@ static void nd_ndpi_load_host_match(
         tag.c_str(), loaded, nd_config.path_host_match);
 }
 
-struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
+struct ndpi_detection_module_struct *nd_ndpi_init(
+    const string &tag, uint32_t &custom_proto_base)
 {
     struct stat path_custom_match_stat;
     struct ndpi_detection_module_struct *ndpi = NULL;
@@ -151,6 +152,8 @@ struct ndpi_detection_module_struct *nd_ndpi_init(const string &tag)
 
     if (ndpi == NULL)
         throw ndThreadException("Detection module initialization failure");
+
+    custom_proto_base = ndpi->ndpi_num_supported_protocols;
 
     nd_ndpi_load_content_match(tag, ndpi);
     nd_ndpi_load_host_match(tag, ndpi);

@@ -571,8 +571,9 @@ void nd_json_protocols(string &json_string)
     json.AddObject(NULL, "type", "protocols");
     json_object *jarray = json.CreateArray(NULL, "protocols");
 
+    uint32_t custom_proto_base;
     struct ndpi_detection_module_struct *ndpi;
-    ndpi = nd_ndpi_init("netifyd");
+    ndpi = nd_ndpi_init("netifyd", custom_proto_base);
 
     for (unsigned i = 0; i < (unsigned)ndpi->ndpi_num_supported_protocols; i++) {
         json_object *json_proto = json.CreateObject();
@@ -1125,8 +1126,9 @@ void nd_generate_uuid(void)
 
 static void nd_dump_protocols(void)
 {
+    uint32_t custom_proto_base;
     struct ndpi_detection_module_struct *ndpi;
-    ndpi = nd_ndpi_init("netifyd");
+    ndpi = nd_ndpi_init("netifyd", custom_proto_base);
 
     for (unsigned i = 0; i < (unsigned)ndpi->ndpi_num_supported_protocols; i++)
         printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
