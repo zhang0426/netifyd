@@ -736,9 +736,9 @@ void ndDetectionThread::ProcessPacket(void)
 #endif
         if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
+            new_flow->detection_guessed |= 0x01;
 
-                new_flow->detection_guessed = 1;
+            if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
 
                 ndpi_set_detected_protocol(
                     ndpi,
@@ -747,63 +747,67 @@ void ndDetectionThread::ProcessPacket(void)
                     new_flow->detected_protocol.app_protocol
                 );
             }
+            else {
+                new_flow->detected_protocol = ndpi_guess_undetected_protocol(
+                    ndpi,
+                    new_flow->ip_protocol,
+                    ntohl(
+                        (new_flow->ip_version == 4) ?
+                            new_flow->lower_addr.s_addr :
+                                new_flow->lower_addr6.s6_addr32[2] +
+                                new_flow->lower_addr6.s6_addr32[3]
+                    ),
+                    ntohs(new_flow->lower_port),
+                    ntohl(
+                        (new_flow->ip_version == 4) ?
+                            new_flow->upper_addr.s_addr :
+                                new_flow->upper_addr6.s6_addr32[2] +
+                                new_flow->upper_addr6.s6_addr32[3]
+                    ),
+                    ntohs(new_flow->upper_port)
+                );
+            }
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            new_flow->detection_guessed = 1;
-
             if (new_flow->ndpi_flow->host_server_name[0] == '\0') {
                 string hostname;
 
-                if (new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
-                    new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
-                    if (new_flow->ip_version == 4)
-                        dns_cache->lookup(new_flow->upper_addr, hostname);
-                    else
-                        dns_cache->lookup(new_flow->upper_addr6, hostname);
-                }
-                else if(new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
-                    new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP) {
+                if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN) {
                     if (new_flow->ip_version == 4)
                         dns_cache->lookup(new_flow->lower_addr, hostname);
                     else
                         dns_cache->lookup(new_flow->lower_addr6, hostname);
                 }
+                else if (new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
+                    if (new_flow->ip_version == 4)
+                        dns_cache->lookup(new_flow->upper_addr, hostname);
+                    else
+                        dns_cache->lookup(new_flow->upper_addr6, hostname);
+                }
 
                 if (hostname.size()) {
 
-                    new_flow->detection_guessed = 2;
-
-                    nd_debug_printf("%s: Found hostname for undetected app proto: %s\n",
-                        tag.c_str(), hostname.c_str());
+                    new_flow->detection_guessed |= 0x02;
 
                     snprintf(
                         (char *)new_flow->ndpi_flow->host_server_name,
                         sizeof(new_flow->ndpi_flow->host_server_name) - 1,
                         "%s", hostname.c_str()
                     );
+
+                    new_flow->detected_protocol.app_protocol = ndpi_match_host_subprotocol(
+                        ndpi,
+                        new_flow->ndpi_flow,
+                        (char *)new_flow->ndpi_flow->host_server_name,
+                        strlen((const char *)new_flow->ndpi_flow->host_server_name),
+                        new_flow->detected_protocol.master_protocol);
+
+                    nd_debug_printf("%s: Found hostname for undetected app proto: %s [%hu]\n",
+                        tag.c_str(), hostname.c_str(), new_flow->detected_protocol.app_protocol);
                 }
             }
-
-            new_flow->detected_protocol = ndpi_guess_undetected_protocol(
-                ndpi,
-                new_flow->ip_protocol,
-                ntohl(
-                    (new_flow->ip_version == 4) ?
-                        new_flow->lower_addr.s_addr :
-                            new_flow->lower_addr6.s6_addr32[2] +
-                            new_flow->lower_addr6.s6_addr32[3]
-                ),
-                ntohs(new_flow->lower_port),
-                ntohl(
-                    (new_flow->ip_version == 4) ?
-                        new_flow->upper_addr.s_addr :
-                            new_flow->upper_addr6.s6_addr32[2] +
-                            new_flow->upper_addr6.s6_addr32[3]
-                ),
-                ntohs(new_flow->upper_port)
-            );
         }
 
         // Sanitize host server name; RFC 952 plus underscore.
