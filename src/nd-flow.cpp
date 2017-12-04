@@ -519,27 +519,15 @@ json_object *ndFlow::json_encode(const string &device,
         json.AddObject(json_flow, "total_bytes", total_bytes);
     }
 
-    if (detected_protocol.master_protocol) {
-        json.AddObject(json_flow, "detected_protocol",
-            (int32_t)detected_protocol.master_protocol);
-        json.AddObject(json_flow, "detected_protocol_name",
-            ndpi_get_proto_name(ndpi, detected_protocol.master_protocol));
+    json.AddObject(json_flow, "detected_protocol",
+        (int32_t)detected_protocol.master_protocol);
+    json.AddObject(json_flow, "detected_protocol_name",
+        ndpi_get_proto_name(ndpi, detected_protocol.master_protocol));
 
-        json.AddObject(json_flow, "detected_service",
-            (int32_t)detected_protocol.app_protocol);
-        json.AddObject(json_flow, "detected_service_name",
-            ndpi_get_proto_name(ndpi, detected_protocol.app_protocol));
-    }
-    else {
-        json.AddObject(json_flow, "detected_protocol",
-            (int32_t)detected_protocol.app_protocol);
-        json.AddObject(json_flow, "detected_protocol_name",
-            ndpi_get_proto_name(ndpi, detected_protocol.app_protocol));
-
-        json.AddObject(json_flow, "detected_service", 0);
-        json.AddObject(json_flow, "detected_service_name",
-            ndpi_get_proto_name(ndpi, 0));
-    }
+    json.AddObject(json_flow, "detected_service",
+        (int32_t)detected_protocol.app_protocol);
+    json.AddObject(json_flow, "detected_service_name",
+        ndpi_get_proto_name(ndpi, detected_protocol.app_protocol));
 
     json.AddObject(json_flow, "detection_guessed", detection_guessed);
 
