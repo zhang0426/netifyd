@@ -52,6 +52,8 @@ void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
 
 void nd_iface_name(const string &iface, string &result);
 
+bool nd_is_ipaddr(const char *ip);
+
 class ndException : public runtime_error
 {
 public:

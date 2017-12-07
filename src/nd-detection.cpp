@@ -778,7 +778,9 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            if (new_flow->ndpi_flow->host_server_name[0] == '\0') {
+            if (new_flow->ndpi_flow->host_server_name[0] == '\0' ||
+                nd_is_ipaddr((const char *)new_flow->ndpi_flow->host_server_name)) {
+
                 string hostname;
 
                 if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN) {

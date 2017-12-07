@@ -36,6 +36,8 @@
 #include <errno.h>
 
 #include <sys/socket.h>
+
+#include <arpa/inet.h>
 #include <netdb.h>
 
 #include "ndpi_main.h"
@@ -328,6 +330,15 @@ void nd_iface_name(const string &iface, string &result)
     size_t p = string::npos;
     if ((p = iface.find_first_of(",")) != string::npos)
         result = iface.substr(0, p);
+}
+
+bool nd_is_ipaddr(const char *ip)
+{
+    struct in_addr addr4;
+    struct in6_addr addr6;
+
+    if (inet_pton(AF_INET, ip, &addr4) == 0) return true;
+    return (inet_pton(AF_INET6, ip, &addr6) == 0) ? true : false;
 }
 
 ndException::ndException(const string &where_arg, const string &what_arg) throw()
