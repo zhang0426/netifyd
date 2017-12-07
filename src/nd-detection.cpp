@@ -737,7 +737,7 @@ void ndDetectionThread::ProcessPacket(void)
 #endif
         if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            new_flow->detection_guessed |= 0x01;
+            new_flow->detection_guessed |= ND_FLOW_GUESS_PROTO;
 
             if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
 
@@ -798,7 +798,7 @@ void ndDetectionThread::ProcessPacket(void)
 
                 if (hostname.size()) {
 
-                    new_flow->detection_guessed |= 0x02;
+                    new_flow->detection_guessed |= ND_FLOW_GUESS_DNS;
 
                     snprintf(
                         (char *)new_flow->ndpi_flow->host_server_name,

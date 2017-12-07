@@ -31,6 +31,11 @@
 // BitTorrent info hash length
 #define ND_FLOW_BTIHASH_LEN SHA1_DIGEST_LENGTH
 
+// Bits for detection guess types
+#define ND_FLOW_GUESS_NONE  0x00    // No guesses made
+#define ND_FLOW_GUESS_PROTO 0x01    // Protocol guesses (ports)
+#define ND_FLOW_GUESS_DNS   0x02    // Application guessed by DNS cache hint
+
 struct ndFlow
 {
     bool internal;
