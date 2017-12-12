@@ -49,7 +49,9 @@
 #define ND_DETECTION_TICKS      1000    // Ticks-per-second (1000 = milliseconds)
 #define ND_IDLE_SCAN_TIME       10      // Idle flow scan in milliseconds
 #define ND_IDLE_FLOW_TIME       30000   // Purge idle flows older than this (30s)
-#define ND_IDLE_DNS_CACHE_TTL   300     // Purge TTL for idle DNS cache entries.
+#define ND_IDLE_DNS_CACHE_TTL  (60 * 30)// Purge TTL for idle DNS cache entries.
+#define ND_HASH_BUCKETS_FLOWS   1613    // Initial flows map bucket count.
+#define ND_HASH_BUCKETS_DNSARS  1613    // DNS cache address record hash buckets.
 
 #define ND_MAX_TCP_PKTS         10      // Maximum number of TCP packets to process.
 #define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
@@ -57,6 +59,8 @@
 #define ND_PID_FILE_NAME        "/var/run/netifyd/netifyd.pid"
 
 #define ND_CONF_FILE_NAME       "/etc/netifyd.conf"
+
+#define ND_DNS_CACHE_FILE_NAME  "/var/lib/netifyd/dns-cache.csv"
 
 #define ND_JSON_VERSION         1.5     // JSON format version
 #define ND_JSON_FILE_NAME       "/var/lib/netifyd/netifyd.json"
@@ -152,6 +156,7 @@ typedef struct nd_global_config_t {
     unsigned update_interval;
     unsigned upload_timeout;
     unsigned dns_cache_ttl;
+    bool dns_cache_save;
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
     vector<struct sockaddr *> privacy_filter_host;
@@ -224,6 +229,9 @@ typedef struct nd_dns_cache_t
     bool lookup(const string &digest, string &hostname);
 
     size_t purge(void);
+
+    void load(void);
+    void save(void);
 } nd_dns_cache;
 
 typedef unordered_map<string, vector<string> > nd_device_addrs;

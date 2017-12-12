@@ -110,6 +110,7 @@ nd_global_config nd_config = {
     .update_interval = ND_STATS_INTERVAL,
     .upload_timeout = ND_UPLOAD_TIMEOUT,
     .dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL,
+    .dns_cache_save = false,
 };
 
 pthread_mutex_t *nd_printf_mutex = NULL;
@@ -230,6 +231,33 @@ size_t nd_dns_cache::purge(void)
     return purged;
 }
 
+void nd_dns_cache::load(void)
+{
+}
+
+void nd_dns_cache::save(void)
+{
+    string digest;
+
+    FILE *h_f = fopen(ND_DNS_CACHE_FILE_NAME, "w");
+    if (! h_f) return;
+
+    pthread_mutex_lock(&lock);
+
+    fprintf(h_f, "\"host\",\"addr_digest\",\"ttl\"\n");
+
+    for (nd_dns_ar::iterator i = map_ar.begin();
+        i != map_ar.end(); i++) {
+        nd_sha1_to_string((const uint8_t *)i->first.c_str(), digest);
+        fprintf(h_f, "\"%s\",%s,%u\n", i->second.second.c_str(),
+            digest.c_str(), i->second.first - time(NULL));
+    }
+
+    pthread_mutex_unlock(&lock);
+
+    fclose(h_f);
+}
+
 static nd_dns_cache dns_cache;
 
 static void nd_usage(int rc = 0, bool version = false)
@@ -336,6 +364,9 @@ static int nd_config_load(void)
 
     nd_config.dns_cache_ttl = (unsigned)reader.GetInteger(
         "netifyd", "dns_cache_ttl", ND_IDLE_DNS_CACHE_TTL);
+
+    nd_config.dns_cache_save = reader.GetBoolean(
+        "netifyd", "dns_cache_save", false);
 
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
@@ -444,7 +475,14 @@ static int nd_start_detection_threads(void)
 {
     for (nd_ifaces::iterator i = ifaces.begin();
         i != ifaces.end(); i++) {
+
         flows[(*i).second] = new nd_flow_map;
+        flows[(*i).second]->reserve(ND_HASH_BUCKETS_FLOWS);
+        nd_debug_printf("%s: flows_map, buckets: %lu, max_load: %f\n",
+            (*i).second.c_str(),
+            flows[(*i).second]->bucket_count(),
+            flows[(*i).second]->max_load_factor());
+
         stats[(*i).second] = new nd_packet_stats;
 
         // XXX: Only collect device MAC/addresses on LAN interfaces?
@@ -1290,6 +1328,7 @@ int main(int argc, char *argv[])
     pthread_mutex_init(nd_printf_mutex, NULL);
 
     pthread_mutex_init(&dns_cache.lock, NULL);
+    dns_cache.map_ar.reserve(ND_HASH_BUCKETS_DNSARS);
 
     static struct option options[] =
     {
@@ -1654,6 +1693,8 @@ int main(int argc, char *argv[])
             nd_dump_stats();
 
             dns_cache.purge();
+            if (nd_config.dns_cache_save)
+                dns_cache.save();
 
             nd_reap_detection_threads();
 
