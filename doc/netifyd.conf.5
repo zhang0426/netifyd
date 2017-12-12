@@ -10,7 +10,11 @@ The netifyd.conf file follows the standard INI-style file format.
 .PP
 The netifyd.conf file is used to configure the behaviour of the Netify daemon and set essential paramters of the Netify Clound Sync service.
 .SH MAIN SECTION
-The main server options are set under the [\fBnetifyd\fR] section.
+The main server options are defined within the [\fBnetifyd\fR] section.
+.PP
+\fBdns_cache_ttl\fR=\fIINTEGER\fR
+.PP
+The \fBdns_cache_ttl\fR paramter can be set to override the default time interval that cached DNS answer records will be kept in memory.  The default time is 30 minutes.
 .PP
 \fBenable_netify_sink\fR=\fIBOOLEAN\fR
 .PP
