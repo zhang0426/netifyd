@@ -819,7 +819,7 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 
-        // Sanitize host server name; RFC 952 plus underscore.
+        // Sanitize host server name; RFC 952 plus underscore for SSDP.
         snprintf(
             new_flow->host_server_name, HOST_NAME_MAX,
             "%s", new_flow->ndpi_flow->host_server_name
