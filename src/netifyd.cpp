@@ -250,7 +250,7 @@ void nd_dns_cache::save(void)
         i != map_ar.end(); i++) {
         nd_sha1_to_string((const uint8_t *)i->first.c_str(), digest);
         fprintf(h_f, "\"%s\",%s,%u\n", i->second.second.c_str(),
-            digest.c_str(), i->second.first - time(NULL));
+            digest.c_str(), (unsigned)(i->second.first - time(NULL)));
     }
 
     pthread_mutex_unlock(&lock);
