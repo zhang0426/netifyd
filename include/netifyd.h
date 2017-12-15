@@ -157,6 +157,7 @@ typedef struct nd_global_config_t {
     unsigned upload_timeout;
     unsigned dns_cache_ttl;
     bool dns_cache_save;
+
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
     vector<struct sockaddr *> privacy_filter_host;

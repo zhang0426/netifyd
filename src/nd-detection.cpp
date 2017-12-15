@@ -166,7 +166,7 @@ ndDetectionThread::~ndDetectionThread()
 {
     Join();
     if (pcap != NULL) pcap_close(pcap);
-    if (ndpi != NULL) ndpi_exit_detection_module(ndpi);
+    if (ndpi != NULL) nd_ndpi_free(ndpi);
 
     nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
 }

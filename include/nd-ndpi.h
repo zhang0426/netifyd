@@ -20,5 +20,7 @@
 struct ndpi_detection_module_struct *nd_ndpi_init(
     const string &tag, uint32_t &custom_proto_base);
 
+void nd_ndpi_free(ndpi_detection_module_struct *ndpi);
+
 #endif // _ND_NDPI_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
