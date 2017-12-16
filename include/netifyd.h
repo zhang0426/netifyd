@@ -109,22 +109,24 @@
 enum nd_global_flags {
     ndGF_DEBUG = 0x1,
     ndGF_DEBUG_UPLOAD = 0x2,
-    ndGF_DEBUG_USE_ETHERS = 0x4,
-    ndGF_OVERRIDE_CONTENT_MATCH = 0x8,
-    ndGF_OVERRIDE_CUSTOM_MATCH = 0x10,
-    ndGF_OVERRIDE_HOST_MATCH = 0x20,
-    ndGF_SSL_USE_TLSv1 = 0x40,
-    ndGF_SSL_VERIFY_PEER = 0x80,
-    ndGF_USE_CONNTRACK = 0x100,
-    ndGF_USE_NCURSES = 0x200,
-    ndGF_USE_SINK = 0x400,
-    ndGF_VERBOSE = 0x800,
-    ndGF_REPLAY_DELAY = 0x1000
+    ndGF_DEBUG_WITH_ETHERS = 0x4,
+    ndGF_DEBUG_DNS_CACHE = 0x8,
+    ndGF_OVERRIDE_CONTENT_MATCH = 0x10,
+    ndGF_OVERRIDE_CUSTOM_MATCH = 0x20,
+    ndGF_OVERRIDE_HOST_MATCH = 0x40,
+    ndGF_SSL_USE_TLSv1 = 0x80,
+    ndGF_SSL_VERIFY_PEER = 0x100,
+    ndGF_USE_CONNTRACK = 0x200,
+    ndGF_USE_NCURSES = 0x400,
+    ndGF_USE_SINK = 0x800,
+    ndGF_VERBOSE = 0x1000,
+    ndGF_REPLAY_DELAY = 0x2000
 };
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
 #define ND_DEBUG_UPLOAD (nd_config.flags & ndGF_DEBUG_UPLOAD)
-#define ND_DEBUG_USE_ETHERS (nd_config.flags & ndGF_DEBUG_USE_ETHERS)
+#define ND_DEBUG_WITH_ETHERS (nd_config.flags & ndGF_DEBUG_WITH_ETHERS)
+#define ND_DEBUG_DNS_CACHE (nd_config.flags & ndGF_DEBUG_DNS_CACHE)
 #define ND_OVERRIDE_CONTENT_MATCH (nd_config.flags & ndGF_OVERRIDE_CONTENT_MATCH)
 #define ND_OVERRIDE_CUSTOM_MATCH (nd_config.flags & ndGF_OVERRIDE_CUSTOM_MATCH)
 #define ND_OVERRIDE_HOST_MATCH (nd_config.flags & ndGF_OVERRIDE_HOST_MATCH)

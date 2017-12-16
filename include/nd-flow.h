@@ -28,6 +28,7 @@
 #define ND_FLOW_SSL_CNLEN   48      // SSL certificate common-name length
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
 #define ND_FLOW_DHCPCI_LEN  96      // DHCP class identifier
+#define ND_FLOW_MDNS_ANSLEN 96      // MDNS answer length
 // BitTorrent info hash length
 #define ND_FLOW_BTIHASH_LEN SHA1_DIGEST_LENGTH
 
@@ -112,6 +113,10 @@ struct ndFlow
             uint8_t info_hash_valid:1;
             char info_hash[ND_FLOW_BTIHASH_LEN];
         } bt;
+
+        struct {
+            char answer[ND_FLOW_MDNS_ANSLEN];
+        } mdns;
     };
 
     enum {
@@ -157,6 +162,7 @@ struct ndFlow
     bool has_ssl_client_certcn(void);
     bool has_ssl_server_certcn(void);
     bool has_bt_info_hash(void);
+    bool has_mdns_answer(void);
 
     void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
 

@@ -114,6 +114,7 @@ nd_global_config nd_config = {
 };
 
 pthread_mutex_t *nd_printf_mutex = NULL;
+
 static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
 static nd_devices devices;
@@ -519,7 +520,9 @@ static int nd_start_detection_threads(void)
                 &dns_cache,
                 (ifaces.size() > 1) ? cpu++ : -1
             );
+
             threads[(*i).second]->Create();
+
             if (cpu == cpus) cpu = 0;
         }
     }
@@ -1042,7 +1045,7 @@ static void nd_json_upload(ndJson *json)
         nd_json_add_file(json->GetRoot(), i->first, i->second);
     }
 #else
-    if (ND_DEBUG && ND_DEBUG_USE_ETHERS) nd_load_ethers();
+    if (ND_DEBUG && ND_DEBUG_WITH_ETHERS) nd_load_ethers();
 #endif
     string json_string;
     json->ToString(json_string);
@@ -1337,6 +1340,7 @@ int main(int argc, char *argv[])
         { "debug", 0, 0, 'd' },
         { "debug-ether-names", 0, 0, 'e' },
         { "debug-uploads", 0, 0, 'D' },
+        { "debug-dns-cache", 0, 0, 's' },
         { "replay-delay", 0, 0, 'r' },
         { "serial", 1, 0, 's' },
         { "internal", 1, 0, 'I' },
@@ -1363,7 +1367,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDenrs:I:E:j:i:c:UPA:N:f:H:C:S:t",
+            "?hVdDaenrs:I:E:j:i:c:UPA:N:f:H:C:S:t",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -1381,7 +1385,10 @@ int main(int argc, char *argv[])
             nd_config.flags |= ndGF_DEBUG_UPLOAD;
             break;
         case 'e':
-            nd_config.flags |= ndGF_DEBUG_USE_ETHERS;
+            nd_config.flags |= ndGF_DEBUG_WITH_ETHERS;
+            break;
+        case 'a':
+            nd_config.flags |= ndGF_DEBUG_DNS_CACHE;
             break;
         case 'r':
             nd_config.flags |= ndGF_REPLAY_DELAY;

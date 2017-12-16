@@ -102,6 +102,9 @@ void ndFlow::hash(const string &device, string &digest,
         if (has_bt_info_hash()) {
             sha1_write(&ctx, bt.info_hash, ND_FLOW_BTIHASH_LEN);
         }
+        if (has_mdns_answer()) {
+            sha1_write(&ctx, mdns.answer, ND_FLOW_MDNS_ANSLEN);
+        }
     }
 
     if (key != NULL && key_length > 0)
@@ -220,12 +223,21 @@ bool ndFlow::has_bt_info_hash(void)
     );
 }
 
+bool ndFlow::has_mdns_answer(void)
+{
+    return (
+        (detected_protocol.master_protocol == NDPI_PROTOCOL_MDNS ||
+        detected_protocol.app_protocol == NDPI_PROTOCOL_MDNS) &&
+        mdns.answer[0] != '\0'
+    );
+}
+
 void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 {
     char *p = NULL, buffer[64];
     const char *lower_name = lower_ip, *upper_name = upper_ip;
 
-    if (ND_DEBUG_USE_ETHERS) {
+    if (ND_DEBUG_WITH_ETHERS) {
         string key;
         nd_device_ethers::const_iterator i;
 
@@ -268,8 +280,9 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         p,
         lower_name, ntohs(lower_port),
         upper_name, ntohs(upper_port),
-        (host_server_name[0] != '\0') ? " H: " : "",
-        (host_server_name[0] != '\0') ? host_server_name : "",
+        (host_server_name[0] != '\0' || has_mdns_answer()) ? " H: " : "",
+        (host_server_name[0] != '\0' || has_mdns_answer()) ?
+            has_mdns_answer() ? mdns.answer : host_server_name : "",
         (has_ssl_client_certcn() || has_ssl_server_certcn()) ? " SSL" : "",
         (has_ssl_client_certcn()) ? " C: " : "",
         (has_ssl_client_certcn()) ? ssl.client_certcn : "",
@@ -583,6 +596,13 @@ json_object *ndFlow::json_encode(const string &device,
 
         nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
         json.AddObject(_bt, "info_hash", digest);
+    }
+
+    if (has_mdns_answer()) {
+
+        json_object *_mdns = json.CreateObject(json_flow, "mdns");
+
+        json.AddObject(_mdns, "answer", mdns.answer);
     }
 
     json.AddObject(json_flow, "first_seen_at", ts_first_seen);

@@ -26,8 +26,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+
 #include <sys/stat.h>
 #include <sys/un.h>
+
 #include <arpa/inet.h>
 
 extern "C" {
@@ -46,6 +49,7 @@ static int ndpi_ref_count = 0;
 static void *ndpi_host_automa = NULL;
 static pthread_mutex_t *ndpi_host_automa_lock = NULL;
 static void *ndpi_proto_ptree = NULL;
+static struct ndpi_detection_module_struct *ndpi_parent = NULL;
 
 static void nd_ndpi_load_content_match(
     const string &tag, struct ndpi_detection_module_struct *ndpi)
@@ -158,7 +162,13 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     if (ndpi == NULL)
         throw ndThreadException("Detection module initialization failure");
 
+    custom_proto_base = ndpi->ndpi_num_supported_protocols;
+
+    // Enable DNS response dissection
+    ndpi->dns_dissect_response = 1;
+
     if (ndpi_ref_count == 0) {
+        ndpi_parent = ndpi;
         ndpi_host_automa = ndpi_init_automa();
         if (ndpi_host_automa == NULL)
             throw ndThreadException("Unable to initialize host_automa");
@@ -177,10 +187,8 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     ndpi->host_automa.lock = ndpi_host_automa_lock;
     ndpi->protocols_ptree = ndpi_proto_ptree;
 
-    custom_proto_base = ndpi->ndpi_num_supported_protocols;
-
-    nd_ndpi_load_content_match(tag, ndpi);
-    nd_ndpi_load_host_match(tag, ndpi);
+    //nd_ndpi_load_content_match(tag, ndpi);
+    //nd_ndpi_load_host_match(tag, ndpi);
 
     ndpi_init_string_based_protocols(ndpi);
 
@@ -193,9 +201,6 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
 
     ndpi_set_protocol_detection_bitmask2(ndpi, &proto_all);
 
-    // Enable DNS response dissection
-    ndpi->dns_dissect_response = 1;
-
     if (ndpi_ref_count == 0 && nd_config.path_custom_match != NULL &&
         stat(nd_config.path_custom_match, &path_custom_match_stat) == 0) {
         nd_debug_printf("%s: loading custom protocols from%s: %s\n",
@@ -203,6 +208,33 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
             ND_OVERRIDE_CUSTOM_MATCH ? " override" : "",
             nd_config.path_custom_match);
         ndpi_load_protocols_file(ndpi, nd_config.path_custom_match);
+
+        //ndpi_host_automa = ndpi->host_automa.ac_automa;
+        //ndpi_proto_ptree = ndpi->protocols_ptree;
+    }
+
+    if (ndpi_ref_count > 0) {
+
+        for (int i = 0;
+            i < NDPI_MAX_SUPPORTED_PROTOCOLS + NDPI_MAX_NUM_CUSTOM_PROTOCOLS;
+            i++) {
+            memcpy(&ndpi->proto_defaults[i], &ndpi_parent->proto_defaults[i],
+                sizeof(ndpi_proto_defaults_t));
+            if (ndpi->proto_defaults[i].protoName != NULL) {
+                ndpi->proto_defaults[i].protoName = ndpi_strdup(
+                    ndpi_parent->proto_defaults[i].protoName
+                );
+            }
+        }
+
+        ndpi_tdestroy(ndpi->udpRoot, ndpi_free);
+        ndpi_tdestroy(ndpi->tcpRoot, ndpi_free);
+
+        ndpi->udpRoot = ndpi_parent->udpRoot;
+        ndpi->tcpRoot = ndpi_parent->tcpRoot;
+
+        ndpi->ndpi_num_supported_protocols = ndpi_parent->ndpi_num_supported_protocols;
+        ndpi->ndpi_num_custom_protocols = ndpi_parent->ndpi_num_custom_protocols;
     }
 
     ndpi_ref_count++;
@@ -220,6 +252,8 @@ void nd_ndpi_free(struct ndpi_detection_module_struct *ndpi)
     if (ndpi_ref_count > 0) {
         ndpi->host_automa.ac_automa = NULL;
         ndpi->protocols_ptree = NULL;
+        ndpi->udpRoot = NULL;
+        ndpi->tcpRoot = NULL;
     }
     else
         pthread_mutex_destroy(ndpi_host_automa_lock);

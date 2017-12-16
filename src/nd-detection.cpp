@@ -115,7 +115,7 @@ using namespace std;
 //#define _ND_LOG_PKT_DISCARD     1
 
 // Enable log log DNS Response processing
-#define _ND_LOG_DNS_RESPONSE    1
+//#define _ND_LOG_DNS_RESPONSE    1
 
 extern bool nd_debug;
 
@@ -851,13 +851,13 @@ void ndDetectionThread::ProcessPacket(void)
                 flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
 
                 if (! flow_iter.second) {
-                    nd_debug_printf("%s: dns old flow re-inserted.\n",
+                    if (ND_DEBUG_DNS_CACHE) nd_debug_printf("%s: dns old flow re-inserted.\n",
                         tag.c_str());
 
                     delete new_flow;
                     new_flow = flow_iter.first->second;
                 }
-                else {
+                else if (ND_DEBUG_DNS_CACHE) {
                     nd_debug_printf("%s: dns new flow re-inserted.\n",
                         tag.c_str());
                 }
@@ -900,6 +900,13 @@ void ndDetectionThread::ProcessPacket(void)
                     ND_FLOW_BTIHASH_LEN
                 );
             }
+            break;
+        case NDPI_PROTOCOL_MDNS:
+            snprintf(
+                new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN,
+                "%s", new_flow->ndpi_flow->protos.mdns.answer
+            );
+            break;
         }
 
         switch (new_flow->ip_version) {
@@ -1064,13 +1071,13 @@ bool ndDetectionThread::ProcessDNSResponse(
     int rc = ns_initparse(pkt, length, &ns_h);
 
     if (rc < 0) {
-        nd_debug_printf(
+        if (ND_DEBUG_DNS_CACHE) nd_debug_printf(
             "%s: dns initparse error: %s\n", tag.c_str(), strerror(errno));
         return false;
     }
 
     if (ns_msg_getflag(ns_h, ns_f_rcode) != ns_r_noerror) {
-        nd_debug_printf(
+        if (ND_DEBUG_DNS_CACHE) nd_debug_printf(
             "%s: dns response code: %hu\n", tag.c_str(),
             ns_msg_getflag(ns_h, ns_f_rcode));
         return false;
@@ -1083,7 +1090,7 @@ bool ndDetectionThread::ProcessDNSResponse(
 #endif
     for (uint16_t i = 0; i < ns_msg_count(ns_h, ns_s_an); i++) {
         if (ns_parserr(&ns_h, ns_s_an, i, &rr)) {
-            nd_debug_printf(
+            if (ND_DEBUG_DNS_CACHE) nd_debug_printf(
                 "%s: dns error parsing RR %hu of %hu.\n", tag.c_str(),
                 i + 1, ns_msg_count(ns_h, ns_s_an));
             continue;
@@ -1110,7 +1117,7 @@ bool ndDetectionThread::ProcessDNSResponse(
             inet_ntop(AF_INET6, &addr6, addr, INET6_ADDRSTRLEN);
         }
 
-        nd_debug_printf(
+        if (ND_DEBUG_DNS_CACHE) nd_debug_printf(
             "%s: dns RR %s address: %s, ttl: %u, rlen: %hu: %s\n",
             tag.c_str(), host,
             (ns_rr_type(rr) == ns_t_a) ? "A" : "AAAA",
