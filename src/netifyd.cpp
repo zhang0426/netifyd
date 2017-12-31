@@ -28,10 +28,12 @@
 #include <unordered_map>
 #include <vector>
 #include <locale>
+#include <atomic>
 
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/resource.h>
 
 #include <errno.h>
 #include <getopt.h>
@@ -1069,6 +1071,10 @@ static void nd_dump_stats(void)
     json.AddObject(NULL, "custom_match_digest", digest);
     nd_sha1_to_string(nd_config.digest_host_match, digest);
     json.AddObject(NULL, "host_match_digest", digest);
+
+    struct rusage rusage_data;
+    getrusage(RUSAGE_SELF, &rusage_data);
+    json.AddObject(NULL, "maxrss_kb", rusage_data.ru_maxrss);
 
     json_object *json_ifaces = json.CreateObject(NULL, "interfaces");
     json_object *json_devices = json.CreateObject(NULL, "devices");

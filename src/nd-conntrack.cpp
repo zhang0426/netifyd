@@ -23,8 +23,8 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
-
 #include <sstream>
+#include <atomic>
 
 #include <sys/stat.h>
 #include <sys/select.h>

@@ -29,6 +29,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
 
 #include <unistd.h>
 #include <pthread.h>

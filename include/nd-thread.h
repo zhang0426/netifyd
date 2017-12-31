@@ -52,8 +52,8 @@ protected:
     pthread_t id;
     pthread_attr_t attr;
     long cpu;
-    bool terminate;
-    bool terminated;
+    atomic_bool terminate;
+    atomic_bool terminated;
     pthread_mutex_t lock;
 
     int Join(void);

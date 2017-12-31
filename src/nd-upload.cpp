@@ -30,6 +30,7 @@
 #include <queue>
 #include <deque>
 #include <sstream>
+#include <atomic>
 
 #include <unistd.h>
 #include <signal.h>

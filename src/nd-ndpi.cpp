@@ -23,6 +23,7 @@
 #include <map>
 #include <unordered_map>
 #include <stdexcept>
+#include <atomic>
 
 #include <stdio.h>
 #include <stdlib.h>

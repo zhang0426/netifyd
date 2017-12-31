@@ -28,6 +28,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
 
 #include <arpa/inet.h>
 #include <errno.h>
