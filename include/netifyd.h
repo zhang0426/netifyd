@@ -226,6 +226,7 @@ typedef struct nd_dns_cache_t
     nd_dns_ar map_ar;
 
     void insert(sa_family_t af, const uint8_t *addr, const string &hostname);
+    void insert(const string &digest, const string &hostname);
 
     bool lookup(const struct in_addr &addr, string &hostname);
     bool lookup(const struct in6_addr &addr, string &hostname);

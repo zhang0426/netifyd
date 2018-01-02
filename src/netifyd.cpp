@@ -166,6 +166,27 @@ void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hos
     pthread_mutex_unlock(&lock);
 }
 
+void nd_dns_cache::insert(const string &digest, const string &hostname)
+{
+    int i = 0;
+    uint8_t v;
+    size_t len = digest.size();
+    const char *p = digest.c_str();
+    string _digest;
+
+    do {
+        if (sscanf(p, "%2hhx", &v) != 1) break;
+        _digest.append(1, v);
+        p += 2;
+    }
+    while (++i < SHA1_DIGEST_LENGTH);
+
+    if (_digest.size() != SHA1_DIGEST_LENGTH) return;
+
+    nd_dns_tuple ar(time_t(time(NULL) + nd_config.dns_cache_ttl), hostname);
+    map_ar.insert(nd_dns_cache_insert_pair(_digest, ar));
+}
+
 bool nd_dns_cache::lookup(const struct in_addr &addr, string &hostname)
 {
     sha1 ctx;
@@ -236,6 +257,43 @@ size_t nd_dns_cache::purge(void)
 
 void nd_dns_cache::load(void)
 {
+    int rc;
+    time_t ttl;
+    char header[1024], *host, *digest;
+    size_t loaded = 0, line = 1;
+
+    FILE *h_f = fopen(ND_DNS_CACHE_FILE_NAME, "r");
+    if (! h_f) return;
+
+    if (fgets(header, sizeof(header), h_f) == NULL) { fclose(h_f); return; }
+
+    pthread_mutex_lock(&lock);
+
+    while (! feof(h_f)) {
+        line++;
+        if ((rc = fscanf(h_f,
+            " \"%m[0-9A-z.-]\" , %m[0-9A-Fa-f] , %u\n",
+            &host, &digest, &ttl)) != 3) {
+            nd_printf("%s: parse error at line #%u [%d]\n",
+                ND_DNS_CACHE_FILE_NAME, line, rc);
+            if (rc >= 1) free(host);
+            if (rc >= 2) free(digest);
+            break;
+        }
+
+        insert(digest, host);
+
+        free(host);
+        free(digest);
+
+        loaded++;
+    }
+
+    nd_debug_printf("Loaded %u of %u DNS cache entries.\n", map_ar.size(), loaded);
+
+    pthread_mutex_unlock(&lock);
+
+    fclose(h_f);
 }
 
 void nd_dns_cache::save(void)
@@ -1553,6 +1611,8 @@ int main(int argc, char *argv[])
 
     memset(&totals, 0, sizeof(nd_packet_stats));
 
+    dns_cache.load();
+
     nd_sha1_file(
         nd_config.path_content_match, nd_config.digest_content_match);
     nd_sha1_file(
@@ -1787,6 +1847,8 @@ int main(int argc, char *argv[])
         delete thread_conntrack;
     }
 #endif
+    if (nd_config.dns_cache_save)
+        dns_cache.save();
     pthread_mutex_destroy(&dns_cache.lock);
 
     pthread_mutex_destroy(nd_printf_mutex);
