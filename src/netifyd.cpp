@@ -111,8 +111,9 @@ nd_global_config nd_config = {
     .max_udp_pkts = ND_MAX_UDP_PKTS,
     .update_interval = ND_STATS_INTERVAL,
     .upload_timeout = ND_UPLOAD_TIMEOUT,
+    .dns_cache_enable = true,
+    .dns_cache_save = true,
     .dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL,
-    .dns_cache_save = false,
 };
 
 pthread_mutex_t *nd_printf_mutex = NULL;
@@ -423,11 +424,14 @@ static int nd_config_load(void)
     nd_config.upload_timeout = (unsigned)reader.GetInteger(
         "netifyd", "upload_timeout", ND_UPLOAD_TIMEOUT);
 
-    nd_config.dns_cache_ttl = (unsigned)reader.GetInteger(
-        "netifyd", "dns_cache_ttl", ND_IDLE_DNS_CACHE_TTL);
+    nd_config.dns_cache_enable = reader.GetBoolean(
+        "dns_cache", "enable", true);
 
     nd_config.dns_cache_save = reader.GetBoolean(
-        "netifyd", "dns_cache_save", false);
+        "dns_cache", "save", true);
+
+    nd_config.dns_cache_ttl = (unsigned)reader.GetInteger(
+        "dns_cache", "cache_ttl", ND_IDLE_DNS_CACHE_TTL);
 
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
@@ -577,7 +581,7 @@ static int nd_start_detection_threads(void)
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
-                &dns_cache,
+                (nd_config.dns_cache_enable) ? &dns_cache : NULL,
                 (ifaces.size() > 1) ? cpu++ : -1
             );
 
@@ -1611,7 +1615,7 @@ int main(int argc, char *argv[])
 
     memset(&totals, 0, sizeof(nd_packet_stats));
 
-    dns_cache.load();
+    if (nd_config.dns_cache_enable) dns_cache.load();
 
     nd_sha1_file(
         nd_config.path_content_match, nd_config.digest_content_match);
@@ -1765,9 +1769,11 @@ int main(int argc, char *argv[])
 #endif
             nd_dump_stats();
 
-            dns_cache.purge();
-            if (nd_config.dns_cache_save)
-                dns_cache.save();
+            if (nd_config.dns_cache_enable) {
+                dns_cache.purge();
+                if (nd_config.dns_cache_save)
+                    dns_cache.save();
+            }
 
             nd_reap_detection_threads();
 
@@ -1847,7 +1853,7 @@ int main(int argc, char *argv[])
         delete thread_conntrack;
     }
 #endif
-    if (nd_config.dns_cache_save)
+    if (nd_config.dns_cache_enable && nd_config.dns_cache_save)
         dns_cache.save();
     pthread_mutex_destroy(&dns_cache.lock);
 
