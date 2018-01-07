@@ -558,7 +558,7 @@ void ndDetectionThread::ProcessPacket(void)
         }
     }
     else {
-        // XXX: Warning: unsupported protocol version (IPv4/6 only)
+        // XXX: Warning: unsupported IP protocol version (IPv4/6 only)
         stats->pkt_discard++;
         stats->pkt_discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
@@ -779,8 +779,9 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            if (new_flow->ndpi_flow->host_server_name[0] == '\0' ||
-                nd_is_ipaddr((const char *)new_flow->ndpi_flow->host_server_name)) {
+            if (dns_cache != NULL &&
+                (new_flow->ndpi_flow->host_server_name[0] == '\0' ||
+                nd_is_ipaddr((const char *)new_flow->ndpi_flow->host_server_name))) {
 
                 string hostname;
 
@@ -813,9 +814,10 @@ void ndDetectionThread::ProcessPacket(void)
                         (char *)new_flow->ndpi_flow->host_server_name,
                         strlen((const char *)new_flow->ndpi_flow->host_server_name),
                         new_flow->detected_protocol.master_protocol);
-
+#if 0
                     nd_debug_printf("%s: Found hostname for undetected app proto: %s [%hu]\n",
                         tag.c_str(), hostname.c_str(), new_flow->detected_protocol.app_protocol);
+#endif
                 }
             }
         }
@@ -840,27 +842,29 @@ void ndDetectionThread::ProcessPacket(void)
         switch (new_flow->master_protocol()) {
 
         case NDPI_PROTOCOL_DNS:
-            if (pkt != NULL && pkt_len > 12 && ProcessDNSResponse(
-                new_flow->host_server_name, pkt, pkt_len)) {
+            if (dns_cache != NULL && pkt != NULL && pkt_len > 12 &&
+                ProcessDNSResponse(new_flow->host_server_name, pkt, pkt_len)) {
 
+                // Rehash DNS flows:
+                // This is done to uniquely track queries that originate from
+                // the same local port.  Some devices re-use their local port
+                // which would cause additional queries to not be processed.
+                // Rehashing using the host_server_name as an additional key
+                // guarantees that we see all DNS queries/responses.
                 new_flow->hash(tag, digest, false,
                     (const uint8_t *)new_flow->host_server_name,
                     strnlen(new_flow->host_server_name, HOST_NAME_MAX));
 
-                // XXX: To be optimized.
                 flows->erase(flow_iter.first);
                 flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
 
                 if (! flow_iter.second) {
-                    if (ND_DEBUG_DNS_CACHE) nd_debug_printf("%s: dns old flow re-inserted.\n",
-                        tag.c_str());
-
+                    // TODO: The new_flow stat counters should be added
+                    // to the existing flow before being destroyed.
+                    new_flow->release();
                     delete new_flow;
+
                     new_flow = flow_iter.first->second;
-                }
-                else if (ND_DEBUG_DNS_CACHE) {
-                    nd_debug_printf("%s: dns new flow re-inserted.\n",
-                        tag.c_str());
                 }
             }
             break;
