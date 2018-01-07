@@ -10,13 +10,13 @@ The netifyd.conf file is used to configure the behaviour of the Netify daemon an
 .SH MAIN SECTION
 The main server options are defined within the [\fBnetifyd\fR] section.
 .PP
-\fBdns_cache_ttl\fR=\fIINTEGER\fR
+\fBjson_save\fR=\fIBOOLEAN\fR
 .PP
-The \fBdns_cache_ttl\fR paramter can be set to override the default time interval that cached DNS answer records will be kept in memory.  The default time is 30 minutes.
+Enable/disable the \fBjson_save\fR paramter to set whether the current state is output as JSON.  The default is true.
 .PP
-\fBenable_netify_sink\fR=\fIBOOLEAN\fR
+\fBenable_sink\fR=\fIBOOLEAN\fR
 .PP
-Uploading detection flow metadata to the Netify Portal can be enabled or disabled by setting the \fBenable_netify_sink\fR option.  When enabled, detection flow metadata is JSON-encoded, compressed, and uploaded to the Netify Sink server for further analysis and reporting.
+Uploading detection flow metadata to the Netify Portal can be enabled or disabled by setting the \fBenable_sink\fR option.  When enabled, detection flow metadata is JSON-encoded, compressed, and uploaded to the Netify Sink server for further analysis and reporting.
 .PP
 \fBmax_backlog_kb\fR=\fIINTEGER\fR
 .PP
@@ -59,11 +59,11 @@ The DNS hint cache stores DNS response records for a period of time.  These hint
 .PP
 \fBenable\fR=\fIBOOLEAN\fR
 .PP
-Enable or disable the DNS hint cache.  The default is false.  On non-embedded systems with more memory, it is highly recommended that this be enabled for more comprehensive application detection.
+Enable or disable the DNS hint cache.  On non-embedded systems with more memory, it is highly recommended that this be enabled for more comprehensive application detection.  The default is true.
 .PP
 \fBsave\fR=\fIBOOLEAN\fR
 .PP
-Enable or disable periodic saving of the DNS hint cache.  The default is false.  When reasonably fast storage (hard-drive, fast flash, or sufficiently large RAM disk) is available this option should be enabled.  In the event of a program crash/reload, or system reboot, the DNS hint cache will be primed on start-up.  This prevents failed application detection due to missed DNS responses.
+Enable or disable periodic saving of the DNS hint cache.  When reasonably fast storage (hard-drive, fast flash, or sufficiently large RAM disk) is available this option should be enabled.  In the event of a program crash/reload, or system reboot, the DNS hint cache will be primed on start-up.  This prevents failed application detection due to missed DNS responses.  The default is true.
 .PP
 \fBcache_ttl\fR=\fISECONDS\fR
 .PP
@@ -110,7 +110,8 @@ The following sample configuration file contains all possible options.
 # Netify Agent sample configuration
 
 [netifyd]
-enable_netify_sink = true
+enable_sink = true
+json_save = true
 max_backlog_kb = 2048
 max_tcp_pkts = 10
 max_udp_pkts = 8
@@ -121,14 +122,14 @@ uuid = 00-00-00-00
 uuid_serial = abc123
 
 [dns_cache]
+cache_ttl = 1800
 enable = true
 save = true
-cache_ttl = 1800
 
 [socket]
-listen_path[0] = /var/lib/netifyd/netifyd.sock
 listen_address[0] = 0.0.0.0
 listen_port[0] = 7150
+listen_path[0] = /var/lib/netifyd/netifyd.sock
 
 [privacy_filter]
 mac[0] = 00:11:22:33:44:55

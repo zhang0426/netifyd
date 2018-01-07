@@ -438,6 +438,9 @@ static int nd_config_load(void)
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
 
     nd_config.flags |= (reader.GetBoolean(
+        "netifyd", "enable_sink", false)) ? ndGF_USE_SINK : 0;
+
+    nd_config.flags |= (reader.GetBoolean(
         "netifyd", "enable_netify_sink", false)) ? ndGF_USE_SINK : 0;
 
     nd_config.flags |= (reader.GetBoolean(
