@@ -2,9 +2,7 @@
 .SH NAME
 netifyd.conf - Netify Agent configuration file
 .SH DESCRIPTION
-The netifyd.conf file contains configuration information for
-.IR netifyd,
-a deep-packet inspection daemon.
+The netifyd.conf file contains configuration information for \fBnetifyd(8)\fR, a deep-packet inspection daemon.
 .PP
 The netifyd.conf file follows the standard INI-style file format.
 .PP
@@ -43,7 +41,7 @@ Specifiy the number of seconds between update intervals.  The default and recomm
 .PP
 \fBuuid\fR=\fIUUID\fR
 .PP
-A client UUID is a base-35 alpha-numeric string (0-9, A-N, P-Z) comprised of 8 digits in four groups of two seperated by dashes.  The letter "\fUO\fR" is removed to avoid confusion with zero "\fU0\fR".  A client UUID example: 00-11-AB-YZ  You can use \fBnetifyd\fR to generate a random UUID:
+A client UUID is a base-35 alpha-numeric string (0-9, A-N, P-Z) comprised of 8 digits in four groups of two seperated by dashes.  The letter "\fUO\fR" is removed to avoid confusion with zero "\fU0\fR".  A client UUID example: 00-11-AB-YZ  You can use \fBnetifyd(8)\fR to generate a random UUID:
 
 .nf
 # netifyd -U
@@ -73,7 +71,7 @@ The number of seconds DNS hints should be cached.  New hints will have their ini
 .SH SOCKET SECTION
 All socket related configuration options are specified under the [\fBsocket\fR] section.
 
-The Netify Agent can be configured to listen on one or more sockets (TCP/IP socket, or UNIX-domain socket).  Upon a client connection, \fBnetifyd\fR will pass real-time JSON-encoded flow detections.  This is designed for interfacing with third-party applications.  Take care to protect these sockets as there is no authentication or encryption performed.
+The Netify Agent can be configured to listen on one or more sockets (TCP/IP socket, or UNIX-domain socket).  Upon a client connection, \fBnetifyd(8)\fR will pass real-time JSON-encoded flow detections.  This is designed for interfacing with third-party applications.  Take care to protect these sockets as there is no authentication or encryption performed.
 
 Declare these paramters as arrays with a starting index[\fIn\fR] of zero.
 .PP
