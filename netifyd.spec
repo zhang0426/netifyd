@@ -52,7 +52,7 @@ Summary: Netify Agent
 Version: 2.4
 Release: 1%{dist}
 Vendor: eGloo Incorporated
-License: GPL
+License: GPLv3
 Group: System/Daemons
 Packager: eGloo Incorporated
 Source: %{name}-%{version}.tar.gz
