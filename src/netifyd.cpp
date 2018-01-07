@@ -143,6 +143,7 @@ WINDOW *win_output = NULL;
 static ndNetlink *netlink = NULL;
 static map<string, string> device_netlink;
 #endif
+static time_t nd_ethers_mtime = 0;
 
 void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hostname)
 {
@@ -1060,6 +1061,17 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
 static void nd_load_ethers(void)
 {
     char buffer[1024 + ND_STR_ETHALEN + 17];
+
+    struct stat ethers_stat;
+    if (stat(ND_ETHERS_FILE_NAME, &ethers_stat) < 0) {
+        cerr << "Can not stat ethers file: " << ND_ETHERS_FILE_NAME <<
+            ": " << strerror(errno) << endl;
+        return;
+    }
+
+    if (nd_ethers_mtime == ethers_stat.st_mtime) return;
+    nd_ethers_mtime = ethers_stat.st_mtime;
+
     FILE *fh = fopen(ND_ETHERS_FILE_NAME, "r");
 
     if (fh == NULL) return;
@@ -1102,23 +1114,6 @@ static void nd_load_ethers(void)
 
     nd_debug_printf("Loaded %lu entries from: %s\n",
         device_ethers.size(), ND_ETHERS_FILE_NAME);
-}
-
-static void nd_json_upload(ndJson *json)
-{
-#ifdef _ND_USE_INOTIFY
-    for (map<string, string>::const_iterator i = inotify_watches.begin();
-        i != inotify_watches.end(); i++) {
-        if (! inotify->EventOccured(i->first)) continue;
-        nd_json_add_file(json->GetRoot(), i->first, i->second);
-    }
-#else
-    if (ND_DEBUG && ND_DEBUG_WITH_ETHERS) nd_load_ethers();
-#endif
-    string json_string;
-    json->ToString(json_string);
-
-    if (ND_USE_SINK) thread_upload->QueuePush(json_string);
 }
 
 static void nd_dump_stats(void)
@@ -1182,27 +1177,40 @@ static void nd_dump_stats(void)
         i->second->Unlock();
     }
 
+    if (ND_USE_SINK) {
+        try {
+#ifdef _ND_USE_INOTIFY
+            for (map<string, string>::const_iterator i = inotify_watches.begin();
+                i != inotify_watches.end(); i++) {
+                if (! inotify->EventOccured(i->first)) continue;
+                nd_json_add_file(json.GetRoot(), i->first, i->second);
+            }
+#endif
+            string json_string;
+            json.ToString(json_string);
+
+            thread_upload->QueuePush(json_string);
+        }
+        catch (runtime_error &e) {
+            nd_printf("Error pushing JSON payload to upload queue: %s\n", e.what());
+        }
+    }
+
     try {
         if (ND_JSON_SAVE)
             json.SaveToFile(nd_config.path_json);
     }
     catch (runtime_error &e) {
-        nd_printf("Error writing JSON file: %s: %s\n",
+        nd_printf("Error writing JSON playload to file: %s: %s\n",
             nd_config.path_json, e.what());
-    }
-
-    if (ND_USE_SINK) {
-        try {
-            nd_json_upload(&json);
-        }
-        catch (runtime_error &e) {
-            nd_printf("Error uploading JSON: %s\n", e.what());
-        }
     }
 
     json.Destroy();
 
-    if (ND_DEBUG) nd_print_stats(flow_count, totals);
+    if (ND_DEBUG) {
+        if (ND_DEBUG_WITH_ETHERS) nd_load_ethers();
+        nd_print_stats(flow_count, totals);
+    }
 }
 
 void nd_generate_uuid(void)
