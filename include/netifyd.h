@@ -119,8 +119,11 @@ enum nd_global_flags {
     ndGF_USE_CONNTRACK = 0x200,
     ndGF_USE_NCURSES = 0x400,
     ndGF_USE_SINK = 0x800,
-    ndGF_VERBOSE = 0x1000,
-    ndGF_REPLAY_DELAY = 0x2000
+    ndGF_USE_DNS_CACHE = 0x1000,
+    ndGF_DNS_CACHE_SAVE = 0x2000,
+    ndGF_JSON_SAVE = 0x4000,
+    ndGF_VERBOSE = 0x8000,
+    ndGF_REPLAY_DELAY = 0x10000,
 };
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
@@ -135,6 +138,9 @@ enum nd_global_flags {
 #define ND_USE_CONNTRACK (nd_config.flags & ndGF_USE_CONNTRACK)
 #define ND_USE_NCURSES (nd_config.flags & ndGF_USE_NCURSES)
 #define ND_USE_SINK (nd_config.flags & ndGF_USE_SINK)
+#define ND_USE_DNS_CACHE (nd_config.flags & ndGF_USE_DNS_CACHE)
+#define ND_DNS_CACHE_SAVE (nd_config.flags & ndGF_DNS_CACHE_SAVE)
+#define ND_JSON_SAVE (nd_config.flags & ndGF_JSON_SAVE)
 #define ND_VERBOSE (nd_config.flags & ndGF_VERBOSE)
 #define ND_REPLAY_DELAY (nd_config.flags & ndGF_REPLAY_DELAY)
 
@@ -157,8 +163,6 @@ typedef struct nd_global_config_t {
     unsigned max_udp_pkts;
     unsigned update_interval;
     unsigned upload_timeout;
-    bool dns_cache_enable;
-    bool dns_cache_save;
     unsigned dns_cache_ttl;
 
     vector<pair<string, string> > socket_host;

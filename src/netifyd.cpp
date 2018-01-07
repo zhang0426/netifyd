@@ -111,8 +111,6 @@ nd_global_config nd_config = {
     .max_udp_pkts = ND_MAX_UDP_PKTS,
     .update_interval = ND_STATS_INTERVAL,
     .upload_timeout = ND_UPLOAD_TIMEOUT,
-    .dns_cache_enable = true,
-    .dns_cache_save = true,
     .dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL,
 };
 
@@ -424,11 +422,14 @@ static int nd_config_load(void)
     nd_config.upload_timeout = (unsigned)reader.GetInteger(
         "netifyd", "upload_timeout", ND_UPLOAD_TIMEOUT);
 
-    nd_config.dns_cache_enable = reader.GetBoolean(
-        "dns_cache", "enable", true);
+    nd_config.flags |= (reader.GetBoolean(
+        "netifyd", "json_save", true)) ? ndGF_JSON_SAVE : 0;
 
-    nd_config.dns_cache_save = reader.GetBoolean(
-        "dns_cache", "save", true);
+    nd_config.flags |= (reader.GetBoolean(
+        "dns_cache", "enable", true)) ? ndGF_USE_DNS_CACHE : 0;
+
+    nd_config.flags |= (reader.GetBoolean(
+        "dns_cache", "save", true)) ? ndGF_DNS_CACHE_SAVE : 0;
 
     nd_config.dns_cache_ttl = (unsigned)reader.GetInteger(
         "dns_cache", "cache_ttl", ND_IDLE_DNS_CACHE_TTL);
@@ -581,7 +582,7 @@ static int nd_start_detection_threads(void)
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
-                (nd_config.dns_cache_enable) ? &dns_cache : NULL,
+                (ND_USE_DNS_CACHE) ? &dns_cache : NULL,
                 (ifaces.size() > 1) ? cpu++ : -1
             );
 
@@ -1123,28 +1124,34 @@ static void nd_dump_stats(void)
     uint32_t flow_count = 0;
 
     ndJson json;
-    json_object *json_obj;
+    json_object *json_obj = NULL;
+    json_object *json_ifaces = NULL;
+    json_object *json_devices = NULL;
+    json_object *json_stats = NULL;
+    json_object *json_flows = NULL;
 
-    json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
-    json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
-    nd_sha1_to_string(nd_config.digest_content_match, digest);
-    json.AddObject(NULL, "content_match_digest", digest);
-    nd_sha1_to_string(nd_config.digest_custom_match, digest);
-    json.AddObject(NULL, "custom_match_digest", digest);
-    nd_sha1_to_string(nd_config.digest_host_match, digest);
-    json.AddObject(NULL, "host_match_digest", digest);
+    if (ND_USE_SINK || ND_JSON_SAVE) {
+        json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
+        json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
+        nd_sha1_to_string(nd_config.digest_content_match, digest);
+        json.AddObject(NULL, "content_match_digest", digest);
+        nd_sha1_to_string(nd_config.digest_custom_match, digest);
+        json.AddObject(NULL, "custom_match_digest", digest);
+        nd_sha1_to_string(nd_config.digest_host_match, digest);
+        json.AddObject(NULL, "host_match_digest", digest);
 
-    struct rusage rusage_data;
-    getrusage(RUSAGE_SELF, &rusage_data);
-    json.AddObject(NULL, "maxrss_kb", rusage_data.ru_maxrss);
+        struct rusage rusage_data;
+        getrusage(RUSAGE_SELF, &rusage_data);
+        json.AddObject(NULL, "maxrss_kb", rusage_data.ru_maxrss);
 
-    json_object *json_ifaces = json.CreateObject(NULL, "interfaces");
-    json_object *json_devices = json.CreateObject(NULL, "devices");
-    json_object *json_stats = json.CreateObject(NULL, "stats");
-    json_object *json_flows = json.CreateObject(NULL, "flows");
+        json_ifaces = json.CreateObject(NULL, "interfaces");
+        json_devices = json.CreateObject(NULL, "devices");
+        json_stats = json.CreateObject(NULL, "stats");
+        json_flows = json.CreateObject(NULL, "flows");
 
-    nd_json_add_interfaces(json_ifaces);
-    nd_json_add_devices(json_devices);
+        nd_json_add_interfaces(json_ifaces);
+        nd_json_add_devices(json_devices);
+    }
 
     for (nd_threads::iterator i = threads.begin();
         i != threads.end(); i++) {
@@ -1154,24 +1161,27 @@ static void nd_dump_stats(void)
         totals += *stats[i->first];
         flow_count += flows[i->first]->size();
 
-        json_obj = json.CreateObject();
-        nd_json_add_stats(json_obj, stats[i->first]);
+        if (ND_USE_SINK || ND_JSON_SAVE) {
+            json_obj = json.CreateObject();
+            nd_json_add_stats(json_obj, stats[i->first]);
 
-        string iface_name;
-        nd_iface_name(i->first, iface_name);
-        json_object_object_add(json_stats, iface_name.c_str(), json_obj);
+            string iface_name;
+            nd_iface_name(i->first, iface_name);
+            json_object_object_add(json_stats, iface_name.c_str(), json_obj);
+
+            json_obj = json.CreateArray(json_flows, iface_name);
+            nd_json_add_flows(iface_name, json_obj,
+                i->second->GetDetectionModule(), flows[i->first]);
+        }
 
         memset(stats[i->first], 0, sizeof(nd_packet_stats));
-
-        json_obj = json.CreateArray(json_flows, iface_name);
-        nd_json_add_flows(iface_name, json_obj,
-            i->second->GetDetectionModule(), flows[i->first]);
 
         i->second->Unlock();
     }
 
     try {
-        json.SaveToFile(nd_config.path_json);
+        if (ND_JSON_SAVE)
+            json.SaveToFile(nd_config.path_json);
     }
     catch (runtime_error &e) {
         nd_printf("Error writing JSON file: %s: %s\n",
@@ -1615,7 +1625,7 @@ int main(int argc, char *argv[])
 
     memset(&totals, 0, sizeof(nd_packet_stats));
 
-    if (nd_config.dns_cache_enable) dns_cache.load();
+    if (ND_USE_DNS_CACHE) dns_cache.load();
 
     nd_sha1_file(
         nd_config.path_content_match, nd_config.digest_content_match);
@@ -1769,9 +1779,9 @@ int main(int argc, char *argv[])
 #endif
             nd_dump_stats();
 
-            if (nd_config.dns_cache_enable) {
+            if (ND_USE_DNS_CACHE) {
                 dns_cache.purge();
-                if (nd_config.dns_cache_save)
+                if (ND_DNS_CACHE_SAVE)
                     dns_cache.save();
             }
 
@@ -1853,7 +1863,7 @@ int main(int argc, char *argv[])
         delete thread_conntrack;
     }
 #endif
-    if (nd_config.dns_cache_enable && nd_config.dns_cache_save)
+    if (ND_USE_DNS_CACHE && ND_DNS_CACHE_SAVE)
         dns_cache.save();
     pthread_mutex_destroy(&dns_cache.lock);
 
