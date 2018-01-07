@@ -157,8 +157,9 @@ typedef struct nd_global_config_t {
     unsigned max_udp_pkts;
     unsigned update_interval;
     unsigned upload_timeout;
-    unsigned dns_cache_ttl;
+    bool dns_cache_enable;
     bool dns_cache_save;
+    unsigned dns_cache_ttl;
 
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
