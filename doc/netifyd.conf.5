@@ -54,6 +54,22 @@ The client UUID is used by the Netify Portal to provision a site to a realm.
 \fBuuid_serial\fR=\fIUUID\fR
 .PP
 Specify an supplemental UUID (serial number).  This is usually taken from the device hardware, such as a BIOS UUID or MAC address, or a hash of several unique system properties.  Normally only the client UUID is needed.  There is no default value.
+.SH DNS CACHE SECTION
+DNS hint cache options are set within the [\fBdns_cache\fR] section.
+
+The DNS hint cache stores DNS response records for a period of time.  These hints are used when application detection fails.  A cache look-up is performed and any matching hostname is used to 'hint' the application detection logic.  In most cases this significantly improves application detection.
+.PP
+\fBenable\fR=\fIBOOLEAN\fR
+.PP
+Enable or disable the DNS hint cache.  The default is false.  On non-embedded systems with more memory, it is highly recommended that this be enabled for more comprehensive application detection.
+.PP
+\fBsave\fR=\fIBOOLEAN\fR
+.PP
+Enable or disable periodic saving of the DNS hint cache.  The default is false.  When reasonably fast storage (hard-drive, fast flash, or sufficiently large RAM disk) is available this option should be enabled.  In the event of a program crash/reload, or system reboot, the DNS hint cache will be primed on start-up.  This prevents failed application detection due to missed DNS responses.
+.PP
+\fBcache_ttl\fR=\fISECONDS\fR
+.PP
+The number of seconds DNS hints should be cached.  New hints will have their initial TTL set to this value.  Existing hints will have their TTL reset to this value on a cache hit (look-up match).  This value should be adjusted according to available memory and network traffic.  Larger networks will generate significantly more DNS traffic.  The default value is 30 minutes (1800 seconds).
 .SH SOCKET SECTION
 All socket related configuration options are specified under the [\fBsocket\fR] section.
 
@@ -75,9 +91,10 @@ For TCP/IP sockets, you can specify a corresponding \fISERVICE\fR or \fIPORT\fR.
 .SH PRIVACY FILTER SECTION
 The Netify Agent can be configured to obfuscate flow addresses (MAC and IP) that match rules in the [\fBprivacy_filter\fR] section.  You can match by MAC or IP address.  When a match is found, the MAC and IP address will be replaced with the following bogus addresses:
 
+ \fBMAC\fR: 01:02:03:04:05:06 (lower addresses) 0a:0b:0c:0d:0e:0f (upper addresses)
+
  \fBIPv4\fR: 1.2.3.1 (lower addresses) 1.2.3.2 (upper addresses)
  \fBIPv6\fR: 1230::1 (lower addresses) 1230::2 (upper addresses)
- \fBMAC\fR: 01:02:03:04:05:06 (lower addresses) 0a:0b:0c:0d:0e:0f (upper addresses)
 
 Declare these paramters as arrays with a starting index[\fIn\fR] of zero.
 .PP
@@ -104,6 +121,11 @@ ssl_verify_peer = true
 update_interval = 15
 uuid = 00-00-00-00
 uuid_serial = abc123
+
+[dns_cache]
+enable = true
+save = true
+cache_ttl = 1800
 
 [socket]
 listen_path[0] = /var/lib/netifyd/netifyd.sock
