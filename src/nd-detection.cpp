@@ -130,6 +130,17 @@ extern bool nd_debug;
 
 extern nd_global_config nd_config;
 
+struct __attribute__((packed)) nd_mpls_header_t
+{
+#if defined(__LITTLE_ENDIAN__)
+    uint32_t ttl:8, s:1, exp:3, label:20;
+#elif defined(__BIG_ENDIAN__)
+    uint32_t label:20, exp:3, s:1, ttl:8;
+#else
+#error Endianess not defined.
+#endif
+};
+
 ndDetectionThread::ndDetectionThread(const string &dev,
 #ifdef _ND_USE_NETLINK
     const string &netlink_dev,
@@ -397,13 +408,17 @@ void ndDetectionThread::ProcessPacket(void)
         }
         else if (type == ETHERTYPE_MPLS_UC || type == ETHERTYPE_MPLS_MC) {
             stats->pkt_mpls++;
-            uint32_t label = ntohl(*((uint32_t *)&pkt_data[l2_len]));
+            union mpls {
+                uint32_t u32;
+                struct nd_mpls_header_t mpls;
+            } mpls;
+            mpls.u32 = ntohl(*((uint32_t *)&pkt_data[l2_len]));
             type = ETHERTYPE_IP;
             l2_len += 4;
 
-            while ((label & 0x100) != 0x100) {
+            while (! mpls.mpls.s) {
                 l2_len += 4;
-                label = ntohl(*((uint32_t *)&pkt_data[l2_len]));
+                mpls.u32 = ntohl(*((uint32_t *)&pkt_data[l2_len]));
             }
         }
         else if (type == ETHERTYPE_PPPOE) {
