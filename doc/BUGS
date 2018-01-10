@@ -1,0 +1,23 @@
+Unclassified Applications
+-------------------------
+
+Just a list of "should-be-classified" applications:
+
+- *.gvt1.com: Google update service
+
+Google Hangouts
+---------------
+Because we remove all application definitions from nDPI and define our own,
+Google Hangout detection is broken.  Several solutions to be investigated.
+
+Memory Leak - libCURL/NSS
+-------------------------
+
+- There is a known run-time memory leak in libnss < 3.34.0-0.1.beta1
+- Affected: ClearOS/CentOS/RHEL = 6.*
+  https://bugzilla.redhat.com/show_bug.cgi?id=1057388
+- Affected: ClearOS/CentOS/RHEL < 7.5
+  https://bugzilla.redhat.com/show_bug.cgi?id=1395803
+- Solutions:
+    - Disable SSL peer verification (BAD!)
+    - Use built-in libcurl with OpenSSL back-end (SAD!).
