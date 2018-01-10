@@ -36,6 +36,7 @@
 #include <signal.h>
 #include <netdb.h>
 #include <resolv.h>
+#include <endian.h>
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -61,6 +62,7 @@
 #define ETHERTYPE_MPLS_UC ETH_P_MPLS_UC
 #else
 #error Unable to find suitable define for ETHERTYPE_MPLS_UC
+#endif
 #endif
 #ifndef ETHERTYPE_MPLS_MC
 #ifdef ETH_P_MPLS_MC
