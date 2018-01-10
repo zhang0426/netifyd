@@ -56,11 +56,17 @@
 #include <netinet/udp.h>
 #undef __FAVOR_BSD
 
-#ifndef ETHERTYPE_MPLS
+#ifndef ETHERTYPE_MPLS_UC
 #ifdef ETH_P_MPLS_UC
-#define ETHERTYPE_MPLS ETH_P_MPLS_UC
+#define ETHERTYPE_MPLS_UC ETH_P_MPLS_UC
 #else
-#error Unable to find suitable define for ETHERTYPE_MPLS
+#error Unable to find suitable define for ETHERTYPE_MPLS_UC
+#endif
+#ifndef ETHERTYPE_MPLS_MC
+#ifdef ETH_P_MPLS_MC
+#define ETHERTYPE_MPLS_MC ETH_P_MPLS_MC
+#else
+#error Unable to find suitable define for ETHERTYPE_MPLS_MC
 #endif
 #endif
 #ifndef ETHERTYPE_PPPOE
@@ -387,7 +393,7 @@ void ndDetectionThread::ProcessPacket(void)
             type = (pkt_data[l2_len + 2] << 8) + pkt_data[l2_len + 3];
             l2_len += 4;
         }
-        else if (type == ETHERTYPE_MPLS) {
+        else if (type == ETHERTYPE_MPLS_UC || type == ETHERTYPE_MPLS_MC) {
             stats->pkt_mpls++;
             uint32_t label = ntohl(*((uint32_t *)&pkt_data[l2_len]));
             type = ETHERTYPE_IP;
