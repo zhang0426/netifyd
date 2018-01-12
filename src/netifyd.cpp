@@ -324,7 +324,8 @@ static nd_dns_cache dns_cache;
 static void nd_usage(int rc = 0, bool version = false)
 {
     cerr << PACKAGE_NAME << " v" << PACKAGE_VERSION << "/";
-    cerr << fixed << showpoint << setprecision(1) << ND_JSON_VERSION << endl;
+    cerr << fixed << showpoint << setprecision(1) << ND_JSON_VERSION;
+    cerr << " [" << _ND_CANONICAL_HOST << "]" << endl;
     cerr << "Copyright (C) 2015-2018 eGloo Incorporated"
          <<  endl << "[" << GIT_RELEASE << " " << GIT_DATE << "]" << endl;
     if (version) {

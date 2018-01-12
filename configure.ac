@@ -12,15 +12,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
-
-# Detect the target system
-case "${host_os}" in
-    linux*)
-        ;;
-    *)
-        AC_MSG_ERROR(["OS $host_os is not supported"])
-        ;;
-esac
+AC_DEFINE_UNQUOTED([_ND_CANONICAL_HOST], ["${host_os}"], [Defines the canonical host.])
 
 # Checks for programs.
 AC_PROG_CC
@@ -35,6 +27,7 @@ AS_IF([test "x$ac_cv_path_bash" != "xfalse"], [
 ], [
     AC_MSG_ERROR([bash not found.])
 ])
+
 # Checks for libraries.
 AC_CHECK_LIB([pcap],
     [pcap_open_live], [], [AC_MSG_ERROR([libpcap/pcap_open_live() not found.])])
@@ -42,8 +35,12 @@ AC_CHECK_LIB([pthread],
     [pthread_create], [], [AC_MSG_ERROR([libpthread/pthread_create() not found.])])
 AC_CHECK_LIB([rt],
     [timer_create], [], [AC_MSG_ERROR([librt/timer_create() not found.])])
-AC_CHECK_LIB([resolv],
-    [ns_initparse], [], [AC_MSG_ERROR([libresolv/ns_initparse() not found.])])
+case "${host_os}" in
+    linux*)
+        AC_CHECK_LIB([resolv],
+            [ns_initparse], [], [AC_MSG_ERROR([libresolv/ns_initparse() not found.])])
+        ;;
+esac
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
@@ -125,7 +122,7 @@ AS_IF([test "x$enable_netlink" = "xyes"], [
     AM_CONDITIONAL(USE_NETLINK, false)
 ])
 
-# Checks for header files.
+# Checks for required header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h net/ethernet.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/socket.h sys/types.h sys/time.h sys/un.h syslog.h unistd.h], [], AC_MSG_ERROR([required header(s) not found.]))
 AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC_MSG_ERROR([required netinet header(s) not found.]),
 [[#ifdef HAVE_SYS_TYPES_H
@@ -135,6 +132,9 @@ AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC
 #include <netinet/in.h>
 #endif
 ]])
+
+# Check for optional header files.
+AC_CHECK_HEADERS([endian.h])
 
 # Check compiler flags (gnu++11)
 m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])

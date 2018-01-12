@@ -31,13 +31,6 @@
 #include <vector>
 #include <atomic>
 
-#include <unistd.h>
-#include <pthread.h>
-#include <signal.h>
-#include <netdb.h>
-#include <resolv.h>
-#include <endian.h>
-
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -57,33 +50,49 @@
 #include <netinet/udp.h>
 #undef __FAVOR_BSD
 
-#ifndef ETHERTYPE_MPLS_UC
-#ifdef ETH_P_MPLS_UC
-#define ETHERTYPE_MPLS_UC ETH_P_MPLS_UC
-#else
-#error Unable to find suitable define for ETHERTYPE_MPLS_UC
+#if !defined(ETHERTYPE_MPLS_UC)
+ #if defined(ETHERTYPE_MPLS)
+  #define ETHERTYPE_MPLS_UC ETHERTYPE_MPLS
+ #elif defined(ETH_P_MPLS_UC)
+  #define ETHERTYPE_MPLS_UC ETH_P_MPLS_UC
+ #else
+  #error Unable to find suitable define for ETHERTYPE_MPLS_UC
+ #endif
 #endif
+
+#if !defined(ETHERTYPE_MPLS_MC)
+ #if defined(ETHERTYPE_MPLS_MCAST)
+  #define ETHERTYPE_MPLS_MC ETHERTYPE_MPLS_MCAST
+ #elif defined(ETH_P_MPLS_MC)
+  #define ETHERTYPE_MPLS_MC ETH_P_MPLS_MC
+ #else
+  #error Unable to find suitable define for ETHERTYPE_MPLS_MC
+ #endif
 #endif
-#ifndef ETHERTYPE_MPLS_MC
-#ifdef ETH_P_MPLS_MC
-#define ETHERTYPE_MPLS_MC ETH_P_MPLS_MC
-#else
-#error Unable to find suitable define for ETHERTYPE_MPLS_MC
+
+#if !defined(ETHERTYPE_PPPOE)
+ #if defined(ETH_P_PPP_SES)
+  #define ETHERTYPE_PPPOE ETH_P_PPP_SES
+ #else
+  #error Unable to find suitable define for ETHERTYPE_PPPOE
+ #endif
 #endif
+
+#if !defined(ETHERTYPE_PPPOEDISC)
+ #if defined(ETH_P_PPP_DISC)
+  #define ETHERTYPE_PPPOEDISC ETH_P_PPP_DISC
+ #else
+  #error Unable to find suitable define for ETHERTYPE_PPPOEDISC
+ #endif
 #endif
-#ifndef ETHERTYPE_PPPOE
-#ifdef ETH_P_PPP_SES
-#define ETHERTYPE_PPPOE ETH_P_PPP_SES
-#else
-#error Unable to find suitable define for ETHERTYPE_PPPOE
-#endif
-#endif
-#ifndef ETHERTYPE_PPPOEDISC
-#ifdef ETH_P_PPP_DISC
-#define ETHERTYPE_PPPOEDISC ETH_P_PPP_DISC
-#else
-#error Unable to find suitable define for ETHERTYPE_PPPOEDISC
-#endif
+
+#include <unistd.h>
+#include <pthread.h>
+#include <signal.h>
+#include <netdb.h>
+#include <resolv.h>
+#ifdef HAVE_ENDIAN_H
+#include <endian.h>
 #endif
 
 #include <json.h>
@@ -807,7 +816,7 @@ void ndDetectionThread::ProcessPacket(void)
                 nd_is_ipaddr((const char *)new_flow->ndpi_flow->host_server_name))) {
 
                 string hostname;
-
+#ifdef _ND_USE_NETLINK
                 if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN) {
                     if (new_flow->ip_version == 4)
                         dns_cache->lookup(new_flow->lower_addr, hostname);
@@ -820,7 +829,19 @@ void ndDetectionThread::ProcessPacket(void)
                     else
                         dns_cache->lookup(new_flow->upper_addr6, hostname);
                 }
-
+#else
+                // TODO: Best effort for now:
+                // First try the lower address, if not found in cache...
+                // ...try the upper address.
+                if (new_flow->ip_version == 4) {
+                    if (! dns_cache->lookup(new_flow->lower_addr, hostname))
+                        dns_cache->lookup(new_flow->upper_addr, hostname);
+                }
+                else {
+                    if (! dns_cache->lookup(new_flow->lower_addr6, hostname))
+                        dns_cache->lookup(new_flow->upper_addr6, hostname);
+                }
+#endif
                 if (hostname.size()) {
 
                     new_flow->detection_guessed |= ND_FLOW_GUESS_DNS;
