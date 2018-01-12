@@ -277,7 +277,7 @@ void ndUploadThread::CreateHeaders(void)
 
     ostringstream user_agent;
     user_agent << "User-Agent: " <<
-        PACKAGE_NAME << "/" << GIT_RELEASE << "(" << _ND_CANONICAL_HOST << ")" <<
+        PACKAGE_NAME << "/" << GIT_RELEASE << " (" << _ND_CANONICAL_HOST << ")" <<
         " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION <<
         " nDPI/" << ndpi_revision();
 
