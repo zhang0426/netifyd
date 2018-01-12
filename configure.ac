@@ -11,6 +11,16 @@ AC_CONFIG_SUBDIRS([inih ndpi])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_USE_SYSTEM_EXTENSIONS
+AC_CANONICAL_HOST
+
+# Detect the target system
+case "${host_os}" in
+    linux*)
+        ;;
+    *)
+        AC_MSG_ERROR(["OS $host_os is not supported"])
+        ;;
+esac
 
 # Checks for programs.
 AC_PROG_CC
