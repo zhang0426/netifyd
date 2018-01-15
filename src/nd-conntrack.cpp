@@ -61,6 +61,10 @@ using namespace std;
 #include "nd-thread.h"
 #include "nd-conntrack.h"
 
+// Enable Conntrack debug logging
+//#define _ND_LOG_CONNTRACK       1
+//#define _ND_LOG_CONNTRACK_INTV  15
+
 static int nd_ct_event_callback(
     enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data)
 {
@@ -194,7 +198,9 @@ void *ndConntrackThread::Entry(void)
 {
     int rc;
     struct timeval tv;
-
+#ifdef _ND_LOG_CONNTRACK
+    time_t log_stats = time(NULL) + _ND_LOG_CONNTRACK_INTV;
+#endif
     while (! terminate) {
         fd_set fds_read;
 
@@ -215,6 +221,13 @@ void *ndConntrackThread::Entry(void)
                     __PRETTY_FUNCTION__, "nfct_catch", errno);
             }
         }
+#ifdef _ND_LOG_CONNTRACK
+        if (time(NULL) > log_stats) {
+            nd_debug_printf("%s: entries: ids: %lu, flows: %lu\n",
+                tag.c_str(), ct_id_map.size(), ct_flow_map.size());
+            log_stats = time(NULL) + _ND_LOG_CONNTRACK_INTV;
+        }
+#endif
     }
 
     nd_debug_printf("%s: Exit.\n", tag.c_str());
