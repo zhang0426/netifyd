@@ -175,11 +175,11 @@ rm -f %{_sharedstatedir}/%{name}/*.csv
 %endif
 %if %{?_with_clearos:1}%{!?_with_clearos:0}
 %dir %attr(750,root,webconfig) %{_sharedstatedir}/%{name}/
-%attr(640,root,webconfig) %{_sharedstatedir}/%{name}/app-custom-match.conf
+%config(noreplace) %attr(640,root,webconfig) %{_sharedstatedir}/%{name}/app-custom-match.conf
 %config(noreplace) %attr(660,root,webconfig) %{_sysconfdir}/%{name}.conf
 %else
 %dir %attr(750,root,root) %{_sharedstatedir}/%{name}/
-%attr(640,root,root) %{_sharedstatedir}/%{name}/app-custom-match.conf
+%config(noreplace) %attr(640,root,root) %{_sharedstatedir}/%{name}/app-custom-match.conf
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
 %endif
 %{_sbindir}/%{name}
