@@ -142,10 +142,12 @@ if [ -z "$uuid" -o "$uuid" == "00-00-00-00" ]; then
 fi
 
 # Display new or existing UUID
+%if %{?_with_clearos:1}%{!?_with_clearos:0}
 if [ ! -z "$uuid" ]; then
     echo "Your Netify Site UUID is: $(tput smso)$uuid$(tput rmso)"
     echo "Follow this link to provision your site: https://www.egloo.ca/login"
 fi
+%endif
 
 # Remove old CSV configuration files
 rm -f %{_sharedstatedir}/%{name}/*.csv
