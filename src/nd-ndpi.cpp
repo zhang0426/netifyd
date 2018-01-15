@@ -188,6 +188,7 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     ndpi->host_automa.lock = ndpi_host_automa_lock;
     ndpi->protocols_ptree = ndpi_proto_ptree;
 
+    // XXX: No longer used.
     //nd_ndpi_load_content_match(tag, ndpi);
     //nd_ndpi_load_host_match(tag, ndpi);
 
@@ -209,9 +210,6 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
             ND_OVERRIDE_CUSTOM_MATCH ? " override" : "",
             nd_config.path_custom_match);
         ndpi_load_protocols_file(ndpi, nd_config.path_custom_match);
-
-        //ndpi_host_automa = ndpi->host_automa.ac_automa;
-        //ndpi_proto_ptree = ndpi->protocols_ptree;
     }
 
     if (ndpi_ref_count > 0) {

@@ -162,7 +162,7 @@ void ndConntrackThread::DumpConntrackTable(void)
 
     nlh = mnl_nlmsg_put_header(buffer);
     nlh->nlmsg_type = (NFNL_SUBSYS_CTNETLINK << 8) | IPCTNL_MSG_CT_GET;
-    nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_DUMP;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
     nlh->nlmsg_seq = seq = time(NULL);
 
     nfh = (struct nfgenmsg *)mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
@@ -191,7 +191,8 @@ void ndConntrackThread::DumpConntrackTable(void)
 
     mnl_socket_close(nl);
 
-    nd_debug_printf("%s: pre-loaded %lu conntrack entries.\n", tag.c_str(), ct_id_map.size());
+    nd_debug_printf("%s: pre-loaded %lu conntrack entries.\n",
+        tag.c_str(), ct_id_map.size());
 }
 
 void *ndConntrackThread::Entry(void)
@@ -212,8 +213,10 @@ void *ndConntrackThread::Entry(void)
 
         rc = select(ctfd + 1, &fds_read, NULL, NULL, &tv);
 
-        if (rc == -1)
-            throw ndConntrackSystemException(__PRETTY_FUNCTION__, "select", errno);
+        if (rc == -1) {
+            throw ndConntrackSystemException(
+                __PRETTY_FUNCTION__, "select", errno);
+        }
 
         if (FD_ISSET(ctfd, &fds_read)) {
             if (nfct_catch(cth) < 0) {
