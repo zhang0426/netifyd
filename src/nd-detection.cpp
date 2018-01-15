@@ -132,7 +132,7 @@ using namespace std;
 // Enable to log discarded packets
 //#define _ND_LOG_PKT_DISCARD     1
 
-// Enable log log DNS Response processing
+// Enable DNS response debug logging
 //#define _ND_LOG_DNS_RESPONSE    1
 
 extern bool nd_debug;
