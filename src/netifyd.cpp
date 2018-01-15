@@ -272,7 +272,7 @@ void nd_dns_cache::load(void)
     while (! feof(h_f)) {
         line++;
         if ((rc = fscanf(h_f,
-            " \"%m[0-9A-z.-]\" , %m[0-9A-Fa-f] , %u\n",
+            " \"%m[0-9A-z.-]\" , %m[0-9A-Fa-f] , %ld\n",
             &host, &digest, &ttl)) != 3) {
             nd_printf("%s: parse error at line #%u [%d]\n",
                 ND_DNS_CACHE_FILE_NAME, line, rc);
