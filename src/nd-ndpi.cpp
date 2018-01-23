@@ -46,7 +46,7 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
-static int ndpi_ref_count = 0;
+static atomic_int ndpi_ref_count(0);
 static void *ndpi_host_automa = NULL;
 static pthread_mutex_t *ndpi_host_automa_lock = NULL;
 static void *ndpi_proto_ptree = NULL;
