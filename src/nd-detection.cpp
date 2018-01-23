@@ -650,6 +650,15 @@ void ndDetectionThread::ProcessPacket(void)
         }
         break;
 
+    case IPPROTO_ICMP:
+    case IPPROTO_ICMPV6:
+        stats->pkt_icmp++;
+        break;
+
+    case IPPROTO_IGMP:
+        stats->pkt_igmp++;
+        break;
+
     default:
         // Non-TCP/UDP protocols, ex: ICMP...
         //nd_debug_printf("%s: non TCP/UDP protocol: %d\n", tag.c_str(), flow.ip_protocol);

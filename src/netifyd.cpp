@@ -812,6 +812,8 @@ static void nd_json_add_stats(json_object *parent, const nd_packet_stats *stats)
     json.AddObject(NULL, "ip", stats->pkt_ip);
     json.AddObject(NULL, "tcp", stats->pkt_tcp);
     json.AddObject(NULL, "udp", stats->pkt_udp);
+    json.AddObject(NULL, "icmp", stats->pkt_icmp);
+    json.AddObject(NULL, "igmp", stats->pkt_igmp);
     json.AddObject(NULL, "ip_bytes", stats->pkt_ip_bytes);
     json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
 }
@@ -903,8 +905,8 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
         nd_print_number(*nd_stats_os, stats.pkt_ip6, false);
         nd_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
 
-        nd_print_number(*nd_stats_os, 0, false);
-        nd_printf("%12s: %s ", "ICMP", (*nd_stats_os).str().c_str());
+        nd_print_number(*nd_stats_os, stats.pkt_icmp + stats.pkt_igmp, false);
+        nd_printf("%12s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_udp, false);
         nd_printf("%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
@@ -995,8 +997,8 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
         wclrtoeol(win_stats);
         nd_printw(win_stats, "\n");
 
-        nd_print_number(*nd_stats_os, 0, false);
-        nd_printw(win_stats, "%10s: %s ", "ICMP", (*nd_stats_os).str().c_str());
+        nd_print_number(*nd_stats_os, stats.pkt_icmp + stats.pkt_igmp, false);
+        nd_printw(win_stats, "%10s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_udp, false);
         nd_printw(win_stats, "%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
