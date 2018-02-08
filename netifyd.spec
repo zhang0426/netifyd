@@ -49,7 +49,7 @@
 # RPM package details
 Name: netifyd
 Summary: Netify Agent
-Version: 2.4
+Version: 2.5
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPLv3
@@ -93,7 +93,7 @@ Report bugs to: https://github.com/eglooca/netify-daemon/issues
     %{?_with_conntrack} \
     %{?_with_inotify} \
     %{?_with_ncurses} \
-    %{?_with_netilink}
+    %{?_with_netlink}
 
 # Build
 %build

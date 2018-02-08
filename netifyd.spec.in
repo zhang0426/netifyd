@@ -93,7 +93,7 @@ Report bugs to: @PACKAGE_BUGREPORT@
     %{?_with_conntrack} \
     %{?_with_inotify} \
     %{?_with_ncurses} \
-    %{?_with_netilink}
+    %{?_with_netlink}
 
 # Build
 %build
