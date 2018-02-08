@@ -144,7 +144,7 @@ AS_IF([test "$HAVE_CXX11" = "0"], [AX_CXX_COMPILE_STDCXX_0X])
 
 # Check for optional parameters
 
-# Checks for typedefs, structures, and compiler characteristics.
+# Checks for typedefs, structures, sizes, and compiler characteristics.
 #AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_TYPE_INT32_T
@@ -155,6 +155,7 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
+AC_CHECK_SIZEOF([long])
 
 # Checks for library functions.
 AC_FUNC_MALLOC

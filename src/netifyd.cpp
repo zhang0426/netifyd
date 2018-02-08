@@ -170,9 +170,10 @@ void nd_dns_cache::insert(const string &digest, const string &hostname)
 {
     int i = 0;
     uint8_t v;
-    size_t len = digest.size();
     const char *p = digest.c_str();
     string _digest;
+
+    // TODO: Verify length of digest (must be SHA1_DIGEST_LENGTH).
 
     do {
         if (sscanf(p, "%2hhx", &v) != 1) break;
@@ -1143,8 +1144,11 @@ static void nd_dump_stats(void)
 
         struct rusage rusage_data;
         getrusage(RUSAGE_SELF, &rusage_data);
-        json.AddObject(NULL, "maxrss_kb", rusage_data.ru_maxrss);
-
+#if (SIZEOF_LONG == 4)
+        json.AddObject(NULL, "maxrss_kb", (uint32_t)rusage_data.ru_maxrss);
+#elif (SIZEOF_LONG == 8)
+        json.AddObject(NULL, "maxrss_kb", (uint64_t)rusage_data.ru_maxrss);
+#endif
         json_ifaces = json.CreateObject(NULL, "interfaces");
         json_devices = json.CreateObject(NULL, "devices");
         json_stats = json.CreateObject(NULL, "stats");
