@@ -99,8 +99,12 @@ nd_global_config nd_config = {
     .uuid_realm = NULL,
     .uuid_serial = NULL,
     .max_backlog = ND_MAX_BACKLOG_KB * 1024,
-#ifdef _ND_USE_CONNTRACK
+#if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
+    .flags = ndGF_USE_CONNTRACK | ndGF_USE_NETLINK,
+#elif defined(_ND_USE_CONNTRACK)
     .flags = ndGF_USE_CONNTRACK,
+#elif defined(_ND_USE_NETLINK)
+    .flags = ndGF_USE_NETLINK,
 #else
     .flags = 0x0,
 #endif
@@ -545,6 +549,8 @@ static int nd_config_load(void)
 
 static int nd_start_detection_threads(void)
 {
+    ndpi_global_init();
+
     for (nd_ifaces::iterator i = ifaces.begin();
         i != ifaces.end(); i++) {
 
@@ -565,14 +571,17 @@ static int nd_start_detection_threads(void)
     try {
         long cpu = 0;
         long cpus = sysconf(_SC_NPROCESSORS_ONLN);
+        string netlink_dev;
 
         for (nd_ifaces::iterator i = ifaces.begin();
             i != ifaces.end(); i++) {
 #ifdef _ND_USE_NETLINK
-            map<string, string>::const_iterator j;
-            string netlink_dev = (*i).second;
-            if ((j = device_netlink.find(netlink_dev)) != device_netlink.end())
-                netlink_dev = j->second.c_str();
+            if (ND_USE_NETLINK) {
+                map<string, string>::const_iterator j;
+                netlink_dev = (*i).second;
+                if ((j = device_netlink.find(netlink_dev)) != device_netlink.end())
+                    netlink_dev = j->second.c_str();
+            }
 #endif
             threads[(*i).second] = new ndDetectionThread(
                 (*i).second,
@@ -599,7 +608,7 @@ static int nd_start_detection_threads(void)
     }
     catch (exception &e) {
         nd_printf("Runtime error: %s\n", e.what());
-        return -1;
+        throw;
     }
 
     return 0;
@@ -628,6 +637,8 @@ static void nd_stop_detection_threads(void)
     flows.clear();
     stats.clear();
     devices.clear();
+
+    ndpi_global_destroy();
 }
 
 static void nd_reap_detection_threads(void)
@@ -1454,7 +1465,8 @@ int main(int argc, char *argv[])
         { "content-match", 1, 0, 'C' },
         { "host-match", 1, 0, 'H' },
         { "hash-file", 1, 0, 'S' },
-        { "disable-conntrack", 1, 0, 't' },
+        { "disable-conntrack", 0, 0, 't' },
+        { "disable-netlink", 0, 0, 'l' },
         { "enable-ncurses", 0, 0, 'n' },
 
         { NULL, 0, 0, 0 }
@@ -1463,7 +1475,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDaenrs:I:E:j:i:c:UPA:N:f:H:C:S:t",
+            "?hVdDaenrtls:I:E:j:i:c:UPA:N:f:H:C:S:",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -1577,6 +1589,9 @@ int main(int argc, char *argv[])
             break;
         case 't':
             nd_config.flags &= ~ndGF_USE_CONNTRACK;
+            break;
+        case 'l':
+            nd_config.flags &= ~ndGF_USE_NETLINK;
             break;
         case 'n':
 #if _ND_USE_NCURSES
@@ -1730,16 +1745,18 @@ int main(int argc, char *argv[])
     }
 #endif
 #ifdef _ND_USE_NETLINK
-    try {
-        netlink = new ndNetlink(ifaces);
+    if (ND_USE_NETLINK) {
+        try {
+            netlink = new ndNetlink(ifaces);
 
-        map<string, string>::const_iterator i;
-        for (i = device_netlink.begin(); i != device_netlink.end(); i++)
-            netlink->AddInterface(i->second);
-    }
-    catch (exception &e) {
-        nd_printf("Error creating netlink watch: %s\n", e.what());
-        return 1;
+            map<string, string>::const_iterator i;
+            for (i = device_netlink.begin(); i != device_netlink.end(); i++)
+                netlink->AddInterface(i->second);
+        }
+        catch (exception &e) {
+            nd_printf("Error creating netlink watch: %s\n", e.what());
+            return 1;
+        }
     }
 #endif
     nd_add_device_addresses(device_addresses);
@@ -1766,7 +1783,8 @@ int main(int argc, char *argv[])
     if (ND_USE_NCURSES) nd_print_stats(0, totals);
 #endif
 #ifdef _ND_USE_NETLINK
-    netlink->Refresh();
+    if (ND_USE_NETLINK)
+        netlink->Refresh();
 #endif
     while (! terminate) {
         int sig;
@@ -1823,7 +1841,8 @@ int main(int argc, char *argv[])
                 inotify->ProcessEvent();
                 continue;
             }
-            else if (netlink->GetDescriptor() == si.si_fd) {
+            else if (ND_USE_NETLINK &&
+                netlink->GetDescriptor() == si.si_fd) {
                 if (netlink->ProcessEvent())
                     if (ND_DEBUG) netlink->Dump();
                 continue;
