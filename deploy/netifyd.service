@@ -8,7 +8,8 @@ PIDFile=/var/run/netifyd/netifyd.pid
 User=root
 ExecStartPre=/usr/libexec/netifyd/exec-pre.sh
 ExecStart=/usr/sbin/netifyd $NETIFYD_OPTS
-Restart=on-abort
+Restart=on-failure
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
