@@ -774,8 +774,10 @@ void ndDetectionThread::ProcessPacket(void)
             upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper6);
         }
 #ifdef _ND_USE_NETLINK
-        new_flow->lower_type = netlink->ClassifyAddress(lower_addr);
-        new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
+        if (ND_USE_NETLINK) {
+            new_flow->lower_type = netlink->ClassifyAddress(lower_addr);
+            new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
+        }
 #endif
         if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
