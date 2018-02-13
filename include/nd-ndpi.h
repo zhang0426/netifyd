@@ -17,6 +17,9 @@
 #ifndef _ND_NDPI_H
 #define _ND_NDPI_H
 
+void ndpi_global_init(void);
+void ndpi_global_destroy(void);
+
 struct ndpi_detection_module_struct *nd_ndpi_init(
     const string &tag, uint32_t &custom_proto_base);
 
