@@ -255,7 +255,7 @@ ndSocket *ndSocketServer::Accept(void)
         peer->type = ndSOCKET_TYPE_CLIENT;
         peer->state = ndSOCKET_STATE_ACCEPTED;
 
-        delete (peer_sa);
+        delete peer_sa;
     }
     catch (runtime_error &e) {
         if (peer != NULL) {
