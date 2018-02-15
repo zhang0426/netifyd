@@ -240,11 +240,13 @@ void *ndConntrackThread::Entry(void)
 void ndConntrackThread::ProcessConntrackEvent(
     enum nf_conntrack_msg_type type, struct nf_conntrack *ct)
 {
-    bool ct_exists = false, ct_new_or_update = false;
     uint32_t id = nfct_get_attr_u32(ct, ATTR_ID);
     ndConntrackFlow *ct_flow = NULL;
     nd_ct_id_map::iterator id_iter = ct_id_map.find(id);
     nd_ct_flow_map::iterator flow_iter;
+#ifdef _ND_LOG_CONNTRACK
+    bool ct_exists = false, ct_new_or_update = false;
+#endif
 
     if (id_iter == ct_id_map.end()) {
         try {
@@ -257,10 +259,14 @@ void ndConntrackThread::ProcessConntrackEvent(
 
         ct_id_map[id] = ct_flow->digest;
         ct_flow_map[ct_flow->digest] = ct_flow;
+#ifdef _ND_LOG_CONNTRACK
         ct_new_or_update = true;
+#endif
     }
     else {
+#ifdef _ND_LOG_CONNTRACK
         ct_exists = true;
+#endif
         flow_iter = ct_flow_map.find(id_iter->second);
 
         if (type & NFCT_T_DESTROY) {
@@ -272,16 +278,17 @@ void ndConntrackThread::ProcessConntrackEvent(
         }
         else {
             if (flow_iter == ct_flow_map.end()) {
-                nd_printf("%s: Connection tracking flow not found! [%u]\n",
+                nd_printf("%s: [%u] Connection tracking flow not found!\n",
                     tag.c_str(), id);
                 ct_id_map.erase(id_iter);
                 return;
             }
 
-            ct_new_or_update = true;
             ct_flow = flow_iter->second;
             ct_flow->Update(ct);
-
+#ifdef _ND_LOG_CONNTRACK
+            ct_new_or_update = true;
+#endif
             if (ct_flow->digest != id_iter->second) {
                 nd_printf("%s: [%u] Connection tracking flow hash changed!\n",
                     tag.c_str(), id);
@@ -291,12 +298,12 @@ void ndConntrackThread::ProcessConntrackEvent(
             }
         }
     }
-#if 0
+#ifdef _ND_LOG_CONNTRACK
     if (nd_debug) {
         char buffer[1024];
         nfct_snprintf(buffer, sizeof(buffer), ct, type, NFCT_O_PLAIN, NFCT_OF_TIME);
 
-        if (ct_new_or_update && ! ct_exists)
+        if (! ct_exists && ct_new_or_update)
             nd_debug_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
 //        if (! ct_new_or_update && ! ct_exists)
 //            nd_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
