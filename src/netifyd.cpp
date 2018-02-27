@@ -1276,10 +1276,16 @@ static void nd_dump_protocols(void)
 {
     uint32_t custom_proto_base;
     struct ndpi_detection_module_struct *ndpi;
+
+    ndpi_global_init();
+
     ndpi = nd_ndpi_init("netifyd", custom_proto_base);
 
     for (unsigned i = 0; i < (unsigned)ndpi->ndpi_num_supported_protocols; i++)
         printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
+
+    ndpi_free(ndpi);
+    ndpi_global_init();
 }
 
 static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
