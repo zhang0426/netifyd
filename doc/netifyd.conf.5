@@ -1,12 +1,14 @@
 .TH netifyd.conf 5
 .SH NAME
-netifyd.conf - Netify Agent configuration file
+netifyd.conf - The Netify Agent Configuration File Format
 .SH DESCRIPTION
-The netifyd.conf file contains configuration information for \fBnetifyd(8)\fR, a deep-packet inspection daemon.
-.PP
-The netifyd.conf file follows the standard INI-style file format.
-.PP
-The netifyd.conf file is used to configure the behaviour of the Netify daemon and set essential paramters of the Netify Clound Sync service.
+The netifyd.conf file...
+.IP \(bu 2
+follows the standard INI-style file format.
+.IP \(bu 2
+contains configuration parameters for \fBnetifyd(8)\fR, a deep-packet inspection daemon.
+.IP \(bu 2
+contains configuration parameters for the Netify Portal service (\fIhttps://www.netify.ai/\fR).
 .SH MAIN SECTION
 The main server options are defined within the [\fBnetifyd\fR] section.
 .PP
@@ -41,17 +43,17 @@ Specifiy the number of seconds between update intervals.  The default and recomm
 .PP
 \fBuuid\fR=\fIUUID\fR
 .PP
-A client UUID is a base-35 alpha-numeric string (0-9, A-N, P-Z) comprised of 8 digits in four groups of two seperated by dashes.  The letter "\fUO\fR" is removed to avoid confusion with zero "\fU0\fR".  A client UUID example: 00-11-AB-YZ  You can use \fBnetifyd(8)\fR to generate a random UUID:
+An Agent UUID is a base-35 alpha-numeric string (0-9, A-N, P-Z) comprised of 8 digits in four groups of two seperated by dashes.  The letter "\fUO\fR" is removed to avoid confusion with zero "\fU0\fR".  An example Agent UUID: 00-11-AB-YZ  You can use \fBnetifyd(8)\fR to generate a new UUID:
 
 .nf
 # netifyd -U
 .fi
 
-The client UUID is used by the Netify Portal to provision a site to a realm.
+The Agent UUID is used by the Netify Portal to provision an Agent to a site.
 .PP
 \fBuuid_serial\fR=\fIUUID\fR
 .PP
-Specify an supplemental UUID (serial number).  This is usually taken from the device hardware, such as a BIOS UUID or MAC address, or a hash of several unique system properties.  Normally only the client UUID is needed.  There is no default value.
+Specify an supplemental UUID (serial number).  This is usually taken from the device hardware, such as a BIOS UUID or MAC address, or a hash of several unique system properties.  Normally only the Agent UUID is needed.  There is no default value.
 .SH DNS CACHE SECTION
 DNS hint cache options are set within the [\fBdns_cache\fR] section.
 
