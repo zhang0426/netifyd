@@ -54,6 +54,9 @@ void nd_iface_name(const string &iface, string &result);
 
 bool nd_is_ipaddr(const char *ip);
 
+bool nd_load_uuid(string &uuid, const char *path, size_t length);
+bool nd_save_uuid(const string &uuid, const char *path, size_t length);
+
 class ndException : public runtime_error
 {
 public:

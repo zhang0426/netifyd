@@ -341,6 +341,38 @@ bool nd_is_ipaddr(const char *ip)
     return (inet_pton(AF_INET6, ip, &addr6) == 1) ? true : false;
 }
 
+bool nd_load_uuid(string &uuid, const char *path, size_t length)
+{
+    char _uuid[length + 1];
+    FILE *fh = fopen(path, "r");
+
+    if (fh == NULL) return false;
+    if (fread((void *)_uuid, 1, length, fh) != length) {
+        fclose(fh);
+        return false;
+    }
+
+    fclose(fh);
+    _uuid[length] = '\0';
+    uuid.assign(_uuid);
+
+    return true;
+}
+
+bool nd_save_uuid(const string &uuid, const char *path, size_t length)
+{
+    FILE *fh = fopen(path, "w");
+
+    if (fwrite((const void *)uuid.c_str(),
+        1, length, fh) != length) {
+        fclose(fh);
+        return false;
+    }
+
+    fclose(fh);
+    return true;
+}
+
 ndException::ndException(const string &where_arg, const string &what_arg) throw()
     : runtime_error(what_arg), where_arg(where_arg), what_arg(what_arg), message(NULL)
 {

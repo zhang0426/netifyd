@@ -77,6 +77,10 @@
 #define ND_COOKIE_JAR           "/var/lib/netifyd/netifyd.cookies"
 #define ND_UPLOAD_TIMEOUT       300     // Default 5-minute upload timeout
 
+#define ND_AGENT_UUID_PATH      "/var/lib/netifyd/agent.uuid"
+#define ND_AGENT_UUID_NULL      "00-00-00-00"
+#define ND_AGENT_UUID_LEN       11
+
 #define ND_REALM_UUID_PATH      "/var/lib/netifyd/netify-realm.uuid"
 #define ND_REALM_UUID_NULL      "-"
 #define ND_REALM_UUID_LEN       36

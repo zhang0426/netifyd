@@ -63,9 +63,6 @@ protected:
     string Deflate(const string &data);
     void ProcessResponse(void);
 
-    bool LoadRealmUUID(string &uuid);
-    bool SaveRealmUUID(const string &uuid);
-
     bool ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *config);
 };
 

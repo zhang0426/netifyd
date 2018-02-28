@@ -282,18 +282,26 @@ void ndUploadThread::CreateHeaders(void)
         " nDPI/" << ndpi_revision();
 
     ostringstream uuid;
-    uuid << "X-UUID: " << nd_config.uuid;
+    if (! strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN))
+        uuid << "X-UUID: " << nd_config.uuid;
+    else {
+        string _uuid;
+        if (nd_load_uuid(_uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN))
+            uuid << "X-UUID: " << _uuid;
+        else
+            uuid << "X-UUID: " << nd_config.uuid;
+    }
 
     ostringstream serial;
     serial << "X-UUID-Serial: " <<
         ((nd_config.uuid_serial != NULL) ? nd_config.uuid_serial : "-");
 
     ostringstream realm_uuid;
-    if (nd_config.uuid_realm[0] != '-')
+    if (! strncmp(nd_config.uuid_realm, ND_REALM_UUID_NULL, ND_REALM_UUID_LEN))
         realm_uuid << "X-UUID-Realm: " << nd_config.uuid_realm;
     else {
         string _uuid;
-        if (LoadRealmUUID(_uuid))
+        if (nd_load_uuid(_uuid, ND_REALM_UUID_PATH, ND_REALM_UUID_LEN))
             realm_uuid << "X-UUID-Realm: " << _uuid;
         else
             realm_uuid << "X-UUID-Realm: " << nd_config.uuid_realm;
@@ -476,7 +484,10 @@ void ndUploadThread::ProcessResponse(void)
 
         if (json_result->GetCode() == ndJSON_RES_SET_REALM_UUID) {
             if (json_result->GetMessage().length() == ND_REALM_UUID_LEN
-                && SaveRealmUUID(json_result->GetMessage())) {
+                && nd_save_uuid(
+                    json_result->GetMessage(),
+                    ND_REALM_UUID_PATH, ND_REALM_UUID_LEN
+                )) {
                 nd_debug_printf("%s: saved new realm UUID: %s\n", tag.c_str(),
                     json_result->GetMessage().c_str());
                 CreateHeaders();
@@ -524,39 +535,6 @@ void ndUploadThread::ProcessResponse(void)
     }
 
     if (json_obj != NULL) delete json_obj;
-}
-
-bool ndUploadThread::LoadRealmUUID(string &uuid)
-{
-    char _uuid[ND_REALM_UUID_LEN + 1];
-    FILE *fh = fopen(ND_REALM_UUID_PATH, "r");
-
-    if (fh == NULL) return false;
-    if (fread((void *)_uuid,
-        1, ND_REALM_UUID_LEN, fh) != ND_REALM_UUID_LEN) {
-        fclose(fh);
-        return false;
-    }
-
-    fclose(fh);
-    _uuid[ND_REALM_UUID_LEN] = '\0';
-    uuid.assign(_uuid);
-
-    return true;
-}
-
-bool ndUploadThread::SaveRealmUUID(const string &uuid)
-{
-    FILE *fh = fopen(ND_REALM_UUID_PATH, "w");
-
-    if (fwrite((const void *)uuid.c_str(),
-        1, ND_REALM_UUID_LEN, fh) != ND_REALM_UUID_LEN) {
-        fclose(fh);
-        return false;
-    }
-
-    fclose(fh);
-    return true;
 }
 
 bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *config)
