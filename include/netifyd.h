@@ -81,9 +81,9 @@
 #define ND_AGENT_UUID_NULL      "00-00-00-00"
 #define ND_AGENT_UUID_LEN       11
 
-#define ND_REALM_UUID_PATH      "/var/lib/netifyd/netify-realm.uuid"
-#define ND_REALM_UUID_NULL      "-"
-#define ND_REALM_UUID_LEN       36
+#define ND_SITE_UUID_PATH       "/var/lib/netifyd/site.uuid"
+#define ND_SITE_UUID_NULL       "-"
+#define ND_SITE_UUID_LEN        36
 
 #define ND_ETHERS_FILE_NAME     "/etc/ethers"
 
@@ -158,7 +158,7 @@ typedef struct nd_global_config_t {
     char *path_json;
     char *url_upload;
     char *uuid;
-    char *uuid_realm;
+    char *uuid_site;
     char *uuid_serial;
     size_t max_backlog;
     uint32_t flags;

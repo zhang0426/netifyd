@@ -96,7 +96,7 @@ nd_global_config nd_config = {
     .path_json = NULL,
     .url_upload = NULL,
     .uuid = NULL,
-    .uuid_realm = NULL,
+    .uuid_site = NULL,
     .uuid_serial = NULL,
     .max_backlog = ND_MAX_BACKLOG_KB * 1024,
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
@@ -456,9 +456,9 @@ static int nd_config_load(void)
     nd_config.flags |= (reader.GetBoolean(
         "netifyd", "ssl_use_tlsv1", false)) ? ndGF_SSL_USE_TLSv1 : 0;
 
-    string uuid_realm = reader.Get(
-        "netifyd", "uuid_realm", ND_REALM_UUID_NULL);
-    nd_config.uuid_realm = strdup(uuid_realm.c_str());
+    string uuid_site = reader.Get(
+        "netifyd", "uuid_site", ND_SITE_UUID_NULL);
+    nd_config.uuid_site = strdup(uuid_site.c_str());
 
     nd_config.max_tcp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_tcp_pkts", ND_MAX_TCP_PKTS);

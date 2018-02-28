@@ -2,4 +2,4 @@ ok
 auth_fail
 malformed_data
 server_error
-set_realm_uuid
+set_site_uuid

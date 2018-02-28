@@ -296,29 +296,29 @@ void ndUploadThread::CreateHeaders(void)
     serial << "X-UUID-Serial: " <<
         ((nd_config.uuid_serial != NULL) ? nd_config.uuid_serial : "-");
 
-    ostringstream realm_uuid;
-    if (! strncmp(nd_config.uuid_realm, ND_REALM_UUID_NULL, ND_REALM_UUID_LEN))
-        realm_uuid << "X-UUID-Realm: " << nd_config.uuid_realm;
+    ostringstream site_uuid;
+    if (! strncmp(nd_config.uuid_site, ND_SITE_UUID_NULL, ND_SITE_UUID_LEN))
+        site_uuid << "X-UUID-Site: " << nd_config.uuid_site;
     else {
         string _uuid;
-        if (nd_load_uuid(_uuid, ND_REALM_UUID_PATH, ND_REALM_UUID_LEN))
-            realm_uuid << "X-UUID-Realm: " << _uuid;
+        if (nd_load_uuid(_uuid, ND_SITE_UUID_PATH, ND_SITE_UUID_LEN))
+            site_uuid << "X-UUID-Site: " << _uuid;
         else
-            realm_uuid << "X-UUID-Realm: " << nd_config.uuid_realm;
+            site_uuid << "X-UUID-Site: " << nd_config.uuid_site;
     }
 
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, uuid.str().c_str());
     headers = curl_slist_append(headers, serial.str().c_str());
-    headers = curl_slist_append(headers, realm_uuid.str().c_str());
+    headers = curl_slist_append(headers, site_uuid.str().c_str());
 
     headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
     headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
     headers_gz = curl_slist_append(headers_gz, "Content-Encoding: gzip");
     headers_gz = curl_slist_append(headers_gz, uuid.str().c_str());
     headers_gz = curl_slist_append(headers_gz, serial.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, realm_uuid.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, site_uuid.str().c_str());
 }
 
 void ndUploadThread::FreeHeaders(void)
@@ -482,13 +482,13 @@ void ndUploadThread::ProcessResponse(void)
             (json_result->GetMessage().length() > 0) ?
                 json_result->GetMessage().c_str() : "(null)");
 
-        if (json_result->GetCode() == ndJSON_RES_SET_REALM_UUID) {
-            if (json_result->GetMessage().length() == ND_REALM_UUID_LEN
+        if (json_result->GetCode() == ndJSON_RES_SET_SITE_UUID) {
+            if (json_result->GetMessage().length() == ND_SITE_UUID_LEN
                 && nd_save_uuid(
                     json_result->GetMessage(),
-                    ND_REALM_UUID_PATH, ND_REALM_UUID_LEN
+                    ND_SITE_UUID_PATH, ND_SITE_UUID_LEN
                 )) {
-                nd_debug_printf("%s: saved new realm UUID: %s\n", tag.c_str(),
+                nd_debug_printf("%s: saved new site UUID: %s\n", tag.c_str(),
                     json_result->GetMessage().c_str());
                 CreateHeaders();
             }
