@@ -3,6 +3,7 @@
 *.cpp-e
 .deps/
 Makefile
+Makefile.in
 nd-json-*.h
 netifyd
 *.o

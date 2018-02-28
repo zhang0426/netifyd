@@ -9,7 +9,7 @@ install-sh
 libtool
 ltmain.sh
 Makefile
-Makefile.in
+/Makefile.in
 missing
 netifyd-*.tar.gz
 osc

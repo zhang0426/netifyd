@@ -3,3 +3,4 @@
 generate-json-include.sh
 generate-protocol-csv.sh
 nd-match-export
+Makefile.in
