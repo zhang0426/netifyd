@@ -39,8 +39,14 @@
 #include <arpa/nameser.h>
 
 #include <net/if.h>
-#include <net/ppp_defs.h>
 #include <net/ethernet.h>
+#if HAVE_NET_PPP_DEFS_H
+#include <net/ppp_defs.h>
+#elif HAVE_LINUX_PPP_DEFS_H
+#include <linux/ppp_defs.h>
+#else
+#error Unable to find a usable ppp_defs include
+#endif
 
 #define __FAVOR_BSD 1
 #include <netinet/in.h>
