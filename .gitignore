@@ -15,3 +15,4 @@ netifyd-*.tar.gz
 osc
 stamp-h1
 .ycm_extra_conf*
+confdefs.h

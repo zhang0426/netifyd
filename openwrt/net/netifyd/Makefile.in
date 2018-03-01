@@ -64,7 +64,7 @@ CONFIGURE_VARS += \
 CONFIGURE_ARGS += \
 	--disable-inotify \
 	--disable-ncurses \
-	--disable-systemd
+	--without-systemdsystemunitdir
 
 # Package preparation
 define Build/Prepare
