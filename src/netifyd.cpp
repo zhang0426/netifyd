@@ -1842,21 +1842,19 @@ int main(int argc, char *argv[])
         }
 
         if (sig == SIGIO) {
-#ifdef _ND_USE_NETLINK
-            if (inotify->GetDescriptor() == si.si_fd) {
+#ifdef _ND_USE_INOTIFY
+            if (inotify->GetDescriptor() == si.si_fd)
                 inotify->ProcessEvent();
-                continue;
-            }
-            else if (ND_USE_NETLINK &&
+#endif
+
+#ifdef _ND_USE_NETLINK
+            if (ND_USE_NETLINK &&
                 netlink->GetDescriptor() == si.si_fd) {
                 if (netlink->ProcessEvent())
                     if (ND_DEBUG) netlink->Dump();
-                continue;
             }
-#elif _ND_USE_INOTIFY
-            inotify->ProcessEvent();
-            continue;
 #endif
+            continue;
         }
 
         if (sig == SIGHUP) {
