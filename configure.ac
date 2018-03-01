@@ -134,7 +134,7 @@ AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC
 ]])
 
 # Check for optional header files.
-AC_CHECK_HEADERS([endian.h])
+AC_CHECK_HEADERS([endian.h net/ppp_defs.h linux/ppp_defs.h])
 
 # Check compiler flags (gnu++11)
 m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
@@ -195,7 +195,7 @@ AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
 # Output files
 AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec])
 AC_CONFIG_FILES([debian/debian.changelog debian/debian.control debian/debian.rules debian/netifyd.dsc])
-AC_CONFIG_FILES([openwrt/Makefile])
+AC_CONFIG_FILES([openwrt/net/netifyd/Makefile])
 AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
 AC_CONFIG_FILES([util/generate-protocol-csv.sh], [chmod +x util/generate-protocol-csv.sh])
 AC_OUTPUT
