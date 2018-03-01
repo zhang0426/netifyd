@@ -27,3 +27,7 @@ To update the Netify Agent source after changes:
   `# make package/netifyd/clean`
 4. Build new image:
   `# make`
+
+Useful links:
+
+- https://openwrt.org/docs/guide-developer/start
