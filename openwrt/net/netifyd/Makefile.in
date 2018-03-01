@@ -18,7 +18,7 @@ PKG_MAINTAINER:=Darryl Sokoloski <darryl@egloo.ca>
 PKG_LICENSE:=GPL-3.0+
 
 # Source settings
-SOURCE_DIR:=/home/dsokoloski/netify-daemon-openwrt
+SOURCE_DIR:=$(TOPDIR)/netify-daemon
 
 #include $(INCLUDE_DIR)/uclibc++.mk
 include $(INCLUDE_DIR)/package.mk
