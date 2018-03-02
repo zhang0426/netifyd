@@ -1660,7 +1660,11 @@ int main(int argc, char *argv[])
         nd_create_windows();
     }
 #endif
-    nd_printf("%s v%s\n", PACKAGE_NAME, PACKAGE_VERSION);
+    nd_printf("%s v%s (%s)\n", PACKAGE_NAME, GIT_RELEASE, _ND_CANONICAL_HOST);
+    nd_printf("nDPI v%s, JSON format v%.2f\n", ndpi_revision(), ND_JSON_VERSION);
+
+    nd_debug_printf("Flow entry size: %lu\n", sizeof(struct ndFlow) +
+        sizeof(struct ndpi_flow_struct) + sizeof(struct ndpi_id_struct) * 2);
 
     memset(&totals, 0, sizeof(nd_packet_stats));
 

@@ -1111,10 +1111,12 @@ void ndDetectionThread::ProcessPacket(void)
         nd_flow_map::iterator i = flows->begin();
         while (i != flows->end()) {
             if (i->second->ts_last_seen + ND_IDLE_FLOW_TIME < ts_pkt_last) {
+
                 i->second->release();
                 delete i->second;
-                i = flows->erase(i);
+
                 purged++;
+                i = flows->erase(i);
             }
             else
                 i++;
