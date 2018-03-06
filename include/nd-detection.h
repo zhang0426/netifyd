@@ -51,6 +51,8 @@ public:
 
     nd_flow_map *GetFlows(void) { return flows; }
 
+    int GetCaptureStats(struct pcap_stat &stats, bool do_lock = false);
+
 protected:
 #ifdef _ND_USE_NETLINK
     string netlink_dev;

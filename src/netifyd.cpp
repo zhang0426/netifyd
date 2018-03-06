@@ -807,7 +807,8 @@ static void nd_json_add_devices(json_object *parent)
     }
 }
 
-static void nd_json_add_stats(json_object *parent, const nd_packet_stats *stats)
+static void nd_json_add_stats(json_object *parent,
+    const nd_packet_stats *stats, struct pcap_stat *pcap)
 {
     ndJson json(parent);
 
@@ -827,6 +828,9 @@ static void nd_json_add_stats(json_object *parent, const nd_packet_stats *stats)
     json.AddObject(NULL, "igmp", stats->pkt_igmp);
     json.AddObject(NULL, "ip_bytes", stats->pkt_ip_bytes);
     json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
+    json.AddObject(NULL, "pcap_recv", pcap->ps_recv);
+    json.AddObject(NULL, "pcap_drop", pcap->ps_drop);
+    json.AddObject(NULL, "pcap_ifdrop", pcap->ps_ifdrop);
 }
 
 static void nd_json_add_flows(
@@ -1177,8 +1181,11 @@ static void nd_dump_stats(void)
         flow_count += flows[i->first]->size();
 
         if (ND_USE_SINK || ND_JSON_SAVE) {
+            struct pcap_stat pcap;
+            i->second->GetCaptureStats(pcap);
+
             json_obj = json.CreateObject();
-            nd_json_add_stats(json_obj, stats[i->first]);
+            nd_json_add_stats(json_obj, stats[i->first], &pcap);
 
             string iface_name;
             nd_iface_name(i->first, iface_name);
