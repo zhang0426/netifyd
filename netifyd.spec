@@ -124,41 +124,22 @@ install -D -m 0755 %{netify_systemd_exec} %{buildroot}/%{_libexecdir}/%{name}/ex
 %clean
 [ "%{buildroot}" != "/" ] && rm -rf %{buildroot}
 
-# Post install
+# Post-install
 %post
 %if %{?_with_systemd:1}%{!?_with_systemd:0}
 %systemd_post %{name}.service
 %endif
 
-# Generate a new UUID if this is our first install
-uuid=$(egrep '^uuid' %{_sysconfdir}/%{name}.conf | sed -e "s/^uuid[[:space:]]*=[[:space:]]*\([A-NP-Z0-9-]*\)$/\1/")
-if [ -z "$uuid" -o "$uuid" == "00-00-00-00" ]; then
-    uuid=$(%{_sbindir}/%{name} -U 2>/dev/null)
-    if [ -z "$uuid" ]; then
-        echo "Error generating UUID."
-    else
-        sed -e "s/^uuid[[:space:]]*=[[:space:]]*00-00-00-00/uuid = $uuid/" -i %{_sysconfdir}/%{name}.conf
-    fi
-fi
-
-# Display new or existing UUID
-%if %{?_with_clearos:1}%{!?_with_clearos:0}
-if [ ! -z "$uuid" ]; then
-    echo "Your Netify Site UUID is: $(tput smso)$uuid$(tput rmso)"
-    echo "Follow this link to provision your site: https://www.egloo.ca/login"
-fi
-%endif
-
 # Remove old CSV configuration files
 rm -f %{_sharedstatedir}/%{name}/*.csv
 
-# Pre uninstall
+# Pre-uninstall
 %preun
 %if %{?_with_systemd:1}%{!?_with_systemd:0}
 %systemd_preun %{name}.service
 %endif
 
-# Post uninstall
+# Post-uninstall
 %postun
 %if %{?_with_systemd:1}%{!?_with_systemd:0}
 %systemd_postun_with_restart %{name}.service
