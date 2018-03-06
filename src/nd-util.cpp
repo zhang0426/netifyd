@@ -28,6 +28,7 @@
 #include <sstream>
 #include <vector>
 #include <map>
+#include <deque>
 #include <unordered_map>
 
 #include <unistd.h>
@@ -371,6 +372,48 @@ bool nd_save_uuid(const string &uuid, const char *path, size_t length)
 
     fclose(fh);
     return true;
+}
+
+void nd_generate_uuid(string &uuid)
+{
+    int digit = 0;
+    deque<char> result;
+    uint64_t input = 623714775;
+    unsigned int seed = (unsigned int)time(NULL);
+    const char *clist = { "0123456789abcdefghijklmnpqrstuvwxyz" };
+    FILE *fh = fopen("/dev/urandom", "r");
+    ostringstream os;
+
+    if (fh == NULL)
+        nd_printf("Error opening random device: %s\n", strerror(errno));
+    else {
+        if (fread((void *)&seed, sizeof(unsigned int), 1, fh) != 1)
+            nd_printf("Error reading from random device: %s\n", strerror(errno));
+        fclose(fh);
+    }
+
+    srand(seed);
+    input = (uint64_t)rand();
+    input += (uint64_t)rand() << 32;
+
+    while (input != 0) {
+        result.push_front(toupper(clist[input % strlen(clist)]));
+        input /= strlen(clist);
+    }
+
+    for (size_t i = result.size(); i < 8; i++)
+        result.push_back('0');
+
+    while (result.size() && digit < 8) {
+        os << result.front();
+        result.pop_front();
+        if (digit == 1) os << "-";
+        if (digit == 3) os << "-";
+        if (digit == 5) os << "-";
+        digit++;
+    }
+
+    uuid = os.str();
 }
 
 ndException::ndException(const string &where_arg, const string &what_arg) throw()

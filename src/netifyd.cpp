@@ -18,7 +18,6 @@
 #include "config.h"
 #endif
 
-#include <deque>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -405,18 +404,22 @@ static int nd_config_load(void)
         return -1;
     }
 
-    string uuid = reader.Get("netifyd", "uuid", "");
-    if (uuid.size() > 0)
-        nd_config.uuid = strdup(uuid.c_str());
-    else {
-        cerr << "UUID not set in: " << nd_conf_filename << endl;
-        return -1;
+    if (nd_config.uuid == NULL) {
+        string uuid = reader.Get("netifyd", "uuid", ND_AGENT_UUID_NULL);
+        if (uuid.size() > 0)
+            nd_config.uuid = strdup(uuid.c_str());
     }
 
-    string serial = reader.Get("netifyd", "uuid_serial", "");
-    if (serial.size() > 0) {
-        if (nd_config.uuid_serial != NULL) free(nd_config.uuid_serial);
-        nd_config.uuid_serial = strdup(serial.c_str());
+    if (nd_config.uuid_site == NULL) {
+        string uuid_site = reader.Get("netifyd", "uuid_site", ND_SITE_UUID_NULL);
+        if (uuid_site.size() > 0)
+            nd_config.uuid_site = strdup(uuid_site.c_str());
+    }
+
+    if (nd_config.uuid_serial == NULL) {
+        string serial = reader.Get("netifyd", "uuid_serial", ND_AGENT_SERIAL_NULL);
+        if (serial.size() > 0)
+            nd_config.uuid_serial = strdup(serial.c_str());
     }
 
     string url_upload = reader.Get(
@@ -455,10 +458,6 @@ static int nd_config_load(void)
 
     nd_config.flags |= (reader.GetBoolean(
         "netifyd", "ssl_use_tlsv1", false)) ? ndGF_SSL_USE_TLSv1 : 0;
-
-    string uuid_site = reader.Get(
-        "netifyd", "uuid_site", ND_SITE_UUID_NULL);
-    nd_config.uuid_site = strdup(uuid_site.c_str());
 
     nd_config.max_tcp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_tcp_pkts", ND_MAX_TCP_PKTS);
@@ -1231,47 +1230,6 @@ static void nd_dump_stats(void)
     }
 }
 
-void nd_generate_uuid(void)
-{
-    int digit = 0;
-    deque<char> result;
-    uint64_t input = 623714775;
-    unsigned int seed = (unsigned int)time(NULL);
-    const char *clist = { "0123456789abcdefghijklmnpqrstuvwxyz" };
-    FILE *fh = fopen("/dev/urandom", "r");
-
-    if (fh == NULL)
-        cerr << "Error opening random device: " << strerror(errno) << endl;
-    else {
-        if (fread((void *)&seed, sizeof(unsigned int), 1, fh) != 1)
-            cerr << "Error reading from random device: " << strerror(errno) << endl;
-        fclose(fh);
-    }
-
-    srand(seed);
-    input = (uint64_t)rand();
-    input += (uint64_t)rand() << 32;
-
-    while (input != 0) {
-        result.push_front(toupper(clist[input % strlen(clist)]));
-        input /= strlen(clist);
-    }
-
-    for (size_t i = result.size(); i < 8; i++)
-        result.push_back('0');
-
-    while (result.size() && digit < 8) {
-        fprintf(stdout, "%c", result.front());
-        result.pop_front();
-        if (digit == 1) fprintf(stdout, "-");
-        if (digit == 3) fprintf(stdout, "-");
-        if (digit == 5) fprintf(stdout, "-");
-        digit++;
-    }
-
-    fprintf(stdout, "\n");
-}
-
 static void nd_dump_protocols(void)
 {
     uint32_t custom_proto_base;
@@ -1542,7 +1500,12 @@ int main(int argc, char *argv[])
             nd_conf_filename = strdup(optarg);
             break;
         case 'U':
-            nd_generate_uuid();
+            {
+                string uuid;
+                nd_generate_uuid(uuid);
+                nd_config.flags |= ndGF_DEBUG;
+                nd_printf("%s\n", uuid.c_str());
+            }
             exit(0);
         case 'P':
             nd_dump_protocols();
@@ -1662,6 +1625,18 @@ int main(int argc, char *argv[])
 #endif
     nd_printf("%s v%s (%s)\n", PACKAGE_NAME, GIT_RELEASE, _ND_CANONICAL_HOST);
     nd_printf("nDPI v%s, JSON format v%.2f\n", ndpi_revision(), ND_JSON_VERSION);
+
+    if (nd_config.uuid == NULL ||
+        ! strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
+        string uuid;
+        if (! nd_load_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN) ||
+            ! uuid.size() ||
+            ! strncmp(uuid.c_str(), ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
+            nd_generate_uuid(uuid);
+            nd_printf("Generated a new UUID: %s\n", uuid.c_str());
+            nd_save_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN);
+        }
+    }
 
     nd_debug_printf("Flow entry size: %lu\n", sizeof(struct ndFlow) +
         sizeof(struct ndpi_flow_struct) + sizeof(struct ndpi_id_struct) * 2);

@@ -282,7 +282,7 @@ void ndUploadThread::CreateHeaders(void)
         " nDPI/" << ndpi_revision();
 
     ostringstream uuid;
-    if (! strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN))
+    if (strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN))
         uuid << "X-UUID: " << nd_config.uuid;
     else {
         string _uuid;
@@ -293,11 +293,10 @@ void ndUploadThread::CreateHeaders(void)
     }
 
     ostringstream serial;
-    serial << "X-UUID-Serial: " <<
-        ((nd_config.uuid_serial != NULL) ? nd_config.uuid_serial : "-");
+    serial << "X-UUID-Serial: " << nd_config.uuid_serial;
 
     ostringstream site_uuid;
-    if (! strncmp(nd_config.uuid_site, ND_SITE_UUID_NULL, ND_SITE_UUID_LEN))
+    if (strncmp(nd_config.uuid_site, ND_SITE_UUID_NULL, ND_SITE_UUID_LEN))
         site_uuid << "X-UUID-Site: " << nd_config.uuid_site;
     else {
         string _uuid;

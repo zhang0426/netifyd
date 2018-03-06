@@ -191,7 +191,7 @@ void ndConntrackThread::DumpConntrackTable(void)
 
     mnl_socket_close(nl);
 
-    nd_debug_printf("%s: pre-loaded %lu conntrack entries.\n",
+    nd_debug_printf("%s: Loaded %lu conntrack entries.\n",
         tag.c_str(), ct_id_map.size());
 }
 

@@ -81,6 +81,8 @@
 #define ND_AGENT_UUID_NULL      "00-00-00-00"
 #define ND_AGENT_UUID_LEN       11
 
+#define ND_AGENT_SERIAL_NULL    "-"
+
 #define ND_SITE_UUID_PATH       "/var/lib/netifyd/site.uuid"
 #define ND_SITE_UUID_NULL       "-"
 #define ND_SITE_UUID_LEN        36

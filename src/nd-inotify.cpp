@@ -19,7 +19,9 @@
 #endif
 
 #include <string>
+#include <sstream>
 #include <stdexcept>
+#include <deque>
 #include <map>
 
 #include <unistd.h>
