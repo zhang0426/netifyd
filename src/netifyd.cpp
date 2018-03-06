@@ -433,7 +433,7 @@ static int nd_config_load(void)
         "netifyd", "upload_timeout", ND_UPLOAD_TIMEOUT);
 
     nd_config.flags |= (reader.GetBoolean(
-        "netifyd", "json_save", true)) ? ndGF_JSON_SAVE : 0;
+        "netifyd", "json_save", false)) ? ndGF_JSON_SAVE : 0;
 
     nd_config.flags |= (reader.GetBoolean(
         "dns_cache", "enable", true)) ? ndGF_USE_DNS_CACHE : 0;

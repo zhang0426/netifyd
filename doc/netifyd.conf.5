@@ -12,13 +12,9 @@ contains configuration parameters for the Netify Portal service (\fIhttps://www.
 .SH MAIN SECTION
 The main server options are defined within the [\fBnetifyd\fR] section.
 .PP
-\fBjson_save\fR=\fIBOOLEAN\fR
-.PP
-Enable/disable the \fBjson_save\fR paramter to set whether the current state is output as JSON.  The default is true.
-.PP
 \fBenable_sink\fR=\fIBOOLEAN\fR
 .PP
-Uploading detection flow metadata to the Netify Portal can be enabled or disabled by setting the \fBenable_sink\fR option.  When enabled, detection flow metadata is JSON-encoded, compressed, and uploaded to the Netify Sink server for further analysis and reporting.
+Uploading detection flow metadata to the Netify Portal can be enabled or disabled by setting the \fBenable_sink\fR option.  When enabled, detection flow metadata is JSON-encoded, compressed, and uploaded to the Netify Sink server for further analysis and reporting.  A Netify Portal account is required for registration and provisioning at: \fIhttps://www.netify.ai/\rR
 .PP
 \fBmax_backlog_kb\fR=\fIINTEGER\fR
 .PP
@@ -36,6 +32,10 @@ For some platforms it may be necessary to enforce the use of TLSv1.  The default
 \fBssl_verify_peer\fR=\fIBOOLEAN\fR
 .PP
 This option disables peer certificate validation.  You can use this option for testing against a server with a self-signed certificate.  The default is false.
+.PP
+\fBjson_save\fR=\fIBOOLEAN\fR
+.PP
+Enable/disable the \fBjson_save\fR parameter to set whether the current state is output to a JSON file.  The default is false.
 .PP
 \fBupdate_interval\fR=\fISECONDS\fR
 .PP
