@@ -1420,6 +1420,7 @@ int main(int argc, char *argv[])
         { "debug-uploads", 0, 0, 'D' },
         { "debug-dns-cache", 0, 0, 's' },
         { "replay-delay", 0, 0, 'r' },
+        { "uuid", 1, 0, 'u' },
         { "serial", 1, 0, 's' },
         { "internal", 1, 0, 'I' },
         { "external", 1, 0, 'E' },
@@ -1446,7 +1447,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDaenrtls:I:E:j:i:c:UPA:N:f:H:C:S:",
+            "?hVdDaenrtlu:s:I:E:j:i:c:UPA:N:f:H:C:S:",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -1471,6 +1472,9 @@ int main(int argc, char *argv[])
             break;
         case 'r':
             nd_config.flags |= ndGF_REPLAY_DELAY;
+            break;
+        case 'u':
+            nd_config.uuid = strdup(optarg);
             break;
         case 's':
             nd_config.uuid_serial = strdup(optarg);
