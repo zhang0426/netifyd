@@ -177,7 +177,7 @@ ndDetectionThread::ndDetectionThread(const string &dev,
 #ifdef _ND_USE_CONNTRACK
     thread_conntrack(thread_conntrack),
 #endif
-    pcap(NULL), pcap_snaplen(ND_PCAP_SNAPLEN),
+    pcap(NULL), pcap_fd(-1), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
     ts_last_idle_scan(0), ndpi(NULL), custom_proto_base(0), flows(flow_map),
     stats(stats), device_addrs(device_addrs), dns_cache(dns_cache)
@@ -264,6 +264,31 @@ void *ndDetectionThread::Entry(void)
                 tag.c_str(), cpu >= 0 ? cpu : 0);
         }
 
+        if (pcap_fd != -1) {
+            int rc;
+            struct timeval tv;
+            fd_set fds_read;
+
+            FD_ZERO(&fds_read);
+            FD_SET(pcap_fd, &fds_read);
+
+            memset(&tv, 0, sizeof(struct timeval));
+            tv.tv_sec = 1;
+
+            rc = select(pcap_fd + 1, &fds_read, NULL, NULL, &tv);
+
+            if (rc == -1)
+                throw ndDetectionThreadException(strerror(errno));
+
+            if (rc == 0) continue;
+
+            if (! FD_ISSET(pcap_fd, &fds_read)) {
+                nd_debug_printf("%s: Read event but pcap descriptor not set!",
+                    tag.c_str());
+                continue;
+            }
+        }
+
         switch (pcap_next_ex(pcap, &pkt_header, &pkt_data)) {
         case 0:
             break;
@@ -306,20 +331,32 @@ void *ndDetectionThread::Entry(void)
 
 pcap_t *ndDetectionThread::OpenCapture(void)
 {
+    pcap_t *pcap_new = NULL;
+
     if (pcap_file.size()) {
-        return pcap_open_offline(
+        pcap_new = pcap_open_offline(
             pcap_file.c_str(),
             pcap_errbuf
         );
     }
+    else {
+        pcap_new = pcap_open_live(
+            tag.c_str(),
+            pcap_snaplen,
+            1, // Promisc?
+            ND_PCAP_READ_TIMEOUT,
+            pcap_errbuf
+        );
+    }
 
-    return pcap_open_live(
-        tag.c_str(),
-        pcap_snaplen,
-        1, // Promisc?
-        ND_PCAP_READ_TIMEOUT,
-        pcap_errbuf
-    );
+    if (pcap_new != NULL) {
+        //if (pcap_setnonblock(pcap_new, 1, pcap_errbuf) < 0)
+        //    nd_debug_printf("%s: pcap_setnonblock: %s\n", tag.c_str(), pcap_errbuf);
+        if ((pcap_fd = pcap_get_selectable_fd(pcap_new)) < 0)
+            nd_debug_printf("%s: pcap_get_selectable_fd: -1\n", tag.c_str());
+    }
+
+    return pcap_new;
 }
 
 int ndDetectionThread::GetCaptureStats(struct pcap_stat &stats, bool do_lock)
