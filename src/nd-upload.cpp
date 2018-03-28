@@ -276,10 +276,7 @@ void ndUploadThread::CreateHeaders(void)
     FreeHeaders();
 
     ostringstream user_agent;
-    user_agent << "User-Agent: " <<
-        PACKAGE_NAME << "/" << GIT_RELEASE << " (" << _ND_CANONICAL_HOST << ")" <<
-        " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION <<
-        " nDPI/" << ndpi_revision();
+    user_agent << "User-Agent: " << nd_get_version_and_features();
 
     ostringstream uuid;
     if (strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN))

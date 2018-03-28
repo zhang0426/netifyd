@@ -327,9 +327,7 @@ static nd_dns_cache dns_cache;
 
 static void nd_usage(int rc = 0, bool version = false)
 {
-    cerr << PACKAGE_NAME << " v" << PACKAGE_VERSION << "/";
-    cerr << fixed << showpoint << setprecision(1) << ND_JSON_VERSION;
-    cerr << " [" << _ND_CANONICAL_HOST << "]" << endl;
+    cerr << nd_get_version_and_features() << endl;
     cerr << "Copyright (C) 2015-2018 eGloo Incorporated"
          <<  endl << "[" << GIT_RELEASE << " " << GIT_DATE << "]" << endl;
     if (version) {
@@ -1635,8 +1633,7 @@ int main(int argc, char *argv[])
         nd_create_windows();
     }
 #endif
-    nd_printf("%s v%s (%s)\n", PACKAGE_NAME, GIT_RELEASE, _ND_CANONICAL_HOST);
-    nd_printf("nDPI v%s, JSON format v%.2f\n", ndpi_revision(), ND_JSON_VERSION);
+    nd_printf("%s\n", nd_get_version_and_features().c_str());
 
     if (nd_config.uuid == NULL ||
         ! strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {

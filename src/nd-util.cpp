@@ -427,6 +427,25 @@ void nd_generate_uuid(string &uuid)
     uuid = os.str();
 }
 
+string nd_get_version_and_features(void)
+{
+    ostringstream ident;
+    ident <<
+        PACKAGE_NAME << "/" << GIT_RELEASE << " (host-" << _ND_CANONICAL_HOST;
+
+    if (ND_USE_CONNTRACK) ident << " use-conntrack";
+    if (ND_USE_NETLINK) ident << " use-netlink";
+    if (ND_USE_DNS_CACHE) ident << " use-dns-cache";
+    if (ND_SSL_USE_TLSv1) ident << " ssl-tlsv1";
+    if (ND_SSL_VERIFY_PEER) ident << " ssl-verify-peer";
+
+    ident << ")" <<
+        " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION <<
+        " nDPI/" << ndpi_revision();
+
+    return ident.str();
+}
+
 ndException::ndException(const string &where_arg, const string &what_arg) throw()
     : runtime_error(what_arg), where_arg(where_arg), what_arg(what_arg), message(NULL)
 {
