@@ -1252,12 +1252,9 @@ static void nd_dump_protocols(void)
     ndpi_free(ndpi);
     ndpi_global_init();
 }
-
+#ifdef _ND_USE_NETLINK
 static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
 {
-#ifndef _ND_USE_NETLINK
-    nd_printf("WARNING: Can't assign device address; netlink support unavailable.\n");
-#else
     char *token = NULL;
     struct sockaddr_in network_ip4;
     struct sockaddr_in bcast_ip4;
@@ -1265,11 +1262,6 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
     int bit, word, words;
     uint32_t b, word_net[4] = { 0, 0, 0, 0 }, word_bcast[1] = { 0 };
     char netaddr[INET6_ADDRSTRLEN], bcastaddr[INET6_ADDRSTRLEN];
-
-    if (! ND_USE_NETLINK || netlink == NULL) {
-        nd_printf("WARNING: Can't assign device address; netlink support disabled.\n");
-        return;
-    }
 
     for (vector<pair<string, string> >::const_iterator i = device_addresses.begin();
         i != device_addresses.end(); i++) {
@@ -1375,8 +1367,9 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
     }
 
     if (token != NULL) free(token);
-#endif
 }
+#endif // _ND_USE_NETLINK
+
 #ifdef _ND_USE_NCURSES
 static void nd_create_windows(void)
 {
@@ -1761,9 +1754,10 @@ int main(int argc, char *argv[])
             nd_printf("Error creating netlink watch: %s\n", e.what());
             return 1;
         }
+    
+        nd_add_device_addresses(device_addresses);
     }
 #endif
-    nd_add_device_addresses(device_addresses);
 
     if (nd_start_detection_threads() < 0)
         return 1;
