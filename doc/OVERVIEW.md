@@ -28,7 +28,10 @@ Netify Technical Overview
         = Configurable; default: 2MB
 
 - current test platforms:
-    - Linux x86 32 & 64bit (RHEL; CentOS; ClearOS; Debian; Ubuntu; Gentoo)
-    - LEDE / OpenWrt (ARM, MIPS): TP-Link Archer C2600, Pete's MIPS flash-router
-    - Raspberry Pi
+    - Linux PC (RHEL, CentOS, ClearOS, Debian, Ubuntu, Gentoo) (x86; 1GB+)
+    - Raspbian: Raspberry Pi Model 2 (ARMv7; Cortex-A7; 512GB)
+    - Raspbian: Raspberry Pi Model 3 (ARMv8; Cortex-A53; 1GB)
+    - EdgeOS (Debian / Proprietary): Ubiquiti ERLite-3 (MIPS64; Cavium Octeon+; 512MB)
+    - LEDE / OpenWrt: TP-Link Archer C2600 (ARMv7; Qualcomm Atheros IPQ806X; 512MB)
+    - FreeBSD 10.x PC (pfSense 2.x) (x86; 1GB+)
 

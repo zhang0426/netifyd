@@ -347,9 +347,14 @@ bool nd_load_uuid(string &uuid, const char *path, size_t length)
     char _uuid[length + 1];
     FILE *fh = fopen(path, "r");
 
-    if (fh == NULL) return false;
+    if (fh == NULL) {
+        nd_printf("Error loading uuid: %s: %s\n", path, strerror(errno));
+        return false;
+    }
+
     if (fread((void *)_uuid, 1, length, fh) != length) {
         fclose(fh);
+        nd_printf("Error reading uuid: %s: %s\n", path, strerror(errno));
         return false;
     }
 
@@ -364,9 +369,15 @@ bool nd_save_uuid(const string &uuid, const char *path, size_t length)
 {
     FILE *fh = fopen(path, "w");
 
+    if (fh == NULL) {
+        nd_printf("Error saving uuid: %s: %s\n", path, strerror(errno));
+        return false;
+    }
+
     if (fwrite((const void *)uuid.c_str(),
         1, length, fh) != length) {
         fclose(fh);
+        nd_printf("Error writing uuid: %s: %s\n", path, strerror(errno));
         return false;
     }
 
