@@ -1255,6 +1255,9 @@ static void nd_dump_protocols(void)
 
 static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
 {
+#ifndef _ND_USE_NETLINK
+    nd_printf("WARNING: Can't assign device address; netlink support unavailable.\n");
+#else
     char *token = NULL;
     struct sockaddr_in network_ip4;
     struct sockaddr_in bcast_ip4;
@@ -1262,6 +1265,11 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
     int bit, word, words;
     uint32_t b, word_net[4] = { 0, 0, 0, 0 }, word_bcast[1] = { 0 };
     char netaddr[INET6_ADDRSTRLEN], bcastaddr[INET6_ADDRSTRLEN];
+
+    if (! ND_USE_NETLINK || netlink == NULL) {
+        nd_printf("WARNING: Can't assign device address; netlink support disabled.\n");
+        return;
+    }
 
     for (vector<pair<string, string> >::const_iterator i = device_addresses.begin();
         i != device_addresses.end(); i++) {
@@ -1340,10 +1348,10 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
             bcast_ip4.sin_addr.s_addr = htonl(word_bcast[0]);
             inet_ntop(AF_INET,
                 &bcast_ip4.sin_addr, bcastaddr, INET_ADDRSTRLEN);
-#ifdef _ND_USE_NETLINK
+
             if (! netlink->AddAddress(family, _ND_NETLINK_BROADCAST, bcastaddr))
                 nd_printf("WARNING: Error adding device address: %s\n", bcastaddr);
-#endif
+
             break;
 
         case AF_INET6:
@@ -1355,7 +1363,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
                 &network_ip6.sin6_addr, netaddr, INET6_ADDRSTRLEN);
             break;
         }
-#ifdef _ND_USE_NETLINK
+
         if (! netlink->AddNetwork(family, (*i).first, netaddr, _length)) {
             nd_printf("WARNING: Error adding device network: %s\n",
                 (*i).second.c_str());
@@ -1364,10 +1372,10 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
         if (! netlink->AddAddress(family, (*i).first, address)) {
             nd_printf("WARNING: Error adding device address: %s\n", address);
         }
-#endif
     }
 
     if (token != NULL) free(token);
+#endif
 }
 #ifdef _ND_USE_NCURSES
 static void nd_create_windows(void)
