@@ -1,0 +1,15 @@
+# Netify Agent command-line options
+# See the netifyd(8) manual for common options.
+
+# Set desired custom options here:
+# NETIFYD_EXTRA_OPTS=""
+
+# Define internal network interfaces and if needed, corresponding network
+# addresses.  Normally network addresses are discovered via Netlink but for
+# cases where Netlink is unavailable or when capturing from a mirrored port,
+# they should be specified as a comma-delimited list as shown below:
+# NETIFYD_INTNET="eth1 eth2 eth3,192.168.0.0/24,10.0.0.0/16"
+
+# Define external network interfaces.  For PPPoE interfaces, you can optionally
+# specify the associated physical ethernet interface to set the MAC address.
+# NETIFYD_EXTNET="eth4 ppp0,eth5"
