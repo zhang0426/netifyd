@@ -36,12 +36,16 @@ install: build
 	dh_installdirs
 
 	make install DESTDIR=/usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@
-	install -D -m 0660 deploy/@PACKAGE_TARNAME@.conf /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/@PACKAGE_TARNAME@.conf
-	install -D -m 0755 deploy/debian/@PACKAGE_TARNAME@.init /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/init.d/@PACKAGE_TARNAME@
-	install -D -m 0644 deploy/debian/@PACKAGE_TARNAME@.default /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/default/@PACKAGE_TARNAME@
-	mkdir -p /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/var/run
+
+	install -D -m 0660 deploy/@PACKAGE_TARNAME@.conf \
+        /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/@PACKAGE_TARNAME@.conf
+	install -D -m 0755 deploy/debian/@PACKAGE_TARNAME@.init \
+        /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/init.d/@PACKAGE_TARNAME@
+	install -D -m 0644 deploy/debian/@PACKAGE_TARNAME@.default \
+        /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/default/@PACKAGE_TARNAME@
+	install -D -m 0644 deploy/app-custom-match.conf \
+        /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/var/lib/@PACKAGE_TARNAME@/app-custom-match.conf
 	install -d -m 0755 /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/var/run/@PACKAGE_TARNAME@
-	install -D -m 0644 deploy/app-custom-match.conf /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/var/lib/@PACKAGE_TARNAME@/app-custom-match.conf
 
 # Build architecture-independent files here.
 binary-indep: build install
