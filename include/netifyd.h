@@ -158,10 +158,13 @@ typedef struct nd_global_config_t {
     char *path_custom_match;
     char *path_host_match;
     char *path_json;
+    char *path_uuid;
+    char *path_uuid_serial;
+    char *path_uuid_site;
     char *url_upload;
     char *uuid;
-    char *uuid_site;
     char *uuid_serial;
+    char *uuid_site;
     size_t max_backlog;
     uint32_t flags;
     uint8_t digest_content_match[SHA1_DIGEST_LENGTH];

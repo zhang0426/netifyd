@@ -93,10 +93,13 @@ nd_global_config nd_config = {
     .path_custom_match = NULL,
     .path_host_match = NULL,
     .path_json = NULL,
+    .path_uuid = NULL,
+    .path_uuid_serial = NULL,
+    .path_uuid_site= NULL,
     .url_upload = NULL,
     .uuid = NULL,
-    .uuid_site = NULL,
     .uuid_serial = NULL,
+    .uuid_site = NULL,
     .max_backlog = ND_MAX_BACKLOG_KB * 1024,
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
     .flags = ndGF_USE_CONNTRACK | ndGF_USE_NETLINK,
@@ -407,6 +410,14 @@ static int nd_config_load(void)
         if (uuid.size() > 0)
             nd_config.uuid = strdup(uuid.c_str());
     }
+
+    string path_uuid = reader.Get(
+        "netifyd", "path_uuid", ND_AGENT_UUID_PATH);
+    nd_config.path_uuid = strdup(path_uuid.c_str());
+
+    string path_uuid_site = reader.Get(
+        "netifyd", "path_uuid_site", ND_SITE_UUID_PATH);
+    nd_config.path_uuid_site = strdup(path_uuid_site.c_str());
 
     if (nd_config.uuid_site == NULL) {
         string uuid_site = reader.Get("netifyd", "uuid_site", ND_SITE_UUID_NULL);
@@ -1587,6 +1598,7 @@ int main(int argc, char *argv[])
 
     if (nd_config.path_json == NULL)
         nd_config.path_json = strdup(ND_JSON_FILE_NAME);
+
     if (nd_conf_filename == NULL)
         nd_conf_filename = strdup(ND_CONF_FILE_NAME);
 
