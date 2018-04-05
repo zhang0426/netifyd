@@ -283,7 +283,7 @@ void ndUploadThread::CreateHeaders(void)
         uuid << "X-UUID: " << nd_config.uuid;
     else {
         string _uuid;
-        if (nd_load_uuid(_uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN))
+        if (nd_load_uuid(_uuid, nd_config.path_uuid, ND_AGENT_UUID_LEN))
             uuid << "X-UUID: " << _uuid;
         else
             uuid << "X-UUID: " << nd_config.uuid;
@@ -297,7 +297,7 @@ void ndUploadThread::CreateHeaders(void)
         site_uuid << "X-UUID-Site: " << nd_config.uuid_site;
     else {
         string _uuid;
-        if (nd_load_uuid(_uuid, ND_SITE_UUID_PATH, ND_SITE_UUID_LEN))
+        if (nd_load_uuid(_uuid, nd_config.path_uuid_site, ND_SITE_UUID_LEN))
             site_uuid << "X-UUID-Site: " << _uuid;
         else
             site_uuid << "X-UUID-Site: " << nd_config.uuid_site;
@@ -482,7 +482,7 @@ void ndUploadThread::ProcessResponse(void)
             if (json_result->GetMessage().length() == ND_SITE_UUID_LEN
                 && nd_save_uuid(
                     json_result->GetMessage(),
-                    ND_SITE_UUID_PATH, ND_SITE_UUID_LEN
+                    nd_config.path_uuid_site, ND_SITE_UUID_LEN
                 )) {
                 nd_debug_printf("%s: saved new site UUID: %s\n", tag.c_str(),
                     json_result->GetMessage().c_str());
