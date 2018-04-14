@@ -169,8 +169,9 @@ void nd_verbose_printf(const char *format, ...)
     }
 }
 
-void ndpi_debug_printf(
-    unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...)
+void ndpi_debug_printf(uint32_t protocol, void *ndpi,
+    ndpi_log_level_t level, const char *file, const char *func, unsigned line,
+    const char *format, ...)
 {
     if (ND_DEBUG) {
 
@@ -181,8 +182,22 @@ void ndpi_debug_printf(
 #ifndef _ND_USE_NCURSES
         vfprintf(stderr, format, ap);
 #else
-        vwprintw(win_output, format, ap);
-        wrefresh(win_output);
+        if (! ND_USE_NCURSES) {
+            fprintf(stderr, "[nDPI:%08x:%p:%s]: %s/%s:%d: ", protocol, ndpi,
+                (level == NDPI_LOG_ERROR) ? "ERROR" :
+                    (level == NDPI_LOG_TRACE) ? "TRACE" :
+                        (level == NDPI_LOG_DEBUG) ? "DEBUG" :
+                            (level == NDPI_LOG_DEBUG_EXTRA) ? "DEXTRA" :
+                                "UNK???",
+                file, func, line
+            );
+            vfprintf(stderr, format, ap);
+            //fputc('\n', stderr);
+        }
+        else {
+            vwprintw(win_output, format, ap);
+            wrefresh(win_output);
+        }
 #endif
         va_end(ap);
 

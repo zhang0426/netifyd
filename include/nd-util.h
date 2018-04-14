@@ -37,8 +37,9 @@ void nd_printf_unlock(void);
 void nd_debug_printf(const char *format, ...);
 void nd_verbose_printf(const char *format, ...);
 
-void ndpi_debug_printf(
-    unsigned int i, void *p, ndpi_log_level_t l, const char *format, ...);
+void ndpi_debug_printf(uint32_t protocol, void *ndpi,
+    ndpi_log_level_t level, const char *file, const char *func, unsigned line,
+    const char *format, ...);
 
 void nd_print_address(const struct sockaddr_storage *addr);
 
