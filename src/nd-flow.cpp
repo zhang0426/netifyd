@@ -582,7 +582,7 @@ json_object *ndFlow::json_encode(const string &device,
         char tohex[7];
         json_object *_ssl = json.CreateObject(json_flow, "ssl");
 
-        sprintf(tohex, "0x%02hhx%02hhx", ssl.ssl_version, ssl.tls_version);
+        sprintf(tohex, "0x%04hx", ssl.version);
         json.AddObject(_ssl, "version", tohex);
 
         sprintf(tohex, "0x%04hx", ssl.cipher_suite);

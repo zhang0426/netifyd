@@ -989,10 +989,8 @@ void ndDetectionThread::ProcessPacket(void)
             );
             break;
         case NDPI_PROTOCOL_SSL:
-            new_flow->ssl.ssl_version =
-                new_flow->ndpi_flow->protos.ssl.ssl_version;
-            new_flow->ssl.tls_version =
-                new_flow->ndpi_flow->protos.ssl.tls_version;
+            new_flow->ssl.version =
+                new_flow->ndpi_flow->protos.ssl.version;
             new_flow->ssl.cipher_suite =
                 new_flow->ndpi_flow->protos.ssl.cipher_suite;
 
