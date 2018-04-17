@@ -235,24 +235,10 @@ void *ndDetectionThread::Entry(void)
                 continue;
             }
 
-            memset(pcap_errbuf, 0, PCAP_ERRBUF_SIZE);
-
-            pcap = OpenCapture();
-
-            if (pcap == NULL) {
-                nd_printf("%s.\n", pcap_errbuf);
+            if ((pcap = OpenCapture()) == NULL) {
                 sleep(1);
                 continue;
             }
-
-            if (pcap_file.size()) {
-            nd_printf("%s: using capture file: %s: v%d.%d\n",
-                tag.c_str(), pcap_file.c_str(),
-                pcap_major_version(pcap), pcap_minor_version(pcap));
-            }
-
-            if (strlen(pcap_errbuf))
-                nd_printf("%s.\n", pcap_errbuf);
 
             pcap_datalink_type = pcap_datalink(pcap);
 
@@ -329,23 +315,24 @@ pcap_t *ndDetectionThread::OpenCapture(void)
 {
     pcap_t *pcap_new = NULL;
 
+    memset(pcap_errbuf, 0, PCAP_ERRBUF_SIZE);
+
     if (pcap_file.size()) {
-        pcap_new = pcap_open_offline(
-            pcap_file.c_str(),
-            pcap_errbuf
-        );
+        pcap_new = pcap_open_offline(pcap_file.c_str(), pcap_errbuf);
+
+        nd_printf("%s: reading from capture file: %s: v%d.%d\n",
+            tag.c_str(), pcap_file.c_str(),
+            pcap_major_version(pcap_new), pcap_minor_version(pcap_new));
     }
     else {
-        pcap_new = pcap_open_live(
-            tag.c_str(),
-            pcap_snaplen,
-            1, // Promisc?
-            ND_PCAP_READ_TIMEOUT,
-            pcap_errbuf
+        pcap_new = pcap_open_live(tag.c_str(),
+            pcap_snaplen, 1, ND_PCAP_READ_TIMEOUT, pcap_errbuf
         );
     }
 
-    if (pcap_new != NULL) {
+    if (pcap_new == NULL)
+        nd_printf("%s: pcap_open: %s\n", tag.c_str(), pcap_errbuf);
+    else {
         if ((pcap_fd = pcap_get_selectable_fd(pcap_new)) < 0)
             nd_debug_printf("%s: pcap_get_selectable_fd: -1\n", tag.c_str());
 
@@ -356,14 +343,15 @@ pcap_t *ndDetectionThread::OpenCapture(void)
 
             if (pcap_compile(pcap_new, &pcap_filter,
                 i->second.c_str(), 1, PCAP_NETMASK_UNKNOWN) < 0) {
-                nd_printf("%s: pcap_compile: %s\n", tag.c_str(), pcap_errbuf);
+                nd_printf("%s: pcap_compile: %s\n",
+                    tag.c_str(), pcap_geterr(pcap_new));
                 pcap_close(pcap_new);
                 return NULL;
             }
 
             if (pcap_setfilter(pcap_new, &pcap_filter) < 0) {
                 nd_printf("%s: pcap_setfilter: %s\n",
-                    tag.c_str(), pcap_errbuf);
+                    tag.c_str(), pcap_geterr(pcap_new));
                 pcap_close(pcap_new);
                 return NULL;
             }
