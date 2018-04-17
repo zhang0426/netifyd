@@ -34,11 +34,10 @@
 #endif
 #include <json.h>
 
-#include "ndpi_main.h"
-
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
@@ -139,7 +138,6 @@ uint16_t ndFlow::master_protocol(void)
     case NDPI_PROTOCOL_HTTP_CONNECT:
     case NDPI_PROTOCOL_HTTP_PROXY:
     case NDPI_PROTOCOL_IQIYI:
-    case NDPI_PROTOCOL_MOVE:
     case NDPI_PROTOCOL_NETFLIX:
     case NDPI_PROTOCOL_OOKLA:
     case NDPI_PROTOCOL_PPSTREAM:

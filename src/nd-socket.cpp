@@ -68,11 +68,10 @@
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #endif
 
-#include "ndpi_main.h"
-
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"

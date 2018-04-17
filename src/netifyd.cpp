@@ -62,11 +62,11 @@
 #endif
 
 #include "INIReader.h"
-#include "ndpi_main.h"
 
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #ifdef _ND_USE_INOTIFY
 #include "nd-inotify.h"
@@ -83,7 +83,6 @@ using namespace std;
 #include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-upload.h"
-#include "nd-ndpi.h"
 
 #define ND_STR_ETHALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
 
@@ -139,7 +138,7 @@ static ndConntrackThread *thread_conntrack = NULL;
 #endif
 #ifdef _ND_USE_INOTIFY
 static ndInotify *inotify = NULL;
-static map<string, string> inotify_watches;
+static nd_inotify_watch inotify_watches;
 #endif
 #ifdef _ND_USE_NCURSES
 static WINDOW *win_stats = NULL;
@@ -147,8 +146,10 @@ WINDOW *win_output = NULL;
 #endif
 #ifdef _ND_USE_NETLINK
 static ndNetlink *netlink = NULL;
-static map<string, string> device_netlink;
+nd_device_netlink device_netlink;
 #endif
+static nd_device_filter device_filters;
+
 static time_t nd_ethers_mtime = 0;
 
 void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hostname)
@@ -585,7 +586,7 @@ static int nd_start_detection_threads(void)
             i != ifaces.end(); i++) {
 #ifdef _ND_USE_NETLINK
             if (ND_USE_NETLINK) {
-                map<string, string>::const_iterator j;
+                nd_device_netlink::const_iterator j;
                 netlink_dev = (*i).second;
                 if ((j = device_netlink.find(netlink_dev)) != device_netlink.end())
                     netlink_dev = j->second.c_str();
@@ -1213,7 +1214,7 @@ static void nd_dump_stats(void)
     if (ND_USE_SINK) {
         try {
 #ifdef _ND_USE_INOTIFY
-            for (map<string, string>::const_iterator i = inotify_watches.begin();
+            for (nd_inotify_watch::const_iterator i = inotify_watches.begin();
                 i != inotify_watches.end(); i++) {
                 if (! inotify->EventOccured(i->first)) continue;
                 nd_json_add_file(json.GetRoot(), i->first, i->second);
@@ -1261,8 +1262,9 @@ static void nd_dump_protocols(void)
     ndpi_free(ndpi);
     ndpi_global_init();
 }
+
 #ifdef _ND_USE_NETLINK
-static void nd_add_device_addresses(vector<pair<string, string> > &device_addresses)
+static void nd_add_device_addresses(nd_device_addr &device_addresses)
 {
     char *token = NULL;
     struct sockaddr_in network_ip4;
@@ -1272,7 +1274,7 @@ static void nd_add_device_addresses(vector<pair<string, string> > &device_addres
     uint32_t b, word_net[4] = { 0, 0, 0, 0 }, word_bcast[1] = { 0 };
     char netaddr[INET6_ADDRSTRLEN], bcastaddr[INET6_ADDRSTRLEN];
 
-    for (vector<pair<string, string> >::const_iterator i = device_addresses.begin();
+    for (nd_device_addr::const_iterator i = device_addresses.begin();
         i != device_addresses.end(); i++) {
 
         sa_family_t family = AF_UNSPEC;
@@ -1397,7 +1399,7 @@ int main(int argc, char *argv[])
     timer_t timer_id;
     struct itimerspec it_spec;
     string last_device;
-    vector<pair<string, string> > device_addresses;
+    nd_device_addr device_addresses;
 
     setlocale(LC_ALL, "");
 
@@ -1440,6 +1442,7 @@ int main(int argc, char *argv[])
         { "uuidgen", 0, 0, 'U' },
         { "protocols", 0, 0, 'P' },
         { "device-address", 1, 0, 'A' },
+        { "device-filter", 1, 0, 'F' },
 #ifdef _ND_USE_NETLINK
         { "device-netlink", 1, 0, 'N' },
 #endif
@@ -1457,7 +1460,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDaenrtlu:s:I:E:j:i:c:UPA:N:f:H:C:S:",
+            "?hVdDaenrtlu:s:I:E:j:i:c:UPA:N:f:H:C:S:F:",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -1537,6 +1540,18 @@ int main(int argc, char *argv[])
                 exit(1);
             }
             device_addresses.push_back(make_pair(last_device, optarg));
+            break;
+        case 'F':
+            if (last_device.size() == 0) {
+                cerr << "You must specify an interface first." << endl;
+                exit(1);
+            }
+            if (nd_config.device_filters
+                .find(last_device) != nd_config.device_filters.end()) {
+                cerr << "Only one filter can be applied to a device." << endl;
+                exit(1);
+            }
+            nd_config.device_filters[last_device] = optarg;
             break;
 #ifdef _ND_USE_NETLINK
         case 'N':
@@ -1740,7 +1755,7 @@ int main(int argc, char *argv[])
 #ifdef _ND_USE_INOTIFY
     try {
         inotify = new ndInotify();
-        for (map<string, string>::const_iterator i = inotify_watches.begin();
+        for (nd_inotify_watch::const_iterator i = inotify_watches.begin();
             i != inotify_watches.end(); i++)
             inotify->AddWatch(i->first, i->second);
         if (inotify_watches.size()) inotify->RefreshWatches();
@@ -1755,7 +1770,7 @@ int main(int argc, char *argv[])
         try {
             netlink = new ndNetlink(ifaces);
 
-            map<string, string>::const_iterator i;
+            nd_device_netlink::const_iterator i;
             for (i = device_netlink.begin(); i != device_netlink.end(); i++)
                 netlink->AddInterface(i->second);
         }

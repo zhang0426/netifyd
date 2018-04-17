@@ -29,11 +29,12 @@
 #include <signal.h>
 #include <pthread.h>
 
-#include "ndpi_main.h"
+#include <sys/socket.h>
 
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-thread.h"
 

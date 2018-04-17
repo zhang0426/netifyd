@@ -39,9 +39,13 @@
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif
 
-#ifndef HOST_NAME_MAX
 #include <limits.h>
+#ifndef HOST_NAME_MAX
+#ifdef _POSIX_HOST_NAME_MAX
 #define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#else
+#error Unable to define HOST_NAME_MAX.
+#endif
 #endif
 
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
@@ -112,6 +116,15 @@
 
 #include "nd-sha1.h"
 
+typedef unordered_map<string, vector<string> > nd_device_addrs;
+typedef map<string, nd_device_addrs *> nd_devices;
+typedef unordered_map<string, string> nd_device_ethers;
+typedef vector<pair<bool, string> > nd_ifaces;
+typedef vector<pair<string, string> > nd_device_addr;
+typedef map<string, string> nd_device_filter;
+typedef map<string, string> nd_device_netlink;
+typedef map<string, string> nd_inotify_watch;
+
 enum nd_global_flags {
     ndGF_DEBUG = 0x1,
     ndGF_DEBUG_UPLOAD = 0x2,
@@ -180,6 +193,7 @@ typedef struct nd_global_config_t {
     vector<string> socket_path;
     vector<struct sockaddr *> privacy_filter_host;
     vector<uint8_t *> privacy_filter_mac;
+    nd_device_filter device_filters;
 } nd_global_config;
 
 typedef struct nd_packet_stats_t
@@ -231,6 +245,8 @@ typedef struct nd_packet_stats_t
     }
 } nd_packet_stats;
 
+typedef map<string, nd_packet_stats *> nd_stats;
+
 typedef pair<time_t, string> nd_dns_tuple;
 typedef unordered_map<string, nd_dns_tuple> nd_dns_ar;
 typedef pair<nd_dns_ar::iterator, bool> nd_dns_cache_insert;
@@ -253,12 +269,6 @@ typedef struct nd_dns_cache_t
     void load(void);
     void save(void);
 } nd_dns_cache;
-
-typedef unordered_map<string, vector<string> > nd_device_addrs;
-typedef map<string, nd_device_addrs *> nd_devices;
-typedef unordered_map<string, string> nd_device_ethers;
-typedef vector<pair<bool, string> > nd_ifaces;
-typedef map<string, nd_packet_stats *> nd_stats;
 
 void nd_json_protocols(string &json_string);
 

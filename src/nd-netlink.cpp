@@ -25,23 +25,23 @@
 
 #include <unistd.h>
 #include <string.h>
-#include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <net/if.h>
 #include <netdb.h>
 #include <pthread.h>
 
+#include <sys/stat.h>
+#include <sys/socket.h>
+
+#include <net/if.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
 using namespace std;
 
-#include "ndpi_main.h"
-
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-netlink.h"
 

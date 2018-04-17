@@ -40,11 +40,10 @@
 #include <json.h>
 #include <zlib.h>
 
-#include "ndpi_main.h"
-
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-json.h"
 #include "nd-thread.h"

@@ -41,11 +41,10 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "ndpi_main.h"
-
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-sha1.h"
 
@@ -169,6 +168,7 @@ void nd_verbose_printf(const char *format, ...)
     }
 }
 
+#ifdef NDPI_ENABLE_DEBUG_MESSAGES
 void ndpi_debug_printf(uint32_t protocol, void *ndpi,
     ndpi_log_level_t level, const char *file, const char *func, unsigned line,
     const char *format, ...)
@@ -180,6 +180,14 @@ void ndpi_debug_printf(uint32_t protocol, void *ndpi,
         va_list ap;
         va_start(ap, format);
 #ifndef _ND_USE_NCURSES
+        fprintf(stderr, "[nDPI:%08x:%p:%s]: %s/%s:%d: ", protocol, ndpi,
+            (level == NDPI_LOG_ERROR) ? "ERROR" :
+                (level == NDPI_LOG_TRACE) ? "TRACE" :
+                    (level == NDPI_LOG_DEBUG) ? "DEBUG" :
+                        (level == NDPI_LOG_DEBUG_EXTRA) ? "DEXTRA" :
+                            "UNK???",
+            file, func, line
+        );
         vfprintf(stderr, format, ap);
 #else
         if (! ND_USE_NCURSES) {
@@ -195,15 +203,24 @@ void ndpi_debug_printf(uint32_t protocol, void *ndpi,
             //fputc('\n', stderr);
         }
         else {
+            wprintw(win_output, "[nDPI:%08x:%p:%s]: %s/%s:%d: ", protocol, ndpi,
+                (level == NDPI_LOG_ERROR) ? "ERROR" :
+                    (level == NDPI_LOG_TRACE) ? "TRACE" :
+                        (level == NDPI_LOG_DEBUG) ? "DEBUG" :
+                            (level == NDPI_LOG_DEBUG_EXTRA) ? "DEXTRA" :
+                                "UNK???",
+                file, func, line
+            );
             vwprintw(win_output, format, ap);
             wrefresh(win_output);
         }
-#endif
+#endif // _ND_USE_NCURSES
         va_end(ap);
 
         pthread_mutex_unlock(nd_printf_mutex);
     }
 }
+#endif // NDPI_ENABLE_DEBUG_MESSAGES
 
 void nd_print_address(const struct sockaddr_storage *addr)
 {

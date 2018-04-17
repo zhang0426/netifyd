@@ -36,11 +36,11 @@ void nd_printf_unlock(void);
 #endif
 void nd_debug_printf(const char *format, ...);
 void nd_verbose_printf(const char *format, ...);
-
+#ifdef NDPI_ENABLE_DEBUG_MESSAGES
 void ndpi_debug_printf(uint32_t protocol, void *ndpi,
     ndpi_log_level_t level, const char *file, const char *func, unsigned line,
     const char *format, ...);
-
+#endif
 void nd_print_address(const struct sockaddr_storage *addr);
 
 void nd_print_binary(uint32_t byte);

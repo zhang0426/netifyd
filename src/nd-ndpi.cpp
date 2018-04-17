@@ -34,13 +34,10 @@
 
 #include <arpa/inet.h>
 
-extern "C" {
-#include "ndpi_api.h"
-}
-
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-thread.h"
 
@@ -83,8 +80,11 @@ void ndpi_global_init(void)
 
     set_ndpi_malloc(nd_mem_alloc);
     set_ndpi_free(nd_mem_free);
+#ifdef NDPI_ENABLE_DEBUG_MESSAGES
+    ndpi_parent->ndpi_log_level = NDPI_LOG_TRACE;
+    //ndpi_parent->ndpi_log_level = NDPI_LOG_DEBUG_EXTRA;
     set_ndpi_debug_function(ndpi_parent, ndpi_debug_printf);
-
+#endif
     NDPI_PROTOCOL_BITMASK proto_all;
     NDPI_BITMASK_SET_ALL(proto_all);
 
@@ -238,9 +238,11 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     //nd_ndpi_load_host_match(tag, ndpi);
 
     ndpi_init_string_based_protocols(ndpi);
-
+#ifdef NDPI_ENABLE_DEBUG_MESSAGES
+    ndpi->ndpi_log_level = NDPI_LOG_TRACE;
+    //ndpi->ndpi_log_level = NDPI_LOG_DEBUG_EXTRA;
     set_ndpi_debug_function(ndpi, ndpi_debug_printf);
-
+#endif
     NDPI_PROTOCOL_BITMASK proto_all;
     NDPI_BITMASK_SET_ALL(proto_all);
 

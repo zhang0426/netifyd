@@ -112,15 +112,12 @@
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #endif
 
-extern "C" {
-#include "ndpi_api.h"
-}
-
 #define _ND_PPP_PROTOCOL(p)	((((uint8_t *)(p))[0] << 8) + ((uint8_t *)(p))[1])
 
 using namespace std;
 
 #include "netifyd.h"
+#include "nd-ndpi.h"
 #include "nd-util.h"
 #ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
@@ -133,7 +130,6 @@ using namespace std;
 #endif
 #include "nd-detection.h"
 #include "nd-socket.h"
-#include "nd-ndpi.h"
 
 // Enable to log discarded packets
 //#define _ND_LOG_PKT_DISCARD     1
@@ -350,10 +346,28 @@ pcap_t *ndDetectionThread::OpenCapture(void)
     }
 
     if (pcap_new != NULL) {
-        //if (pcap_setnonblock(pcap_new, 1, pcap_errbuf) < 0)
-        //    nd_debug_printf("%s: pcap_setnonblock: %s\n", tag.c_str(), pcap_errbuf);
         if ((pcap_fd = pcap_get_selectable_fd(pcap_new)) < 0)
             nd_debug_printf("%s: pcap_get_selectable_fd: -1\n", tag.c_str());
+
+        nd_device_filter::const_iterator i =
+            nd_config.device_filters.find(pcap_file.size() ? pcap_file : tag);
+
+        if (i != nd_config.device_filters.end()) {
+
+            if (pcap_compile(pcap_new, &pcap_filter,
+                i->second.c_str(), 1, PCAP_NETMASK_UNKNOWN) < 0) {
+                nd_printf("%s: pcap_compile: %s\n", tag.c_str(), pcap_errbuf);
+                pcap_close(pcap_new);
+                return NULL;
+            }
+
+            if (pcap_setfilter(pcap_new, &pcap_filter) < 0) {
+                nd_printf("%s: pcap_setfilter: %s\n",
+                    tag.c_str(), pcap_errbuf);
+                pcap_close(pcap_new);
+                return NULL;
+            }
+        }
     }
 
     return pcap_new;
