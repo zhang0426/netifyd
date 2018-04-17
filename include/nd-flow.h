@@ -105,6 +105,9 @@ struct ndFlow
         } ssh;
 
         struct {
+            uint8_t ssl_version;
+            uint8_t tls_version;
+            uint16_t cipher_suite;
             char client_certcn[ND_FLOW_SSL_CNLEN];
             char server_certcn[ND_FLOW_SSL_CNLEN];
         } ssl;

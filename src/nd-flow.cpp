@@ -579,7 +579,14 @@ json_object *ndFlow::json_encode(const string &device,
 
     if (has_ssl_client_certcn() || has_ssl_server_certcn()) {
 
+        char tohex[7];
         json_object *_ssl = json.CreateObject(json_flow, "ssl");
+
+        sprintf(tohex, "0x%02hhx%02hhx", ssl.ssl_version, ssl.tls_version);
+        json.AddObject(_ssl, "version", tohex);
+
+        sprintf(tohex, "0x%04hx", ssl.cipher_suite);
+        json.AddObject(_ssl, "cipher_suite", tohex);
 
         if (has_ssl_client_certcn())
             json.AddObject(_ssl, "client", ssl.client_certcn);

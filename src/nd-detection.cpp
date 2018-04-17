@@ -989,6 +989,13 @@ void ndDetectionThread::ProcessPacket(void)
             );
             break;
         case NDPI_PROTOCOL_SSL:
+            new_flow->ssl.ssl_version =
+                new_flow->ndpi_flow->protos.ssl.ssl_version;
+            new_flow->ssl.tls_version =
+                new_flow->ndpi_flow->protos.ssl.tls_version;
+            new_flow->ssl.cipher_suite =
+                new_flow->ndpi_flow->protos.ssl.cipher_suite;
+
             snprintf(new_flow->ssl.client_certcn, ND_FLOW_SSL_CNLEN,
                 "%s", new_flow->ndpi_flow->protos.ssl.client_certificate);
             snprintf(new_flow->ssl.server_certcn, ND_FLOW_SSL_CNLEN,
