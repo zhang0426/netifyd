@@ -41,7 +41,7 @@ install: build
         /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/@PACKAGE_TARNAME@.conf
 	install -D -m 0755 deploy/debian/@PACKAGE_TARNAME@.init \
         /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/init.d/@PACKAGE_TARNAME@
-	install -D -m 0644 deploy/debian/@PACKAGE_TARNAME@.default \
+	install -D -m 0644 deploy/@PACKAGE_TARNAME@.default \
         /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/etc/default/@PACKAGE_TARNAME@
 	install -D -m 0644 deploy/app-custom-match.conf \
         /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/var/lib/@PACKAGE_TARNAME@/app-custom-match.conf
