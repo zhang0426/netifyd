@@ -158,8 +158,6 @@ AC_TYPE_UINT8_T
 AC_CHECK_SIZEOF([long])
 
 # Checks for library functions.
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
 AC_FUNC_STRNLEN
 
 AC_CHECK_FUNCS([ftruncate memchr memset pathconf select socket strcasecmp strdup strerror])
