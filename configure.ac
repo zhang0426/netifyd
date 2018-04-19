@@ -12,7 +12,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
-AC_DEFINE_UNQUOTED([_ND_CANONICAL_HOST], ["${host_os}"], [Defines the canonical host.])
+AC_DEFINE_UNQUOTED([_ND_CANONICAL_HOST], ["${host_alias}"], [Defines the canonical host.])
 
 # Checks for programs.
 AC_PROG_CC
