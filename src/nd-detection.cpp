@@ -97,9 +97,6 @@
 #include <signal.h>
 #include <netdb.h>
 #include <resolv.h>
-#ifdef HAVE_ENDIAN_H
-#include <endian.h>
-#endif
 
 #include <json.h>
 #include <pcap/pcap.h>
@@ -143,12 +140,12 @@ extern nd_global_config nd_config;
 
 struct __attribute__((packed)) nd_mpls_header_t
 {
-#if defined(__LITTLE_ENDIAN__)
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     uint32_t ttl:8, s:1, exp:3, label:20;
-#elif defined(__BIG_ENDIAN__)
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     uint32_t label:20, exp:3, s:1, ttl:8;
 #else
-#error Endianess not defined.
+#error Endianess not defined (__BYTE_ORDER__).
 #endif
 };
 
