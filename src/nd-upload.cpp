@@ -130,6 +130,7 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_POST, 1);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)nd_config.upload_timeout);
+    curl_easy_setopt(ch, CURLOPT_NOSIGNAL, (long)1);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (ND_DEBUG_UPLOAD) ? ND_COOKIE_JAR : "");
 
     curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndUploadThread_read_data);
