@@ -1,5 +1,20 @@
-// This code is public-domain - it is based on libcrypt
-// Placed in the public domain by Wei Dai and other contributors.
+/* Declarations of functions and data types used for SHA1 sum
+   library functions.
+   Copyright (C) 2000-2001, 2003, 2005-2006, 2008-2017 Free Software
+   Foundation, Inc.
+
+   This program is free software; you can redistribute it and/or modify it
+   under the terms of the GNU General Public License as published by the
+   Free Software Foundation; either version 3, or (at your option) any
+   later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, see <https://www.gnu.org/licenses/>.  */
 
 #ifndef _SHA1_H
 #define _SHA1_H
@@ -9,40 +24,42 @@ extern "C" {
 #endif
 
 #define SHA1_DIGEST_LENGTH  20
-#define SHA1_BLOCK_LENGTH   64
-#define SHA1_K0             0x5a827999
-#define SHA1_K20            0x6ed9eba1
-#define SHA1_K40            0x8f1bbcdc
-#define SHA1_K60            0xca62c1d6
-#define SHA1_HMAC_IPAD      0x36
-#define SHA1_HMAC_OPAD      0x5c
 
-union sha1_buffer {
-    uint8_t b[SHA1_BLOCK_LENGTH];
-    uint32_t w[SHA1_BLOCK_LENGTH / 4];
-};
-
-union sha1_state {
-    uint8_t b[SHA1_DIGEST_LENGTH];
-    uint32_t w[SHA1_DIGEST_LENGTH / 4];
-};
-
+/* Structure to save state of computation between the single steps.  */
 typedef struct sha1_t
 {
-    union sha1_buffer buffer;
-    uint8_t buffer_offset;
-    union sha1_state state;
-    uint32_t byte_count;
-    uint8_t key_buffer[SHA1_BLOCK_LENGTH];
-    uint8_t inner_hash[SHA1_DIGEST_LENGTH];
+    uint32_t A, B, C, D, E;
+
+    uint32_t total[2];
+    uint32_t buflen;     /* ≥ 0, ≤ 128 */
+    uint32_t buffer[32]; /* 128 bytes; the first buflen bytes are in use */
 } sha1;
 
-void sha1_init(sha1 *s);
-void sha1_writebyte(sha1 *s, uint8_t data);
-void sha1_write(sha1 *s, const char *data, size_t len);
-uint8_t *sha1_result(sha1 *s);
-void sha1_init_hmac(sha1 *s, const uint8_t *key, int key_length);
-uint8_t *sha1_result_hmac(sha1 *s);
+/* Initialize structure containing state of computation. */
+extern void sha1_init(sha1 *ctx);
+
+/* Starting with the result of former calls of this function (or the
+   initialization function update the context for the next LEN bytes
+   starting at BUFFER.
+   It is necessary that LEN is a multiple of 64!!! */
+extern void sha1_write_block(sha1 *ctx, const void *buffer, size_t len);
+
+/* Starting with the result of former calls of this function (or the
+   initialization function update the context for the next LEN bytes
+   starting at BUFFER.
+   It is NOT required that LEN is a multiple of 64.  */
+extern void sha1_write(sha1 *ctx, const void *buffer, size_t len);
+
+/* Put result from CTX in first 20 bytes following RESBUF.  The result is
+   always in little endian byte order, so that a byte-wise output yields
+   to the wanted ASCII representation of the message digest.  */
+extern void *sha1_read(const sha1 *ctx, void *resbuf);
+
+/* Process the remaining bytes in the buffer and put result from CTX
+   in first 20 bytes following RESBUF.  The result is always in little
+   endian byte order, so that a byte-wise output yields to the wanted
+   ASCII representation of the message digest.  */
+extern void *sha1_result(sha1 *ctx, void *resbuf);
 
 #ifdef  __cplusplus
 }

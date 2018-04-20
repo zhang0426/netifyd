@@ -1,173 +1,328 @@
-// This code is public-domain - it is based on libcrypt
-// Placed in the public domain by Wei Dai and other contributors.
+/* nd-sha1.c - Functions to compute SHA1 message digest of files or
+   memory blocks according to the NIST specification FIPS-180-1.
 
+   Copyright (C) 2000-2001, 2003-2006, 2008-2017 Free Software Foundation, Inc.
+
+   This program is free software; you can redistribute it and/or modify it
+   under the terms of the GNU General Public License as published by the
+   Free Software Foundation; either version 3, or (at your option) any
+   later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, see <https://www.gnu.org/licenses/>.  */
+
+/* Written by Scott G. Miller
+   Credits:
+      Robert Klep <robert@ilse.nl>  -- Expansion function fix
+*/
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <stdalign.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "nd-sha1.h"
 
-const uint8_t sha1_init_state[] = {
-    0x01, 0x23, 0x45, 0x67, // H0
-    0x89, 0xab, 0xcd, 0xef, // H1
-    0xfe, 0xdc, 0xba, 0x98, // H2
-    0x76, 0x54, 0x32, 0x10, // H3
-    0xf0, 0xe1, 0xd2, 0xc3  // H4
-};
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+# define SWAP(n) (n)
+#else
+# define SWAP(n) \
+    (((n) << 24) | (((n) & 0xff00) << 8) | (((n) >> 8) & 0xff00) | ((n) >> 24))
+#endif
 
-void sha1_init(sha1 *s)
+#define BLOCKSIZE 32768
+#if BLOCKSIZE % 64 != 0
+# error "invalid BLOCKSIZE"
+#endif
+
+/* This array contains the bytes used to pad the buffer to the next
+   64-byte boundary.  (RFC 1321, 3.1: Step 1)  */
+static const unsigned char fillbuf[64] = { 0x80, 0 /* , 0, 0, ...  */ };
+
+/* Take a pointer to a 160 bit block of data (five 32 bit ints) and
+   initialize it to the start constants of the SHA1 algorithm.  This
+   must be called before using hash in the call to sha1_hash.  */
+void sha1_init(sha1 *ctx)
 {
-    memcpy(s->state.b, sha1_init_state, SHA1_DIGEST_LENGTH);
-    s->byte_count = 0;
-    s->buffer_offset = 0;
+  ctx->A = 0x67452301;
+  ctx->B = 0xefcdab89;
+  ctx->C = 0x98badcfe;
+  ctx->D = 0x10325476;
+  ctx->E = 0xc3d2e1f0;
+
+  ctx->total[0] = ctx->total[1] = 0;
+  ctx->buflen = 0;
 }
 
-uint32_t sha1_rol32(uint32_t number, uint8_t bits)
+/* Copy the 4 byte value from v into the memory location pointed to by *cp,
+   If your architecture allows unaligned access this is equivalent to
+   * (uint32_t *) cp = v  */
+static void set_uint32(char *cp, uint32_t v)
 {
-    return ((number << bits) | (number >> (32 - bits)));
+  memcpy (cp, &v, sizeof v);
 }
 
-void sha1_hash_block(sha1 *s)
+/* Put result from CTX in first 20 bytes following RESBUF.  The result
+   must be in little endian byte order.  */
+void * sha1_read(const sha1 *ctx, void *resbuf)
 {
-    uint8_t i;
-    uint32_t a, b, c, d, e, t;
+  char *r = resbuf;
+  set_uint32 (r + 0 * sizeof ctx->A, SWAP (ctx->A));
+  set_uint32 (r + 1 * sizeof ctx->B, SWAP (ctx->B));
+  set_uint32 (r + 2 * sizeof ctx->C, SWAP (ctx->C));
+  set_uint32 (r + 3 * sizeof ctx->D, SWAP (ctx->D));
+  set_uint32 (r + 4 * sizeof ctx->E, SWAP (ctx->E));
 
-    a = s->state.w[0];
-    b = s->state.w[1];
-    c = s->state.w[2];
-    d = s->state.w[3];
-    e = s->state.w[4];
+  return resbuf;
+}
 
-    for (i = 0; i < 80; i++) {
-        if (i >= 16) {
-            t = s->buffer.w[(i + 13) & 15] ^
-                s->buffer.w[(i + 8) & 15] ^
-                s->buffer.w[(i + 2) & 15] ^
-                s->buffer.w[i & 15];
-            s->buffer.w[i & 15] = sha1_rol32(t, 1);
+/* Process the remaining bytes in the internal buffer and the usual
+   prolog according to the standard and write the result to RESBUF.  */
+void *sha1_result(sha1 *ctx, void *resbuf)
+{
+  /* Take yet unprocessed bytes into account.  */
+  uint32_t bytes = ctx->buflen;
+  size_t size = (bytes < 56) ? 64 / 4 : 64 * 2 / 4;
+
+  /* Now count remaining bytes.  */
+  ctx->total[0] += bytes;
+  if (ctx->total[0] < bytes)
+    ++ctx->total[1];
+
+  /* Put the 64-bit file length in *bits* at the end of the buffer.  */
+  ctx->buffer[size - 2] = SWAP ((ctx->total[1] << 3) | (ctx->total[0] >> 29));
+  ctx->buffer[size - 1] = SWAP (ctx->total[0] << 3);
+
+  memcpy (&((char *) ctx->buffer)[bytes], fillbuf, (size - 2) * 4 - bytes);
+
+  /* Process last bytes.  */
+  sha1_write_block(ctx, ctx->buffer, size * 4);
+
+  return sha1_read(ctx, resbuf);
+}
+
+void sha1_write(sha1 *ctx, const void *buffer, size_t len)
+{
+  /* When we already have some bits in our internal buffer concatenate
+     both inputs first.  */
+  if (ctx->buflen != 0)
+    {
+      size_t left_over = ctx->buflen;
+      size_t add = 128 - left_over > len ? len : 128 - left_over;
+
+      memcpy (&((char *) ctx->buffer)[left_over], buffer, add);
+      ctx->buflen += add;
+
+      if (ctx->buflen > 64)
+        {
+          sha1_write_block(ctx, ctx->buffer, ctx->buflen & ~63);
+
+          ctx->buflen &= 63;
+          /* The regions in the following copy operation cannot overlap,
+             because ctx->buflen < 64 ≤ (left_over + add) & ~63.  */
+          memcpy (ctx->buffer,
+                  &((char *) ctx->buffer)[(left_over + add) & ~63],
+                  ctx->buflen);
         }
 
-        if (i < 20) {
-            t = (d ^ (b & (c ^ d))) + SHA1_K0;
-        } else if (i < 40) {
-          t = (b ^ c ^ d) + SHA1_K20;
-        } else if (i < 60) {
-          t = ((b & c) | (d & (b | c))) + SHA1_K40;
-        } else {
-          t = (b ^ c ^ d) + SHA1_K60;
+      buffer = (const char *) buffer + add;
+      len -= add;
+    }
+
+  /* Process available complete blocks.  */
+  if (len >= 64)
+    {
+#if !(_STRING_ARCH_unaligned || _STRING_INLINE_unaligned)
+# define UNALIGNED_P(p) ((uintptr_t) (p) % alignof (uint32_t) != 0)
+      if (UNALIGNED_P (buffer))
+        while (len > 64)
+          {
+            sha1_write_block (ctx, memcpy(ctx->buffer, buffer, 64), 64);
+            buffer = (const char *) buffer + 64;
+            len -= 64;
+          }
+      else
+#endif
+        {
+          sha1_write_block(ctx, buffer, len & ~63);
+          buffer = (const char *) buffer + (len & ~63);
+          len &= 63;
+        }
+    }
+
+  /* Move remaining bytes in internal buffer.  */
+  if (len > 0)
+    {
+      size_t left_over = ctx->buflen;
+
+      memcpy (&((char *) ctx->buffer)[left_over], buffer, len);
+      left_over += len;
+      if (left_over >= 64)
+        {
+          sha1_write_block(ctx, ctx->buffer, 64);
+          left_over -= 64;
+          /* The regions in the following copy operation cannot overlap,
+             because left_over ≤ 64.  */
+          memcpy (ctx->buffer, &ctx->buffer[16], left_over);
+        }
+      ctx->buflen = left_over;
+    }
+}
+
+/* SHA1 round constants */
+#define K1 0x5a827999
+#define K2 0x6ed9eba1
+#define K3 0x8f1bbcdc
+#define K4 0xca62c1d6
+
+/* Round functions.  Note that F2 is the same as F4.  */
+#define F1(B,C,D) ( D ^ ( B & ( C ^ D ) ) )
+#define F2(B,C,D) (B ^ C ^ D)
+#define F3(B,C,D) ( ( B & C ) | ( D & ( B | C ) ) )
+#define F4(B,C,D) (B ^ C ^ D)
+
+/* Process LEN bytes of BUFFER, accumulating context into CTX.
+   It is assumed that LEN % 64 == 0.
+   Most of this code comes from GnuPG's cipher/sha1.c.  */
+
+void sha1_write_block(sha1 *ctx, const void *buffer, size_t len)
+{
+  const uint32_t *words = buffer;
+  size_t nwords = len / sizeof (uint32_t);
+  const uint32_t *endp = words + nwords;
+  uint32_t x[16];
+  uint32_t a = ctx->A;
+  uint32_t b = ctx->B;
+  uint32_t c = ctx->C;
+  uint32_t d = ctx->D;
+  uint32_t e = ctx->E;
+  uint32_t lolen = len;
+
+  /* First increment the byte count.  RFC 1321 specifies the possible
+     length of the file up to 2^64 bits.  Here we only compute the
+     number of bytes.  Do a double word increment.  */
+  ctx->total[0] += lolen;
+  ctx->total[1] += (len >> 31 >> 1) + (ctx->total[0] < lolen);
+
+#define rol(x, n) (((x) << (n)) | ((uint32_t) (x) >> (32 - (n))))
+
+#define M(I) ( tm =   x[I&0x0f] ^ x[(I-14)&0x0f] \
+                    ^ x[(I-8)&0x0f] ^ x[(I-3)&0x0f] \
+               , (x[I&0x0f] = rol(tm, 1)) )
+
+#define R(A,B,C,D,E,F,K,M)  do { E += rol( A, 5 )     \
+                                      + F( B, C, D )  \
+                                      + K             \
+                                      + M;            \
+                                 B = rol( B, 30 );    \
+                               } while(0)
+
+  while (words < endp)
+    {
+      uint32_t tm;
+      int t;
+      for (t = 0; t < 16; t++)
+        {
+          x[t] = SWAP (*words);
+          words++;
         }
 
-        t += sha1_rol32(a, 5) + e + s->buffer.w[i & 15];
-        e = d;
-        d = c;
-        c = sha1_rol32(b, 30);
-        b = a;
-        a = t;
+      R( a, b, c, d, e, F1, K1, x[ 0] );
+      R( e, a, b, c, d, F1, K1, x[ 1] );
+      R( d, e, a, b, c, F1, K1, x[ 2] );
+      R( c, d, e, a, b, F1, K1, x[ 3] );
+      R( b, c, d, e, a, F1, K1, x[ 4] );
+      R( a, b, c, d, e, F1, K1, x[ 5] );
+      R( e, a, b, c, d, F1, K1, x[ 6] );
+      R( d, e, a, b, c, F1, K1, x[ 7] );
+      R( c, d, e, a, b, F1, K1, x[ 8] );
+      R( b, c, d, e, a, F1, K1, x[ 9] );
+      R( a, b, c, d, e, F1, K1, x[10] );
+      R( e, a, b, c, d, F1, K1, x[11] );
+      R( d, e, a, b, c, F1, K1, x[12] );
+      R( c, d, e, a, b, F1, K1, x[13] );
+      R( b, c, d, e, a, F1, K1, x[14] );
+      R( a, b, c, d, e, F1, K1, x[15] );
+      R( e, a, b, c, d, F1, K1, M(16) );
+      R( d, e, a, b, c, F1, K1, M(17) );
+      R( c, d, e, a, b, F1, K1, M(18) );
+      R( b, c, d, e, a, F1, K1, M(19) );
+      R( a, b, c, d, e, F2, K2, M(20) );
+      R( e, a, b, c, d, F2, K2, M(21) );
+      R( d, e, a, b, c, F2, K2, M(22) );
+      R( c, d, e, a, b, F2, K2, M(23) );
+      R( b, c, d, e, a, F2, K2, M(24) );
+      R( a, b, c, d, e, F2, K2, M(25) );
+      R( e, a, b, c, d, F2, K2, M(26) );
+      R( d, e, a, b, c, F2, K2, M(27) );
+      R( c, d, e, a, b, F2, K2, M(28) );
+      R( b, c, d, e, a, F2, K2, M(29) );
+      R( a, b, c, d, e, F2, K2, M(30) );
+      R( e, a, b, c, d, F2, K2, M(31) );
+      R( d, e, a, b, c, F2, K2, M(32) );
+      R( c, d, e, a, b, F2, K2, M(33) );
+      R( b, c, d, e, a, F2, K2, M(34) );
+      R( a, b, c, d, e, F2, K2, M(35) );
+      R( e, a, b, c, d, F2, K2, M(36) );
+      R( d, e, a, b, c, F2, K2, M(37) );
+      R( c, d, e, a, b, F2, K2, M(38) );
+      R( b, c, d, e, a, F2, K2, M(39) );
+      R( a, b, c, d, e, F3, K3, M(40) );
+      R( e, a, b, c, d, F3, K3, M(41) );
+      R( d, e, a, b, c, F3, K3, M(42) );
+      R( c, d, e, a, b, F3, K3, M(43) );
+      R( b, c, d, e, a, F3, K3, M(44) );
+      R( a, b, c, d, e, F3, K3, M(45) );
+      R( e, a, b, c, d, F3, K3, M(46) );
+      R( d, e, a, b, c, F3, K3, M(47) );
+      R( c, d, e, a, b, F3, K3, M(48) );
+      R( b, c, d, e, a, F3, K3, M(49) );
+      R( a, b, c, d, e, F3, K3, M(50) );
+      R( e, a, b, c, d, F3, K3, M(51) );
+      R( d, e, a, b, c, F3, K3, M(52) );
+      R( c, d, e, a, b, F3, K3, M(53) );
+      R( b, c, d, e, a, F3, K3, M(54) );
+      R( a, b, c, d, e, F3, K3, M(55) );
+      R( e, a, b, c, d, F3, K3, M(56) );
+      R( d, e, a, b, c, F3, K3, M(57) );
+      R( c, d, e, a, b, F3, K3, M(58) );
+      R( b, c, d, e, a, F3, K3, M(59) );
+      R( a, b, c, d, e, F4, K4, M(60) );
+      R( e, a, b, c, d, F4, K4, M(61) );
+      R( d, e, a, b, c, F4, K4, M(62) );
+      R( c, d, e, a, b, F4, K4, M(63) );
+      R( b, c, d, e, a, F4, K4, M(64) );
+      R( a, b, c, d, e, F4, K4, M(65) );
+      R( e, a, b, c, d, F4, K4, M(66) );
+      R( d, e, a, b, c, F4, K4, M(67) );
+      R( c, d, e, a, b, F4, K4, M(68) );
+      R( b, c, d, e, a, F4, K4, M(69) );
+      R( a, b, c, d, e, F4, K4, M(70) );
+      R( e, a, b, c, d, F4, K4, M(71) );
+      R( d, e, a, b, c, F4, K4, M(72) );
+      R( c, d, e, a, b, F4, K4, M(73) );
+      R( b, c, d, e, a, F4, K4, M(74) );
+      R( a, b, c, d, e, F4, K4, M(75) );
+      R( e, a, b, c, d, F4, K4, M(76) );
+      R( d, e, a, b, c, F4, K4, M(77) );
+      R( c, d, e, a, b, F4, K4, M(78) );
+      R( b, c, d, e, a, F4, K4, M(79) );
+
+      a = ctx->A += a;
+      b = ctx->B += b;
+      c = ctx->C += c;
+      d = ctx->D += d;
+      e = ctx->E += e;
     }
-
-    s->state.w[0] += a;
-    s->state.w[1] += b;
-    s->state.w[2] += c;
-    s->state.w[3] += d;
-    s->state.w[4] += e;
-}
-
-void sha1_add_uncounted(sha1 *s, uint8_t data)
-{
-    s->buffer.b[s->buffer_offset ^ 3] = data;
-    s->buffer_offset++;
-    if (s->buffer_offset == SHA1_BLOCK_LENGTH) {
-        sha1_hash_block(s);
-        s->buffer_offset = 0;
-    }
-}
-
-void sha1_writebyte(sha1 *s, uint8_t data)
-{
-    ++s->byte_count;
-    sha1_add_uncounted(s, data);
-}
-
-void sha1_write(sha1 *s, const char *data, size_t len)
-{
-    for ( ; len--; ) sha1_writebyte(s, (uint8_t) *data++);
-}
-
-void sha1_pad(sha1 *s)
-{
-    // Implement SHA-1 padding (fips180-2 Â§5.1.1)
-
-    // Pad with 0x80 followed by 0x00 until the end of the block
-    sha1_add_uncounted(s, 0x80);
-    while (s->buffer_offset != 56) sha1_add_uncounted(s, 0x00);
-
-    // Append length in the last 8 bytes
-    sha1_add_uncounted(s, 0); // We're only using 32 bit lengths
-    sha1_add_uncounted(s, 0); // But SHA-1 supports 64 bit lengths
-    sha1_add_uncounted(s, 0); // So zero pad the top bits
-    sha1_add_uncounted(s, s->byte_count >> 29); // Shifting to multiply by 8
-    sha1_add_uncounted(s, s->byte_count >> 21); // as SHA-1 supports bitstreams as well as
-    sha1_add_uncounted(s, s->byte_count >> 13); // byte.
-    sha1_add_uncounted(s, s->byte_count >> 5);
-    sha1_add_uncounted(s, s->byte_count << 3);
-}
-
-uint8_t *sha1_result(sha1 *s)
-{
-    int i;
-    // Pad to complete the last block
-    sha1_pad(s);
-
-    // Swap byte order back
-    for (i = 0; i < 5; i++) {
-        uint32_t a, b;
-        a = s->state.w[i];
-        b = a << 24;
-        b |= (a << 8) & 0x00ff0000;
-        b |= (a >> 8) & 0x0000ff00;
-        b |= a >> 24;
-        s->state.w[i] = b;
-    }
-
-    // Return pointer to hash (20 characters)
-    return s->state.b;
-}
-
-void sha1_init_hmac(sha1 *s, const uint8_t *key, int key_length)
-{
-    uint8_t i;
-    memset(s->key_buffer, 0, SHA1_BLOCK_LENGTH);
-
-    if (key_length > SHA1_BLOCK_LENGTH) {
-        // Hash long keys
-        sha1_init(s);
-        for ( ; key_length--; ) sha1_writebyte(s, *key++);
-        memcpy(s->key_buffer, sha1_result(s), SHA1_DIGEST_LENGTH);
-    } else {
-        // Block length keys are used as is
-        memcpy(s->key_buffer, key, key_length);
-    }
-
-    // Start inner hash
-    sha1_init(s);
-    for (i = 0; i < SHA1_BLOCK_LENGTH; i++) {
-        sha1_writebyte(s, s->key_buffer[i] ^ SHA1_HMAC_IPAD);
-    }
-}
-
-uint8_t *sha1_result_hmac(sha1 *s)
-{
-    uint8_t i;
-
-    // Complete inner hash
-    memcpy(s->inner_hash, sha1_result(s), SHA1_DIGEST_LENGTH);
-
-    // Calculate outer hash
-    sha1_init(s);
-    for (i = 0; i < SHA1_BLOCK_LENGTH; i++)
-        sha1_writebyte(s, s->key_buffer[i] ^ SHA1_HMAC_OPAD);
-    for (i = 0; i < SHA1_DIGEST_LENGTH; i++)
-        sha1_writebyte(s, s->inner_hash[i]);
-    return sha1_result(s);
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
