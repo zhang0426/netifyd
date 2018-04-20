@@ -107,7 +107,8 @@ ndThread::~ndThread(void)
 
 void ndThread::SetProcName(void)
 {
-#ifdef HAVE_PTHREAD_SETNAME_NP
+//#ifdef HAVE_PTHREAD_SETNAME_NP
+#if 0
     char name[ND_THREAD_MAX_PROCNAMELEN];
 
     snprintf(name, ND_THREAD_MAX_PROCNAMELEN, "%s", tag.c_str());

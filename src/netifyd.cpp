@@ -156,11 +156,12 @@ void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hos
 {
     sha1 ctx;
     string digest;
+    uint8_t _digest[SHA1_DIGEST_LENGTH];
 
     sha1_init(&ctx);
     sha1_write(&ctx, (const char *)addr, (af == AF_INET) ?
         sizeof(struct in_addr) : sizeof(struct in6_addr));
-    digest.assign((const char *)sha1_result(&ctx), SHA1_DIGEST_LENGTH);
+    digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
 
     pthread_mutex_lock(&lock);
 
@@ -199,10 +200,11 @@ bool nd_dns_cache::lookup(const struct in_addr &addr, string &hostname)
 {
     sha1 ctx;
     string digest;
+    uint8_t _digest[SHA1_DIGEST_LENGTH];
 
     sha1_init(&ctx);
     sha1_write(&ctx, (const char *)&addr, sizeof(struct in_addr));
-    digest.assign((const char *)sha1_result(&ctx), SHA1_DIGEST_LENGTH);
+    digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
 
     return lookup(digest, hostname);
 }
@@ -211,10 +213,11 @@ bool nd_dns_cache::lookup(const struct in6_addr &addr, string &hostname)
 {
     sha1 ctx;
     string digest;
+    uint8_t _digest[SHA1_DIGEST_LENGTH];
 
     sha1_init(&ctx);
     sha1_write(&ctx, (const char *)&addr, sizeof(struct in6_addr));
-    digest.assign((const char *)sha1_result(&ctx), SHA1_DIGEST_LENGTH);
+    digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
 
     return lookup(digest, hostname);
 }

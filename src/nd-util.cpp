@@ -315,7 +315,7 @@ int nd_sha1_file(const string &filename, uint8_t *digest)
 {
     sha1 ctx;
     int fd = open(filename.c_str(), O_RDONLY);
-    uint8_t buffer[ND_SHA1_BUFFER];
+    uint8_t buffer[ND_SHA1_BUFFER], _digest[SHA1_DIGEST_LENGTH];
     ssize_t bytes;
 
     sha1_init(&ctx);
@@ -341,7 +341,7 @@ int nd_sha1_file(const string &filename, uint8_t *digest)
     while (bytes != 0);
 
     close(fd);
-    memcpy(digest, sha1_result(&ctx), SHA1_DIGEST_LENGTH);
+    memcpy(digest, sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
 
     return 0;
 }

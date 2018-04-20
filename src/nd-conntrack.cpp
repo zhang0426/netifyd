@@ -475,7 +475,7 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
 {
     sha1 ctx;
     string digest;
-    uint8_t *_digest;
+    uint8_t _digest[SHA1_DIGEST_LENGTH];
     sa_family_t family;
     struct sockaddr_in *sa_orig_src = NULL, *sa_orig_dst = NULL;
     struct sockaddr_in *sa_repl_src = NULL, *sa_repl_dst = NULL;
@@ -513,8 +513,7 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
     sha1_write(&ctx,
         (const char *)&flow->upper_port, sizeof(uint16_t));
 
-    _digest = sha1_result(&ctx);
-    digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
+    digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
 
     Lock();
 
@@ -782,7 +781,7 @@ void ndConntrackFlow::Hash(void)
 {
     sha1 ctx;
     int addr_cmp = 0;
-    uint8_t *_digest;
+    uint8_t _digest[SHA1_DIGEST_LENGTH];
     struct sockaddr_in *sa_src = NULL, *sa_dst = NULL;
     struct sockaddr_in6 *sa6_src = NULL, *sa6_dst = NULL;
 
@@ -851,8 +850,7 @@ void ndConntrackFlow::Hash(void)
             (const char *)&repl_port[ndCT_DIR_SRC], sizeof(uint16_t));
     }
 
-    _digest = sha1_result(&ctx);
-    digest.assign((const char *)_digest, SHA1_DIGEST_LENGTH);
+    digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
