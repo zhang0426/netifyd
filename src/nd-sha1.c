@@ -33,10 +33,12 @@
 #include "nd-sha1.h"
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-# define SWAP(n) (n)
-#else
-# define SWAP(n) \
+#define SWAP(n) (n)
+#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define SWAP(n) \
     (((n) << 24) | (((n) & 0xff00) << 8) | (((n) >> 8) & 0xff00) | ((n) >> 24))
+#else
+#error Endianess not defined (__BYTE_ORDER__).
 #endif
 
 #define BLOCKSIZE 32768
