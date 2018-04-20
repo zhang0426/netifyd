@@ -41,10 +41,40 @@ start() {
         return 1
     fi
 
-    if [ -z "$NETIFYD_OPTS" ]; then
+    if [ -z "$NETIFYD_INTNET" -a -z "$NETIFYD_EXTNET" ]; then
         log_failure_msg "Please configure $DESC in: /etc/default/$NAME"
         return 1
     fi
+
+    NETIFYD_OPTS=$NETIFYD_EXTRA_OPTS
+
+    for entry in $NETIFYD_INTNET; do
+        if [ "$entry" == "${entry/,/}" ]; then
+            NETIFYD_OPTS="$NETIFYD_OPTS -I $entry"
+            continue
+        fi
+        for net in ${entry//,/ }; do
+            if [ "$net" == "${entry/,*/}" ]; then
+                NETIFYD_OPTS="$NETIFYD_OPTS -I $net"
+            else
+                NETIFYD_OPTS="$NETIFYD_OPTS -A $net"
+            fi
+        done
+    done
+
+    for entry in $NETIFYD_EXTNET; do
+        if [ "$entry" == "${entry/,/}" ]; then
+            NETIFYD_OPTS="$NETIFYD_OPTS -E $entry"
+            continue
+        fi
+        for ifn in ${entry//,/ }; do
+            if [ "$ifn" == "${entry/,*/}" ]; then
+                NETIFYD_OPTS="$NETIFYD_OPTS -E $ifn"
+            else
+                NETIFYD_OPTS="$NETIFYD_OPTS -N $ifn"
+            fi
+        done
+    done
 
     start-stop-daemon --start --quiet --oknodo --pidfile "$PIDFILE" --exec $DAEMON -- $NETIFYD_OPTS
     status=$?
