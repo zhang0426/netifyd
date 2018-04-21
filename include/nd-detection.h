@@ -29,7 +29,9 @@ public:
 class ndDetectionThread : public ndThread
 {
 public:
-    ndDetectionThread(const string &dev,
+    ndDetectionThread(
+        const string &dev,
+        bool internal,
 #ifdef _ND_USE_NETLINK
         const string &netlink_dev,
         ndNetlink *netlink,
@@ -54,6 +56,7 @@ public:
     int GetCaptureStats(struct pcap_stat &stats, bool do_lock = false);
 
 protected:
+    bool internal;
 #ifdef _ND_USE_NETLINK
     string netlink_dev;
     ndNetlink *netlink;

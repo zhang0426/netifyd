@@ -149,7 +149,9 @@ struct __attribute__((packed)) nd_mpls_header_t
 #endif
 };
 
-ndDetectionThread::ndDetectionThread(const string &dev,
+ndDetectionThread::ndDetectionThread(
+    const string &dev,
+    bool internal,
 #ifdef _ND_USE_NETLINK
     const string &netlink_dev,
     ndNetlink *netlink,
@@ -389,7 +391,7 @@ void ndDetectionThread::ProcessPacket(void)
 
     struct ndFlow flow;
     memset(&flow, 0, sizeof(struct ndFlow));
-    flow.internal = (thread_socket != NULL) ? true : false;
+    flow.internal = internal;
 
     string digest;
 

@@ -597,6 +597,7 @@ static int nd_start_detection_threads(void)
 #endif
             threads[(*i).second] = new ndDetectionThread(
                 (*i).second,
+                (*i).first,
 #ifdef _ND_USE_NETLINK
                 netlink_dev,
                 netlink,
