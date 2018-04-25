@@ -32,8 +32,6 @@ public:
 
     virtual void *Entry(void);
 
-    virtual void Terminate(void) { QueuePush("terminate"); }
-
     void QueuePush(const string &json);
     size_t QueuePendingSize(void);
 

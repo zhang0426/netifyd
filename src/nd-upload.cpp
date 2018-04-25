@@ -209,25 +209,21 @@ void *ndUploadThread::Entry(void)
             continue;
         }
 
-        if (uploads.back() == "terminate")
-            terminate = true;
-        else {
-            do {
-                if (uploads.front().size() <= ND_COMPRESS_SIZE)
-                    pending.push_back(make_pair(false, uploads.front()));
-                else
-                    pending.push_back(make_pair(true, Deflate(uploads.front())));
+        do {
+            if (uploads.front().size() <= ND_COMPRESS_SIZE)
+                pending.push_back(make_pair(false, uploads.front()));
+            else
+                pending.push_back(make_pair(true, Deflate(uploads.front())));
 
-                pending_size += pending.back().second.size();
-                uploads.pop();
+            pending_size += pending.back().second.size();
+            uploads.pop();
 
-                while (pending_size > nd_config.max_backlog) {
-                    pending_size -= pending.front().second.size();
-                    pending.pop_front();
-                }
+            while (pending_size > nd_config.max_backlog) {
+                pending_size -= pending.front().second.size();
+                pending.pop_front();
             }
-            while (uploads.size() > 0);
         }
+        while (uploads.size() > 0);
 
         if ((rc = pthread_mutex_unlock(&lock)) != 0)
             throw ndUploadThreadException(strerror(rc));
@@ -393,15 +389,6 @@ void ndUploadThread::Upload(void)
 
         pending_size -= pending.front().second.size();
         pending.pop_front();
-
-        if ((rc = pthread_mutex_lock(&lock)) != 0)
-            throw ndUploadThreadException(strerror(rc));
-
-        if (uploads.size() > 0 && uploads.back() == "terminate")
-            terminate = true;
-
-        if ((rc = pthread_mutex_unlock(&lock)) != 0)
-            throw ndUploadThreadException(strerror(rc));
     }
     while (pending.size() > 0 && ! terminate);
 }
