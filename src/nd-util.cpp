@@ -463,17 +463,17 @@ string nd_get_version_and_features(void)
 {
     ostringstream ident;
     ident <<
-        PACKAGE_NAME << "/" << GIT_RELEASE << " (host-" << _ND_CANONICAL_HOST;
+        PACKAGE_NAME << "/" << GIT_RELEASE << " (" << _ND_HOST_CPU;
 
-    if (ND_USE_CONNTRACK) ident << " use-conntrack";
-    if (ND_USE_NETLINK) ident << " use-netlink";
-    if (ND_USE_DNS_CACHE) ident << " use-dns-cache";
-    if (ND_SSL_USE_TLSv1) ident << " ssl-tlsv1";
-    if (ND_SSL_VERIFY_PEER) ident << " ssl-verify-peer";
+    if (ND_USE_CONNTRACK) ident << "; use-conntrack";
+    if (ND_USE_NETLINK) ident << "; use-netlink";
+    if (ND_USE_DNS_CACHE) ident << "; use-dns-cache";
+    if (ND_SSL_USE_TLSv1) ident << "; ssl-tlsv1";
+    if (ND_SSL_VERIFY_PEER) ident << "; ssl-verify-peer";
 
     ident << ")" <<
-        " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION <<
-        " nDPI/" << ndpi_revision();
+        " nDPI/" << ndpi_revision() <<
+        " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION;
 
     return ident.str();
 }
