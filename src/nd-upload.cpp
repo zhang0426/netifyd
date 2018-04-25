@@ -236,6 +236,21 @@ void *ndUploadThread::Entry(void)
     return NULL;
 }
 
+void ndUploadThread::Terminate(void)
+{
+    int rc;
+
+    if ((rc = pthread_mutex_lock(&lock)) != 0)
+        throw ndUploadThreadException(strerror(rc));
+    if ((rc = pthread_cond_broadcast(&uploads_cond)) != 0)
+        throw ndUploadThreadException(strerror(rc));
+
+    terminate = true;
+
+    if ((rc = pthread_mutex_unlock(&lock)) != 0)
+        throw ndUploadThreadException(strerror(rc));
+}
+
 void ndUploadThread::QueuePush(const string &json)
 {
     int rc;
