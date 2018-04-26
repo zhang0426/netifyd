@@ -395,6 +395,11 @@ static void nd_usage(int rc = 0, bool version = false)
 
 static int nd_config_load(void)
 {
+    if (nd_conf_filename == NULL) {
+        cerr << "Configuration file not set." << endl;
+        return -1;
+    }
+
     struct stat extern_config_stat;
     if (stat(nd_conf_filename, &extern_config_stat) < 0) {
         cerr << "Can not stat configuration file: " << nd_conf_filename <<
@@ -1384,7 +1389,20 @@ static void nd_add_device_addresses(nd_device_addr &device_addresses)
     if (token != NULL) free(token);
 }
 #endif // _ND_USE_NETLINK
-
+static void nd_check_agent_uuid(void)
+{
+    if (nd_config.uuid == NULL ||
+        ! strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
+        string uuid;
+        if (! nd_load_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN) ||
+            ! uuid.size() ||
+            ! strncmp(uuid.c_str(), ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
+            nd_generate_uuid(uuid);
+            nd_printf("Generated a new UUID: %s\n", uuid.c_str());
+            nd_save_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN);
+        }
+    }
+}
 #ifdef _ND_USE_NCURSES
 static void nd_create_windows(void)
 {
@@ -1457,6 +1475,7 @@ int main(int argc, char *argv[])
         { "disable-conntrack", 0, 0, 't' },
         { "disable-netlink", 0, 0, 'l' },
         { "enable-ncurses", 0, 0, 'n' },
+        { "provision", 0, 0, 'p' },
 
         { NULL, 0, 0, 0 }
     };
@@ -1464,7 +1483,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDaenrtlu:s:I:E:j:i:c:UPA:N:f:H:C:S:F:",
+            "?hVdDaenrtlpu:s:I:E:j:i:c:UPA:N:f:H:C:S:F:",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
@@ -1610,6 +1629,17 @@ int main(int argc, char *argv[])
             return 1;
 #endif
             break;
+        case 'p':
+            nd_config.flags |= ndGF_DEBUG;
+            if (nd_conf_filename == NULL)
+                nd_conf_filename = strdup(ND_CONF_FILE_NAME);
+            if (nd_config_load() < 0)
+                return 1;
+            nd_check_agent_uuid();
+            if (nd_config.uuid == NULL) return 1;
+            nd_printf("Netify Agent Provisioning UUID: %s\n", nd_config.uuid);
+            nd_printf("https://portal.netify.ai/app/provision/agent?uuid=%s\n", nd_config.uuid);
+            return 0;
         default:
             nd_usage(1);
         }
@@ -1665,19 +1695,7 @@ int main(int argc, char *argv[])
     }
 #endif
     nd_printf("%s\n", nd_get_version_and_features().c_str());
-
-    if (nd_config.uuid == NULL ||
-        ! strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
-        string uuid;
-        if (! nd_load_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN) ||
-            ! uuid.size() ||
-            ! strncmp(uuid.c_str(), ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
-            nd_generate_uuid(uuid);
-            nd_printf("Generated a new UUID: %s\n", uuid.c_str());
-            nd_save_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN);
-        }
-    }
-
+    nd_check_agent_uuid();
     nd_debug_printf("Flow entry size: %lu\n", sizeof(struct ndFlow) +
         sizeof(struct ndpi_flow_struct) + sizeof(struct ndpi_id_struct) * 2);
 
