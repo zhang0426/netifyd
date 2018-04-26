@@ -84,7 +84,8 @@ using namespace std;
 #include "nd-socket.h"
 #include "nd-upload.h"
 
-#define ND_STR_ETHALEN    (ETH_ALEN * 2 + ETH_ALEN - 1)
+#define ND_SIG_UPDATE       SIGRTMIN
+#define ND_STR_ETHALEN     (ETH_ALEN * 2 + ETH_ALEN - 1)
 
 nd_global_config nd_config = {
     .path_config = NULL,
@@ -1638,7 +1639,7 @@ int main(int argc, char *argv[])
             nd_check_agent_uuid();
             if (nd_config.uuid == NULL) return 1;
             nd_printf("Netify Agent Provisioning UUID: %s\n", nd_config.uuid);
-            nd_printf("https://portal.netify.ai/app/provision/agent?uuid=%s\n", nd_config.uuid);
+            nd_printf("%s%s\n", ND_URL_PROVISION, nd_config.uuid);
             return 0;
         default:
             nd_usage(1);
@@ -1712,13 +1713,14 @@ int main(int argc, char *argv[])
 
     sigfillset(&sigset);
     //sigdelset(&sigset, SIGPROF);
-
+    //sigdelset(&sigset, SIGINT);
+    sigdelset(&sigset, SIGQUIT);
     sigprocmask(SIG_BLOCK, &sigset, NULL);
 
     sigemptyset(&sigset);
-    sigaddset(&sigset, SIGINT);
+    //sigaddset(&sigset, SIGINT);
     sigaddset(&sigset, SIGTERM);
-    sigaddset(&sigset, SIGRTMIN);
+    sigaddset(&sigset, ND_SIG_UPDATE);
     sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
 #ifdef _ND_USE_NCURSES
@@ -1800,7 +1802,7 @@ int main(int argc, char *argv[])
             nd_printf("Error creating netlink watch: %s\n", e.what());
             return 1;
         }
-    
+
         nd_add_device_addresses(device_addresses);
     }
 #endif
@@ -1810,7 +1812,7 @@ int main(int argc, char *argv[])
 
     memset(&sigev, 0, sizeof(struct sigevent));
     sigev.sigev_notify = SIGEV_SIGNAL;
-    sigev.sigev_signo = SIGRTMIN;
+    sigev.sigev_signo = ND_SIG_UPDATE;
 
     if (timer_create(CLOCK_REALTIME, &sigev, &timer_id) < 0) {
         nd_printf("timer_create: %s\n", strerror(errno));
@@ -1846,6 +1848,8 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        nd_debug_printf("Caught signal: [%d] %s\n", sig, strsignal(sig));
+
         if (sig == SIGINT || sig == SIGTERM) {
             rc = 0;
             terminate = true;
@@ -1853,7 +1857,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        if (sig == sigev.sigev_signo) {
+        if (sig == ND_SIG_UPDATE) {
 #ifdef _ND_USE_INOTIFY
             inotify->RefreshWatches();
 #endif
