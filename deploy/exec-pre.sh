@@ -36,7 +36,8 @@ for entry in $NETIFYD_EXTNET; do
     done
 done
 
-NETIFYD_OPTS=$(echo "$NETIFYD_OPTS" | sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
+NETIFYD_OPTS=$(echo "$NETIFYD_OPTS" |\
+    sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
 
 systemctl set-environment NETIFYD_OPTS="$NETIFYD_OPTS"
 

@@ -1402,6 +1402,9 @@ static void nd_check_agent_uuid(void)
             nd_printf("Generated a new UUID: %s\n", uuid.c_str());
             nd_save_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN);
         }
+        if (nd_config.uuid != NULL)
+            free(nd_config.uuid);
+        nd_config.uuid = strdup(uuid.c_str());
     }
 }
 #ifdef _ND_USE_NCURSES
