@@ -1,11 +1,15 @@
 aclocal.m4
 autom4te.cache/
 compile
+confdefs.h
 config.*
 configure
 depcomp
 doc/*.bak
 install-sh
+libmnl/
+libnetfilter_conntrack/
+libnfnetlink/
 libtool
 ltmain.sh
 Makefile
@@ -15,4 +19,3 @@ netifyd-*.tar.gz
 osc
 stamp-h1
 .ycm_extra_conf*
-confdefs.h

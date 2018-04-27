@@ -15,6 +15,7 @@ netifyd_LDFLAGS = $(JSONC_LIBS) $(LIBCURL_LIBS) $(ZLIB_LIBS)
 netifyd_LDADD = ../inih/libini.la ../ndpi/src/lib/libndpi.la
 
 if USE_CONNTRACK
+AM_CPPFLAGS += $(LIBNETFILTER_CONNTRACK_CFLAGS) $(LIBMNL_CFLAGS)
 netifyd_SOURCES += nd-conntrack.cpp
 netifyd_LDADD += $(LIBNETFILTER_CONNTRACK_LIBS) $(LIBMNL_LIBS)
 endif

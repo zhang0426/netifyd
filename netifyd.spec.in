@@ -1,13 +1,14 @@
 # Netify Agent
 
 # Configure conditionals
-# Default values: --with conntrack --with inotify --with ncurses --with netlink
+# Default values: --with conntrack --with inotify --with netlink
 %{!?_with_conntrack: %{!?_without_conntrack: %define _with_conntrack --enable-conntrack}}
 %{!?_with_inotify: %{!?_without_inotify: %define _with_inotify --enable-inotify}}
-%{!?_with_ncurses: %{!?_without_ncurses: %define _with_ncurses --enable-ncurses}}
 %{!?_with_netlink: %{!?_without_netlink: %define _with_netlink --enable-netlink}}
 
-# Generic configuration files
+%{!?_without_local_netlink: %{!?_with_local_netlink: %define _with_local_netlink 1}}
+
+# Configuration files
 %define netifyd_conf deploy/%{name}.conf
 %define netifyd_init deploy/%{name}.init
 %define netifyd_tmpf deploy/%{name}.tmpf
@@ -30,13 +31,14 @@ BuildRequires: automake
 BuildRequires: bc
 BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
+%if %{?_without_local_netlink:1}%{!?_without_local_netlink:0}
 %if %{?_with_conntrack:1}%{!?_with_conntrack:0}
 BuildRequires: libmnl-devel
 BuildRequires: libnetfilter_conntrack-devel
 %endif
+%endif
 BuildRequires: libpcap-devel
 BuildRequires: libtool
-%{?_with_ncurses:BuildRequires: ncurses-devel}
 BuildRequires: pkgconfig
 BuildRequires: zlib-devel
 %{?systemd_requires}
@@ -48,12 +50,36 @@ Report bugs to: @PACKAGE_BUGREPORT@
 # Prepare
 %prep
 %setup -q
+
+%if %{?_with_local_netlink:1}%{!?_with_local_netlink:0}
+
+git clone git://git.netfilter.org/libmnl
+(cd libmnl && ./autogen.sh &&\
+    ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
+    make %{?_smp_mflags} && ln -s src lib)
+
+git clone git://git.netfilter.org/libnfnetlink
+(cd libnfnetlink && ./autogen.sh &&\
+    ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
+    make %{?_smp_mflags} && ln -s src lib)
+
+export PKG_CONFIG_PATH=$(pwd)/libmnl:$(pwd)/libnfnetlink
+
+git clone git://git.netfilter.org/libnetfilter_conntrack
+(cd libnetfilter_conntrack && ./autogen.sh &&\
+    ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
+    make %{?_smp_mflags} && ln -s src lib)
+
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libnetfilter_conntrack
+
+%endif
+
 ./autogen.sh
 %{configure} \
     %{?_with_conntrack} \
     %{?_with_inotify} \
-    %{?_with_ncurses} \
-    %{?_with_netlink}
+    %{?_with_netlink} \
+    --disable-ncurses
 
 # Build
 %build
