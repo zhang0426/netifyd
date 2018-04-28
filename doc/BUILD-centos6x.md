@@ -67,6 +67,6 @@ Configure and Compile Netify Agent Source
 -----------------------------------------
 ```
 # ./autogen.sh
-# configure --without-ncurses
+# configure
 # make
 ```
