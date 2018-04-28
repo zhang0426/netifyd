@@ -1,12 +1,11 @@
 # Netify Agent
 
 # Configure conditionals
-# Default values: --with conntrack --with inotify --with netlink
+# Default values: --with conntrack --with inotify --with netlink --without local_netlink
 %{!?_with_conntrack: %{!?_without_conntrack: %define _with_conntrack --enable-conntrack}}
 %{!?_with_inotify: %{!?_without_inotify: %define _with_inotify --enable-inotify}}
 %{!?_with_netlink: %{!?_without_netlink: %define _with_netlink --enable-netlink}}
-
-%{!?_without_local_netlink: %{!?_with_local_netlink: %define _with_local_netlink 1}}
+%{!?_with_local_netlink: %{!?_without_local_netlink: %define _without_local_netlink 1}}
 
 # Configuration files
 %define netifyd_conf deploy/%{name}.conf
@@ -51,15 +50,27 @@ Report bugs to: https://github.com/eglooca/netify-daemon/issues
 %prep
 %setup -q
 
-%if %{?_with_local_netlink:1}%{!?_with_local_netlink:0}
+%if 0%{?_with_local_netlink:1}
+
 git clone git://git.netfilter.org/libmnl
-(cd libmnl && ./autogen.sh && ./configure --prefix=$(pwd) --disable-shared --enable-static && make && ln -s src lib)
+(cd libmnl && ./autogen.sh &&\
+    ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
+    make %{?_smp_mflags} && ln -s src lib)
+
 git clone git://git.netfilter.org/libnfnetlink
-(cd libnfnetlink && ./autogen.sh && ./configure --prefix=$(pwd) --disable-shared --enable-static && make && ln -s src lib)
+(cd libnfnetlink && ./autogen.sh &&\
+    ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
+    make %{?_smp_mflags} && ln -s src lib)
+
 export PKG_CONFIG_PATH=$(pwd)/libmnl:$(pwd)/libnfnetlink
+
 git clone git://git.netfilter.org/libnetfilter_conntrack
-(cd libnetfilter_conntrack && ./autogen.sh && ./configure --prefix=$(pwd) --disable-shared --enable-static && make && ln -s src lib)
+(cd libnetfilter_conntrack && ./autogen.sh &&\
+    ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
+    make %{?_smp_mflags} && ln -s src lib)
+
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libnetfilter_conntrack
+
 %endif
 
 ./autogen.sh
