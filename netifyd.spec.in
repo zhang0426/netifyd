@@ -7,6 +7,8 @@
 %{!?_with_netlink: %{!?_without_netlink: %define _with_netlink --enable-netlink}}
 %{!?_with_local_netlink: %{!?_without_local_netlink: %define _without_local_netlink 1}}
 
+%{?_unitdir:%define _with_systemd 1}
+
 # Configuration files
 %define netifyd_conf deploy/%{name}.conf
 %define netifyd_init deploy/%{name}.init
@@ -86,6 +88,10 @@ make %{?_smp_mflags}
 
 # Install
 %install
+
+EXTRA_DIST=%{buildroot}/EXTRA_DIST.txt
+touch %{EXTRA_DIST}
+
 make install DESTDIR=%{buildroot}
 
 rm -rf %{buildroot}/%{_bindir}
@@ -95,8 +101,12 @@ rm -rf %{buildroot}/%{_libdir}
 install -d -m 0755 %{buildroot}/var/run/%{name}
 
 install -D -m 0644 deploy/app-custom-match.conf %{buildroot}/%{_sharedstatedir}/%{name}/app-custom-match.conf
+%if %{?_with_systemd:1}%{!?_with_systemd:0}
 install -D -m 0644 %{netifyd_systemd_unit} %{buildroot}/%{_unitdir}/%{name}.service
 install -D -m 0644 %{netifyd_tmpf} %{buildroot}/%{_tmpfilesdir}/%{name}.conf
+echo "%{_tmpfilesdir}/%{name}.conf" >> %{EXTRA_DIST}
+echo "%{_unitdir}/%{name}.service" >> %{EXTRA_DIST}
+%endif
 install -D -m 0660 %{netifyd_conf} %{buildroot}/%{_sysconfdir}/%{name}.conf
 install -D -m 0755 %{netifyd_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
 install -D -m 0755 %{netifyd_systemd_exec} %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
@@ -121,13 +131,11 @@ rm -f %{_sharedstatedir}/%{name}/*.csv
 %systemd_postun_with_restart %{name}.service
 
 # Files
-%files
+%files -f %{EXTRA_DIST}
 %defattr(-,root,root)
 %dir /var/run/%{name}
 %dir %attr(750,root,root) %{_sharedstatedir}/%{name}/
 %attr(755,root,root) %{_sysconfdir}/init.d/%{name}
-%attr(644,root,root) %{_tmpfilesdir}/%{name}.conf
-%attr(644,root,root) %{_unitdir}/%{name}.service
 %attr(755,root,root) %{_libexecdir}/%{name}/
 %config(noreplace) %attr(640,root,root) %{_sharedstatedir}/%{name}/app-custom-match.conf
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
