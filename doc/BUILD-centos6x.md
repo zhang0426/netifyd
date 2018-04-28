@@ -39,6 +39,8 @@ Clone Netify Agent Source
 Build RPM: Prepare Source Archive
 ---------------------------------
 ```
+# ./autogen.sh
+# ./configure --disable-conntrack --disable-netlink --disable-ncurses
 # make dist-gzip
 # mv netifyd-<version>.tar.gz ~/rpmbuild/SOURCES
 # rpmbuild -ba netifyd.spec --with local_netlink
@@ -67,6 +69,6 @@ Configure and Compile Netify Agent Source
 -----------------------------------------
 ```
 # ./autogen.sh
-# configure
+# ./configure --disable-ncurses
 # make
 ```
