@@ -35,17 +35,21 @@ Download Packages
 -----------------
 
 Currently you can download binary packages for the following OS distributions:
-- [ClearOS](http://clearos.com)
+- [ClearOS](https://www.clearos.com/products/purchase/clearos-marketplace-apps#cloud)
 - [CentOS](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
 - [Debian](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
 - [Fedora](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
 - [Ubuntu](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
 
-Configuring Source
-------------------
+Configuring/Building From Source
+--------------------------------
 
+Read the appropriate documentation in the doc directory, prefixed with: BUILD-*
+
+Generally the process is:
 ```
 # ./autoconf.sh
 # ./configure --prefix=/usr/local
+# make
 ```
 
