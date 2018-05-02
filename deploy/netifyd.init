@@ -24,49 +24,18 @@
 # Source function library.
 . /etc/init.d/functions
 
-# Source defaults.
-[ -f /etc/default/netifyd ] && source /etc/default/netifyd
-[ -f /etc/sysconfig/netifyd ] && source /etc/sysconfig/netifyd
-
-NETIFYD_OPTS=$NETIFYD_EXTRA_OPTS
-
-for entry in $NETIFYD_INTNET; do
-    if [ "$entry" == "${entry/,/}" ]; then
-        NETIFYD_OPTS="$NETIFYD_OPTS -I $entry"
-        continue
-    fi
-    for net in ${entry//,/ }; do
-        if [ "$net" == "${entry/,*/}" ]; then
-            NETIFYD_OPTS="$NETIFYD_OPTS -I $net"
-        else
-            NETIFYD_OPTS="$NETIFYD_OPTS -A $net"
-        fi
-    done
-done
-
-for entry in $NETIFYD_EXTNET; do
-    if [ "$entry" == "${entry/,/}" ]; then
-        NETIFYD_OPTS="$NETIFYD_OPTS -E $entry"
-        continue
-    fi
-    for ifn in ${entry//,/ }; do
-        if [ "$ifn" == "${entry/,*/}" ]; then
-            NETIFYD_OPTS="$NETIFYD_OPTS -E $ifn"
-        else
-            NETIFYD_OPTS="$NETIFYD_OPTS -N $ifn"
-        fi
-    done
-done
-
-NETIFYD_OPTS=$(echo "$NETIFYD_OPTS" | sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
-
 RETVAL=0
 prog="netifyd"
 PID_FILE=/var/run/netifyd/netifyd.pid
 
 start() {
-    /sbin/modprobe -q nfnetlink
-    /sbin/modprobe -q nf_conntrack_netlink
+    # Load defaults.
+    [ -f /var/libexec/netifyd/functions.sh ] &&
+        source /var/libexec/netifyd/functions.sh
+
+    NETIFYD_OPTS=$(auto_load_options)
+
+    load_modules
 
     echo -n "Starting $prog: "
 
