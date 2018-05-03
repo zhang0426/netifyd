@@ -11,7 +11,7 @@
 
 # Configuration files
 %define netifyd_conf deploy/%{name}.conf
-%define netifyd_init deploy/%{name}.init
+%define netifyd_init deploy/%{name}-sysv.init
 %define netifyd_tmpf deploy/%{name}.tmpf
 %define netifyd_systemd_exec deploy/exec-pre.sh
 %define netifyd_systemd_unit deploy/%{name}.service

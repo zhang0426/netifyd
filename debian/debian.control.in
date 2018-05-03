@@ -2,7 +2,7 @@ Source: @PACKAGE_TARNAME@
 Section: net
 Priority: optional
 Maintainer: Darryl Sokoloski <darryl@egloo.ca>
-Build-Depends: debhelper (>= 9), autoconf, automake, bc, build-essential, libcurl4-openssl-dev, libjson-c-dev, libmnl-dev, libncurses5-dev, libnetfilter-conntrack-dev, libpcap-dev, libtool, zlib1g-dev
+Build-Depends: debhelper (>= 9), dh-systemd (>= 1.5), autoconf, automake, bc, build-essential, libcurl4-openssl-dev, libjson-c-dev, libmnl-dev, libncurses5-dev, libnetfilter-conntrack-dev, libpcap-dev, libtool, zlib1g-dev
 
 Package: @PACKAGE_TARNAME@
 Architecture: any
