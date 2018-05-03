@@ -44,6 +44,9 @@ install: build
 	install -D -m 0755 deploy/exec-pre.sh \
         /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/var/libexec/@PACKAGE_TARNAME@/exec-pre.sh
 
+	install -D -m 0755 deploy/@PACKAGE_TARNAME@.tmpf \
+        /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/usr/lib/tmpfiles.d/@PACKAGE_TARNAME@.conf
+
 	install -D -m 0755 deploy/@PACKAGE_TARNAME@.service \
         /usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@/lib/systemd/system/@PACKAGE_TARNAME@.service
 

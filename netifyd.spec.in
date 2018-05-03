@@ -14,6 +14,7 @@
 %define netifyd_init deploy/%{name}-sysv.init
 %define netifyd_tmpf deploy/%{name}.tmpf
 %define netifyd_systemd_exec deploy/exec-pre.sh
+%define netifyd_systemd_func deploy/functions.sh
 %define netifyd_systemd_unit deploy/%{name}.service
 
 # RPM package details
@@ -103,13 +104,14 @@ install -d -m 0755 %{buildroot}/var/run/%{name}
 install -D -m 0644 deploy/app-custom-match.conf %{buildroot}/%{_sharedstatedir}/%{name}/app-custom-match.conf
 %if %{?_with_systemd:1}%{!?_with_systemd:0}
 install -D -m 0644 %{netifyd_systemd_unit} %{buildroot}/%{_unitdir}/%{name}.service
+echo "%{_unitdir}/%{name}.service" >> %{EXTRA_DIST}
 install -D -m 0644 %{netifyd_tmpf} %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 echo "%{_tmpfilesdir}/%{name}.conf" >> %{EXTRA_DIST}
-echo "%{_unitdir}/%{name}.service" >> %{EXTRA_DIST}
 %endif
 install -D -m 0660 %{netifyd_conf} %{buildroot}/%{_sysconfdir}/%{name}.conf
 install -D -m 0755 %{netifyd_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
 install -D -m 0755 %{netifyd_systemd_exec} %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
+install -D -m 0755 %{netifyd_systemd_func} %{buildroot}/%{_libexecdir}/%{name}/functions.sh
 
 # Clean-up
 %clean
