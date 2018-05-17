@@ -39,6 +39,9 @@ BuildRequires: libmnl-devel
 BuildRequires: libnetfilter_conntrack-devel
 %endif
 %endif
+%if 0%{?_with_local_netlink:1}
+BuildRequires: git
+%endif
 BuildRequires: libpcap-devel
 BuildRequires: libtool
 BuildRequires: pkgconfig
