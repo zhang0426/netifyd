@@ -724,7 +724,7 @@ void nd_json_protocols(string &json_string)
         json.PushObject(jarray, json_proto);
     }
 
-    nd_ndpi_free(ndpi);
+    ndpi_free(ndpi);
 
     json.ToString(json_string, false);
     json_string.append("\n");
