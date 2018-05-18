@@ -841,8 +841,7 @@ void ndDetectionThread::ProcessPacket(void)
 
             new_flow->detection_guessed |= ND_FLOW_GUESS_PROTO;
 
-            if (new_flow->ndpi_flow->num_stun_udp_pkts > 0) {
-
+            if (new_flow->ndpi_flow->protos.stun.num_processed_pkts > 0) {
                 ndpi_set_detected_protocol(
                     ndpi,
                     new_flow->ndpi_flow,

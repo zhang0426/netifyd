@@ -223,8 +223,12 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
 
     custom_proto_base = ndpi->ndpi_num_supported_protocols;
 
-    // Enable DNS response dissection
-    ndpi->dns_dissect_response = 1;
+    // Set nDPI preferences
+    ndpi_set_detection_preferences(ndpi, ndpi_pref_http_dont_dissect_response, 0);
+    ndpi_set_detection_preferences(ndpi, ndpi_pref_dns_dissect_response, 1);
+    ndpi_set_detection_preferences(ndpi, ndpi_pref_direction_detect_disable, 0);
+    ndpi_set_detection_preferences(ndpi, ndpi_pref_disable_metadata_export, 0);
+    ndpi_set_detection_preferences(ndpi, ndpi_pref_enable_category_substring_match, 0);
 
     ndpi_free_automa(ndpi->host_automa.ac_automa);
     ndpi_free_ptree(ndpi->protocols_ptree);
