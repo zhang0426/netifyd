@@ -1,6 +1,5 @@
 Netify Agent
 ============
-[![Build Status](https://travis-ci.org/eglooca/netify-daemon.png?branch=master)](https://travis-ci.org/eglooca/netify-daemon)
 
 Deep Packet Inspection Server
 -----------------------------
