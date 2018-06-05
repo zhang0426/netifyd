@@ -343,7 +343,6 @@ void ndUploadThread::FreeHeaders(void)
 
 void ndUploadThread::Upload(void)
 {
-    int rc;
     CURLcode curl_rc;
     size_t xfer = 0, total = pending.size();
 

@@ -111,6 +111,8 @@ void ndpi_global_destroy(void)
     ndpi_proto_ptree = NULL;
 }
 
+#if 0
+// XXX: Deprecated: Tue Jun  5 16:56:04 EDT 2018
 static void nd_ndpi_load_content_match(
     const string &tag, struct ndpi_detection_module_struct *ndpi)
 {
@@ -210,6 +212,7 @@ static void nd_ndpi_load_host_match(
     nd_debug_printf("%s: loaded %u host protocol records from: %s\n",
         tag.c_str(), loaded, nd_config.path_host_match);
 }
+#endif // XXX: Deprecated
 
 struct ndpi_detection_module_struct *nd_ndpi_init(
     const string &tag, uint32_t &custom_proto_base)
@@ -236,11 +239,11 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     ndpi->host_automa.ac_automa = ndpi_host_automa;
     ndpi->host_automa.lock = ndpi_host_automa_lock;
     ndpi->protocols_ptree = ndpi_proto_ptree;
-
-    // XXX: No longer used.
-    //nd_ndpi_load_content_match(tag, ndpi);
-    //nd_ndpi_load_host_match(tag, ndpi);
-
+#if 0
+    // XXX: Deprecated: Tue Jun  5 16:56:04 EDT 2018
+    nd_ndpi_load_content_match(tag, ndpi);
+    nd_ndpi_load_host_match(tag, ndpi);
+#endif
     ndpi_init_string_based_protocols(ndpi);
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
     ndpi->ndpi_log_level = NDPI_LOG_TRACE;
