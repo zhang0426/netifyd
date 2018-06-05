@@ -1,8 +1,8 @@
 [submodule "ndpi"]
 	path = ndpi
-	url = https://github.com/dsokoloski/nDPI.git
+	url = https://bitbucket.org/eglooca/ndpi.git
 	branch = dev
 [submodule "inih"]
 	path = inih
-	url = https://github.com/dsokoloski/inih.git
+	url = git clone https://bitbucket.org/eglooca/inih.git
 	branch = master
