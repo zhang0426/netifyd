@@ -2,8 +2,8 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify Agent], [2.63],
-    [https://github.com/eglooca/netify-daemon/issues],
+AC_INIT([Netify Agent], [2.64],
+    [https://bitbucket.org/eglooca/netify-daemon/issues],
     [netifyd], [http://www.egloo.ca/])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/netifyd.cpp])

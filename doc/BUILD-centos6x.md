@@ -32,7 +32,7 @@ be run before building an RPM or compiling locally:
 Clone Netify Agent Source
 -------------------------
 ```
-# git clone --recursive git@github.com:eglooca/netify-daemon.git
+# git clone --recursive git clone https://bitbucket.org/eglooca/netify-daemon.git
 # cd netify-daemon
 ```
 

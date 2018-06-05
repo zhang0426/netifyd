@@ -9,7 +9,7 @@ Working guide for building the Netify Agent into an OpenWrt image.
 2. Clone the Netify Agent into the OpenWrt top-level directory:
 
   `# cd openwrt`
-  `# git clone --recursive git@github.com:eglooca/netify-daemon.git`
+  `# git clone --recursive https://bitbucket.org/eglooca/netify-daemon.git`
   
 3. Create a custom feeds configuration file.  Adjust the path to your environment:
 

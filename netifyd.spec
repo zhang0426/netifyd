@@ -21,7 +21,7 @@
 # RPM package details
 Name: netifyd
 Summary: Netify Agent
-Version: 2.63
+Version: 2.64
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPLv3
@@ -51,7 +51,7 @@ BuildRequires: zlib-devel
 
 %description
 Netify provides visibility into the traffic on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.
-Report bugs to: https://github.com/eglooca/netify-daemon/issues
+Report bugs to: https://bitbucket.org/eglooca/netify-daemon/issues
 
 # Prepare
 %prep
