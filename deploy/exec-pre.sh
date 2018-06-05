@@ -3,7 +3,7 @@
 # At least one -I, --internal and/or -E, --external parameters are required.
 # See man netifyd(8) for all options.
 
-source /var/libexec/netifyd/functions.sh
+source /usr/libexec/netifyd/functions.sh
 
 load_modules
 

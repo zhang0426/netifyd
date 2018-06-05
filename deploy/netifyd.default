@@ -1,6 +1,9 @@
 # Netify Agent command-line options
 # See the netifyd(8) manual for common options.
 
+# Auto-detect (when possible) network ineterface roles (yes/no)?
+NETIFYD_AUTODETECT="yes"
+
 # Set desired custom options here:
 # NETIFYD_EXTRA_OPTS=""
 

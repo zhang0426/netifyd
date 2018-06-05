@@ -1,12 +1,13 @@
 # Netify Agent Common Functions
 
+[ -f /etc/conf.d/netifyd ] && source /etc/conf.d/netifyd
+[ -f /etc/default/netifyd ] && source /etc/default/netifyd
+[ -f /etc/sysconfig/netifyd ] && source /etc/sysconfig/netifyd
+
 # Load defaults for RedHat/CentOS/Ubuntu/Debian
 function load_defaults
 {
     local options=""
-
-    [ -f /etc/default/netifyd ] && source /etc/default/netifyd
-    [ -f /etc/sysconfig/netifyd ] && source /etc/sysconfig/netifyd
 
     options=$NETIFYD_EXTRA_OPTS
 
@@ -49,10 +50,7 @@ function load_clearos
 {
     local options=""
 
-    [ -f /etc/sysconfig/netifyd ] && source /etc/sysconfig/netifyd
     [ -f /etc/clearos/network.conf ] && source /etc/clearos/network.conf
-
-    options=$NETIFYD_EXTRA_OPTS
 
     for ifn in $LANIF; do
         [ -z "$ifn" ] && break
@@ -87,10 +85,6 @@ function load_nethserver
 {
     local options=""
     local ifcfg_sw="/etc/shorewall/interfaces"
-
-    [ -f /etc/sysconfig/netifyd ] && source /etc/sysconfig/netifyd
-
-    options=$NETIFYD_EXTRA_OPTS
 
     if [ -f "$ifcfg_sw" ]; then
         for ifn in "$(grep '^loc[[:space:]]' $ifcfg_sw | awk '{ print $2 }')"; do
@@ -135,27 +129,35 @@ function load_modules
 
 function detect_os
 {
-    [ -f /etc/clearos-release ] && echo "clearos"
-    [ -f /etc/nethserver-release ] && echo "nethserver"
-
-    echo "unknown"
+    if [ -f /etc/clearos-release ]; then
+        echo "clearos"
+    elif [ -f /etc/nethserver-release ]; then
+        echo "nethserver"
+    elif [ -f /etc/gentoo-release ]; then
+        echo "gentoo"
+    else
+        echo "unknown"
+    fi
 }
 
 function auto_detect_options
 {
     local options=""
 
-    case "$(detect_os)" in
-        clearos)
-            options=$(load_clearos)
-        ;;
-        nethserver)
-            options=$(load_nethserver)
-        ;;
-        *)
-            options=$(load_defaults)
-        ;;
-    esac
+    options=$(load_defaults)
+
+    if [ "$NETIFYD_AUTODETECT" != "yes" ]; then
+        echo $options
+    else
+        case "$(detect_os)" in
+            clearos)
+                options=$(load_clearos)
+            ;;
+            nethserver)
+                options=$(load_nethserver)
+            ;;
+        esac
+    fi
 
     echo $options
 }

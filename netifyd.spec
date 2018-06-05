@@ -11,11 +11,12 @@
 
 # Configuration files
 %define netifyd_conf deploy/%{name}.conf
+%define netifyd_default deploy/%{name}.default
+%define netifyd_exec_pre deploy/exec-pre.sh
+%define netifyd_functions deploy/functions.sh
 %define netifyd_init deploy/%{name}-sysv.init
-%define netifyd_tmpf deploy/%{name}.tmpf
-%define netifyd_systemd_exec deploy/exec-pre.sh
-%define netifyd_systemd_func deploy/functions.sh
 %define netifyd_systemd_unit deploy/%{name}.service
+%define netifyd_tmpf deploy/%{name}.tmpf
 
 # RPM package details
 Name: netifyd
@@ -105,16 +106,18 @@ rm -rf %{buildroot}/%{_libdir}
 install -d -m 0755 %{buildroot}/var/run/%{name}
 
 install -D -m 0644 deploy/app-custom-match.conf %{buildroot}/%{_sharedstatedir}/%{name}/app-custom-match.conf
+install -D -m 0660 %{netifyd_conf} %{buildroot}/%{_sysconfdir}/%{name}.conf
+install -D -m 0660 %{netifyd_default} %{buildroot}/%{_sysconfdir}/sysconfig/%{name}
+install -D -m 0755 %{netifyd_exec_pre} %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
+install -D -m 0755 %{netifyd_functions} %{buildroot}/%{_libexecdir}/%{name}/functions.sh
+install -D -m 0755 %{netifyd_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
+
 %if %{?_with_systemd:1}%{!?_with_systemd:0}
 install -D -m 0644 %{netifyd_systemd_unit} %{buildroot}/%{_unitdir}/%{name}.service
 echo "%{_unitdir}/%{name}.service" >> %{EXTRA_DIST}
 install -D -m 0644 %{netifyd_tmpf} %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 echo "%{_tmpfilesdir}/%{name}.conf" >> %{EXTRA_DIST}
 %endif
-install -D -m 0660 %{netifyd_conf} %{buildroot}/%{_sysconfdir}/%{name}.conf
-install -D -m 0755 %{netifyd_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
-install -D -m 0755 %{netifyd_systemd_exec} %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
-install -D -m 0755 %{netifyd_systemd_func} %{buildroot}/%{_libexecdir}/%{name}/functions.sh
 
 # Clean-up
 %clean
@@ -140,8 +143,9 @@ rm -f %{_sharedstatedir}/%{name}/*.csv
 %defattr(-,root,root)
 %dir /var/run/%{name}
 %dir %attr(750,root,root) %{_sharedstatedir}/%{name}/
-%attr(755,root,root) %{_sysconfdir}/init.d/%{name}
+%attr(644,root,root) %{_sysconfdir}/sysconfig/%{name}
 %attr(755,root,root) %{_libexecdir}/%{name}/
+%attr(755,root,root) %{_sysconfdir}/init.d/%{name}
 %config(noreplace) %attr(640,root,root) %{_sharedstatedir}/%{name}/app-custom-match.conf
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}

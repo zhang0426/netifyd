@@ -29,10 +29,10 @@ test -x $DAEMON || exit 0
 
 start() {
     # Load defaults.
-    [ -f /var/libexec/netifyd/functions.sh ] &&
-        source /var/libexec/netifyd/functions.sh
-
-    load_modules
+    if [ -f /usr/libexec/netifyd/functions.sh ]; then
+        source /usr/libexec/netifyd/functions.sh
+        load_modules
+    fi
 
     log_daemon_msg "Starting $DESC" "$NAME"
 

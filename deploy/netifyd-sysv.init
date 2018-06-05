@@ -30,12 +30,13 @@ PID_FILE=/var/run/netifyd/netifyd.pid
 
 start() {
     # Load defaults.
-    [ -f /var/libexec/netifyd/functions.sh ] &&
+    if [ -f /var/libexec/netifyd/functions.sh ]; then
         source /var/libexec/netifyd/functions.sh
 
-    NETIFYD_OPTS=$(auto_load_options)
+        NETIFYD_OPTS=$(auto_load_options)
 
-    load_modules
+        load_modules
+    fi
 
     echo -n "Starting $prog: "
 
