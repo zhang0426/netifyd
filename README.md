@@ -47,8 +47,8 @@ Read the appropriate documentation in the doc directory, prefixed with: BUILD-*
 
 Generally the process is:
 ```
-# ./autoconf.sh
-# ./configure --prefix=/usr/local
+# ./autogen.sh
+# ./configure
 # make
 ```
 
