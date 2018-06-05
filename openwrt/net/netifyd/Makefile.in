@@ -18,6 +18,14 @@ PKG_MAINTAINER:=Darryl Sokoloski <darryl@egloo.ca>
 PKG_LICENSE:=GPL-3.0+
 
 # Source settings
+
+# Disable the following and enable SOURCE_DIR below for local test builds.
+#PKG_SOURCE_PROTO:=git
+#PKG_SOURCE_URL:=https://github.com/eglooca/netify-daemon.git
+#PKG_SOURCE_DATE:=2018-05-25
+#PKG_SOURCE_VERSION:=32fc0925cbc30a4a8f71392e976aa94b586c4086
+#PKG_MIRROR_HASH:=caedb66cf6dcbdcee0d1525923e203d003ef15f34a13a328686794666f16171f
+
 SOURCE_DIR:=$(TOPDIR)/netify-daemon
 
 #include $(INCLUDE_DIR)/uclibc++.mk
@@ -35,7 +43,7 @@ endef
 # Package description
 define Package/@PACKAGE_TARNAME@/description
 Netify provides visibility into the traffic on your network along with the
-option to take an active role (on supported devices) in stopping/shaping
+option to take an active role (on supported devices) in blocking or shaping
 undesirable traffic from recurring on your network.
 
 endef
@@ -75,11 +83,13 @@ endef
 
 # Package install
 define Package/@PACKAGE_TARNAME@/install
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/netifyd.init $(1)/etc/init.d/netifyd
 	$(INSTALL_DIR) $(1)/usr/sbin
-	#$(INSTALL_DIR) $(1)/etc/init.d
-	#$(INSTALL_DIR) $(1)/etc/config
-	#$(INSTALL_DIR) $(1)/var/lib/netifyd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/netifyd $(1)/usr/sbin
+	#$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_DIR) $(1)/var/lib/netifyd
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/deploy/app-custom-match.conf $(1)/var/lib/netifyd
 endef
 
 # Get the job done
