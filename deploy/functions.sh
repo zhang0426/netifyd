@@ -82,6 +82,51 @@ function load_clearos
     echo $options
 }
 
+# NethServer: Dynamically add all configured LAN/WAN interfaces.
+function load_nethserver
+{
+    local options=""
+    local ifcfg_sw="/etc/shorewall/interfaces"
+
+    [ -f /etc/sysconfig/netifyd ] && source /etc/sysconfig/netifyd
+
+    options=$NETIFYD_EXTRA_OPTS
+
+    if [ -f "$ifcfg_sw" ]; then
+        for ifn in "$(grep '^loc[[:space:]]' $ifcfg_sw | awk '{ print $2 }')"; do
+            [ -z "$ifn" ] && break
+            options="$options -I $ifn"
+        done
+
+        for ifn in "$(grep "^blue[[:space:]]" $ifcfg_sw | awk '{ print $2 }')"; do
+            [ -z "$ifn" ] && break
+            options="$options -I $ifn"
+        done
+
+        for ifn in "$(grep "^orang[[:space:]]" $ifcfg_sw | awk '{ print $2 }')"; do
+            [ -z "$ifn" ] && break
+            options="$options -I $ifn"
+        done
+
+        for ifn in "$(grep '^net[[:space:]]' $ifcfg_sw | awk '{ print $2 }')"; do
+            [ -z "$ifn" ] && break
+            [ -f "/etc/sysconfig/network-scripts/ifcfg-${ifn}" ] &&
+                source "/etc/sysconfig/network-scripts/ifcfg-${ifn}"
+            if [ ! -z "$ETH" ]; then
+                options="$options -E $ETH -N $ifn"
+                unset ETH
+            else
+                options="$options -E $ifn"
+            fi
+        done
+    fi
+
+    options=$(echo "$options" |\
+        sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
+
+    echo $options
+}
+
 function load_modules
 {
     /sbin/modprobe -q nfnetlink
@@ -91,6 +136,7 @@ function load_modules
 function detect_os
 {
     [ -f /etc/clearos-release ] && echo "clearos"
+    [ -f /etc/nethserver-release ] && echo "nethserver"
 
     echo "unknown"
 }
@@ -102,6 +148,9 @@ function auto_detect_options
     case "$(detect_os)" in
         clearos)
             options=$(load_clearos)
+        ;;
+        nethserver)
+            options=$(load_nethserver)
         ;;
         *)
             options=$(load_defaults)
