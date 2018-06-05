@@ -841,7 +841,7 @@ void ndDetectionThread::ProcessPacket(void)
 
             new_flow->detection_guessed |= ND_FLOW_GUESS_PROTO;
 
-            if (new_flow->ndpi_flow->protos.stun.num_processed_pkts > 0) {
+            if (new_flow->ndpi_flow->protos.stun_ssl.stun.num_processed_pkts > 0) {
                 ndpi_set_detected_protocol(
                     ndpi,
                     new_flow->ndpi_flow,
@@ -988,14 +988,14 @@ void ndDetectionThread::ProcessPacket(void)
             break;
         case NDPI_PROTOCOL_SSL:
             new_flow->ssl.version =
-                new_flow->ndpi_flow->protos.ssl.version;
+                new_flow->ndpi_flow->protos.stun_ssl.ssl.version;
             new_flow->ssl.cipher_suite =
-                new_flow->ndpi_flow->protos.ssl.cipher_suite;
+                new_flow->ndpi_flow->protos.stun_ssl.ssl.cipher_suite;
 
             snprintf(new_flow->ssl.client_certcn, ND_FLOW_SSL_CNLEN,
-                "%s", new_flow->ndpi_flow->protos.ssl.client_certificate);
+                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate);
             snprintf(new_flow->ssl.server_certcn, ND_FLOW_SSL_CNLEN,
-                "%s", new_flow->ndpi_flow->protos.ssl.server_certificate);
+                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
             break;
         case NDPI_PROTOCOL_SSH:
             snprintf(new_flow->ssh.client_agent, ND_FLOW_SSH_UALEN,
