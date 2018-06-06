@@ -4,7 +4,7 @@ Version: @PACKAGE_VERSION@-1
 Binary: @PACKAGE_TARNAME@
 Maintainer: Darryl Sokoloski <darryl@egloo.ca>
 Architecture: any
-Build-Depends: debhelper (>= 4.1.16), autoconf, automake, bc, build-essential, libcurl4-openssl-dev, libjson-c-dev, libmnl-dev, libncurses5-dev, libnetfilter-conntrack-dev, libpcap-dev, libtool, zlib1g-dev
+Build-Depends: debhelper (>= 4.1.16), dh-systemd (>= 1.5), autoconf, automake, bc, build-essential, libcurl4-openssl-dev, libjson-c-dev, libmnl-dev, libncurses5-dev, libnetfilter-conntrack-dev, libpcap-dev, libtool, zlib1g-dev
 Files: 
  d57283ebb8157ae919762c58419353c8 133282 @PACKAGE_TARNAME@_@PACKAGE_VERSION@.orig.tar.gz
  2fecf324a32123b08cefc0f047bca5ee 63176 @PACKAGE_TARNAME@_@PACKAGE_VERSION@-1.diff.tar.gz

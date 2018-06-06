@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 9), dh-systemd (>= 1.5), autoconf, automake, bc, bu
 
 Package: @PACKAGE_TARNAME@
 Architecture: any
-Depends: ${misc:Depends} ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Netify Agent
  Netify provides visibility into the traffic on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.
  Report bugs to: @PACKAGE_BUGREPORT@
