@@ -20,13 +20,14 @@ PKG_LICENSE:=GPL-3.0+
 # Source settings
 
 # Disable the following and enable SOURCE_DIR below for local test builds.
-#PKG_SOURCE_PROTO:=git
-#PKG_SOURCE_URL:=https://github.com/eglooca/netify-daemon.git
-#PKG_SOURCE_DATE:=2018-05-25
-#PKG_SOURCE_VERSION:=32fc0925cbc30a4a8f71392e976aa94b586c4086
-#PKG_MIRROR_HASH:=caedb66cf6dcbdcee0d1525923e203d003ef15f34a13a328686794666f16171f
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=@GIT_SOURCE_URL@
+PKG_SOURCE_DATE:=@GIT_LAST_COMMIT_DATE@
+PKG_SOURCE_VERSION:=@GIT_LAST_COMMIT_HASH@
+PKG_MIRROR_HASH:=whatever
 
-SOURCE_DIR:=$(TOPDIR)/netify-daemon
+# Local source builds (create symlink to source here)
+#SOURCE_DIR:=$(TOPDIR)/netify-daemon
 
 #include $(INCLUDE_DIR)/uclibc++.mk
 include $(INCLUDE_DIR)/package.mk
@@ -49,7 +50,7 @@ undesirable traffic from recurring on your network.
 endef
 
 # Package configuration
-define Package/dnsmasq/conffiles
+define Package/@PACKAGE_TARNAME@/conffiles
 /etc/config/@PACKAGE_TARNAME@
 /etc/@PACKAGE_TARNAME@.conf
 endef

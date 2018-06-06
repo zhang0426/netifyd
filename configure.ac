@@ -182,8 +182,8 @@ if test -d ".git"; then :
     GIT_LAST_COMMIT_HASH=`git log -1 --format=%H`
     GIT_LAST_COMMIT_DATE=`date -d ${GIT_DATE_ISO8601} '+%F'`
 
-    AC_DEFINE_UNQUOTED(GIT_LAST_COMMIT_HASH, "${GIT_LAST_COMMIT_HASH}", [Last GIT commit hash])
-    AC_DEFINE_UNQUOTED(GIT_LAST_COMMIT_DATE, "${GIT_LAST_COMMIT_DATE}", [Last GIT commit date])
+    AC_SUBST([GIT_LAST_COMMIT_HASH], [$GIT_LAST_COMMIT_HASH])
+    AC_SUBST([GIT_LAST_COMMIT_DATE], [$GIT_LAST_COMMIT_DATE])
 
     # On CentOS 6 `git rev-list HEAD --count` does not work
     GIT_NUM=`git log --pretty=oneline | wc -l | tr -d '[[:space:]]'`
@@ -196,7 +196,7 @@ fi
 
 AC_DEFINE_UNQUOTED(GIT_RELEASE, "${GIT_RELEASE}", [GIT Release])
 AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
-AC_DEFINE_UNQUOTED(GIT_SOURCE_URL, "https://bitbucket.org/eglooca/netify-daemon.git", [GIT source URL])
+AC_SUBST([GIT_SOURCE_URL], [https://bitbucket.org/eglooca/netify-daemon.git])
 
 # Output files
 AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec])
