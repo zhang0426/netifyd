@@ -196,6 +196,7 @@ fi
 
 AC_DEFINE_UNQUOTED(GIT_RELEASE, "${GIT_RELEASE}", [GIT Release])
 AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
+AC_DEFINE_UNQUOTED(GIT_SOURCE_URL, "https://bitbucket.org/eglooca/netify-daemon.git", [GIT source URL])
 
 # Output files
 AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec])
