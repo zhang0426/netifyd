@@ -51,7 +51,7 @@ endef
 
 # Package configuration
 define Package/@PACKAGE_TARNAME@/conffiles
-/etc/config/@PACKAGE_TARNAME@
+#/etc/config/@PACKAGE_TARNAME@
 /etc/@PACKAGE_TARNAME@.conf
 endef
 
