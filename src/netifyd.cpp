@@ -581,9 +581,8 @@ static int nd_start_detection_threads(void)
 
         stats[(*i).second] = new nd_packet_stats;
 
-        // XXX: Only collect device MAC/addresses on LAN interfaces?
-        //devices[(*i).second] = ((*i).first) ? new nd_device_addrs : NULL;
-        devices[(*i).second] = new nd_device_addrs;
+        // XXX: Only collect device MAC/addresses on LAN interfaces.
+        devices[(*i).second] = ((*i).first) ? new nd_device_addrs : NULL;
     }
 
     try {
