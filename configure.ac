@@ -178,6 +178,9 @@ if test -d ".git"; then :
     GIT_TAG=`git log -1 --format=%h`
     GIT_DATE=`git log -1 --format=%cd`
 
+    GIT_HASH=`git log -1 --format=%H`
+    AC_DEFINE_UNQUOTED(GIT_HASH, "${GIT_HASH}", [Last GIT Commit Hash])
+
     # On CentOS 6 `git rev-list HEAD --count` does not work
     GIT_NUM=`git log --pretty=oneline | wc -l | tr -d '[[:space:]]'`
     GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
