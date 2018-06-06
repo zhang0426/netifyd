@@ -177,9 +177,13 @@ AC_CHECK_FUNC([pthread_attr_setaffinity_np], [
 if test -d ".git"; then :
     GIT_TAG=`git log -1 --format=%h`
     GIT_DATE=`git log -1 --format=%cd`
+    GIT_DATE_ISO8601=`git log -1 --format=%cI`
 
-    GIT_HASH=`git log -1 --format=%H`
-    AC_DEFINE_UNQUOTED(GIT_HASH, "${GIT_HASH}", [Last GIT Commit Hash])
+    GIT_LAST_COMMIT_HASH=`git log -1 --format=%H`
+    GIT_LAST_COMMIT_DATE=`date -d ${GIT_DATE_ISO8601} '+%F'`
+
+    AC_DEFINE_UNQUOTED(GIT_LAST_COMMIT_HASH, "${GIT_LAST_COMMIT_HASH}", [Last GIT commit hash])
+    AC_DEFINE_UNQUOTED(GIT_LAST_COMMIT_DATE, "${GIT_LAST_COMMIT_DATE}", [Last GIT commit date])
 
     # On CentOS 6 `git rev-list HEAD --count` does not work
     GIT_NUM=`git log --pretty=oneline | wc -l | tr -d '[[:space:]]'`
