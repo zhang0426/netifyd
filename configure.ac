@@ -199,9 +199,9 @@ AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
 AC_SUBST([GIT_SOURCE_URL], [https://bitbucket.org/eglooca/netify-daemon.git])
 
 # Output files
-AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec])
-AC_CONFIG_FILES([debian/debian.changelog debian/debian.control debian/debian.rules debian/netifyd.dsc])
+AC_CONFIG_FILES([deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc])
 AC_CONFIG_FILES([deploy/openwrt/Makefile])
+AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile util/Makefile netifyd.spec])
 AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
 AC_CONFIG_FILES([util/generate-protocol-csv.sh], [chmod +x util/generate-protocol-csv.sh])
 AC_OUTPUT
