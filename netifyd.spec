@@ -7,6 +7,10 @@
 %{!?_with_netlink: %{!?_without_netlink: %define _with_netlink --enable-netlink}}
 %{!?_with_local_netlink: %{!?_without_local_netlink: %define _without_local_netlink 1}}
 
+%if 0%{?centos_version} == 600
+%define _with_local_netlink 1
+%endif
+
 %{?_unitdir:%define _with_systemd 1}
 
 # Configuration files
