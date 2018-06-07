@@ -21,6 +21,8 @@ AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG([0.23])
 AC_PATH_PROG([bash], [bash], [false])
+AC_PATH_PROG([osc], [osc])
+AM_CONDITIONAL([HAVE_OSC], [test x$osc != x])
 
 AS_IF([test "x$ac_cv_path_bash" != "xfalse"], [
     AC_SUBST([ND_PATH_BASH], [$ac_cv_path_bash])
@@ -177,10 +179,10 @@ AC_CHECK_FUNC([pthread_attr_setaffinity_np], [
 if test -d ".git"; then :
     GIT_TAG=`git log -1 --format=%h`
     GIT_DATE=`git log -1 --format=%cd`
-    GIT_DATE_ISO8601=`git log -1 --format=%cI`
+    GIT_DATE_ISO8601=`git log -1 --format=%ci`
 
     GIT_LAST_COMMIT_HASH=`git log -1 --format=%H`
-    GIT_LAST_COMMIT_DATE=`date -d ${GIT_DATE_ISO8601} '+%F'`
+    GIT_LAST_COMMIT_DATE=`date -d "${GIT_DATE_ISO8601}" '+%F'`
 
     AC_SUBST([GIT_LAST_COMMIT_HASH], [$GIT_LAST_COMMIT_HASH])
     AC_SUBST([GIT_LAST_COMMIT_DATE], [$GIT_LAST_COMMIT_DATE])
