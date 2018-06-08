@@ -7,9 +7,6 @@ configure
 depcomp
 doc/*.bak
 install-sh
-libmnl/
-libnetfilter_conntrack/
-libnfnetlink/
 libtool
 ltmain.sh
 Makefile

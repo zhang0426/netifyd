@@ -6,3 +6,12 @@
 	path = inih
 	url = https://bitbucket.org/eglooca/inih.git
 	branch = master
+[submodule "libmnl"]
+	path = libmnl
+	url = git://git.netfilter.org/libmnl
+[submodule "libnfnetlink"]
+	path = libnfnetlink
+	url = git://git.netfilter.org/libnfnetlink
+[submodule "libnetfilter_conntrack"]
+	path = libnetfilter_conntrack
+	url = git://git.netfilter.org/libnetfilter_conntrack

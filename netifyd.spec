@@ -63,19 +63,16 @@ Report bugs to: https://bitbucket.org/eglooca/netify-daemon/issues
 
 %if 0%{?_with_local_netlink:1}
 
-git clone git://git.netfilter.org/libmnl
 (cd libmnl && ./autogen.sh &&\
     ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
     make %{?_smp_mflags} && ln -s src lib)
 
-git clone git://git.netfilter.org/libnfnetlink
 (cd libnfnetlink && ./autogen.sh &&\
     ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
     make %{?_smp_mflags} && ln -s src lib)
 
 export PKG_CONFIG_PATH=$(pwd)/libmnl:$(pwd)/libnfnetlink
 
-git clone git://git.netfilter.org/libnetfilter_conntrack
 (cd libnetfilter_conntrack && ./autogen.sh &&\
     ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
     make %{?_smp_mflags} && ln -s src lib)
