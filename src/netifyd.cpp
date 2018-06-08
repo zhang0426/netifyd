@@ -385,9 +385,9 @@ static void nd_config_init(void)
     nd_config.upload_timeout = ND_UPLOAD_TIMEOUT;
     nd_config.dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL;
 
-    nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH),
-    nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH),
-    nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH),
+    nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH);
+    nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH);
+    nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH);
 }
 
 static int nd_config_load(void)
