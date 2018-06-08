@@ -24,7 +24,11 @@
 #include <unordered_map>
 #include <vector>
 #include <sstream>
+#ifdef HAVE_ATOMIC
 #include <atomic>
+#else
+typedef bool atomic_bool;
+#endif
 
 #include <sys/stat.h>
 #include <sys/select.h>

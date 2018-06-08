@@ -25,7 +25,9 @@
 #include "config.h"
 #endif
 
+#ifdef HAVE_STDALIGN_H
 #include <stdalign.h>
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

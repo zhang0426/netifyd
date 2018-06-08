@@ -30,7 +30,11 @@
 #include <queue>
 #include <deque>
 #include <sstream>
+#ifdef HAVE_ATOMIC
 #include <atomic>
+#else
+typedef bool atomic_bool;
+#endif
 
 #include <unistd.h>
 #include <signal.h>

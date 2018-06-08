@@ -29,7 +29,11 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#ifdef HAVE_ATOMIC
 #include <atomic>
+#else
+typedef bool atomic_bool;
+#endif
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

@@ -28,7 +28,11 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#ifdef HAVE_ATOMIC
 #include <atomic>
+#else
+typedef bool atomic_bool;
+#endif
 
 #include <arpa/inet.h>
 #include <errno.h>

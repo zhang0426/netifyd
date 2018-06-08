@@ -136,7 +136,7 @@ AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC
 ]])
 
 # Check for optional header files.
-AC_CHECK_HEADERS([endian.h net/ppp_defs.h linux/ppp_defs.h])
+AC_CHECK_HEADERS([atomic net/ppp_defs.h linux/ppp_defs.h stdalign.h])
 
 # Check compiler flags (gnu++11)
 m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])

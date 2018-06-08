@@ -27,7 +27,11 @@
 #include <unordered_map>
 #include <vector>
 #include <locale>
+#ifdef HAVE_ATOMIC
 #include <atomic>
+#else
+typedef bool atomic_bool;
+#endif
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -87,39 +91,7 @@ using namespace std;
 #define ND_SIG_UPDATE       SIGRTMIN
 #define ND_STR_ETHALEN     (ETH_ALEN * 2 + ETH_ALEN - 1)
 
-nd_global_config nd_config = {
-    .path_config = NULL,
-    .path_content_match = NULL,
-    .path_custom_match = NULL,
-    .path_host_match = NULL,
-    .path_json = NULL,
-    .path_uuid = NULL,
-    .path_uuid_serial = NULL,
-    .path_uuid_site= NULL,
-    .url_upload = NULL,
-    .uuid = NULL,
-    .uuid_serial = NULL,
-    .uuid_site = NULL,
-    .max_backlog = ND_MAX_BACKLOG_KB * 1024,
-#if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
-    .flags = ndGF_USE_CONNTRACK | ndGF_USE_NETLINK,
-#elif defined(_ND_USE_CONNTRACK)
-    .flags = ndGF_USE_CONNTRACK,
-#elif defined(_ND_USE_NETLINK)
-    .flags = ndGF_USE_NETLINK,
-#else
-    .flags = 0x0,
-#endif
-    .digest_content_match = {},
-    .digest_custom_match = {},
-    .digest_host_match = {},
-    .max_tcp_pkts = ND_MAX_TCP_PKTS,
-    .max_udp_pkts = ND_MAX_UDP_PKTS,
-    .update_interval = ND_STATS_INTERVAL,
-    .upload_timeout = ND_UPLOAD_TIMEOUT,
-    .dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL,
-};
-
+nd_global_config nd_config;
 pthread_mutex_t *nd_printf_mutex = NULL;
 
 static struct timespec nd_ts_epoch;
@@ -394,6 +366,26 @@ static void nd_usage(int rc = 0, bool version = false)
     exit(rc);
 }
 
+static void nd_config_init(void)
+{
+    nd_global_config nd_config;
+    memset(&nd_config, '\0', sizeof(nd_global_config));
+
+    nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
+#if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
+    nd_config.flags = ndGF_USE_CONNTRACK | ndGF_USE_NETLINK;
+#elif defined(_ND_USE_CONNTRACK)
+    nd_config.flags = ndGF_USE_CONNTRACK;
+#elif defined(_ND_USE_NETLINK)
+    nd_config.flags = ndGF_USE_NETLINK;
+#endif
+    nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
+    nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
+    nd_config.update_interval = ND_STATS_INTERVAL;
+    nd_config.upload_timeout = ND_UPLOAD_TIMEOUT;
+    nd_config.dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL;
+}
+
 static int nd_config_load(void)
 {
     if (nd_conf_filename == NULL) {
@@ -573,12 +565,13 @@ static int nd_start_detection_threads(void)
         i != ifaces.end(); i++) {
 
         flows[(*i).second] = new nd_flow_map;
+#ifdef HAVE_CXX11
         flows[(*i).second]->reserve(ND_HASH_BUCKETS_FLOWS);
         nd_debug_printf("%s: flows_map, buckets: %lu, max_load: %f\n",
             (*i).second.c_str(),
             flows[(*i).second]->bucket_count(),
             flows[(*i).second]->max_load_factor());
-
+#endif
         stats[(*i).second] = new nd_packet_stats;
 
         // XXX: Only collect device MAC/addresses on LAN interfaces.
@@ -1438,6 +1431,8 @@ int main(int argc, char *argv[])
     locale lc(cout.getloc(), new nd_numpunct);
     os.imbue(lc);
 #endif
+    nd_config_init();
+
     nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH),
     nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH),
     nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH),
@@ -1446,8 +1441,9 @@ int main(int argc, char *argv[])
     pthread_mutex_init(nd_printf_mutex, NULL);
 
     pthread_mutex_init(&dns_cache.lock, NULL);
+#ifdef HAVE_CXX11
     dns_cache.map_ar.reserve(ND_HASH_BUCKETS_DNSARS);
-
+#endif
     static struct option options[] =
     {
         { "help", 0, 0, 'h' },

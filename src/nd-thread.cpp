@@ -22,7 +22,11 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#ifdef HAVE_ATOMIC
 #include <atomic>
+#else
+typedef bool atomic_bool;
+#endif
 
 #include <unistd.h>
 #include <stdlib.h>
