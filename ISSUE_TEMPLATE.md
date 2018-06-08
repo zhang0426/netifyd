@@ -1,2 +1,0 @@
-Netify Agent Bug Report
-=======================
