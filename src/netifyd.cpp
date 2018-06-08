@@ -384,6 +384,10 @@ static void nd_config_init(void)
     nd_config.update_interval = ND_STATS_INTERVAL;
     nd_config.upload_timeout = ND_UPLOAD_TIMEOUT;
     nd_config.dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL;
+
+    nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH),
+    nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH),
+    nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH),
 }
 
 static int nd_config_load(void)
@@ -1432,10 +1436,6 @@ int main(int argc, char *argv[])
     os.imbue(lc);
 #endif
     nd_config_init();
-
-    nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH),
-    nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH),
-    nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH),
 
     nd_printf_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_printf_mutex, NULL);
