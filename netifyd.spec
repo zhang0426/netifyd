@@ -1,14 +1,14 @@
 # Netify Agent
 
 # Configure conditionals
-# Default values: --with conntrack --with inotify --with netlink --without local_netlink
+# Default values: --with conntrack --with inotify --with netlink --without bundled_libs
 %{!?_with_conntrack: %{!?_without_conntrack: %define _with_conntrack --enable-conntrack}}
 %{!?_with_inotify: %{!?_without_inotify: %define _with_inotify --enable-inotify}}
 %{!?_with_netlink: %{!?_without_netlink: %define _with_netlink --enable-netlink}}
-%{!?_with_local_netlink: %{!?_without_local_netlink: %define _without_local_netlink 1}}
+%{!?_with_bundled_libs: %{!?_without_bundled_libs: %define _without_bundled_libs 1}}
 
 %if 0%{?centos_version} == 600
-%define _with_local_netlink 1
+%define _with_bundled_libs 1
 %endif
 
 %{?_unitdir:%define _with_systemd 1}
@@ -36,16 +36,16 @@ BuildRoot: /var/tmp/%{name}-%{version}
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: bc
-BuildRequires: gperftools-devel
 BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
-%if %{?_without_local_netlink:1}%{!?_without_local_netlink:0}
+%if %{?_without_bundled_libs:1}%{!?_without_bundled_libs:0}
 %if %{?_with_conntrack:1}%{!?_with_conntrack:0}
+BuildRequires: gperftools-devel
 BuildRequires: libmnl-devel
 BuildRequires: libnetfilter_conntrack-devel
 %endif
 %endif
-%if 0%{?_with_local_netlink:1}
+%if 0%{?_with_bundled_libs:1}
 BuildRequires: git
 %endif
 BuildRequires: libpcap-devel
@@ -62,7 +62,7 @@ Report bugs to: https://bitbucket.org/eglooca/netify-daemon/issues
 %prep
 %setup -q
 
-%if 0%{?_with_local_netlink:1}
+%if 0%{?_with_bundled_libs:1}
 
 (cd libmnl && ./autogen.sh &&\
     ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
@@ -79,6 +79,12 @@ export PKG_CONFIG_PATH=$(pwd)/libmnl:$(pwd)/libnfnetlink
     make %{?_smp_mflags} && ln -s src lib)
 
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libnetfilter_conntrack
+
+(cd gperftools && ./autogen.sh &&\
+    ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
+    make %{?_smp_mflags} && ln -s .libs lib)
+
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/gperftools
 
 %endif
 
