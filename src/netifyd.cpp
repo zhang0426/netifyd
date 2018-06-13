@@ -368,8 +368,18 @@ static void nd_usage(int rc = 0, bool version = false)
 
 static void nd_config_init(void)
 {
-    nd_global_config nd_config;
-    memset(&nd_config, '\0', sizeof(nd_global_config));
+    nd_config.path_config = NULL;
+    nd_config.path_content_match = NULL;
+    nd_config.path_custom_match = NULL;
+    nd_config.path_host_match = NULL;
+    nd_config.path_json = NULL;
+    nd_config.path_uuid = NULL;
+    nd_config.path_uuid_serial = NULL;
+    nd_config.path_uuid_site = NULL;
+    nd_config.url_upload = NULL;
+    nd_config.uuid = NULL;
+    nd_config.uuid_serial = NULL;
+    nd_config.uuid_site = NULL;
 
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
@@ -379,15 +389,19 @@ static void nd_config_init(void)
 #elif defined(_ND_USE_NETLINK)
     nd_config.flags = ndGF_USE_NETLINK;
 #endif
+    nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH);
+    memset(nd_config.digest_custom_match, 0, SHA1_DIGEST_LENGTH);
+#ifndef _ND_LEAN_AND_MEAN
+    nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH);
+    nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH);
+    memset(nd_config.digest_content_match, 0, SHA1_DIGEST_LENGTH);
+    memset(nd_config.digest_host_match, 0, SHA1_DIGEST_LENGTH);
+#endif
     nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
     nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
     nd_config.update_interval = ND_STATS_INTERVAL;
     nd_config.upload_timeout = ND_UPLOAD_TIMEOUT;
     nd_config.dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL;
-
-    nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH);
-    nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH);
-    nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH);
 }
 
 static int nd_config_load(void)
