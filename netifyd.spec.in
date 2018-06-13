@@ -39,8 +39,8 @@ BuildRequires: bc
 BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
 %if %{?_without_bundled_libs:1}%{!?_without_bundled_libs:0}
-%if %{?_with_conntrack:1}%{!?_with_conntrack:0}
 BuildRequires: gperftools-devel
+%if %{?_with_conntrack:1}%{!?_with_conntrack:0}
 BuildRequires: libmnl-devel
 BuildRequires: libnetfilter_conntrack-devel
 %endif
