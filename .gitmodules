@@ -15,3 +15,6 @@
 [submodule "libnetfilter_conntrack"]
 	path = libnetfilter_conntrack
 	url = git://git.netfilter.org/libnetfilter_conntrack
+[submodule "gperftools"]
+	path = gperftools
+	url = https://github.com/gperftools/gperftools.git
