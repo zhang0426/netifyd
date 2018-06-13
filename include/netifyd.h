@@ -181,9 +181,11 @@ typedef struct nd_global_config_t {
     char *uuid_site;
     size_t max_backlog;
     uint32_t flags;
-    uint8_t digest_content_match[SHA1_DIGEST_LENGTH];
     uint8_t digest_custom_match[SHA1_DIGEST_LENGTH];
+#ifndef _ND_LEAN_AND_MEAN
+    uint8_t digest_content_match[SHA1_DIGEST_LENGTH];
     uint8_t digest_host_match[SHA1_DIGEST_LENGTH];
+#endif
     unsigned max_tcp_pkts;
     unsigned max_udp_pkts;
     unsigned update_interval;

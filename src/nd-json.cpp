@@ -526,7 +526,7 @@ ndJsonConfigHostMatch *ndJsonObjectConfig::GetNextHostMatchEntry(void)
 void ndJsonObjectConfig::UnserializeConfig(ndJsonConfigType type, json_object *jarray)
 {
     int jarray_length;
-    json_object *jentry;
+    json_object *jentry = NULL;
     string jkey;
 
     switch (type) {

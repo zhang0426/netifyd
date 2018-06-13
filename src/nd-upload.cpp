@@ -388,6 +388,7 @@ void ndUploadThread::Upload(void)
             break;
 
         case 400:
+#ifndef _ND_LEAN_AND_MEAN
             if (ND_DEBUG || ND_DEBUG_UPLOAD) {
                 FILE *hf = fopen(ND_JSON_FILE_BAD_SEND, "w");
                 if (hf != NULL) {
@@ -399,6 +400,7 @@ void ndUploadThread::Upload(void)
                         tag.c_str(), ND_JSON_FILE_BAD_SEND);
                 }
             }
+#endif
             break;
 
         default:
@@ -467,14 +469,16 @@ void ndUploadThread::ProcessResponse(void)
         json_type = json_factory.Parse(body_data, &json_obj);
     } catch (ndJsonParseException &e) {
         nd_printf("JSON parse error: %s\n", e.what());
+#ifndef _ND_LEAN_AND_MEAN
         if (ND_DEBUG_UPLOAD) nd_debug_printf(
             "%s: payload:\n\"%s\"\n", tag.c_str(), body_data.c_str());
+#endif
     }
 
     switch (json_type) {
     case ndJSON_OBJ_TYPE_OK:
-        if (ND_DEBUG || ND_DEBUG_UPLOAD)
-            nd_printf("%s: upload successful.\n", tag.c_str());
+        if (ND_DEBUG_UPLOAD)
+            nd_debug_printf("%s: upload successful.\n", tag.c_str());
         break;
     case ndJSON_OBJ_TYPE_RESULT:
         json_result = reinterpret_cast<ndJsonObjectResult *>(json_obj);
@@ -489,32 +493,34 @@ void ndUploadThread::ProcessResponse(void)
                     json_result->GetMessage(),
                     nd_config.path_uuid_site, ND_SITE_UUID_LEN
                 )) {
-                nd_debug_printf("%s: saved new site UUID: %s\n", tag.c_str(),
+                nd_printf("%s: saved new site UUID: %s\n", tag.c_str(),
                     json_result->GetMessage().c_str());
                 CreateHeaders();
             }
         }
         break;
     case ndJSON_OBJ_TYPE_CONFIG:
-        if (ND_DEBUG || ND_DEBUG_UPLOAD)
-            nd_printf("%s: upload successful (w/config).\n", tag.c_str());
+        if (ND_DEBUG_UPLOAD)
+            nd_debug_printf("%s: upload successful (config returned).\n", tag.c_str());
 
         json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
-
+#ifndef _ND_LEAN_AND_MEAN
         if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH) &&
             ! ND_OVERRIDE_CONTENT_MATCH) {
             ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
-            detection_module_reload = true;
-        }
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH) &&
-            ! ND_OVERRIDE_CUSTOM_MATCH) {
-            ExportConfig(ndJSON_CFG_TYPE_CUSTOM_MATCH, json_config);
             detection_module_reload = true;
         }
         if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_MATCH) &&
             ! ND_OVERRIDE_HOST_MATCH) {
             ExportConfig(ndJSON_CFG_TYPE_HOST_MATCH, json_config);
             detection_module_reload = true;
+        }
+#endif
+        if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH) &&
+            ! ND_OVERRIDE_CUSTOM_MATCH) {
+            detection_module_reload = ExportConfig(
+                ndJSON_CFG_TYPE_CUSTOM_MATCH, json_config
+            );
         }
 
         if (detection_module_reload) kill(getpid(), SIGHUP);
@@ -523,6 +529,7 @@ void ndUploadThread::ProcessResponse(void)
     case ndJSON_OBJ_TYPE_NULL:
     default:
         nd_printf("%s: unexpected JSON result type.\n", tag.c_str());
+#ifndef _ND_LEAN_AND_MEAN
         if (ND_DEBUG || ND_DEBUG_UPLOAD) {
             FILE *hf = fopen(ND_JSON_FILE_BAD_RECV, "w");
             if (hf != NULL) {
@@ -533,6 +540,7 @@ void ndUploadThread::ProcessResponse(void)
                     tag.c_str(), ND_JSON_FILE_BAD_RECV);
             }
         }
+#endif
     }
 
     if (json_obj != NULL) delete json_obj;
@@ -544,28 +552,31 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
     FILE *fp = NULL;
     string config_type_string;
     size_t entries = 0;
-    ndJsonConfigContentMatch *content_match;
     ndJsonConfigCustomMatch *custom_match;
+#ifndef _ND_LEAN_AND_MEAN
+    ndJsonConfigContentMatch *content_match;
     ndJsonConfigHostMatch *host_match;
     char ip_addr[INET6_ADDRSTRLEN];
     struct sockaddr_in *saddr_ip4;
     struct sockaddr_in6 *saddr_ip6;
-
+#endif
     switch (type) {
+#ifndef _ND_LEAN_AND_MEAN
     case ndJSON_CFG_TYPE_CONTENT_MATCH:
         fp = fopen(nd_config.path_content_match, "w");
         config_type_string = "content match";
         entries = config->GetContentMatchCount();
         break;
-    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
-        fp = fopen(nd_config.path_custom_match, "w");
-        config_type_string = "custom protos";
-        entries = config->GetCustomMatchCount();
-        break;
     case ndJSON_CFG_TYPE_HOST_MATCH:
         fp = fopen(nd_config.path_host_match, "w");
         config_type_string = "host protocol";
         entries = config->GetHostMatchCount();
+        break;
+#endif
+    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
+        fp = fopen(nd_config.path_custom_match, "w");
+        config_type_string = "custom protos";
+        entries = config->GetCustomMatchCount();
         break;
     default:
         throw ndJsonParseException("Unsupported configuration type for export");
@@ -575,6 +586,7 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         throw ndJsonParseException("Error opening file for configuration export");
 
     switch (type) {
+#ifndef _ND_LEAN_AND_MEAN
     case ndJSON_CFG_TYPE_CONTENT_MATCH:
         content_match = config->GetFirstContentMatchEntry();
         while (content_match != NULL) {
@@ -587,17 +599,6 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         fclose(fp);
         nd_sha1_file(
             nd_config.path_content_match, nd_config.digest_content_match);
-        break;
-    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
-        custom_match = config->GetFirstCustomMatchEntry();
-        while (custom_match != NULL) {
-            fprintf(fp, "%s",
-                custom_match->rule.c_str());
-            custom_match = config->GetNextCustomMatchEntry();
-        }
-        fclose(fp);
-        nd_sha1_file(
-            nd_config.path_custom_match, nd_config.digest_custom_match);
         break;
     case ndJSON_CFG_TYPE_HOST_MATCH:
         host_match = config->GetFirstHostMatchEntry();
@@ -624,6 +625,18 @@ bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *con
         fclose(fp);
         nd_sha1_file(
             nd_config.path_host_match, nd_config.digest_host_match);
+        break;
+#endif
+    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
+        custom_match = config->GetFirstCustomMatchEntry();
+        while (custom_match != NULL) {
+            fprintf(fp, "%s",
+                custom_match->rule.c_str());
+            custom_match = config->GetNextCustomMatchEntry();
+        }
+        fclose(fp);
+        nd_sha1_file(
+            nd_config.path_custom_match, nd_config.digest_custom_match);
         break;
     default:
         fclose(fp);
