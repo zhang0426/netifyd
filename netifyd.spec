@@ -25,7 +25,7 @@
 # RPM package details
 Name: netifyd
 Summary: Netify Agent
-Version: 2.64
+Version: 2.65
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPLv3
@@ -36,6 +36,7 @@ BuildRoot: /var/tmp/%{name}-%{version}
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: bc
+BuildRequires: gperftools-devel
 BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
 %if %{?_without_local_netlink:1}%{!?_without_local_netlink:0}

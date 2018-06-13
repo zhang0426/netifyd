@@ -2,7 +2,7 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify Agent], [2.64],
+AC_INIT([Netify Agent], [2.65],
     [https://bitbucket.org/eglooca/netify-daemon/issues],
     [netifyd], [http://www.egloo.ca/])
 AM_INIT_AUTOMAKE
@@ -122,6 +122,33 @@ AS_IF([test "x$enable_netlink" = "xyes"], [
     AC_CHECK_HEADERS([linux/netlink.h], [], AC_MSG_ERROR([netlink header(s) not found.]))
 ], [
     AM_CONDITIONAL(USE_NETLINK, false)
+])
+
+AC_ARG_ENABLE([libtcmalloc],
+    [AS_HELP_STRING([--enable-libtcmalloc], [Enable Thread Caching malloc support [default=yes]])],
+    [],
+    [enable_libtcmalloc=yes])
+
+AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
+    AC_DEFINE([_ND_USE_LIBTCMALLOC], [1],
+        [Define to enable Thread Caching malloc support.])
+    PKG_CHECK_MODULES([LIBTCMALLOC], [libtcmalloc])
+    AM_CONDITIONAL(USE_LIBTCMALLOC, true)
+], [
+    AM_CONDITIONAL(USE_LIBTCMALLOC, false)
+])
+
+AC_ARG_ENABLE([lean-and-mean],
+    [AS_HELP_STRING([--enable-lean-and-mean], [Enable build for embedded systems [default=no]])],
+    [],
+    [enable_lean_and_mean=no])
+
+AS_IF([test "x$enable_lean_and_mean" = "xyes"], [
+    AC_DEFINE([_ND_LEAN_AND_MEAN], [1],
+        [Define to build smallest possible binary.])
+    AM_CONDITIONAL(ENABLE_LEAN_AND_MEAN, true)
+], [
+    AM_CONDITIONAL(ENABLE_LEAN_AND_MEAN, false)
 ])
 
 # Checks for required header files.

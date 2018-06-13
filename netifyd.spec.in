@@ -36,6 +36,7 @@ BuildRoot: /var/tmp/%{name}-%{version}
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: bc
+BuildRequires: gperftools-devel
 BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
 %if %{?_without_local_netlink:1}%{!?_without_local_netlink:0}

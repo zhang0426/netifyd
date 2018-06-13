@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
 	-I ../ndpi/src/include -I ../inih/cpp \
-	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS) \
+	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS) $(LIBTCMALLOC_CFLAGS) \
 	-DNDPI_LIB_COMPILATION=1
 
 #EXTRA_DIST =
@@ -31,6 +31,14 @@ endif
 
 if USE_NETLINK
 netifyd_SOURCES += nd-netlink.cpp
+endif
+
+if USE_LIBTCMALLOC
+# XXX: Recommended compiler flags
+AM_CFLAGS = -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+AM_CXXFLAGS = -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+# XXX: It's important that this library be linked after all others.
+LIBS += $(LIBTCMALLOC_LIBS)
 endif
 
 # For debugging ns_initparse
