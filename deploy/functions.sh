@@ -146,9 +146,7 @@ function auto_detect_options
 
     options=$(load_defaults)
 
-    if [ "$NETIFYD_AUTODETECT" != "yes" ]; then
-        echo $options
-    else
+    if [ "$NETIFYD_AUTODETECT" == "yes" ]; then
         case "$(detect_os)" in
             clearos)
                 options=$(load_clearos)

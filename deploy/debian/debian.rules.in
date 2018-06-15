@@ -43,9 +43,9 @@ install: build
 	install -d -m 0755 $(DESTDIR)/var/run/@PACKAGE_TARNAME@
 
 	install -D -m 0755 deploy/functions.sh \
-		$(DESTDIR)/var/libexec/@PACKAGE_TARNAME@/functions.sh
+		$(DESTDIR)/usr/libexec/@PACKAGE_TARNAME@/functions.sh
 	install -D -m 0755 deploy/exec-pre.sh \
-		$(DESTDIR)/var/libexec/@PACKAGE_TARNAME@/exec-pre.sh
+		$(DESTDIR)/usr/libexec/@PACKAGE_TARNAME@/exec-pre.sh
 
 	install -D -m 0755 deploy/@PACKAGE_TARNAME@.tmpf \
 		$(DESTDIR)/usr/lib/tmpfiles.d/@PACKAGE_TARNAME@.conf
