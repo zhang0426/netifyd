@@ -10,12 +10,12 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=@PACKAGE_TARNAME@
 PKG_VERSION:=@PACKAGE_VERSION@
 PKG_RELEASE:=1
-
-PKG_INSTALL:=1
-#PKG_FIXUP:=autoreconf
-PKG_BUILD_PARALLEL:=1
 PKG_MAINTAINER:=Darryl Sokoloski <darryl@egloo.ca>
 PKG_LICENSE:=GPL-3.0+
+
+PKG_BUILD_PARALLEL:=1
+PKG_FIXUP:=autoreconf
+PKG_INSTALL:=1
 
 # Source settings
 
@@ -70,16 +70,24 @@ CONFIGURE_VARS += \
 	LIBNETFILTER_CONNTRACK_CFLAGS="-I $(STAGING_DIR)/usr/include" \
 	LIBNETFILTER_CONNTRACK_LDFLAGS="-L $(STAGING_DIR)/usr/lib"
 
+# Package preparation
+#define Build/Prepare
+#	mkdir -p $(PKG_BUILD_DIR)
+#	cp -a $(SOURCE_DIR)/. $(PKG_BUILD_DIR)/
+#	$(Build/Patch)
+#endef
+
+# Package configure
+
 CONFIGURE_ARGS += \
 	--disable-inotify \
 	--disable-ncurses \
 	--without-systemdsystemunitdir
 
-# Package preparation
-define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	cp -a $(SOURCE_DIR)/. $(PKG_BUILD_DIR)/
-	$(Build/Patch)
+
+define Build/Configure
+	(cd $(PKG_BUILD_DIR); ./autogen.sh)
+	$(call Build/Configure/Default,$CONFIGURE_ARGS)
 endef
 
 # Package install
