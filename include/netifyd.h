@@ -60,35 +60,47 @@
 #define ND_MAX_TCP_PKTS         10      // Maximum number of TCP packets to process.
 #define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
 
+#ifndef ND_PID_FILE_NAME
 #define ND_PID_FILE_NAME        "/var/run/netifyd/netifyd.pid"
+#endif
 
+#ifndef ND_CONF_FILE_NAME
 #define ND_CONF_FILE_NAME       "/etc/netifyd.conf"
+#endif
 
+#ifndef ND_DNS_CACHE_FILE_NAME
 #define ND_DNS_CACHE_FILE_NAME  "/var/lib/netifyd/dns-cache.csv"
+#endif
 
 #define ND_JSON_VERSION         1.5     // JSON format version
+#ifndef ND_JSON_FILE_NAME
 #define ND_JSON_FILE_NAME       "/var/lib/netifyd/netifyd.json"
+#endif
 #define ND_JSON_FILE_USER       "root"
 #define ND_JSON_FILE_GROUP      "webconfig"
 #define ND_JSON_FILE_MODE       0640
-#define ND_JSON_FILE_BAD_SEND   "/var/lib/netifyd/netifyd-bad-send.json"
-#define ND_JSON_FILE_BAD_RECV   "/var/lib/netifyd/netifyd-bad-recv.json"
+#define ND_JSON_FILE_BAD_SEND   "/var/state/netifyd/netifyd-bad-send.json"
+#define ND_JSON_FILE_BAD_RECV   "/var/state/netifyd/netifyd-bad-recv.json"
 
 #define ND_PCAP_SNAPLEN         1536    // Capture snap length
 #define ND_PCAP_READ_TIMEOUT    500     // Milliseconds
 
 #define ND_URL_UPLOAD           "https://sink.netify.ai/v1/"
 #define ND_URL_PROVISION        "https://portal.netify.ai/app/provision/agent?uuid="
-#define ND_COOKIE_JAR           "/var/lib/netifyd/netifyd.cookies"
+#define ND_COOKIE_JAR           "/var/state/netifyd/netifyd.cookies"
 #define ND_UPLOAD_TIMEOUT       300     // Default 5-minute upload timeout
 
-#define ND_AGENT_UUID_PATH      "/var/lib/netifyd/agent.uuid"
+#ifndef ND_AGENT_UUID_PATH
+#define ND_AGENT_UUID_PATH      "/etc/netify.d/agent.uuid"
+#endif
 #define ND_AGENT_UUID_NULL      "00-00-00-00"
 #define ND_AGENT_UUID_LEN       11
 
 #define ND_AGENT_SERIAL_NULL    "-"
 
+#ifndef ND_SITE_UUID_PATH
 #define ND_SITE_UUID_PATH       "/var/lib/netifyd/site.uuid"
+#endif
 #define ND_SITE_UUID_NULL       "-"
 #define ND_SITE_UUID_LEN        36
 
@@ -109,9 +121,11 @@
 #define PACKAGE_URL             "http://www.egloo.ca/"
 #endif
 
-#define ND_CONF_CONTENT_MATCH   "/var/lib/netifyd/app-content-match.csv"
-#define ND_CONF_CUSTOM_MATCH    "/var/lib/netifyd/app-custom-match.conf"
-#define ND_CONF_HOST_MATCH      "/var/lib/netifyd/app-host-match.csv"
+#ifndef ND_CONF_CUSTOM_MATCH
+#define ND_CONF_CUSTOM_MATCH    "/var/state/netifyd/netify-sink.conf"
+#endif
+#define ND_CONF_CONTENT_MATCH   "/var/state/netifyd/app-content-match.csv"
+#define ND_CONF_HOST_MATCH      "/var/state/netifyd/app-host-match.csv"
 
 #define ND_STR_ETHALEN          (ETH_ALEN * 2 + ETH_ALEN - 1)
 

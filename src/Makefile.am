@@ -4,7 +4,14 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
 	-I ../ndpi/src/include -I ../inih/cpp \
 	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS) $(LIBTCMALLOC_CFLAGS) \
-	-DNDPI_LIB_COMPILATION=1
+	-DNDPI_LIB_COMPILATION=1 \
+	-D'ND_PID_FILE_NAME="$(localstatedir)/run/$(PACKAGE_TARNAME)/$(PACKAGE_TARNAME).pid"' \
+	-D'ND_CONF_FILE_NAME="$(sysconfdir)/$(PACKAGE_TARNAME).conf"' \
+	-D'ND_DNS_CACHE_FILE_NAME="$(localstatedir)/state/$(PACKAGE_TARNAME)/dns-cache.csv"' \
+	-D'ND_JSON_FILE_NAME="$(localstatedir)/state/$(PACKAGE_TARNAME)/netify.json"' \
+	-D'ND_AGENT_UUID_PATH="$(sysconfdir)/netify.d/agent.uuid"' \
+	-D'ND_SITE_UUID_PATH="$(sysconfdir)/netify.d/site.uuid"' \
+	-D'ND_CONF_CUSTOM_MATCH="$(localstatedir)/state/$(PACKAGE_TARNAME)/netify-sink.conf"'
 
 #EXTRA_DIST =
 
