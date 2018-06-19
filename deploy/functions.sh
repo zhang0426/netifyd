@@ -121,6 +121,20 @@ function load_nethserver
     echo $options
 }
 
+# OpenWrt: Dynamically add all configured LAN/WAN interfaces.
+function load_openwrt
+{
+    local options="-I br-lan"
+
+    ifn=$(uci get network.wan.ifname)
+    [ ! -z "$ifn" ] && options="$options -E $ifn"
+
+    options=$(echo "$options" |\
+        sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
+
+    echo $options
+}
+
 function load_modules
 {
     /sbin/modprobe -q nfnetlink
@@ -135,6 +149,8 @@ function detect_os
         echo "nethserver"
     elif [ -f /etc/gentoo-release ]; then
         echo "gentoo"
+    elif [ -f /etc/openwrt_release ]; then
+        echo "openwrt"
     else
         echo "unknown"
     fi
@@ -153,6 +169,9 @@ function auto_detect_options
             ;;
             nethserver)
                 options=$(load_nethserver)
+            ;;
+            openwrt)
+                options=$(load_openwrt)
             ;;
         esac
     fi
