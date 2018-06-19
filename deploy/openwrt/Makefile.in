@@ -97,8 +97,11 @@ define Package/@PACKAGE_TARNAME@/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/netifyd $(1)/usr/sbin
 	#$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_DIR) $(1)/var/lib/netifyd
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/deploy/app-custom-match.conf $(1)/var/lib/netifyd
+	#$(INSTALL_DIR) $(1)/var/lib/netifyd
+	$(INSTALL_DIR) $(1)/etc/netify.d
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/app-custom-match.conf $(1)/etc/netify.d/netify-sink.conf
+	$(INSTALL_DIR) $(1)/usr/libexec/netifyd
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/function.sh $(1)/usr/libexec/netifyd
 endef
 
 # Get the job done
