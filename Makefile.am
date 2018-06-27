@@ -34,10 +34,14 @@ deploy-edgeos: src/netifyd
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/netify.d/netify-sink.conf
 	$(INSTALL) -D -m 0640 deploy/netifyd.conf \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/netifyd.conf
+	$(INSTALL) -D -m 0640 deploy/watchdog.cron \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/cron.d/netifyd
 	$(INSTALL) -D -m 0755 deploy/netifyd-debian.init \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/init.d/netifyd
 	$(INSTALL) -D -m 0755 deploy/functions.sh \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/libexec/netifyd/functions.sh
+	$(INSTALL) -D -m 0755 deploy/watchdog.sh \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/libexec/netifyd/watchdog.sh
 	$(INSTALL) -D -m 0640 deploy/netifyd.default \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/default/netifyd
 	$(INSTALL) -D -m 0755 deploy/install-edgeos.sh \
