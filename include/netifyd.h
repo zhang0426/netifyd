@@ -108,6 +108,10 @@
 
 #define ND_ETHERS_FILE_NAME     "/etc/ethers"
 
+#ifdef _ND_USE_WATCHDOGS
+#define ND_WD_UPLOAD            ND_VOLATILE_STATEDIR "/upload.wd"
+#endif
+
 // Compress data if it's over this size (bytes)
 #define ND_COMPRESS_SIZE       (1024 * 10)
 #define ND_ZLIB_CHUNK_SIZE      16384   // Compress this many bytes at a time
