@@ -33,7 +33,7 @@ start() {
     if [ -f /usr/libexec/netifyd/functions.sh ]; then
         source /usr/libexec/netifyd/functions.sh
 
-        NETIFYD_OPTS=$(auto_load_options)
+        NETIFYD_OPTS=$(auto_detect_options)
 
         load_modules
     fi

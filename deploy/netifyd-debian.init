@@ -36,7 +36,7 @@ start() {
 
     log_daemon_msg "Starting $DESC" "$NAME"
 
-    NETIFYD_OPTS=$(auto_load_options)
+    NETIFYD_OPTS=$(auto_detect_options)
 
     start-stop-daemon --start --quiet --oknodo --pidfile "$PIDFILE" --exec $DAEMON -- $NETIFYD_OPTS
     status=$?
