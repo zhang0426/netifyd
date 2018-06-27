@@ -1242,7 +1242,9 @@ static void nd_dump_stats(void)
 #endif
             string json_string;
             json.ToString(json_string);
-
+#ifdef _ND_USE_WATCHDOGS
+            nd_touch(ND_WD_UPLOAD);
+#endif
             thread_upload->QueuePush(json_string);
         }
         catch (runtime_error &e) {
