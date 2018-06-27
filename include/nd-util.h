@@ -61,7 +61,9 @@ bool nd_save_uuid(const string &uuid, const char *path, size_t length);
 void nd_generate_uuid(string &uuid);
 
 string nd_get_version_and_features(void);
-
+#ifdef _ND_USE_WATCHDOGS
+int nd_touch(const string &filename);
+#endif
 class ndException : public runtime_error
 {
 public:

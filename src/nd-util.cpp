@@ -35,7 +35,10 @@
 #include <syslog.h>
 #include <fcntl.h>
 #include <errno.h>
-
+#ifdef _ND_USE_WATCHDOGS
+#include <time.h>
+#include <sys/stat.h>
+#endif
 #include <sys/socket.h>
 
 #include <arpa/inet.h>
@@ -477,7 +480,28 @@ string nd_get_version_and_features(void)
 
     return ident.str();
 }
+#ifdef _ND_USE_WATCHDOGS
+int nd_touch(const string &filename)
+{
+    int fd;
+    struct timespec now[2];
 
+    fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_NONBLOCK | O_NOCTTY,
+        S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+
+    if (fd < 0) return fd;
+
+
+    clock_gettime(CLOCK_REALTIME, &now[0]);
+    clock_gettime(CLOCK_REALTIME, &now[1]);
+
+    if (futimens(fd, now) < 0) return -1;
+
+    close(fd);
+
+    return 0;
+}
+#endif
 ndException::ndException(const string &where_arg, const string &what_arg) throw()
     : runtime_error(what_arg), where_arg(where_arg), what_arg(what_arg), message(NULL)
 {
