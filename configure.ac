@@ -2,7 +2,7 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify Agent], [2.66],
+AC_INIT([Netify Agent], [2.67],
     [https://bitbucket.org/eglooca/netify-daemon/issues],
     [netifyd], [http://www.egloo.ca/])
 AM_INIT_AUTOMAKE
@@ -154,6 +154,19 @@ AS_IF([test "x$enable_lean_and_mean" = "xyes"], [
     AM_CONDITIONAL(ENABLE_LEAN_AND_MEAN, true)
 ], [
     AM_CONDITIONAL(ENABLE_LEAN_AND_MEAN, false)
+])
+
+AC_ARG_ENABLE([watchdogs],
+    [AS_HELP_STRING([--enable-watchdogs], [Enable run-time watchdogs [default=no]])],
+    [],
+    [enable_inotify=no])
+
+AS_IF([test "x$enable_watchdogs" = "xyes"], [
+    AC_DEFINE([_ND_USE_WATCHDOGS], [1],
+        [Define to enable run-time watchdogs support.])
+    AM_CONDITIONAL(USE_WATCHDOGS, true)
+], [
+    AM_CONDITIONAL(USE_WATCHDOGS, false)
 ])
 
 # Checks for required header files.
