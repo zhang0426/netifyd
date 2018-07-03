@@ -1462,35 +1462,34 @@ int main(int argc, char *argv[])
 #endif
     static struct option options[] =
     {
-        { "help", 0, 0, 'h' },
-        { "version", 0, 0, 'V' },
+        { "config", 1, 0, 'c' },
+        { "content-match", 1, 0, 'C' },
+        { "custom-match", 1, 0, 'f' },
         { "debug", 0, 0, 'd' },
+        { "debug-dns-cache", 0, 0, 's' },
         { "debug-ether-names", 0, 0, 'e' },
         { "debug-uploads", 0, 0, 'D' },
-        { "debug-dns-cache", 0, 0, 's' },
-        { "replay-delay", 0, 0, 'r' },
-        { "uuid", 1, 0, 'u' },
-        { "serial", 1, 0, 's' },
-        { "internal", 1, 0, 'I' },
-        { "external", 1, 0, 'E' },
-        { "json", 1, 0, 'j' },
-        { "interval", 1, 0, 'i' },
-        { "config", 1, 0, 'c' },
-        { "uuidgen", 0, 0, 'U' },
-        { "protocols", 0, 0, 'P' },
         { "device-address", 1, 0, 'A' },
         { "device-filter", 1, 0, 'F' },
-#ifdef _ND_USE_NETLINK
         { "device-netlink", 1, 0, 'N' },
-#endif
-        { "custom-match", 1, 0, 'f' },
-        { "content-match", 1, 0, 'C' },
-        { "host-match", 1, 0, 'H' },
-        { "hash-file", 1, 0, 'S' },
         { "disable-conntrack", 0, 0, 't' },
         { "disable-netlink", 0, 0, 'l' },
         { "enable-ncurses", 0, 0, 'n' },
+        { "external", 1, 0, 'E' },
+        { "hash-file", 1, 0, 'S' },
+        { "help", 0, 0, 'h' },
+        { "host-match", 1, 0, 'H' },
+        { "internal", 1, 0, 'I' },
+        { "interval", 1, 0, 'i' },
+        { "json", 1, 0, 'j' },
+        { "protocols", 0, 0, 'P' },
         { "provision", 0, 0, 'p' },
+        { "remain-in-foreground", 0, 0, 'R' },
+        { "replay-delay", 0, 0, 'r' },
+        { "serial", 1, 0, 's' },
+        { "uuid", 1, 0, 'u' },
+        { "uuidgen", 0, 0, 'U' },
+        { "version", 0, 0, 'V' },
 
         { NULL, 0, 0, 0 }
     };
@@ -1498,48 +1497,36 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?hVdDaenrtlpu:s:I:E:j:i:c:UPA:N:f:H:C:S:F:",
+            "?A:aC:c:DdE:eF:f:H:hI:i:j:lN:nPprS:s:tUu:V",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
             cerr <<
                 "Try " << argv[0] << " --help for more information." << endl;
             return 1;
-        case 'h':
-            nd_usage();
-        case 'V':
-            nd_usage(0, true);
+        case 'A':
+            if (last_device.size() == 0) {
+                cerr << "You must specify an interface first." << endl;
+                exit(1);
+            }
+            device_addresses.push_back(make_pair(last_device, optarg));
+            break;
+        case 'a':
+            nd_config.flags |= ndGF_DEBUG_DNS_CACHE;
+            break;
+        case 'c':
+            nd_conf_filename = strdup(optarg);
+            break;
         case 'd':
             nd_config.flags |= ndGF_DEBUG;
             break;
         case 'D':
             nd_config.flags |= ndGF_DEBUG_UPLOAD;
             break;
-        case 'e':
-            nd_config.flags |= ndGF_DEBUG_WITH_ETHERS;
-            break;
-        case 'a':
-            nd_config.flags |= ndGF_DEBUG_DNS_CACHE;
-            break;
-        case 'r':
-            nd_config.flags |= ndGF_REPLAY_DELAY;
-            break;
-        case 'u':
-            nd_config.uuid = strdup(optarg);
-            break;
-        case 's':
-            nd_config.uuid_serial = strdup(optarg);
-            break;
-        case 'I':
-            for (nd_ifaces::iterator i = ifaces.begin();
-                i != ifaces.end(); i++) {
-                if (strcasecmp((*i).second.c_str(), optarg) == 0) {
-                    cerr << "Duplicate interface specified: " << optarg << endl;
-                    exit(1);
-                }
-            }
-            last_device = optarg;
-            ifaces.push_back(make_pair(true, optarg));
+        case 'C':
+            free(nd_config.path_content_match);
+            nd_config.path_content_match = strdup(optarg);
+            nd_config.flags |= ndGF_OVERRIDE_CONTENT_MATCH;
             break;
         case 'E':
             for (nd_ifaces::iterator i = ifaces.begin();
@@ -1552,32 +1539,8 @@ int main(int argc, char *argv[])
             last_device = optarg;
             ifaces.push_back(make_pair(false, optarg));
             break;
-        case 'j':
-            nd_config.path_json = strdup(optarg);
-            break;
-        case 'i':
-            nd_config.update_interval = atoi(optarg);
-            break;
-        case 'c':
-            nd_conf_filename = strdup(optarg);
-            break;
-        case 'U':
-            {
-                string uuid;
-                nd_generate_uuid(uuid);
-                nd_config.flags |= ndGF_DEBUG;
-                nd_printf("%s\n", uuid.c_str());
-            }
-            exit(0);
-        case 'P':
-            nd_dump_protocols();
-            exit(0);
-        case 'A':
-            if (last_device.size() == 0) {
-                cerr << "You must specify an interface first." << endl;
-                exit(1);
-            }
-            device_addresses.push_back(make_pair(last_device, optarg));
+        case 'e':
+            nd_config.flags |= ndGF_DEBUG_WITH_ETHERS;
             break;
         case 'F':
             if (last_device.size() == 0) {
@@ -1591,20 +1554,6 @@ int main(int argc, char *argv[])
             }
             nd_config.device_filters[last_device] = optarg;
             break;
-#ifdef _ND_USE_NETLINK
-        case 'N':
-            if (last_device.size() == 0) {
-                cerr << "You must specify an interface first." << endl;
-                exit(1);
-            }
-            device_netlink[last_device] = optarg;
-            break;
-#endif
-        case 'C':
-            free(nd_config.path_content_match);
-            nd_config.path_content_match = strdup(optarg);
-            nd_config.flags |= ndGF_OVERRIDE_CONTENT_MATCH;
-            break;
         case 'f':
             free(nd_config.path_custom_match);
             nd_config.path_custom_match = strdup(optarg);
@@ -1614,6 +1563,68 @@ int main(int argc, char *argv[])
             free(nd_config.path_host_match);
             nd_config.path_host_match = strdup(optarg);
             nd_config.flags |= ndGF_OVERRIDE_HOST_MATCH;
+            break;
+        case 'h':
+            nd_usage();
+        case 'I':
+            for (nd_ifaces::iterator i = ifaces.begin();
+                i != ifaces.end(); i++) {
+                if (strcasecmp((*i).second.c_str(), optarg) == 0) {
+                    cerr << "Duplicate interface specified: " << optarg << endl;
+                    exit(1);
+                }
+            }
+            last_device = optarg;
+            ifaces.push_back(make_pair(true, optarg));
+            break;
+        case 'i':
+            nd_config.update_interval = atoi(optarg);
+            break;
+        case 'j':
+            nd_config.path_json = strdup(optarg);
+            break;
+        case 'l':
+            nd_config.flags &= ~ndGF_USE_NETLINK;
+            break;
+        case 'N':
+#if _ND_USE_NETLINK
+            if (last_device.size() == 0) {
+                cerr << "You must specify an interface first." << endl;
+                exit(1);
+            }
+            device_netlink[last_device] = optarg;
+#else
+            nd_printf("Sorry, netlink was not enabled for this build.\n");
+            return 1;
+#endif
+            break;
+        case 'n':
+#if _ND_USE_NCURSES
+            nd_config.flags |= ndGF_DEBUG;
+#else
+            nd_printf("Sorry, ncurses was not enabled for this build.\n");
+            return 1;
+#endif
+            break;
+        case 'P':
+            nd_dump_protocols();
+            exit(0);
+        case 'p':
+            nd_config.flags |= ndGF_DEBUG;
+            if (nd_conf_filename == NULL)
+                nd_conf_filename = strdup(ND_CONF_FILE_NAME);
+            if (nd_config_load() < 0)
+                return 1;
+            nd_check_agent_uuid();
+            if (nd_config.uuid == NULL) return 1;
+            nd_printf("Netify Agent Provisioning UUID: %s\n", nd_config.uuid);
+            nd_printf("%s%s\n", ND_URL_PROVISION, nd_config.uuid);
+            return 0;
+        case 'R':
+            nd_config.flags |= ndGF_REMAIN_IN_FOREGROUND;
+            break;
+        case 'r':
+            nd_config.flags |= ndGF_REPLAY_DELAY;
             break;
         case 'S':
             {
@@ -1630,31 +1641,25 @@ int main(int argc, char *argv[])
                 }
             }
             break;
+        case 's':
+            nd_config.uuid_serial = strdup(optarg);
+            break;
         case 't':
             nd_config.flags &= ~ndGF_USE_CONNTRACK;
             break;
-        case 'l':
-            nd_config.flags &= ~ndGF_USE_NETLINK;
+        case 'U':
+            {
+                string uuid;
+                nd_generate_uuid(uuid);
+                nd_config.flags |= ndGF_DEBUG;
+                nd_printf("%s\n", uuid.c_str());
+            }
+            exit(0);
+        case 'u':
+            nd_config.uuid = strdup(optarg);
             break;
-        case 'n':
-#if _ND_USE_NCURSES
-            nd_config.flags |= ndGF_DEBUG;
-#else
-            nd_printf("Sorry, ncurses was not enabled for this build.\n");
-            return 1;
-#endif
-            break;
-        case 'p':
-            nd_config.flags |= ndGF_DEBUG;
-            if (nd_conf_filename == NULL)
-                nd_conf_filename = strdup(ND_CONF_FILE_NAME);
-            if (nd_config_load() < 0)
-                return 1;
-            nd_check_agent_uuid();
-            if (nd_config.uuid == NULL) return 1;
-            nd_printf("Netify Agent Provisioning UUID: %s\n", nd_config.uuid);
-            nd_printf("%s%s\n", ND_URL_PROVISION, nd_config.uuid);
-            return 0;
+        case 'V':
+            nd_usage(0, true);
         default:
             nd_usage(1);
         }
@@ -1682,12 +1687,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (! ND_DEBUG) {
+    if (! ND_DEBUG && ! ND_REMAIN_IN_FOREGROUND) {
         if (daemon(1, 0) != 0) {
             nd_printf("daemon: %s\n", strerror(errno));
             return 1;
         }
+    }
 
+    if (! ND_DEBUG) {
         FILE *hpid = fopen(ND_PID_FILE_NAME, "w+");
         if (hpid == NULL) {
             nd_printf("Error opening PID file: %s: %s\n",

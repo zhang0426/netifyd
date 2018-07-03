@@ -163,6 +163,7 @@ enum nd_global_flags {
     ndGF_JSON_SAVE = 0x8000,
     ndGF_VERBOSE = 0x10000,
     ndGF_REPLAY_DELAY = 0x20000,
+    ndGF_REMAIN_IN_FOREGROUND = 0x40000,
 };
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
@@ -183,6 +184,7 @@ enum nd_global_flags {
 #define ND_JSON_SAVE (nd_config.flags & ndGF_JSON_SAVE)
 #define ND_VERBOSE (nd_config.flags & ndGF_VERBOSE)
 #define ND_REPLAY_DELAY (nd_config.flags & ndGF_REPLAY_DELAY)
+#define ND_REMAIN_IN_FOREGROUND (nd_config.flags & ndGF_REMAIN_IN_FOREGROUND)
 
 typedef struct nd_global_config_t {
     char *path_config;
