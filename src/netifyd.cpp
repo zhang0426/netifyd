@@ -1497,7 +1497,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?A:aC:c:DdE:eF:f:H:hI:i:j:lN:nPprS:s:tUu:V",
+            "?A:aC:c:DdE:eF:f:H:hI:i:j:lN:nPpRrS:s:tUu:V",
             options, &o)) == -1) break;
         switch (rc) {
         case '?':
