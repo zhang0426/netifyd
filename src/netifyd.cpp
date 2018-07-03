@@ -1732,7 +1732,7 @@ int main(int argc, char *argv[])
     sigprocmask(SIG_BLOCK, &sigset, NULL);
 
     sigemptyset(&sigset);
-    //sigaddset(&sigset, SIGINT);
+    sigaddset(&sigset, SIGINT);
     sigaddset(&sigset, SIGTERM);
     sigaddset(&sigset, ND_SIG_UPDATE);
     sigaddset(&sigset, SIGIO);
