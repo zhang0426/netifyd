@@ -1,2 +1,3 @@
 .app-host-match.csv
 /Makefile.in
+openwrt/files/netifyd.init
