@@ -43,8 +43,6 @@ define Package/@PACKAGE_TARNAME@/conffiles
 /etc/@PACKAGE_TARNAME@.conf
 endef
 
-COPTS =
-
 TARGET_CFLAGS += -ffunction-sections -fdata-sections
 TARGET_CXXFLAGS += -ffunction-sections -fdata-sections
 TARGET_LDFLAGS += -Wl,--gc-sections
