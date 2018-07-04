@@ -5,7 +5,7 @@ AC_PREREQ([2.63])
 AC_INIT([Netify Agent], [2.67],
     [https://gitlab.com/netify.ai/public/netify-agent/issues],
     [netifyd], [http://www.netify.ai/])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([1.9 tar-pax])
 AC_CONFIG_SRCDIR([src/netifyd.cpp])
 AC_CONFIG_SUBDIRS([libs/inih libs/ndpi])
 AC_CONFIG_HEADERS([config.h])
@@ -136,7 +136,6 @@ AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
     AC_CHECK_LIB([tcmalloc],
         [tc_version], [], [PKG_CHECK_MODULES([LIBTCMALLOC], [libtcmalloc])])
     LIBS=$LIBS_saved
-    LIBTCMALLOC_LIBS=-ltcmalloc
     AC_SUBST([LIBTCMALLOC_LIBS])
     AM_CONDITIONAL(USE_LIBTCMALLOC, true)
 ], [
