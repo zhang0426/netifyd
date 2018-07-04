@@ -2,7 +2,9 @@
 .SH NAME
 netifyd \- The Netify Agent
 .SH DESCRIPTION
-The Netify Agent provides visibility into traffic (flows) on your network along with the option to take an active role (on supported devices) in stopping/shaping undesirable traffic from recurring on your network.  Designed for network administrators, company management or even parents to gain insight into the traffic flowing on their network.  For more information, please visit: \fIhttp://www.netify.ai/\fR
+The Netify Agent is a deep-packet inspection server.  The Agent is built on top of nDPI (\fIhttp://www.ntop.org/products/deep-packet-inspection/ndpi/\fR) (formerly OpenDPI) to detect network protocols and applications.  These detections can be saved locally, served over a UNIX or TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party server.  Flow metadata, network statistics, and detection classifications are stored using JSON encoding.
+
+Optionally, the Netify Agent can be coupled with a Netify Cloud (\fIhttps://www.netify.ai/\fR) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
 .SH SYNOPSIS
 .B netifyd
 [\fB\-d\fR, \fB\-\-debug\fR]
