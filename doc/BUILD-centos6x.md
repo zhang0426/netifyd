@@ -32,8 +32,8 @@ be run before building an RPM or compiling locally:
 Clone Netify Agent Source
 -------------------------
 ```
-# git clone --recursive git clone https://bitbucket.org/eglooca/netify-daemon.git
-# cd netify-daemon
+# git clone --recursive https://gitlab.com/netify.ai/public/netify-agent.git
+# cd netify-agent
 ```
 
 Build RPM: Prepare Source Archive

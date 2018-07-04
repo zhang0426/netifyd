@@ -3,11 +3,11 @@
 
 AC_PREREQ([2.63])
 AC_INIT([Netify Agent], [2.67],
-    [https://bitbucket.org/eglooca/netify-daemon/issues],
-    [netifyd], [http://www.egloo.ca/])
+    [https://gitlab.com/netify.ai/public/netify-agent/issues],
+    [netifyd], [http://www.netify.ai/])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/netifyd.cpp])
-AC_CONFIG_SUBDIRS([inih ndpi])
+AC_CONFIG_SUBDIRS([libs/inih libs/ndpi])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_USE_SYSTEM_EXTENSIONS
@@ -243,7 +243,7 @@ fi
 
 AC_DEFINE_UNQUOTED(GIT_RELEASE, "${GIT_RELEASE}", [GIT Release])
 AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
-AC_SUBST([GIT_SOURCE_URL], [https://bitbucket.org/eglooca/netify-daemon.git])
+AC_SUBST([GIT_SOURCE_URL], [https://gitlab.com/netify.ai/public/netify-agent.git])
 
 # Output files
 AC_CONFIG_FILES([deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc])

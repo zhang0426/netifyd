@@ -18,3 +18,9 @@
 [submodule "gperftools"]
 	path = gperftools
 	url = https://github.com/gperftools/gperftools.git
+[submodule "libs/inih"]
+	path = libs/inih
+	url = https://gitlab.com/netify.ai/public/netify-agent-libs/inih.git
+[submodule "libs/ndpi"]
+	path = libs/ndpi
+	url = https://gitlab.com/netify.ai/public/netify-agent-libs/ndpi.git

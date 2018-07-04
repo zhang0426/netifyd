@@ -9,15 +9,15 @@ Working guide for building the Netify Agent into an OpenWrt image.
 2. Clone the Netify Agent into the OpenWrt top-level directory:
 
   `# cd openwrt`
-  `# git clone --recursive https://bitbucket.org/eglooca/netify-daemon.git`
+  `# git clone --recursive https://gitlab.com/netify.ai/public/netify-agent.git`
   
 3. Create a custom feeds configuration file.  Adjust the path to your environment:
 
-  `# echo "src-link netify /home/dsokoloski/openwrt/netify-daemon/openwrt" >> feeds.conf`
+  `# echo "src-link netify /home/dsokoloski/openwrt/netify-agent/openwrt" >> feeds.conf`
   
 4. Prepare Netify Agent build environment:
 
-  `# (cd netify-daemon && ./autogent.sh && ./configure --without-systemdsystemunitdir)`
+  `# (cd netify-agent && ./autogent.sh && ./configure --without-systemdsystemunitdir)`
   
 5. Update and install all feeds:
 
