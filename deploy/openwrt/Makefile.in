@@ -5,8 +5,6 @@
 
 include $(TOPDIR)/rules.mk
 
-# Name, version and release number
-# The name and version of your package are used to define the variable to point to the build directory of your package: $(PKG_BUILD_DIR)
 PKG_NAME:=@PACKAGE_TARNAME@
 PKG_VERSION:=@PACKAGE_VERSION@
 PKG_RELEASE:=1
@@ -19,22 +17,14 @@ PKG_INSTALL:=1
 
 PKG_CONFIG_DEPENDS:=CONFIG_LIBCURL_ZLIB
 
-# Source settings
-
-# Disable the following and enable SOURCE_DIR below for local test builds.
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=@GIT_SOURCE_URL@
 PKG_SOURCE_DATE:=@GIT_LAST_COMMIT_DATE@
 PKG_SOURCE_VERSION:=@GIT_LAST_COMMIT_HASH@
 PKG_MIRROR_HASH:=whatever
 
-# Local source builds (create symlink to source here)
-#SOURCE_DIR:=$(TOPDIR)/netify-daemon
-
-#include $(INCLUDE_DIR)/uclibc++.mk
 include $(INCLUDE_DIR)/package.mk
 
-# Package definition
 define Package/@PACKAGE_TARNAME@
   SECTION:=net
   CATEGORY:=Network
@@ -43,7 +33,6 @@ define Package/@PACKAGE_TARNAME@
   DEPENDS:=+libcurl +libmnl +libnetfilter-conntrack +libjson-c +libpcap +zlib +libpthread +uclibcxx +libstdcpp
 endef
 
-# Package description
 define Package/@PACKAGE_TARNAME@/description
 Netify provides visibility into the traffic on your network along with the
 option to take an active role (on supported devices) in blocking or shaping
@@ -51,13 +40,10 @@ undesirable traffic from recurring on your network.
 
 endef
 
-# Package configuration
 define Package/@PACKAGE_TARNAME@/conffiles
-#/etc/config/@PACKAGE_TARNAME@
 /etc/@PACKAGE_TARNAME@.conf
 endef
 
-# Compiler, linker, and make options
 COPTS =
 
 TARGET_CFLAGS += -ffunction-sections -fdata-sections
@@ -72,15 +58,6 @@ CONFIGURE_VARS += \
 	LIBNETFILTER_CONNTRACK_CFLAGS="-I $(STAGING_DIR)/usr/include" \
 	LIBNETFILTER_CONNTRACK_LDFLAGS="-L $(STAGING_DIR)/usr/lib"
 
-# Package preparation
-#define Build/Prepare
-#	mkdir -p $(PKG_BUILD_DIR)
-#	cp -a $(SOURCE_DIR)/. $(PKG_BUILD_DIR)/
-#	$(Build/Patch)
-#endef
-
-# Package configure
-
 CONFIGURE_ARGS += \
 	--sharedstatedir=/var/lib \
 	--disable-inotify \
@@ -93,7 +70,6 @@ define Build/Configure
 	$(call Build/Configure/Default,$CONFIGURE_ARGS)
 endef
 
-# Package install
 define Package/@PACKAGE_TARNAME@/install
 	$(INSTALL_DIR) $(1)/etc
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/netifyd.conf $(1)/etc
@@ -101,13 +77,10 @@ define Package/@PACKAGE_TARNAME@/install
 	$(INSTALL_BIN) ./files/netifyd.init $(1)/etc/init.d/netifyd
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/netifyd $(1)/usr/sbin
-	#$(INSTALL_DIR) $(1)/etc/config
-	#$(INSTALL_DIR) $(1)/var/lib/netifyd
 	$(INSTALL_DIR) $(1)/etc/netify.d
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/app-custom-match.conf $(1)/etc/netify.d/netify-sink.conf
 	$(INSTALL_DIR) $(1)/usr/libexec/netifyd
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/functions.sh $(1)/usr/libexec/netifyd
 endef
 
-# Get the job done
 $(eval $(call BuildPackage,@PACKAGE_TARNAME@))
