@@ -5,7 +5,7 @@ SUBDIRS = libs/inih libs/ndpi src util deploy doc
 
 EXTRA_DIST = autogen.sh include debian/compat \
 	util/generate-json-include.sh util/generate-protocol-csv.sh \
-	gperftools libmnl libnetfilter_conntrack libnfnetlink
+	libs/gperftools libs/libmnl libs/libnetfilter-conntrack libs/libnfnetlink
 
 DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
