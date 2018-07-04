@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
-              -I ../ndpi/src/include -I ../ndpi/src/lib
+              -I ../libs/ndpi/src/include -I ../libs/ndpi/src/lib
 
 #EXTRA_DIST = 
 

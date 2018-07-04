@@ -65,27 +65,27 @@ Report bugs to: @PACKAGE_BUGREPORT@
 
 %if 0%{?_with_bundled_libs:1}
 
-(cd libmnl && ./autogen.sh &&\
+(cd libs/libmnl && ./autogen.sh &&\
     ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
     make %{?_smp_mflags} && ln -s src lib)
 
-(cd libnfnetlink && ./autogen.sh &&\
+(cd libs/libnfnetlink && ./autogen.sh &&\
     ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
     make %{?_smp_mflags} && ln -s src lib)
 
-export PKG_CONFIG_PATH=$(pwd)/libmnl:$(pwd)/libnfnetlink
+export PKG_CONFIG_PATH=$(pwd)/libs/libmnl:$(pwd)/libs/libnfnetlink
 
-(cd libnetfilter_conntrack && ./autogen.sh &&\
+(cd libs/libnetfilter-conntrack && ./autogen.sh &&\
     ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
     make %{?_smp_mflags} && ln -s src lib)
 
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libnetfilter_conntrack
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libs/libnetfilter-conntrack
 
-(cd gperftools && ./autogen.sh &&\
+(cd libs/gperftools && ./autogen.sh &&\
     ./configure --prefix=$(pwd) --disable-shared --enable-static &&\
     make %{?_smp_mflags} && ln -s .libs lib)
 
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/gperftools
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libs/gperftools
 
 %endif
 
