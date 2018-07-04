@@ -24,3 +24,15 @@
 [submodule "libs/ndpi"]
 	path = libs/ndpi
 	url = https://gitlab.com/netify.ai/public/netify-agent-libs/ndpi.git
+[submodule "libs/gperftools"]
+	path = libs/gperftools
+	url = https://gitlab.com/netify.ai/public/netify-agent-libs/gperftools.git
+[submodule "libs/libmnl"]
+	path = libs/libmnl
+	url = https://gitlab.com/netify.ai/public/netify-agent-libs/libmnl.git
+[submodule "libs/libnetfilter-conntrack"]
+	path = libs/libnetfilter-conntrack
+	url = https://gitlab.com/netify.ai/public/netify-agent-libs/libnetfilter-conntrack.git
+[submodule "libs/libnfnetlink"]
+	path = libs/libnfnetlink
+	url = https://gitlab.com/netify.ai/public/netify-agent-libs/libnfnetlink.git
