@@ -30,7 +30,7 @@ define Package/@PACKAGE_TARNAME@
   CATEGORY:=Network
   TITLE:=Netify Agent
   URL:=http://www.netify.ai/
-  DEPENDS:=+libcurl +libmnl +libnetfilter-conntrack +libjson-c +libpcap +zlib +libpthread +uclibcxx +libstdcpp
+  DEPENDS:=$(CXX_DEPENDS) +libcurl +libmnl +libnetfilter-conntrack +libjson-c +libpcap +zlib +libpthread
 endef
 
 define Package/@PACKAGE_TARNAME@/description
