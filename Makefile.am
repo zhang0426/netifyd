@@ -17,7 +17,10 @@ deploy-osc: netifyd.spec deploy/debian/debian.changelog deploy/debian/debian.con
 	cp deploy/debian/debian.rules ./osc/home\:egloo/netifyd
 	cp deploy/debian/netifyd.dsc ./osc/home\:egloo/netifyd
 	cp netifyd.spec ./osc/home\:egloo/netifyd
+	grep -v 'gperftools-devel' netifyd.spec > ./osc/home\:egloo/netifyd-CentOS_6.spec
+	(cd ./osc/home\:egloo/netifyd && $(osc) rm $(PACKAGE)-*.tar.gz)
 	cp $(PACKAGE)-$(VERSION).tar.gz ./osc/home\:egloo/netifyd
+	(cd ./osc/home\:egloo/netifyd && $(osc) add $(PACKAGE)-*.tar.gz)
 	(cd ./osc/home\:egloo/netifyd && $(osc) status)
 	(cd ./osc/home\:egloo/netifyd && $(osc) commit -m 'Updated to latest sources.')
 endif
