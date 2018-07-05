@@ -10,15 +10,31 @@ EXTRA_DIST = autogen.sh include debian/compat \
 DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 
+dist-git:
+	rm -f $(PACKAGE)-$(VERSION).tar*
+	git archive --prefix=$(PACKAGE)-$(VERSION)/ --output=$(PACKAGE)-$(VERSION).tar HEAD
+	p=`pwd`; (echo .; git submodule foreach) | while read entering path; do \
+		temp="$${path%\'}"; \
+		temp="$${temp#\'}"; \
+		path=$$temp; \
+		[ "$$path" = "" ] && continue; \
+		(cd $$path && \
+			git archive --prefix=$(PACKAGE)-$(VERSION)/$$path/ --output=/tmp/$(PACKAGE)-submodule.tar HEAD && \
+			$(AMTAR) --concatenate --file="$$p/$(PACKAGE)-$(VERSION).tar" /tmp/$(PACKAGE)-submodule.tar && \
+			rm -f /tmp/$(PACKAGE)-submodule.tar \
+		); \
+	done
+	gzip $(PACKAGE)-$(VERSION).tar
+
 if HAVE_OSC
-deploy-osc: netifyd.spec deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc dist-gzip
+deploy-osc: netifyd.spec deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc dist-git
 	cp deploy/debian/debian.changelog ./osc/home\:egloo/netifyd
 	cp deploy/debian/debian.control ./osc/home\:egloo/netifyd
 	cp deploy/debian/debian.rules ./osc/home\:egloo/netifyd
 	cp deploy/debian/netifyd.dsc ./osc/home\:egloo/netifyd
 	cp netifyd.spec ./osc/home\:egloo/netifyd
 	grep -v 'gperftools-devel' netifyd.spec > ./osc/home\:egloo/netifyd-CentOS_6.spec
-	(cd ./osc/home\:egloo/netifyd && $(osc) rm $(PACKAGE)-*.tar.gz)
+	(cd ./osc/home\:egloo/netifyd && $(osc) rm $(PACKAGE)-*.tar.gz || true)
 	cp $(PACKAGE)-$(VERSION).tar.gz ./osc/home\:egloo/netifyd
 	(cd ./osc/home\:egloo/netifyd && $(osc) add $(PACKAGE)-*.tar.gz)
 	(cd ./osc/home\:egloo/netifyd && $(osc) status)
@@ -51,6 +67,6 @@ deploy-edgeos: src/netifyd
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/install.sh
 
 	rm -f $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu).tar.gz
-	$(AMTAR) -chozf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu).tar.gz \
+	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu).tar.gz \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
