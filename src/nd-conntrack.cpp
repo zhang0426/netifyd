@@ -180,6 +180,9 @@ void ndConntrackThread::DumpConntrackTable(void)
     }
 
     rc = mnl_socket_recvfrom(nl, buffer, sizeof(buffer));
+    if (errno == EINVAL)
+        nd_printf("Is the nf_conntrack_netlink kernel module loaded?\n");
+
     while (rc > 0) {
         rc = mnl_cb_run(buffer, rc, seq, portid, nd_ct_netlink_callback, this);
         if (rc <= MNL_CB_STOP)
