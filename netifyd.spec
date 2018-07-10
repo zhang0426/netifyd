@@ -176,6 +176,7 @@ exit 0
 %attr(755,root,root) %{_libexecdir}/%{name}/
 %attr(755,root,root) %{_sysconfdir}/init.d/%{name}
 %config(noreplace) %attr(640,root,root) %{statedir_pdata}/netify-sink.conf
+%config(noreplace) %attr(660,root,root) %{_libexecdir}/%{name}/env.sh
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
 %{_mandir}/man5/*
