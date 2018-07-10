@@ -132,11 +132,7 @@ AC_ARG_ENABLE([libtcmalloc],
 AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
     AC_DEFINE([_ND_USE_LIBTCMALLOC], [1],
         [Define to enable Thread Caching malloc support.])
-    LIBS_saved=$LIBS
-    AC_CHECK_LIB([tcmalloc],
-        [tc_version], [], [PKG_CHECK_MODULES([LIBTCMALLOC], [libtcmalloc])])
-    LIBS=$LIBS_saved
-    AC_SUBST([LIBTCMALLOC_LIBS])
+    PKG_CHECK_MODULES([LIBTCMALLOC], [libtcmalloc])
     AM_CONDITIONAL(USE_LIBTCMALLOC, true)
 ], [
     AM_CONDITIONAL(USE_LIBTCMALLOC, false)
