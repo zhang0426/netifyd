@@ -16,12 +16,16 @@
 # Configuration files
 %define netifyd_conf deploy/%{name}.conf
 %define netifyd_default deploy/%{name}.default
+%define netifyd_env deploy/env.sh
 %define netifyd_exec_pre deploy/exec-pre.sh
 %define netifyd_functions deploy/functions.sh
 %define netifyd_init deploy/%{name}-sysv.init
 %define netifyd_sink_conf deploy/app-custom-match.conf
 %define netifyd_systemd_unit deploy/%{name}.service
 %define netifyd_tmpf deploy/%{name}.tmpf
+
+%define statedir_pdata %{_sysconfdir}/netify.d
+%define statedir_vdata %{_sharedstatedir}/netifyd
 
 # RPM package details
 Name: netifyd
@@ -112,11 +116,11 @@ rm -rf %{buildroot}/%{_bindir}
 rm -rf %{buildroot}/%{_includedir}
 rm -rf %{buildroot}/%{_libdir}
 
-install -d -m 0750 %{buildroot}/%{_sysconfdir}/netify.d
+install -d -m 0750 %{buildroot}/%{statedir_pdata}
+install -d -m 0750 %{buildroot}/%{statedir_vdata}
 install -d -m 0755 %{buildroot}/%{_localstatedir}/run/%{name}
-install -d -m 0755 %{buildroot}/%{_localstatedir}/lib/%{name}
 
-install -D -m 0644 %{netifyd_sink_conf} %{buildroot}/%{_sysconfdir}/netify.d/netify-sink.conf
+install -D -m 0644 %{netifyd_sink_conf} %{buildroot}/%{statedir_pdata}/netify-sink.conf
 install -D -m 0660 %{netifyd_conf} %{buildroot}/%{_sysconfdir}/%{name}.conf
 install -D -m 0660 %{netifyd_default} %{buildroot}/%{_sysconfdir}/sysconfig/%{name}
 install -D -m 0755 %{netifyd_exec_pre} %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
@@ -126,8 +130,12 @@ install -D -m 0755 %{netifyd_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
 %if %{?_with_systemd:1}%{!?_with_systemd:0}
 install -D -m 0644 %{netifyd_systemd_unit} %{buildroot}/%{_unitdir}/%{name}.service
 echo "%{_unitdir}/%{name}.service" >> %{EXTRA_DIST}
+
 install -D -m 0644 %{netifyd_tmpf} %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 echo "%{_tmpfilesdir}/%{name}.conf" >> %{EXTRA_DIST}
+
+install -D -m 0640 %{netifyd_env} %{buildroot}/%{_libexecdir}/%{name}/env.sh
+echo "%{_libexecdir}/%{name}/env.sh" >> %{EXTRA_DIST}
 %endif
 
 # Clean-up
@@ -139,13 +147,15 @@ echo "%{_tmpfilesdir}/%{name}.conf" >> %{EXTRA_DIST}
 %systemd_post %{name}.service
 
 # Remove old CSV configuration files
-rm -f %{_sharedstatedir}/%{name}/*.csv
-[ -f %{_sharedstatedir}/%{name}/agent.uuid ] && \
-    mv -f %{_sharedstatedir}/%{name}/agent.uuid /etc/netify.d/
-[ -f %{_sharedstatedir}/%{name}/site.uuid ] && \
-    mv -f %{_sharedstatedir}/%{name}/site.uuid /etc/netify.d/
-[ -f %{_sharedstatedir}/%{name}/app-custom-match.conf ] && \
-    mv -f %{_sharedstatedir}/%{name}/app-custom-match.conf /etc/netify.d/netify-sink.conf
+rm -f %{statedir_vdata}/*.csv
+[ -f %{statedir_vdata}/agent.uuid ] && \
+    mv -f %{statedir_vdata}/agent.uuid %{statedir_pdata}
+[ -f %{statedir_vdata}/site.uuid ] && \
+    mv -f %{statedir_vdata}/site.uuid %{statedir_pdata}
+[ -f %{statedir_vdata}/app-custom-match.conf ] && \
+    mv -f %{statedir_vdata}/app-custom-match.conf %{statedir_pdata}/netify-sink.conf
+
+exit 0
 
 # Pre-uninstall
 %preun
@@ -160,12 +170,12 @@ rm -f %{_sharedstatedir}/%{name}/*.csv
 %defattr(-,root,root)
 %dir %{_localstatedir}/run/%{name}
 %dir %{_localstatedir}/lib/%{name}
-%dir %attr(750,root,root) %{_sharedstatedir}/%{name}/
-%dir %attr(750,root,root) %{_sysconfdir}/netify.d/
+%dir %attr(750,root,root) %{statedir_pdata}
+%dir %attr(750,root,root) %{statedir_vdata}
 %attr(644,root,root) %{_sysconfdir}/sysconfig/%{name}
 %attr(755,root,root) %{_libexecdir}/%{name}/
 %attr(755,root,root) %{_sysconfdir}/init.d/%{name}
-%config(noreplace) %attr(640,root,root) %{_sysconfdir}/netify.d/netify-sink.conf
+%config(noreplace) %attr(640,root,root) %{statedir_pdata}/netify-sink.conf
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
 %{_mandir}/man5/*
