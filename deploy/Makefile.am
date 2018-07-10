@@ -1,6 +1,6 @@
-EXTRA_DIST = app-custom-match.conf exec-pre.sh functions.sh netifyd.conf \
-	netifyd.default netifyd-debian.init netifyd-sysv.init netifyd.service \
-	netifyd.tmpf
+EXTRA_DIST = app-custom-match.conf env.sh exec-pre.sh functions.sh \
+	netifyd.conf netifyd.default netifyd-debian.init netifyd-sysv.init \
+	netifyd.service netifyd.tmpf
 
 #openwrt/Makefile: openwrt/Makefile.in
 #	$(SED) \
