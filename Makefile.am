@@ -27,17 +27,19 @@ dist-git:
 	gzip $(PACKAGE)-$(VERSION).tar
 
 if HAVE_OSC
-deploy-osc: netifyd.spec deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc dist-git
+deploy-osc-update: netifyd.spec deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc dist-git
 	cp deploy/debian/debian.changelog ./osc/home\:egloo/netifyd
 	cp deploy/debian/debian.control ./osc/home\:egloo/netifyd
 	cp deploy/debian/debian.rules ./osc/home\:egloo/netifyd
 	cp deploy/debian/netifyd.dsc ./osc/home\:egloo/netifyd
 	cp netifyd.spec ./osc/home\:egloo/netifyd
-	grep -v 'gperftools-devel' netifyd.spec > ./osc/home\:egloo/netifyd-CentOS_6.spec
+	grep -v 'gperftools-devel' netifyd.spec > ./osc/home\:egloo/netifyd/netifyd-CentOS_6.spec
 	(cd ./osc/home\:egloo/netifyd && $(osc) rm $(PACKAGE)-*.tar.gz || true)
 	cp $(PACKAGE)-$(VERSION).tar.gz ./osc/home\:egloo/netifyd
 	(cd ./osc/home\:egloo/netifyd && $(osc) add $(PACKAGE)-*.tar.gz)
 	(cd ./osc/home\:egloo/netifyd && $(osc) status)
+
+deploy-osc-commit: deploy-osc-update
 	(cd ./osc/home\:egloo/netifyd && $(osc) commit -m 'Updated to latest sources.')
 endif
 
