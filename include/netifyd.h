@@ -68,6 +68,10 @@
 #define ND_PERSISTENT_STATEDIR  "/etc/netify.d"
 #endif
 
+#ifndef ND_LIBEXECDIR
+#define ND_LIBEXECDIR           "/usr/libexec/netifyd"
+#endif
+
 #ifndef ND_PID_FILE_NAME
 #define ND_PID_FILE_NAME        "/var/run/netifyd/netifyd.pid"
 #endif
