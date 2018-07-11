@@ -1,0 +1,208 @@
+# Netify Agent Utility Functions
+# Copyright (C) 2016-2018 eGloo, Incorporated
+#
+# This is free software, licensed under the GNU General Public License v3.
+
+NETIFYD_CONF="@sysconfdir@/netifyd.conf"
+
+[ -f @sysconfdir@/conf.d/@PACKAGE_TARNAME@ ] && source @sysconfdir@/conf.d/@PACKAGE_TARNAME@
+[ -f @sysconfdir@/default/@PACKAGE_TARNAME@ ] && source @sysconfdir@/default/@PACKAGE_TARNAME@
+[ -f @sysconfdir@/sysconfig/@PACKAGE_TARNAME@ ] && source @sysconfdir@/sysconfig/@PACKAGE_TARNAME@
+
+# Load defaults for RedHat/CentOS/Ubuntu/Debian
+function load_defaults
+{
+    local options=""
+
+    options=$NETIFYD_EXTRA_OPTS
+
+    for entry in $NETIFYD_INTNET; do
+        if [ "$entry" == "${entry/,/}" ]; then
+            options="$NETIFYD_OPTS -I $entry"
+            continue
+        fi
+        for net in ${entry//,/ }; do
+            if [ "$net" == "${entry/,*/}" ]; then
+                options="$options -I $net"
+            else
+                options="$options -A $net"
+            fi
+        done
+    done
+
+    for entry in $NETIFYD_EXTNET; do
+        if [ "$entry" == "${entry/,/}" ]; then
+            options="$options -E $entry"
+            continue
+        fi
+        for ifn in ${entry//,/ }; do
+            if [ "$ifn" == "${entry/,*/}" ]; then
+                options="$options -E $ifn"
+            else
+                options="$options -N $ifn"
+            fi
+        done
+    done
+
+    options=$(echo "$options" |\
+        sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
+
+    echo $options
+}
+
+# ClearOS: Dynamically add all configured LAN/WAN interfaces.
+function load_clearos
+{
+    local options=""
+
+    [ -f @sysconfdir@/clearos/network.conf ] && source @sysconfdir@/clearos/network.conf
+
+    for ifn in $LANIF; do
+        [ -z "$ifn" ] && break
+        options="$options -I $ifn"
+    done
+
+    for ifn in $HOTIF; do
+        [ -z "$ifn" ] && break
+        options="$options -I $ifn"
+    done
+
+    for ifn in $EXTIF; do
+        [ -z "$ifn" ] && break
+        [ -f "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}" ] &&
+            source "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}"
+        if [ ! -z "$ETH" ]; then
+            options="$options -E $ETH -N $ifn"
+            unset ETH
+        else
+            options="$options -E $ifn"
+        fi
+    done
+
+    options=$(echo "$options" |\
+        sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
+
+    echo $options
+}
+
+# NethServer: Dynamically add all configured LAN/WAN interfaces.
+function load_nethserver
+{
+    local options=""
+    local ifcfg_sw="@sysconfdir@/shorewall/interfaces"
+
+    if [ -f "$ifcfg_sw" ]; then
+        for ifn in "$(grep '^loc[[:space:]]' $ifcfg_sw | awk '{ print $2 }')"; do
+            [ -z "$ifn" ] && break
+            options="$options -I $ifn"
+        done
+
+        for ifn in "$(grep "^blue[[:space:]]" $ifcfg_sw | awk '{ print $2 }')"; do
+            [ -z "$ifn" ] && break
+            options="$options -I $ifn"
+        done
+
+        for ifn in "$(grep "^orang[[:space:]]" $ifcfg_sw | awk '{ print $2 }')"; do
+            [ -z "$ifn" ] && break
+            options="$options -I $ifn"
+        done
+
+        for ifn in "$(grep '^net[[:space:]]' $ifcfg_sw | awk '{ print $2 }')"; do
+            [ -z "$ifn" ] && break
+            [ -f "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}" ] &&
+                source "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}"
+            if [ ! -z "$ETH" ]; then
+                options="$options -E $ETH -N $ifn"
+                unset ETH
+            else
+                options="$options -E $ifn"
+            fi
+        done
+    fi
+
+    options=$(echo "$options" |\
+        sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
+
+    echo $options
+}
+
+# OpenWrt: Dynamically add all configured LAN/WAN interfaces.
+function load_openwrt
+{
+    local options="-I br-lan"
+
+    ifn=$(uci get network.wan.ifname)
+    [ ! -z "$ifn" ] && options="$options -E $ifn"
+
+    options=$(echo "$options" |\
+        sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
+
+    echo $options
+}
+
+function load_modules
+{
+    /sbin/modprobe -q nfnetlink
+    /sbin/modprobe -q nf_conntrack_netlink
+}
+
+function detect_os
+{
+    if [ -f @sysconfdir@/clearos-release ]; then
+        echo "clearos"
+    elif [ -f @sysconfdir@/nethserver-release ]; then
+        echo "nethserver"
+    elif [ -f @sysconfdir@/gentoo-release ]; then
+        echo "gentoo"
+    elif [ -f @sysconfdir@/openwrt_release ]; then
+        echo "openwrt"
+    else
+        echo "unknown"
+    fi
+}
+
+function auto_detect_options
+{
+    local options=""
+
+    options=$(load_defaults)
+
+    if [ "$NETIFYD_AUTODETECT" == "yes" ]; then
+        case "$(detect_os)" in
+            clearos)
+                options=$(load_clearos)
+            ;;
+            nethserver)
+                options=$(load_nethserver)
+            ;;
+            openwrt)
+                options=$(load_openwrt)
+            ;;
+        esac
+    fi
+
+    echo $options
+}
+
+function restart_netifyd
+{
+    @sysconfdir@/init.d/@PACKAGE_TARNAME@ restart
+}
+
+function config_enable_sink
+{
+    if egrep -i -q '^enable_sink = (no|0|false)' $NETIFYD_CONF; then
+        sed -i -e 's/^enable_sink.*/enable_sink = yes/' $NETIFYD_CONF
+        restart_netifyd
+    fi
+}
+
+function config_disable_sink
+{
+    if egrep -i -q '^enable_sink = (yes|1|true)' $NETIFYD_CONF; then
+        sed -i -e 's/^enable_sink.*/enable_sink = no/' $NETIFYD_CONF
+        restart_netifyd
+    fi
+}
+
+# vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4 syntax=sh
