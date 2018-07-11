@@ -134,7 +134,7 @@ AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
         [Define to enable Thread Caching malloc support.])
     PKG_CHECK_MODULES([LIBTCMALLOC], [libtcmalloc], [], [
         LIBS_saved=$LIBS
-        AC_CHECK_LIB([tcmalloc], [tc_version])
+        AC_CHECK_LIB([tcmalloc], [tc_version], [], AC_MSG_ERROR([libtcmalloc not found.]))
         LIBS=$LIBS_saved
         LIBTCMALLOC_LIBS=-ltcmalloc
         AC_SUBST([LIBTCMALLOC_LIBS])
