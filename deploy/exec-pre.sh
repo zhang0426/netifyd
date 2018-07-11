@@ -1,5 +1,9 @@
 #!/bin/bash
-# Set Netify Agent command-line options:
+# Netify Agent command-line options for systemd(1)
+# Copyright (C) 2016-2018 eGloo, Incorporated
+#
+# This is free software, licensed under the GNU General Public License v3.
+#
 # At least one -I, --internal and/or -E, --external parameters are required.
 # See man netifyd(8) for all options.
 

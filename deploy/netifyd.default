@@ -1,4 +1,8 @@
 # Netify Agent command-line options
+# Copyright (C) 2016-2018 eGloo, Incorporated
+#
+# This is free software, licensed under the GNU General Public License v3.
+#
 # See the netifyd(8) manual for common options.
 
 # Auto-detect (when possible) network ineterface roles (yes/no)?
