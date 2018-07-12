@@ -136,7 +136,7 @@ AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
         AC_DEFINE([HAVE_LIBTCMALLOC], [1],
             [Define to 1 if you have the `tcmalloc' library (-ltcmalloc).])], [
         LIBS_saved=$LIBS
-        AC_CHECK_LIB([tcmalloc], [tc_version])
+        AC_CHECK_LIB([tcmalloc], [tc_version], [], AC_MSG_ERROR([libtcmalloc not found.]))
         LIBS=$LIBS_saved
         LIBTCMALLOC_LIBS=-ltcmalloc
         AC_SUBST([LIBTCMALLOC_LIBS])
