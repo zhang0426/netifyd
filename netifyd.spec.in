@@ -156,7 +156,9 @@ echo "%config(noreplace) %attr(640,root,root) %{_libexecdir}/%{name}/env.sh" >> 
 
 # Post-install
 %post
+%if %{?_with_systemd:1}%{!?_with_systemd:0}
 %systemd_post %{name}.service
+%endif
 
 # Remove old CSV configuration files
 rm -f %{statedir_vdata}/*.csv
@@ -171,11 +173,15 @@ exit 0
 
 # Pre-uninstall
 %preun
+%if %{?_with_systemd:1}%{!?_with_systemd:0}
 %systemd_preun %{name}.service
+%endif
 
 # Post-uninstall
 %postun
+%if %{?_with_systemd:1}%{!?_with_systemd:0}
 %systemd_postun_with_restart %{name}.service
+%endif
 
 # Files
 %files -f %{EXTRA_DIST}
