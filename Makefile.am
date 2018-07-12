@@ -28,6 +28,7 @@ dist-git:
 
 if HAVE_OSC
 deploy-osc-update: netifyd.spec deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc dist-git
+	(cd ./osc/home\:egloo/netifyd && $(osc) update)
 	cp deploy/debian/debian.changelog ./osc/home\:egloo/netifyd
 	cp deploy/debian/debian.control ./osc/home\:egloo/netifyd
 	cp deploy/debian/debian.rules ./osc/home\:egloo/netifyd
