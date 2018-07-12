@@ -86,42 +86,24 @@ void nd_printf(const char *format, ...)
     va_list ap;
     va_start(ap, format);
 
+#ifdef _ND_USE_NCURSES
     if (ND_DEBUG) {
-#ifndef _ND_USE_NCURSES
-        vfprintf(stdout, format, ap);
-#else
-        if (! ND_USE_NCURSES || win_output == NULL)
-            vfprintf(stdout, format, ap);
-        else {
-            vwprintw(win_output, format, ap);
-            wrefresh(win_output);
-        }
-#endif
+        vwprintw(win_output, format, ap);
+        wrefresh(win_output);
+
+        va_end(ap);
+
+        pthread_mutex_unlock(nd_printf_mutex);
+        return;
     }
-    else
-        vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
+#endif
+
+    vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
 
     va_end(ap);
 
     pthread_mutex_unlock(nd_printf_mutex);
 }
-
-#ifdef _ND_USE_NCURSES
-void nd_printw(WINDOW *win, const char *format, ...)
-{
-    if (ND_DEBUG) {
-        pthread_mutex_lock(nd_printf_mutex);
-
-        va_list ap;
-        va_start(ap, format);
-        vwprintw(win, format, ap);
-        wrefresh(win);
-        va_end(ap);
-
-        pthread_mutex_unlock(nd_printf_mutex);
-    }
-}
-#endif
 
 void nd_debug_printf(const char *format, ...)
 {
@@ -147,29 +129,22 @@ void nd_debug_printf(const char *format, ...)
     }
 }
 
-void nd_verbose_printf(const char *format, ...)
+#ifdef _ND_USE_NCURSES
+void nd_printw(WINDOW *win, const char *format, ...)
 {
-    if (ND_VERBOSE) {
-
+    if (ND_DEBUG) {
         pthread_mutex_lock(nd_printf_mutex);
 
         va_list ap;
         va_start(ap, format);
-#ifndef _ND_USE_NCURSES
-        vfprintf(stderr, format, ap);
-#else
-        if (! ND_USE_NCURSES)
-            vfprintf(stderr, format, ap);
-        else {
-            vwprintw(win_output, format, ap);
-            wrefresh(win_output);
-        }
-#endif
+        vwprintw(win, format, ap);
+        wrefresh(win);
         va_end(ap);
 
         pthread_mutex_unlock(nd_printf_mutex);
     }
 }
+#endif
 
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
 void ndpi_debug_printf(uint32_t protocol, void *ndpi,
@@ -468,12 +443,14 @@ string nd_get_version_and_features(void)
     ident <<
         PACKAGE_NAME << "/" << GIT_RELEASE << " (" << _ND_HOST_CPU;
 
-    if (ND_USE_CONNTRACK) ident << "; use-conntrack";
-    if (ND_USE_NETLINK) ident << "; use-netlink";
-    if (ND_USE_DNS_CACHE) ident << "; use-dns-cache";
+    if (ND_USE_CONNTRACK) ident << "; conntrack";
+    if (ND_USE_NETLINK) ident << "; netlink";
+    if (ND_USE_DNS_CACHE) ident << "; dns-cache";
     if (ND_SSL_USE_TLSv1) ident << "; ssl-tlsv1";
     if (ND_SSL_VERIFY_PEER) ident << "; ssl-verify-peer";
-
+#ifdef _ND_USE_LIBTCMALLOC
+    ident << "; tcmalloc";
+#endif
     ident << ")" <<
         " nDPI/" << ndpi_revision() <<
         " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION;
