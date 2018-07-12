@@ -44,6 +44,7 @@ typedef bool atomic_bool;
 #include <time.h>
 #include <unistd.h>
 #include <locale.h>
+#include <syslog.h>
 
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
@@ -307,60 +308,22 @@ static nd_dns_cache dns_cache;
 
 static void nd_usage(int rc = 0, bool version = false)
 {
-    cerr << nd_get_version_and_features() << endl;
-    cerr << "Copyright (C) 2015-2018 eGloo Incorporated"
-         <<  endl << "[" << GIT_RELEASE << " " << GIT_DATE << "]" << endl;
+    fprintf(stderr, "%s\n", nd_get_version_and_features().c_str());
+    fprintf(stderr, "Copyright (C) 2015-2018 eGloo Incorporated\n"
+            "[%s %s]\n", GIT_RELEASE, GIT_DATE);
     if (version) {
-        cerr << endl <<
-            "This application uses nDPI v" <<  ndpi_revision() << endl <<
-            "http://www.ntop.org/products/deep-packet-inspection/ndpi/" << endl;
-        cerr << endl;
-        cerr <<
-            "  This program comes with ABSOLUTELY NO WARRANTY." << endl;
-        cerr <<
-            "  This is free software, and you are welcome to redistribute it" << endl;
-        cerr <<
-            "  under certain conditions according to the GNU General Public" << endl;
-        cerr <<
-            "  License version 3, or (at your option) any later version." << endl;
+        fprintf(stderr, "\nThis application uses nDPI v%s\n"
+            "http://www.ntop.org/products/deep-packet-inspection/ndpi/\n", ndpi_revision());
+        fprintf(stderr, "\n  This program comes with ABSOLUTELY NO WARRANTY.\n"
+            "  This is free software, and you are welcome to redistribute it\n"
+            "  under certain conditions according to the GNU General Public\n"
+            "  License version 3, or (at your option) any later version.\n");
 #ifdef PACKAGE_BUGREPORT
-        cerr << endl;
-        cerr << "Report bugs to: " << PACKAGE_BUGREPORT << endl;
+        fprintf(stderr, "\nReport bugs to: %s\n", PACKAGE_BUGREPORT);
 #endif
     }
     else {
-        cerr <<
-            "  -V, --version" << endl;
-        cerr <<
-            "    Display program version and license information." << endl;
-        cerr <<
-            "  -d, --debug" << endl;
-        cerr <<
-            "    Output debug messages and remain in the foreground." << endl;
-        cerr <<
-            "  -I, --internal <device>" << endl;
-        cerr <<
-            "    Internal LAN interface.  Repeat for multiple interfaces.";
-        cerr << endl;
-        cerr <<
-            "  -E, --external <device>" << endl;
-        cerr <<
-            "    External WAN interface.  Repeat for multiple interfaces.";
-        cerr << endl;
-        cerr <<
-            "  -c, --config <filename>" << endl;
-        cerr <<
-            "    Configuration file.  Default: " << ND_CONF_FILE_NAME << endl;;
-        cerr <<
-            "  -j, --json <filename>" << endl;
-        cerr <<
-            "    JSON output file.  Default: " << ND_JSON_FILE_NAME << endl;;
-        cerr <<
-            "  -i, --interval <seconds>" << endl;
-        cerr <<
-            "    JSON update interval (seconds).  ";
-        cerr <<
-            "Default: " << ND_STATS_INTERVAL << endl;
+        fprintf(stderr, "See netifyd(8) and netifyd.conf(5) for help.\n");
     }
 
     exit(rc);
@@ -368,6 +331,8 @@ static void nd_usage(int rc = 0, bool version = false)
 
 static void nd_config_init(void)
 {
+    nd_conf_filename = strdup(ND_CONF_FILE_NAME);
+
     nd_config.path_config = NULL;
     nd_config.path_content_match = NULL;
     nd_config.path_custom_match = NULL;
@@ -407,21 +372,22 @@ static void nd_config_init(void)
 static int nd_config_load(void)
 {
     if (nd_conf_filename == NULL) {
-        cerr << "Configuration file not set." << endl;
+        fprintf(stderr, "Configuration file not defined.\n");
         return -1;
     }
 
     struct stat extern_config_stat;
     if (stat(nd_conf_filename, &extern_config_stat) < 0) {
-        cerr << "Can not stat configuration file: " << nd_conf_filename <<
-            ": " << strerror(errno) << endl;
+        fprintf(stderr, "Can not stat configuration file: %s: %s\n",
+            nd_conf_filename, strerror(errno));
         return -1;
     }
 
     INIReader reader(nd_conf_filename);
 
     if (reader.ParseError() != 0) {
-        cerr << "Can not parse configuration file: " << nd_conf_filename << endl;
+        fprintf(stderr, "Error while parsing configuration file: %s\n",
+            nd_conf_filename);
         return -1;
     }
 
@@ -552,7 +518,7 @@ static int nd_config_load(void)
 
         int rc = getaddrinfo(host_addr.c_str(), NULL, &hints, &result);
         if (rc != 0) {
-            nd_printf("host[%d]: %s: %s\n",
+            fprintf(stderr, "host[%d]: %s: %s\n",
                 i, host_addr.c_str(), gai_strerror(rc));
             continue;
         }
@@ -572,6 +538,58 @@ static int nd_config_load(void)
 #ifdef _ND_USE_INOTIFY
     reader.GetSection("watches", inotify_watches);
 #endif
+    return 0;
+}
+
+#define _ND_LO_ENABLE_SINK      1
+#define _ND_LO_DISABLE_SINK     2
+
+static int nd_config_set_option(int option)
+{
+    ostringstream os;
+    os << "sh -c \"source " << ND_LIBEXECDIR << "/functions.sh && config_";
+
+    switch (option) {
+    case _ND_LO_ENABLE_SINK:
+        os << "enable_sink";
+        printf("Enabling Netify Cloud Sink.\n");
+        break;
+    case _ND_LO_DISABLE_SINK:
+        os << "disable_sink";
+        printf("Disabling Netify Cloud Sink.\n");
+        break;
+    default:
+        fprintf(stderr, "Unrecognized configuration option: %d\n", option);
+        return 1;
+    }
+
+    os << "\" 2>&1";
+
+    FILE *ph = popen(os.str().c_str(), "r");
+    if (ph == NULL) {
+        fprintf(stderr, "Error while enabling/disabling option.\n"
+            "Manually edit configuration file: %s\n", nd_conf_filename);
+        return 1;
+    }
+
+    size_t bytes = 0;
+    do {
+        char buffer[64];
+        memset(buffer, 0, sizeof(buffer));
+        if ((bytes = fread(buffer, 1, sizeof(buffer) - 1, ph)) > 0)
+            nd_debug_printf(buffer);
+    }
+    while (bytes != 0);
+
+    int rc = 0;
+    if ((rc = pclose(ph)) != 0) {
+        fprintf(stderr, "Error while modifying configuration file.\n"
+            "Manually edit configuration file: %s\n", nd_conf_filename);
+        nd_debug_printf("%s: %d\n", os.str().c_str(), rc);
+        return rc;
+    }
+
+    printf("Configuration modified: %s\n", nd_conf_filename);
     return 0;
 }
 
@@ -751,7 +769,7 @@ static void nd_json_add_interfaces(json_object *parent)
     struct ifaddrs *ifap = NULL, *p = NULL;
 
     if (getifaddrs(&ifap) < 0) {
-        nd_printf("Error collecting interface addresses: %s\n",
+        fprintf(stderr, "Error collecting interface addresses: %s\n",
             strerror(errno));
     }
 */
@@ -1112,8 +1130,8 @@ static void nd_load_ethers(void)
 
     struct stat ethers_stat;
     if (stat(ND_ETHERS_FILE_NAME, &ethers_stat) < 0) {
-        cerr << "Can not stat ethers file: " << ND_ETHERS_FILE_NAME <<
-            ": " << strerror(errno) << endl;
+        fprintf(stderr, "Could not stat ethers file: %s: %s\n",
+            ND_ETHERS_FILE_NAME, strerror(errno));
         return;
     }
 
@@ -1153,7 +1171,7 @@ static void nd_load_ethers(void)
             string key;
             key.assign((const char *)mac, ETH_ALEN);
             device_ethers[key] = name;
-            //nd_printf("%2lu: %02x:%02x:%02x:%02x:%02x:%02x (%s): %s\n", line,
+            //nd_debug_printf("%2lu: %02x:%02x:%02x:%02x:%02x:%02x (%s): %s\n", line,
             //    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], ether, name);
         }
     }
@@ -1306,7 +1324,7 @@ static void nd_add_device_addresses(nd_device_addr &device_addresses)
 
         const char *address = strtok(token, "/");
         if (address == NULL) {
-            nd_printf("WARNING: Invalid address, use CIDR notation: %s\n",
+            fprintf(stderr, "WARNING: Invalid address, use CIDR notation: %s\n",
                 (*i).second.c_str());
             continue;
         }
@@ -1326,13 +1344,13 @@ static void nd_add_device_addresses(nd_device_addr &device_addresses)
             family = AF_INET6;
         }
         else {
-            nd_printf("WARNING: Not an IPv4 or IPv6 address: %s\n", address);
+            fprintf(stderr, "WARNING: Not an IPv4 or IPv6 address: %s\n", address);
             continue;
         }
 
         const char *length = strtok(NULL, "/");
         if (length == NULL) {
-            nd_printf("WARNING: Invalid address, use CIDR notation: %s\n",
+            fprintf(stderr, "WARNING: Invalid address, use CIDR notation: %s\n",
                 (*i).second.c_str());
             continue;
         }
@@ -1341,7 +1359,7 @@ static void nd_add_device_addresses(nd_device_addr &device_addresses)
         if (_length == 0 || (
             (family == AF_INET && _length > 32) ||
             (family == AF_INET6 && _length > 128))) {
-            nd_printf("WARNING: Invalid network length: %hu\n", _length);
+            fprintf(stderr, "WARNING: Invalid network length: %hu\n", _length);
             continue;
         }
 
@@ -1375,7 +1393,7 @@ static void nd_add_device_addresses(nd_device_addr &device_addresses)
                 &bcast_ip4.sin_addr, bcastaddr, INET_ADDRSTRLEN);
 
             if (! netlink->AddAddress(family, _ND_NETLINK_BROADCAST, bcastaddr))
-                nd_printf("WARNING: Error adding device address: %s\n", bcastaddr);
+                fprintf(stderr, "WARNING: Error adding device address: %s\n", bcastaddr);
 
             break;
 
@@ -1390,12 +1408,12 @@ static void nd_add_device_addresses(nd_device_addr &device_addresses)
         }
 
         if (! netlink->AddNetwork(family, (*i).first, netaddr, _length)) {
-            nd_printf("WARNING: Error adding device network: %s\n",
+            fprintf(stderr, "WARNING: Error adding device network: %s\n",
                 (*i).second.c_str());
         }
 
         if (! netlink->AddAddress(family, (*i).first, address)) {
-            nd_printf("WARNING: Error adding device address: %s\n", address);
+            fprintf(stderr, "WARNING: Error adding device address: %s\n", address);
         }
     }
 
@@ -1411,7 +1429,7 @@ static void nd_check_agent_uuid(void)
             ! uuid.size() ||
             ! strncmp(uuid.c_str(), ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
             nd_generate_uuid(uuid);
-            nd_printf("Generated a new UUID: %s\n", uuid.c_str());
+            printf("Generated a new UUID: %s\n", uuid.c_str());
             nd_save_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN);
         }
         if (nd_config.uuid != NULL)
@@ -1451,7 +1469,10 @@ int main(int argc, char *argv[])
     locale lc(cout.getloc(), new nd_numpunct);
     os.imbue(lc);
 #endif
+
     nd_config_init();
+
+    openlog(PACKAGE_TARNAME, LOG_NDELAY | LOG_PID | LOG_PERROR, LOG_DAEMON);
 
     nd_printf_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_printf_mutex, NULL);
@@ -1491,6 +1512,9 @@ int main(int argc, char *argv[])
         { "uuidgen", 0, 0, 'U' },
         { "version", 0, 0, 'V' },
 
+        { "enable-sink", 0, NULL, _ND_LO_ENABLE_SINK },
+        { "disable-sink", 0, NULL, _ND_LO_DISABLE_SINK },
+
         { NULL, 0, 0, 0 }
     };
 
@@ -1500,13 +1524,17 @@ int main(int argc, char *argv[])
             "?A:aC:c:DdE:eF:f:H:hI:i:j:lN:nPpRrS:s:tUu:V",
             options, &o)) == -1) break;
         switch (rc) {
+        case 0:
+            break;
+        case _ND_LO_ENABLE_SINK:
+        case _ND_LO_DISABLE_SINK:
+            exit(nd_config_set_option(rc));
         case '?':
-            cerr <<
-                "Try " << argv[0] << " --help for more information." << endl;
+            fprintf(stderr, "Try `--help' for more information.\n");
             return 1;
         case 'A':
             if (last_device.size() == 0) {
-                cerr << "You must specify an interface first." << endl;
+                fprintf(stderr, "You must specify an interface first.\n");
                 exit(1);
             }
             device_addresses.push_back(make_pair(last_device, optarg));
@@ -1515,6 +1543,7 @@ int main(int argc, char *argv[])
             nd_config.flags |= ndGF_DEBUG_DNS_CACHE;
             break;
         case 'c':
+            if (nd_conf_filename != NULL) free(nd_conf_filename);
             nd_conf_filename = strdup(optarg);
             break;
         case 'd':
@@ -1532,7 +1561,7 @@ int main(int argc, char *argv[])
             for (nd_ifaces::iterator i = ifaces.begin();
                 i != ifaces.end(); i++) {
                 if (strcasecmp((*i).second.c_str(), optarg) == 0) {
-                    cerr << "Duplicate interface specified: " << optarg << endl;
+                    fprintf(stderr, "Duplicate interface specified: %s\n", optarg);
                     exit(1);
                 }
             }
@@ -1544,12 +1573,12 @@ int main(int argc, char *argv[])
             break;
         case 'F':
             if (last_device.size() == 0) {
-                cerr << "You must specify an interface first." << endl;
+                fprintf(stderr, "You must specify an interface first.\n");
                 exit(1);
             }
             if (nd_config.device_filters
                 .find(last_device) != nd_config.device_filters.end()) {
-                cerr << "Only one filter can be applied to a device." << endl;
+                fprintf(stderr, "Only one filter can be applied to a device.\n");
                 exit(1);
             }
             nd_config.device_filters[last_device] = optarg;
@@ -1570,7 +1599,7 @@ int main(int argc, char *argv[])
             for (nd_ifaces::iterator i = ifaces.begin();
                 i != ifaces.end(); i++) {
                 if (strcasecmp((*i).second.c_str(), optarg) == 0) {
-                    cerr << "Duplicate interface specified: " << optarg << endl;
+                    fprintf(stderr, "Duplicate interface specified: %s\n", optarg);
                     exit(1);
                 }
             }
@@ -1589,12 +1618,12 @@ int main(int argc, char *argv[])
         case 'N':
 #if _ND_USE_NETLINK
             if (last_device.size() == 0) {
-                cerr << "You must specify an interface first." << endl;
+                fprintf(stderr, "You must specify an interface first.\n");
                 exit(1);
             }
             device_netlink[last_device] = optarg;
 #else
-            nd_printf("Sorry, netlink was not enabled for this build.\n");
+            fprintf(stderr, "Sorry, netlink was not enabled for this build.\n");
             return 1;
 #endif
             break;
@@ -1602,7 +1631,7 @@ int main(int argc, char *argv[])
 #if _ND_USE_NCURSES
             nd_config.flags |= ndGF_DEBUG;
 #else
-            nd_printf("Sorry, ncurses was not enabled for this build.\n");
+            fprintf(stderr, "Sorry, ncurses was not enabled for this build.\n");
             return 1;
 #endif
             break;
@@ -1610,15 +1639,14 @@ int main(int argc, char *argv[])
             nd_dump_protocols();
             exit(0);
         case 'p':
-            nd_config.flags |= ndGF_DEBUG;
             if (nd_conf_filename == NULL)
                 nd_conf_filename = strdup(ND_CONF_FILE_NAME);
             if (nd_config_load() < 0)
                 return 1;
             nd_check_agent_uuid();
             if (nd_config.uuid == NULL) return 1;
-            nd_printf("Netify Agent Provisioning UUID: %s\n", nd_config.uuid);
-            nd_printf("%s%s\n", ND_URL_PROVISION, nd_config.uuid);
+            printf("Netify Agent Provisioning UUID: %s\n", nd_config.uuid);
+            printf("%s%s\n", ND_URL_PROVISION, nd_config.uuid);
             return 0;
         case 'R':
             nd_config.flags |= ndGF_REMAIN_IN_FOREGROUND;
@@ -1630,13 +1658,11 @@ int main(int argc, char *argv[])
             {
                 uint8_t digest[SHA1_DIGEST_LENGTH];
 
-                nd_config.flags |= ndGF_DEBUG;
-
                 if (nd_sha1_file(optarg, digest) < 0) return 1;
                 else {
                     string sha1;
                     nd_sha1_to_string(digest, sha1);
-                    nd_printf("%s\n", sha1.c_str());
+                    printf("%s\n", sha1.c_str());
                     return 0;
                 }
             }
@@ -1651,8 +1677,7 @@ int main(int argc, char *argv[])
             {
                 string uuid;
                 nd_generate_uuid(uuid);
-                nd_config.flags |= ndGF_DEBUG;
-                nd_printf("%s\n", uuid.c_str());
+                printf("%s\n", uuid.c_str());
             }
             exit(0);
         case 'u':
@@ -1675,15 +1700,14 @@ int main(int argc, char *argv[])
         return 1;
 
     if (ifaces.size() == 0) {
-        cerr <<
-            "Required argument, (-I, --internal, or -E, --external) missing." <<
-            endl;
+        fprintf(stderr,
+            "Required argument, (-I, --internal, or -E, --external) missing.\n");
         return 1;
     }
 
     CURLcode cc;
     if ((cc = curl_global_init(CURL_GLOBAL_ALL)) != 0) {
-        cerr << "Unable to initialize libCURL: " << cc << endl;
+        fprintf(stderr, "Unable to initialize libCURL: %lu\n", cc);
         return 1;
     }
 
@@ -1693,6 +1717,11 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
+
+    nd_printf("%s\n", nd_get_version_and_features().c_str());
+    nd_check_agent_uuid();
+    nd_debug_printf("Flow entry size: %lu\n", sizeof(struct ndFlow) +
+        sizeof(struct ndpi_flow_struct) + sizeof(struct ndpi_id_struct) * 2);
 
     if (! ND_DEBUG) {
         FILE *hpid = fopen(ND_PID_FILE_NAME, "w+");
@@ -1716,11 +1745,6 @@ int main(int argc, char *argv[])
         nd_create_windows();
     }
 #endif
-    nd_printf("%s\n", nd_get_version_and_features().c_str());
-    nd_check_agent_uuid();
-    nd_debug_printf("Flow entry size: %lu\n", sizeof(struct ndFlow) +
-        sizeof(struct ndpi_flow_struct) + sizeof(struct ndpi_id_struct) * 2);
-
     memset(&totals, 0, sizeof(nd_packet_stats));
 
     if (ND_USE_DNS_CACHE) dns_cache.load();
@@ -1981,6 +2005,9 @@ int main(int argc, char *argv[])
     refresh();
     endwin();
 #endif
+
+    closelog();
+
     return 0;
 }
 
