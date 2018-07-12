@@ -34,7 +34,7 @@ deploy-osc-update: netifyd.spec deploy/debian/debian.changelog deploy/debian/deb
 	cp deploy/debian/netifyd.dsc ./osc/home\:egloo/netifyd
 	cp netifyd.spec ./osc/home\:egloo/netifyd
 	grep -v 'gperftools-devel' netifyd.spec > ./osc/home\:egloo/netifyd/netifyd-CentOS_6.spec
-	(cd ./osc/home\:egloo/netifyd && $(osc) rm $(PACKAGE)-*.tar.gz || true)
+	(cd ./osc/home\:egloo/netifyd && $(osc) rm --force $(PACKAGE)-*.tar.gz || true)
 	cp $(PACKAGE)-$(VERSION).tar.gz ./osc/home\:egloo/netifyd
 	(cd ./osc/home\:egloo/netifyd && $(osc) add $(PACKAGE)-*.tar.gz)
 	(cd ./osc/home\:egloo/netifyd && $(osc) status)
