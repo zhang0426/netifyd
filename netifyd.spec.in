@@ -135,7 +135,7 @@ install -D -m 0644 %{netifyd_tmpf} %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 echo "%{_tmpfilesdir}/%{name}.conf" >> %{EXTRA_DIST}
 
 install -D -m 0640 %{netifyd_env} %{buildroot}/%{_libexecdir}/%{name}/env.sh
-echo "%{_libexecdir}/%{name}/env.sh" >> %{EXTRA_DIST}
+echo "%config(noreplace) %attr(640,root,root) %{_libexecdir}/%{name}/env.sh" >> %{EXTRA_DIST}
 %endif
 
 # Clean-up
@@ -176,7 +176,6 @@ exit 0
 %attr(755,root,root) %{_libexecdir}/%{name}/
 %attr(755,root,root) %{_sysconfdir}/init.d/%{name}
 %config(noreplace) %attr(640,root,root) %{statedir_pdata}/netify-sink.conf
-%config(noreplace) %attr(660,root,root) %{_libexecdir}/%{name}/env.sh
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
 %{_mandir}/man5/*
