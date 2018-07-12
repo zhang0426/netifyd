@@ -57,9 +57,21 @@ BuildRequires: zlib-devel
 %{?systemd_requires}
 
 %description
-The Netify (https://www.netify.ai/) Agent is a deep-packet inspection server.  The Agent is built on top of nDPI (http://www.ntop.org/products/deep-packet-inspection/ndpi/) (formerly OpenDPI) to detect network protocols and applications.  These detections can be saved locally, served over a UNIX or TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party server.  Flow metadata, network statistics, and detection classifications are stored using JSON encoding.
+The Netify Agent (https://www.netify.ai/) is a deep-packet inspection server.
+The Agent is built on top of nDPI (formerly OpenDPI):
+http://www.ntop.org/products/deep-packet-inspection/ndpi/
 
-Optionally, the Netify Agent can be coupled with a Netify Cloud (https://www.netify.ai/) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
+Protocol and application detections can be saved locally, served over a UNIX or
+TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party server.
+Flow metadata, network statistics, and detection classifications are stored
+using JSON encoding.
+
+Optionally, the Netify Agent can be coupled with a Netify Cloud
+(https://www.netify.ai/) subscription for further cloud processing, historical
+storage, machine-learning analysis, event notifications, device
+detection/identification, along with the option (on supported platforms) to
+take an active role in policing/bandwidth-shaping specific network protocols
+and applications.
 
 Report bugs to: https://gitlab.com/netify.ai/public/netify-agent/issues
 
