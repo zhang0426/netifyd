@@ -8,7 +8,8 @@ AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
 	-D'ND_VOLATILE_STATEDIR="$(sharedstatedir)/$(PACKAGE_TARNAME)"' \
 	-D'ND_PERSISTENT_STATEDIR="$(sysconfdir)/netify.d"'
 	-D'ND_PID_FILE_NAME="$(localstatedir)/run/$(PACKAGE_TARNAME)/$(PACKAGE_TARNAME).pid"' \
-	-D'ND_CONF_FILE_NAME="$(sysconfdir)/$(PACKAGE_TARNAME).conf"'
+	-D'ND_CONF_FILE_NAME="$(sysconfdir)/$(PACKAGE_TARNAME).conf"' \
+	-D'ND_LIBEXECDIR="$(libexecdir)/$(PACKAGE_TARNAME)"'
 
 #EXTRA_DIST =
 
