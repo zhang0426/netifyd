@@ -1,0 +1,21 @@
+#!/bin/sh
+# Netify Agent Debian Post-install Script
+# Copyright (C) 2016-2018 eGloo, Incorporated
+#
+# This is free software, licensed under the GNU General Public License v3.
+
+if [ -f "/var/lib/@PACKAGE_TARNAME@/agent.uuid" ]; then
+    mv -f "/var/lib/@PACKAGE_TARNAME@/agent.uuid" @sysconfdir@/netify.d/
+fi
+
+if [ -f "/var/lib/@PACKAGE_TARNAME@/site.uuid" ]; then
+    mv -f "/var/lib/@PACKAGE_TARNAME@/site.uuid" @sysconfdir@/netify.d/
+fi
+
+if [ -f "/var/lib/@PACKAGE_TARNAME@/app-custom-match.conf" ]; then
+    mv -f "/var/lib/@PACKAGE_TARNAME@/app-custom-match.conf" @sysconfdir@/netify.d/netify-sink.conf
+fi
+
+rm -f "/var/lib/@PACKAGE_TARNAME@/*.csv"
+
+exit 0
