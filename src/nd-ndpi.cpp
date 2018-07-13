@@ -61,6 +61,12 @@ void ndpi_global_init(void)
     if (ndpi_parent == NULL)
         throw ndThreadException("Detection module initialization failure");
 
+    if (ndpi_parent->host_automa.ac_automa == NULL)
+        throw ndThreadException("Detection host_automa initialization failure");
+
+    if (ndpi_parent->protocols_ptree != NULL)
+        throw ndThreadException("Detection protocols_ptree initialization failure");
+
     ndpi_host_automa = ndpi_init_automa();
     if (ndpi_host_automa == NULL)
         throw ndThreadException("Unable to initialize host_automa");
