@@ -31,6 +31,8 @@ deploy-osc-update: netifyd.spec deploy/debian/debian.changelog deploy/debian/deb
 	(cd ./osc/home\:egloo/netifyd && $(osc) update)
 	cp deploy/debian/debian.changelog ./osc/home\:egloo/netifyd
 	cp deploy/debian/debian.control ./osc/home\:egloo/netifyd
+	cp deploy/debian/debian.postinst ./osc/home\:egloo/netifyd
+	chmod a+x ./osc/home\:egloo/netifyd/debian.postinst
 	cp deploy/debian/debian.rules ./osc/home\:egloo/netifyd
 	cp deploy/debian/netifyd.dsc ./osc/home\:egloo/netifyd
 	cp netifyd.spec ./osc/home\:egloo/netifyd
