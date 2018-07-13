@@ -1,7 +1,11 @@
 #!/usr/bin/make -f
 # Netify Agent Debian Makefile Rules
+# Copyright (C) 2016-2018 eGloo, Incorporated
+#
+# This is free software, licensed under the GNU General Public License v3.
+#
 # XXX: Fix tabs when necessary:
-#      $ sed 's/ \+ /\t/g' -i deploy/debian/debian.rules.in
+#	$ sed 's/ \+ /\t/g' -i deploy/debian/debian.rules.in
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
@@ -42,34 +46,40 @@ install: build
 
 	dh_auto_install
 
-	install -d -m 0755 $(DESTDIR)/etc/netify.d
-	install -d -m 0755 $(DESTDIR)/var/run/@PACKAGE_TARNAME@
+	rm -rf $(DESTDIR)@bindir@
+	rm -rf $(DESTDIR)@includedir@
+	rm -rf $(DESTDIR)@libdir@
+
+	install -d -m 0755 $(DESTDIR)@sysconfdir@/netify.d
+	install -d -m 0755 $(DESTDIR)@localstatedir@/run/@PACKAGE_TARNAME@
 
 	install -D -m 0755 deploy/functions.sh \
-		$(DESTDIR)/usr/libexec/@PACKAGE_TARNAME@/functions.sh
+		$(DESTDIR)@libexecdir@/@PACKAGE_TARNAME@/functions.sh
 	install -D -m 0755 deploy/exec-pre.sh \
-		$(DESTDIR)/usr/libexec/@PACKAGE_TARNAME@/exec-pre.sh
+		$(DESTDIR)@libexecdir@/@PACKAGE_TARNAME@/exec-pre.sh
+	install -D -m 0755 deploy/env.sh \
+		$(DESTDIR)@libexecdir@/@PACKAGE_TARNAME@/env.sh
 
 	install -D -m 0755 deploy/@PACKAGE_TARNAME@.tmpf \
-		$(DESTDIR)/usr/lib/tmpfiles.d/@PACKAGE_TARNAME@.conf
+		$(DESTDIR)@libdir@/tmpfiles.d/@PACKAGE_TARNAME@.conf
 
 	install -D -m 0755 deploy/@PACKAGE_TARNAME@.service \
-		$(DESTDIR)/lib/systemd/system/@PACKAGE_TARNAME@.service
+		$(DESTDIR)@systemdsystemunitdir@/@PACKAGE_TARNAME@.service
 
 	dh_systemd_enable
 
 	install -D -m 0755 deploy/@PACKAGE_TARNAME@-debian.init \
-		$(DESTDIR)/etc/init.d/@PACKAGE_TARNAME@
+		$(DESTDIR)@sysconfdir@/init.d/@PACKAGE_TARNAME@
 
 	dh_systemd_start
 
 	install -D -m 0644 deploy/app-custom-match.conf \
-		$(DESTDIR)/etc/netify.d/netify-sink.conf
+		$(DESTDIR)@sysconfdir@/netify.d/netify-sink.conf
 
 	install -D -m 0644 deploy/@PACKAGE_TARNAME@.default \
-		$(DESTDIR)/etc/default/@PACKAGE_TARNAME@
+		$(DESTDIR)@sysconfdir@/default/@PACKAGE_TARNAME@
 	install -D -m 0660 deploy/@PACKAGE_TARNAME@.conf \
-		$(DESTDIR)/etc/@PACKAGE_TARNAME@.conf
+		$(DESTDIR)@sysconfdir@/@PACKAGE_TARNAME@.conf
 
 # Build architecture-independent files here.
 binary-indep: build install
