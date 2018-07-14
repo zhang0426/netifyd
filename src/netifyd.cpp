@@ -1707,7 +1707,7 @@ int main(int argc, char *argv[])
 
     CURLcode cc;
     if ((cc = curl_global_init(CURL_GLOBAL_ALL)) != 0) {
-        fprintf(stderr, "Unable to initialize libCURL: %lu\n", cc);
+        fprintf(stderr, "Unable to initialize libCURL: %d\n", cc);
         return 1;
     }
 
