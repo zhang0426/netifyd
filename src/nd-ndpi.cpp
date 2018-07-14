@@ -64,9 +64,6 @@ void ndpi_global_init(void)
     if (ndpi_parent->host_automa.ac_automa == NULL)
         throw ndThreadException("Detection host_automa initialization failure");
 
-    if (ndpi_parent->protocols_ptree != NULL)
-        throw ndThreadException("Detection protocols_ptree initialization failure");
-
     ndpi_host_automa = ndpi_init_automa();
     if (ndpi_host_automa == NULL)
         throw ndThreadException("Unable to initialize host_automa");
@@ -75,12 +72,13 @@ void ndpi_global_init(void)
     if (pthread_mutex_init(ndpi_host_automa_lock, NULL) != 0)
         throw ndThreadException("Unable to initialize pthread_mutex");
 
-    ndpi_proto_ptree = ndpi_init_ptree(32 /* IPv4 */);
+    ndpi_proto_ptree = ndpi_init_ptree(32); // 32-bit for IPv4
     if (ndpi_proto_ptree == NULL)
         throw ndThreadException("Unable to initialize proto_ptree");
 
     ndpi_free_automa(ndpi_parent->host_automa.ac_automa);
-    ndpi_free_ptree(ndpi_parent->protocols_ptree);
+    if (ndpi_parent->protocols_ptree != NULL)
+        ndpi_free_ptree(ndpi_parent->protocols_ptree);
 
     ndpi_parent->host_automa.ac_automa = ndpi_host_automa;
     ndpi_parent->host_automa.lock = ndpi_host_automa_lock;
