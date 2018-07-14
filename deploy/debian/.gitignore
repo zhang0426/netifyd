@@ -1,4 +1,5 @@
 debian.changelog
 debian.control
+debian.postinst
 debian.rules
 netifyd.dsc
