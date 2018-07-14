@@ -321,11 +321,11 @@ pcap_t *ndDetectionThread::OpenCapture(void)
     memset(pcap_errbuf, 0, PCAP_ERRBUF_SIZE);
 
     if (pcap_file.size()) {
-        pcap_new = pcap_open_offline(pcap_file.c_str(), pcap_errbuf);
-
-        nd_printf("%s: reading from capture file: %s: v%d.%d\n",
-            tag.c_str(), pcap_file.c_str(),
-            pcap_major_version(pcap_new), pcap_minor_version(pcap_new));
+        if ((pcap_new = pcap_open_offline(pcap_file.c_str(), pcap_errbuf)) != NULL) {
+            nd_printf("%s: reading from capture file: %s: v%d.%d\n",
+                tag.c_str(), pcap_file.c_str(),
+                pcap_major_version(pcap_new), pcap_minor_version(pcap_new));
+        }
     }
     else {
         pcap_new = pcap_open_live(tag.c_str(),
