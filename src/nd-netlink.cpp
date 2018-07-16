@@ -1044,9 +1044,9 @@ void ndNetlink::Dump(void)
         i != networks.end(); i++) {
         for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
             j != i->second.end(); j++) {
-            nd_printf("%s: net ", i->first.c_str());
+            printf("%s: net ", i->first.c_str());
             nd_print_address(&(*j)->network);
-            nd_printf("/%hhu\n", (*j)->length);
+            printf("/%hhu\n", (*j)->length);
         }
     }
 
@@ -1054,9 +1054,9 @@ void ndNetlink::Dump(void)
         i != addresses.end(); i++) {
         for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
             j != i->second.end(); j++) {
-            nd_printf("%s: addr ", i->first.c_str());
+            printf("%s: addr ", i->first.c_str());
             nd_print_address((*j));
-            nd_printf("\n");
+            printf("\n");
         }
     }
 }

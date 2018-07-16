@@ -941,81 +941,81 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
     static uint32_t flow_count_previous = 0;
 
     if (! ND_USE_NCURSES) {
-        nd_printf("\n");
-        nd_printf("Cumulative Packet Totals ");
+        printf("\n");
+        printf("Cumulative Packet Totals ");
         if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
-            nd_printf("(clock_gettime: %s):\n", strerror(errno));
+            fprintf(stderr, "(clock_gettime: %s):\n", strerror(errno));
         else {
-            nd_printf("(+%lus):\n",
+            printf("(+%lus):\n",
                 ts_now.tv_sec - nd_ts_epoch.tv_sec);
         }
 
         nd_print_number(*nd_stats_os, stats.pkt_raw, false);
-        nd_printf("%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_eth, false);
-        nd_printf("%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_vlan, false);
-        nd_printf("%12s: %s\n", "VLAN", (*nd_stats_os).str().c_str());
+        printf("%12s: %s\n", "VLAN", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_ip, false);
-        nd_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_ip4, false);
-        nd_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_ip6, false);
-        nd_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
+        printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_icmp + stats.pkt_igmp, false);
-        nd_printf("%12s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_udp, false);
-        nd_printf("%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_tcp, false);
-        nd_printf("%12s: %s\n", "TCP", (*nd_stats_os).str().c_str());
+        printf("%12s: %s\n", "TCP", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_mpls, false);
-        nd_printf("%12s: %s ", "MPLS", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "MPLS", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_pppoe, false);
-        nd_printf("%12s: %s\n", "PPPoE", (*nd_stats_os).str().c_str());
+        printf("%12s: %s\n", "PPPoE", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_frags, false);
-        nd_printf("%12s: %s ", "Frags", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "Frags", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_discard, false);
-        nd_printf("%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_maxlen);
-        nd_printf("%12s: %s\n", "Largest", (*nd_stats_os).str().c_str());
+        printf("%12s: %s\n", "Largest", (*nd_stats_os).str().c_str());
 
-        nd_printf("\nCumulative Byte Totals:\n");
+        printf("\nCumulative Byte Totals:\n");
 
         nd_print_number(*nd_stats_os, stats.pkt_wire_bytes);
-        nd_printf("%12s: %s\n", "Wire", (*nd_stats_os).str().c_str());
+        printf("%12s: %s\n", "Wire", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_ip_bytes);
-        nd_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_ip4_bytes);
-        nd_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
+        printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_ip6_bytes);
-        nd_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
+        printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
 
         nd_print_number(*nd_stats_os, stats.pkt_discard_bytes);
-        nd_printf("%39s: %s ", "Discarded", (*nd_stats_os).str().c_str());
+        printf("%39s: %s ", "Discarded", (*nd_stats_os).str().c_str());
 
         (*nd_stats_os).str("");
         (*nd_stats_os) << setw(8) << flow_count;
 
-        nd_printf("%12s: %s (%s%d)", "Flows", (*nd_stats_os).str().c_str(),
+        printf("%12s: %s (%s%d)", "Flows", (*nd_stats_os).str().c_str(),
             (flow_count > flow_count_previous) ? "+" : "",
             int(flow_count - flow_count_previous));
-        nd_printf("\n\n");
+        printf("\n\n");
     }
 #ifdef _ND_USE_NCURSES
     else {

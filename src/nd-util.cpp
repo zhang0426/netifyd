@@ -215,14 +215,14 @@ void nd_print_address(const struct sockaddr_storage *addr)
             _addr, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
         break;
     default:
-        nd_printf("(unsupported AF:%x)", addr->ss_family);
+        printf("(unsupported AF:%x)", addr->ss_family);
         return;
     }
 
     if (rc == 0)
-        nd_printf(_addr);
+        printf(_addr);
     else
-        nd_printf("???");
+        printf("???");
 }
 
 void nd_print_binary(uint32_t byte)
@@ -234,7 +234,7 @@ void nd_print_binary(uint32_t byte)
     for (i = 0x80000000; i > 0; i >>= 1)
         strcat(b, ((byte & i) == i) ? "1" : "0");
 
-    nd_printf(b);
+    printf(b);
 }
 
 void nd_print_number(ostringstream &os, uint64_t value, bool units_binary)
