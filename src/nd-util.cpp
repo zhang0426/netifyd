@@ -220,7 +220,7 @@ void nd_print_address(const struct sockaddr_storage *addr)
     }
 
     if (rc == 0)
-        printf(_addr);
+        printf("%s", _addr);
     else
         printf("???");
 }
@@ -234,7 +234,7 @@ void nd_print_binary(uint32_t byte)
     for (i = 0x80000000; i > 0; i >>= 1)
         strcat(b, ((byte & i) == i) ? "1" : "0");
 
-    printf(b);
+    printf("%s", b);
 }
 
 void nd_print_number(ostringstream &os, uint64_t value, bool units_binary)
