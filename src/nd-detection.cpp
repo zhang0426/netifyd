@@ -169,6 +169,7 @@ ndDetectionThread::ndDetectionThread(
     nd_dns_cache *dns_cache,
     long cpu)
     : ndThread(dev, cpu),
+    internal(internal),
 #ifdef _ND_USE_NETLINK
     netlink_dev(netlink_dev), netlink(netlink),
 #endif
