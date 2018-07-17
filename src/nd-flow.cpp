@@ -262,14 +262,14 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     string digest;
     nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
 
-    nd_printf(
-        "%s: [%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s%s%s\n",
+    nd_debug_printf(
+        "%s: [%c%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s%s%s\n",
         tag,
         (internal) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
-        (detection_guessed & 0x01 && !(detection_guessed & 0x02)) ? 'g' :
-            (detection_guessed & 0x02) ? 'G' : '-',
         ip_nat ? 'n' : '-',
+        (detection_guessed & ND_FLOW_GUESS_PROTO) ? 'g' : '-',
+        (detection_guessed & ND_FLOW_GUESS_DNS) ? 'G' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
             (privacy_mask & (PRIVATE_LOWER | PRIVATE_UPPER)) ? 'X' :
