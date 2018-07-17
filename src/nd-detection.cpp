@@ -245,7 +245,7 @@ void *ndDetectionThread::Entry(void)
 
             pcap_datalink_type = pcap_datalink(pcap);
 
-            nd_printf("%s: capture started on CPU: %lu\n",
+            nd_debug_printf("%s: capture started on CPU: %lu\n",
                 tag.c_str(), cpu >= 0 ? cpu : 0);
         }
 
@@ -294,7 +294,7 @@ void *ndDetectionThread::Entry(void)
             pcap = NULL;
             break;
         case -2:
-            nd_printf("%s: end of capture file: %s\n",
+            nd_debug_printf("%s: end of capture file: %s\n",
                 tag.c_str(), pcap_file.c_str());
             pcap_close(pcap);
             pcap = NULL;
@@ -306,7 +306,7 @@ void *ndDetectionThread::Entry(void)
 
     close(ifr_fd);
 
-    nd_printf("%s: capture ended on CPU: %lu\n",
+    nd_debug_printf("%s: capture ended on CPU: %lu\n",
         tag.c_str(), cpu >= 0 ? cpu : 0);
 
     terminated = true;
@@ -322,7 +322,7 @@ pcap_t *ndDetectionThread::OpenCapture(void)
 
     if (pcap_file.size()) {
         if ((pcap_new = pcap_open_offline(pcap_file.c_str(), pcap_errbuf)) != NULL) {
-            nd_printf("%s: reading from capture file: %s: v%d.%d\n",
+            nd_debug_printf("%s: reading from capture file: %s: v%d.%d\n",
                 tag.c_str(), pcap_file.c_str(),
                 pcap_major_version(pcap_new), pcap_minor_version(pcap_new));
         }
@@ -841,6 +841,24 @@ void ndDetectionThread::ProcessPacket(void)
             new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
         }
 #endif
+        if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN &&
+            new_flow->detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN &&
+            new_flow->detected_protocol.app_protocol < custom_proto_base) {
+            // XXX: nDPI likes to assign dissector (actual protocol) matches to
+            // 'app_protocol' which then triggers a 'guess' (below).  If we have a
+            // master_protocol that is UNKNOWN, and the app_protocol is less than our
+            // custom_proto_base, move it to where it belongs.
+#if 0
+                nd_debug_printf("%s: App-protocol moved: master: %d <- app: %d\n",
+                    tag.c_str(),
+                    new_flow->detected_protocol.master_protocol,
+                    new_flow->detected_protocol.app_protocol);
+#endif
+            new_flow->detected_protocol.master_protocol =
+                new_flow->detected_protocol.app_protocol;
+            new_flow->detected_protocol.app_protocol = NDPI_PROTOCOL_UNKNOWN;
+        }
+
         if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
             new_flow->detection_guessed |= ND_FLOW_GUESS_PROTO;
@@ -873,12 +891,6 @@ void ndDetectionThread::ProcessPacket(void)
                     ntohs(new_flow->upper_port)
                 );
             }
-        }
-
-        if (new_flow->detected_protocol.app_protocol < custom_proto_base) {
-            new_flow->detected_protocol.master_protocol =
-                new_flow->detected_protocol.app_protocol;
-            new_flow->detected_protocol.app_protocol = NDPI_PROTOCOL_UNKNOWN;
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
