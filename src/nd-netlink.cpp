@@ -189,36 +189,6 @@ ndNetlink::~ndNetlink()
     }
 }
 
-void ndNetlink::PrintType(const string &prefix, const ndNetlinkAddressType &type)
-{
-    switch (type) {
-    case ndNETLINK_ATYPE_UNKNOWN:
-        nd_printf("%s: address is: UNKNOWN\n", prefix.c_str());
-        break;
-    case ndNETLINK_ATYPE_LOCALIP:
-        nd_printf("%s: address is: LOCALIP\n", prefix.c_str());
-        break;
-    case ndNETLINK_ATYPE_LOCALNET:
-        nd_printf("%s: address is: LOCALNET\n", prefix.c_str());
-        break;
-    case ndNETLINK_ATYPE_PRIVATE:
-        nd_printf("%s: address is: PRIVATE\n", prefix.c_str());
-        break;
-    case ndNETLINK_ATYPE_MULTICAST:
-        nd_printf("%s: address is: MULTICAST\n", prefix.c_str());
-        break;
-    case ndNETLINK_ATYPE_BROADCAST:
-        nd_printf("%s: address is: BROADCAST\n", prefix.c_str());
-        break;
-    case ndNETLINK_ATYPE_ERROR:
-        nd_printf("%s: address is: ERROR!\n", prefix.c_str());
-        break;
-    default:
-        nd_printf("%s: address is: Unhandled!\n", prefix.c_str());
-        break;
-    }
-}
-
 void ndNetlink::Refresh(void)
 {
     int rc;
@@ -314,7 +284,7 @@ bool ndNetlink::ProcessEvent(void)
             }
         }
     }
-
+#ifndef _ND_LEAN_AND_MEAN
     if (ND_DEBUG) {
         if (added_net || removed_net) {
             nd_debug_printf("Networks added: %d, removed: %d\n", added_net, removed_net);
@@ -325,7 +295,7 @@ bool ndNetlink::ProcessEvent(void)
 
         if (added_net || removed_net || added_addr || removed_addr) Dump();
     }
-
+#endif
     return (added_net || removed_net || added_addr || removed_addr) ? true : false;
 }
 
@@ -1038,15 +1008,16 @@ bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
     return removed;
 }
 
+#ifndef _ND_LEAN_AND_MEAN
 void ndNetlink::Dump(void)
 {
     for (ndNetlinkNetworks::iterator i = networks.begin();
         i != networks.end(); i++) {
         for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
             j != i->second.end(); j++) {
-            printf("%s: net ", i->first.c_str());
+            nd_debug_printf("%s: net ", i->first.c_str());
             nd_print_address(&(*j)->network);
-            printf("/%hhu\n", (*j)->length);
+            nd_debug_printf("/%hhu\n", (*j)->length);
         }
     }
 
@@ -1054,11 +1025,42 @@ void ndNetlink::Dump(void)
         i != addresses.end(); i++) {
         for (vector<struct sockaddr_storage *>::iterator j = i->second.begin();
             j != i->second.end(); j++) {
-            printf("%s: addr ", i->first.c_str());
+            nd_debug_printf("%s: addr ", i->first.c_str());
             nd_print_address((*j));
-            printf("\n");
+            nd_debug_printf("\n");
         }
     }
 }
+
+void ndNetlink::PrintType(const string &prefix, const ndNetlinkAddressType &type)
+{
+    switch (type) {
+    case ndNETLINK_ATYPE_UNKNOWN:
+        nd_debug_printf("%s: address is: UNKNOWN\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_LOCALIP:
+        nd_debug_printf("%s: address is: LOCALIP\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_LOCALNET:
+        nd_debug_printf("%s: address is: LOCALNET\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_PRIVATE:
+        nd_debug_printf("%s: address is: PRIVATE\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_MULTICAST:
+        nd_debug_printf("%s: address is: MULTICAST\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_BROADCAST:
+        nd_debug_printf("%s: address is: BROADCAST\n", prefix.c_str());
+        break;
+    case ndNETLINK_ATYPE_ERROR:
+        nd_debug_printf("%s: address is: ERROR!\n", prefix.c_str());
+        break;
+    default:
+        nd_debug_printf("%s: address is: Unhandled!\n", prefix.c_str());
+        break;
+    }
+}
+#endif // _ND_LEAN_AND_MEAN
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

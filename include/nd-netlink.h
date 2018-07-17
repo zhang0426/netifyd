@@ -84,9 +84,6 @@ public:
     virtual ~ndNetlink();
 
     int GetDescriptor(void) { return nd; }
-
-    static void PrintType(const string &prefix, const ndNetlinkAddressType &type);
-
     void Refresh(void);
     bool ProcessEvent(void);
 
@@ -95,14 +92,17 @@ public:
     ndNetlinkAddressType ClassifyAddress(
         const string &iface, const struct sockaddr_storage *addr);
 
-    void Dump(void);
-
     bool AddNetwork(sa_family_t family,
         const string &type, const string &saddr, uint8_t length);
 
     bool AddInterface(const string &iface);
 
     bool AddAddress(sa_family_t family, const string &type, const string &saddr);
+
+#ifndef _ND_LEAN_AND_MEAN
+    void Dump(void);
+    static void PrintType(const string &prefix, const ndNetlinkAddressType &type);
+#endif
 
 protected:
     bool InNetwork(
