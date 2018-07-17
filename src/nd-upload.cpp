@@ -66,27 +66,27 @@ static int nd_curl_debug(
     switch (type) {
     case CURLINFO_TEXT:
         buffer.assign(data, size);
-        nd_printf("%s: %s", thread->GetTag().c_str(), buffer.c_str());
+        nd_debug_printf("%s: %s", thread->GetTag().c_str(), buffer.c_str());
         break;
     case CURLINFO_HEADER_IN:
         buffer.assign(data, size);
-        nd_printf("%s: <-- %s", thread->GetTag().c_str(), buffer.c_str());
+        nd_debug_printf("%s: <-- %s", thread->GetTag().c_str(), buffer.c_str());
         break;
     case CURLINFO_HEADER_OUT:
         buffer.assign(data, size);
-        nd_printf("%s: --> %s", thread->GetTag().c_str(), buffer.c_str());
+        nd_debug_printf("%s: --> %s", thread->GetTag().c_str(), buffer.c_str());
         break;
     case CURLINFO_DATA_IN:
-        nd_printf("%s: <-- %lu data bytes\n", thread->GetTag().c_str(), size);
+        nd_debug_printf("%s: <-- %lu data bytes\n", thread->GetTag().c_str(), size);
         break;
     case CURLINFO_DATA_OUT:
-        nd_printf("%s: --> %lu data bytes\n", thread->GetTag().c_str(), size);
+        nd_debug_printf("%s: --> %lu data bytes\n", thread->GetTag().c_str(), size);
         break;
     case CURLINFO_SSL_DATA_IN:
-        nd_printf("%s: <-- %lu SSL bytes\n", thread->GetTag().c_str(), size);
+        nd_debug_printf("%s: <-- %lu SSL bytes\n", thread->GetTag().c_str(), size);
         break;
     case CURLINFO_SSL_DATA_OUT:
-        nd_printf("%s: --> %lu SSL bytes\n", thread->GetTag().c_str(), size);
+        nd_debug_printf("%s: --> %lu SSL bytes\n", thread->GetTag().c_str(), size);
         break;
     default:
         break;
