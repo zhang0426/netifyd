@@ -609,6 +609,12 @@ json_object *ndFlow::json_encode(const string &device,
         json.AddObject(_mdns, "answer", mdns.answer);
     }
 
+    if (detected_protocol.master_protocol == NDPI_PROTOCOL_MAIL_SMTP) {
+        json_object *_smtp = json.CreateObject(json_flow, "smtp");
+
+        json.AddObject(_smtp, "tls", smtp.tls);
+    }
+
     json.AddObject(json_flow, "first_seen_at", ts_first_seen);
     json.AddObject(json_flow, "last_seen_at", ts_last_seen);
 

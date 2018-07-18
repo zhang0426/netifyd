@@ -112,6 +112,10 @@ struct ndFlow
         } ssl;
 
         struct {
+            bool tls;
+        } smtp;
+
+        struct {
             uint8_t info_hash_valid:1;
             char info_hash[ND_FLOW_BTIHASH_LEN];
         } bt;
