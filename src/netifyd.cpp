@@ -1197,12 +1197,14 @@ static void nd_dump_stats(void)
     if (ND_USE_SINK || ND_JSON_SAVE) {
         json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
         json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
+#ifndef _ND_LEAN_AND_MEAN
         nd_sha1_to_string(nd_config.digest_content_match, digest);
         json.AddObject(NULL, "content_match_digest", digest);
-        nd_sha1_to_string(nd_config.digest_custom_match, digest);
-        json.AddObject(NULL, "custom_match_digest", digest);
         nd_sha1_to_string(nd_config.digest_host_match, digest);
         json.AddObject(NULL, "host_match_digest", digest);
+#endif
+        nd_sha1_to_string(nd_config.digest_custom_match, digest);
+        json.AddObject(NULL, "custom_match_digest", digest);
 
         struct rusage rusage_data;
         getrusage(RUSAGE_SELF, &rusage_data);
@@ -1748,13 +1750,14 @@ int main(int argc, char *argv[])
     memset(&totals, 0, sizeof(nd_packet_stats));
 
     if (ND_USE_DNS_CACHE) dns_cache.load();
-
+#ifndef _ND_LEAN_AND_MEAN
     nd_sha1_file(
         nd_config.path_content_match, nd_config.digest_content_match);
     nd_sha1_file(
-        nd_config.path_custom_match, nd_config.digest_custom_match);
-    nd_sha1_file(
         nd_config.path_host_match, nd_config.digest_host_match);
+#endif
+    nd_sha1_file(
+        nd_config.path_custom_match, nd_config.digest_custom_match);
 
     sigfillset(&sigset);
     //sigdelset(&sigset, SIGPROF);
@@ -1937,8 +1940,12 @@ int main(int argc, char *argv[])
 #ifdef _ND_USE_NETLINK
             if (ND_USE_NETLINK &&
                 netlink->GetDescriptor() == si.si_fd) {
+#ifndef _ND_LEAN_AND_MEAN
                 if (netlink->ProcessEvent())
                     if (ND_DEBUG) netlink->Dump();
+#else
+                netlink->ProcessEvent();
+#endif
             }
 #endif
             continue;
