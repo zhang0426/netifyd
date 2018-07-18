@@ -54,6 +54,7 @@ deploy-edgeos: src/netifyd
 
 	$(INSTALL) -D -m 0755 src/netifyd \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/sbin/netifyd
+	$(STRIP) $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/sbin/netifyd
 	$(INSTALL) -D -m 0640 deploy/app-custom-match.conf \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/netify.d/netify-sink.conf
 	$(INSTALL) -D -m 0640 deploy/netifyd.conf \
