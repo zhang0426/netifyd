@@ -1030,9 +1030,6 @@ void ndDetectionThread::ProcessPacket(void)
                 "%s", new_flow->ndpi_flow->protos.dhcp.class_ident
             );
             break;
-        case NDPI_PROTOCOL_MAIL_SMTP:
-            new_flow->smtp.tls = (bool)new_flow->ndpi_flow->protos.smtp.tls;
-            break;
         case NDPI_PROTOCOL_BITTORRENT:
             if (new_flow->ndpi_flow->protos.bittorrent.hash_valid) {
                 new_flow->bt.info_hash_valid = true;
