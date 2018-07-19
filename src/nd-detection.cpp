@@ -755,9 +755,9 @@ void ndDetectionThread::ProcessPacket(void)
         id_dst = new_flow->id_dst;
 
         if (addr_cmp < 0)
-            flow.direction = ndFlow::DIR_LOWER_TO_UPPER;
+            new_flow->direction = ndFlow::DIR_LOWER_TO_UPPER;
         else
-            flow.direction = ndFlow::DIR_UPPER_TO_LOWER;
+            new_flow->direction = ndFlow::DIR_UPPER_TO_LOWER;
     }
     else {
         delete new_flow;
