@@ -132,12 +132,15 @@ struct ndFlow
 
     uint8_t privacy_mask;
 
+    // Indicate flow origin.  This indicates which side sent the first packet.
+    // XXX: If the service has missed a flow's initial packets, the origin's
+    // accuracy would be 50%.
     enum {
-        DIR_LOWER_TO_UPPER = 0x01,
-        DIR_UPPER_TO_LOWER = 0x02
+        ORIGIN_LOWER = 0x01,
+        ORIGIN_UPPER = 0x02
     };
 
-    uint8_t direction;
+    uint8_t origin;
 
     void hash(const string &device, string &digest,
         bool full_hash = false, const uint8_t *key = NULL, size_t key_length = 0);

@@ -277,8 +277,8 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
             '-',
         p,
         lower_name, ntohs(lower_port),
-        (direction == DIR_LOWER_TO_UPPER) ? '-' : '<',
-        (direction == DIR_LOWER_TO_UPPER) ? '>' : '-',
+        (origin == ORIGIN_LOWER) ? '-' : '<',
+        (origin == ORIGIN_LOWER) ? '>' : '-',
         upper_name, ntohs(upper_port),
         (host_server_name[0] != '\0' || has_mdns_answer()) ? " H: " : "",
         (host_server_name[0] != '\0' || has_mdns_answer()) ?
@@ -482,6 +482,18 @@ json_object *ndFlow::json_encode(const string &device,
 #endif
 #endif
     json.AddObject(json_flow, "other_type", other_type);
+
+    switch (origin) {
+    case ORIGIN_UPPER:
+        json.AddObject(json_flow, "local_origin",
+            (_lower_ip == "local_ip") ? false : true);
+        break;
+    case ORIGIN_LOWER:
+    default:
+        json.AddObject(json_flow, "local_origin",
+            (_lower_ip == "local_ip") ? true : false);
+        break;
+    }
 
     if (privacy_mask & PRIVATE_LOWER)
         snprintf(mac_addr, sizeof(mac_addr), "01:02:03:04:05:06");
