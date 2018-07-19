@@ -132,6 +132,13 @@ struct ndFlow
 
     uint8_t privacy_mask;
 
+    enum {
+        DIR_LOWER_TO_UPPER = 0x01,
+        DIR_UPPER_TO_LOWER = 0x02
+    };
+
+    uint8_t direction;
+
     void hash(const string &device, string &digest,
         bool full_hash = false, const uint8_t *key = NULL, size_t key_length = 0);
 

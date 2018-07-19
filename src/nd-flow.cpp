@@ -262,8 +262,9 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     string digest;
     nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
 
+    //"%s: [%c%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s%s%s\n",
     nd_debug_printf(
-        "%s: [%c%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s%s%s\n",
+        "%s: [%c%c%c%c%c%c] %s %s:%hu %c-%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
         tag,
         (internal) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
@@ -276,6 +277,8 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
             '-',
         p,
         lower_name, ntohs(lower_port),
+        (direction == DIR_LOWER_TO_UPPER) ? '-' : '<',
+        (direction == DIR_LOWER_TO_UPPER) ? '>' : '-',
         upper_name, ntohs(upper_port),
         (host_server_name[0] != '\0' || has_mdns_answer()) ? " H: " : "",
         (host_server_name[0] != '\0' || has_mdns_answer()) ?

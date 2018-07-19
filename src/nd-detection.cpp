@@ -753,6 +753,11 @@ void ndDetectionThread::ProcessPacket(void)
         memset(new_flow->id_dst, 0, sizeof(ndpi_id_struct));
         id_src = new_flow->id_src;
         id_dst = new_flow->id_dst;
+
+        if (addr_cmp < 0)
+            flow.direction = ndFlow::DIR_LOWER_TO_UPPER;
+        else
+            flow.direction = ndFlow::DIR_UPPER_TO_LOWER;
     }
     else {
         delete new_flow;
