@@ -69,6 +69,9 @@ struct ndFlow
     uint16_t lower_port;
     uint16_t upper_port;
 
+    uint32_t lower_tcp_seq;
+    uint32_t upper_tcp_seq;
+
     uint64_t lower_bytes;
     uint64_t upper_bytes;
     uint64_t total_bytes;
@@ -136,6 +139,7 @@ struct ndFlow
     // XXX: If the service has missed a flow's initial packets, the origin's
     // accuracy would be 50%.
     enum {
+        ORIGIN_UNKNOWN = 0x00,
         ORIGIN_LOWER = 0x01,
         ORIGIN_UPPER = 0x02
     };
