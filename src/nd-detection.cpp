@@ -384,6 +384,8 @@ void ndDetectionThread::ProcessPacket(void)
     const struct ether_header *hdr_eth = NULL;
     const struct ip *hdr_ip = NULL;
     const struct ip6_hdr *hdr_ip6 = NULL;
+    const struct tcphdr *hdr_tcp;
+    const struct udphdr *hdr_udp;
 
     const uint8_t *l3 = NULL, *l4 = NULL, *pkt = NULL;
     uint16_t l2_len, l3_len, l4_len = 0, pkt_len = 0;
@@ -453,7 +455,7 @@ void ndDetectionThread::ProcessPacket(void)
             (hdr_eth->ether_dhost[0] == 0x01 && hdr_eth->ether_dhost[1] == 0x80 &&
             hdr_eth->ether_dhost[2] == 0xC2)) {
             stats->pkt_discard++;
-            stats->pkt_discard_bytes += ntohs(hdr_eth->ether_type);
+            stats->pkt_discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: STP protocol.\n", tag.c_str());
 #endif
@@ -668,25 +670,28 @@ void ndDetectionThread::ProcessPacket(void)
     switch (flow.ip_protocol) {
     case IPPROTO_TCP:
         if (l4_len >= 20) {
-            const struct tcphdr *hdr_tcp;
             hdr_tcp = reinterpret_cast<const struct tcphdr *>(l4);
             stats->pkt_tcp++;
 
             if (addr_cmp < 0) {
                 flow.lower_port = hdr_tcp->th_sport;
                 flow.upper_port = hdr_tcp->th_dport;
+
+                flow.lower_tcp_seq = (uint32_t)ntohl(hdr_tcp->th_seq);
+                flow.upper_tcp_seq = (uint32_t)ntohl(hdr_tcp->th_ack);
             }
             else {
                 flow.lower_port = hdr_tcp->th_dport;
                 flow.upper_port = hdr_tcp->th_sport;
 
-                if (addr_cmp == 0) {
-                    if (flow.lower_port > flow.upper_port) {
-                        flow.lower_port = flow.upper_port;
-                        flow.upper_port = hdr_tcp->th_dport;
-                    }
-                }
-            }
+                flow.lower_tcp_seq = (uint32_t)ntohl(hdr_tcp->th_ack);
+                flow.upper_tcp_seq = (uint32_t)ntohl(hdr_tcp->th_seq);
+           }
+
+//            if ((hdr_tcp->th_flags & TH_PUSH)) {
+//                nd_debug_printf("%s: lower seq: %u, upper seq: %u\n", tag.c_str(),
+//                    flow.lower_tcp_seq, flow.upper_tcp_seq);
+//            }
 
             pkt = reinterpret_cast<const uint8_t *>(l4 + (hdr_tcp->th_off * 4));
             pkt_len = l4_len - (hdr_tcp->th_off * 4);
@@ -695,7 +700,6 @@ void ndDetectionThread::ProcessPacket(void)
 
     case IPPROTO_UDP:
         if (l4_len >= 8) {
-            const struct udphdr *hdr_udp;
             hdr_udp = reinterpret_cast<const struct udphdr *>(l4);
             stats->pkt_udp++;
 
@@ -736,11 +740,14 @@ void ndDetectionThread::ProcessPacket(void)
     nd_flow_insert flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
 
     if (flow_iter.second) {
+        // New flow inserted, initialize...
+
         new_flow->ts_first_seen = ts_pkt;
 
         new_flow->ndpi_flow = (ndpi_flow_struct *)ndpi_malloc(sizeof(ndpi_flow_struct));
         if (new_flow->ndpi_flow == NULL)
             throw ndDetectionThreadException(strerror(ENOMEM));
+
         memset(new_flow->ndpi_flow, 0, sizeof(ndpi_flow_struct));
 
         new_flow->id_src = new ndpi_id_struct;
@@ -749,17 +756,43 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->id_dst = new ndpi_id_struct;
         if (new_flow->id_dst == NULL)
             throw ndDetectionThreadException(strerror(ENOMEM));
+
         memset(new_flow->id_src, 0, sizeof(ndpi_id_struct));
         memset(new_flow->id_dst, 0, sizeof(ndpi_id_struct));
+
         id_src = new_flow->id_src;
         id_dst = new_flow->id_dst;
 
-        if (addr_cmp < 0)
-            new_flow->origin = ndFlow::ORIGIN_LOWER;
-        else
-            new_flow->origin = ndFlow::ORIGIN_UPPER;
+        // Try to determine flow origin
+        if (flow.ip_protocol == IPPROTO_TCP) {
+
+            if ((hdr_tcp->th_flags & TH_SYN)) {
+
+                if (! (hdr_tcp->th_flags & TH_ACK)) {
+                    if (addr_cmp < 0)
+                        new_flow->origin = ndFlow::ORIGIN_LOWER;
+                    else
+                        new_flow->origin = ndFlow::ORIGIN_UPPER;
+                }
+                else {
+                    if (addr_cmp < 0)
+                        new_flow->origin = ndFlow::ORIGIN_UPPER;
+                    else
+                        new_flow->origin = ndFlow::ORIGIN_LOWER;
+                }
+            }
+        }
+        else {
+            // XXX: A guess based on which side we see first.
+            if (addr_cmp < 0)
+                new_flow->origin = ndFlow::ORIGIN_LOWER;
+            else
+                new_flow->origin = ndFlow::ORIGIN_UPPER;
+        }
     }
     else {
+        // Flow exists in map.
+
         delete new_flow;
         new_flow = flow_iter.first->second;
 
@@ -767,6 +800,33 @@ void ndDetectionThread::ProcessPacket(void)
             id_src = new_flow->id_src, id_dst = new_flow->id_dst;
         else
             id_src = new_flow->id_dst, id_dst = new_flow->id_src;
+
+        if (new_flow->ip_protocol == IPPROTO_TCP && (hdr_tcp->th_flags & TH_PUSH)) {
+
+            tcp_seq seq_new, seq_old;
+
+            if (addr_cmp < 0) {
+                seq_old = new_flow->lower_tcp_seq;
+                seq_new = flow.lower_tcp_seq;
+
+                new_flow->lower_tcp_seq = seq_new;
+            }
+            else {
+                seq_old = new_flow->upper_tcp_seq;
+                seq_new = flow.upper_tcp_seq;
+
+                new_flow->upper_tcp_seq = seq_new;
+            }
+
+            if (seq_new == seq_old) {
+                stats->pkt_discard++;
+                stats->pkt_discard_bytes += pkt_header->len;
+//#ifdef _ND_LOG_PKT_DISCARD
+                nd_debug_printf("%s: discard: TCP re-transmission.\n", tag.c_str());
+//#endif
+                return;
+            }
+        }
     }
 
     stats->pkt_wire_bytes += pkt_header->len + 24;
