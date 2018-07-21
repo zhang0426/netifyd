@@ -832,7 +832,7 @@ void ndDetectionThread::ProcessPacket(void)
             if (seq_new < seq_old) {
                 stats->pkt_discard++;
                 stats->pkt_discard_bytes += pkt_header->len;
-#ifdef 1 // _ND_LOG_PKT_DISCARD
+#if 1 // _ND_LOG_PKT_DISCARD
                 nd_debug_printf("%s: discard: TCP out-of-order.\n", tag.c_str());
 #endif
                 return;
