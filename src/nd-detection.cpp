@@ -809,21 +809,32 @@ void ndDetectionThread::ProcessPacket(void)
                 seq_old = new_flow->lower_tcp_seq;
                 seq_new = flow.lower_tcp_seq;
 
-                new_flow->lower_tcp_seq = seq_new;
+                if (seq_new > new_flow->lower_tcp_seq)
+                    new_flow->lower_tcp_seq = seq_new;
             }
             else {
                 seq_old = new_flow->upper_tcp_seq;
                 seq_new = flow.upper_tcp_seq;
 
-                new_flow->upper_tcp_seq = seq_new;
+                if (seq_new > new_flow->upper_tcp_seq)
+                    new_flow->upper_tcp_seq = seq_new;
             }
 
             if (seq_new == seq_old) {
                 stats->pkt_discard++;
                 stats->pkt_discard_bytes += pkt_header->len;
-//#ifdef _ND_LOG_PKT_DISCARD
+#ifdef _ND_LOG_PKT_DISCARD
                 nd_debug_printf("%s: discard: TCP re-transmission.\n", tag.c_str());
-//#endif
+#endif
+                return;
+            }
+
+            if (seq_new < seq_old) {
+                stats->pkt_discard++;
+                stats->pkt_discard_bytes += pkt_header->len;
+#ifdef 1 // _ND_LOG_PKT_DISCARD
+                nd_debug_printf("%s: discard: TCP out-of-order.\n", tag.c_str());
+#endif
                 return;
             }
         }
