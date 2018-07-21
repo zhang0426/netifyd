@@ -264,7 +264,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 
     //"%s: [%c%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s%s%s\n",
     nd_debug_printf(
-        "%s: [%c%c%c%c%c%c] %s %s:%hu %c-%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
+        "%s: [%c%c%c%c%c%c] %s %s:%hu %c%c%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
         tag,
         (internal) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
@@ -277,8 +277,9 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
             '-',
         p,
         lower_name, ntohs(lower_port),
-        (origin == ORIGIN_LOWER) ? '-' : '<',
-        (origin == ORIGIN_LOWER) ? '>' : '-',
+        (origin == ORIGIN_LOWER || origin == ORIGIN_UNKNOWN) ? '-' : '<',
+        (origin == ORIGIN_UNKNOWN) ? '?' : '-',
+        (origin == ORIGIN_UPPER || origin == ORIGIN_UNKNOWN) ? '-' : '>',
         upper_name, ntohs(upper_port),
         (host_server_name[0] != '\0' || has_mdns_answer()) ? " H: " : "",
         (host_server_name[0] != '\0' || has_mdns_answer()) ?
@@ -291,6 +292,13 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         (has_bt_info_hash()) ? " BT-IH: " : "",
         (has_bt_info_hash()) ? digest.c_str() : ""
     );
+
+    if (ND_DEBUG &&
+        detected_protocol.master_protocol == NDPI_PROTOCOL_SSL &&
+        ssl.version == 0x0000) {
+        nd_debug_printf("%s: SSL with no SSL/TLS verison.\n", tag);
+        if (! (detection_guessed & ND_FLOW_GUESS_PROTO)) exit(1);
+    }
 }
 
 json_object *ndFlow::json_encode(const string &device,
