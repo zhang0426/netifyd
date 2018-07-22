@@ -18,7 +18,7 @@ netifyd_SOURCES = netifyd.cpp nd-detection.cpp nd-flow.cpp \
 	nd-json.cpp nd-ndpi.cpp nd-sha1.c nd-socket.cpp nd-thread.cpp \
 	nd-upload.cpp nd-util.cpp
 netifyd_LDFLAGS = $(JSONC_LIBS) $(LIBCURL_LIBS) $(ZLIB_LIBS)
-netifyd_LDADD = ../libs/inih/libini.la ../libs/ndpi/src/lib/libndpi.a
+netifyd_LDADD = ../libs/inih/libini.la ../libs/ndpi/src/lib/libndpi.la
 
 if USE_CONNTRACK
 AM_CPPFLAGS += $(LIBNETFILTER_CONNTRACK_CFLAGS) $(LIBMNL_CFLAGS)
