@@ -384,8 +384,8 @@ void ndDetectionThread::ProcessPacket(void)
     const struct ether_header *hdr_eth = NULL;
     const struct ip *hdr_ip = NULL;
     const struct ip6_hdr *hdr_ip6 = NULL;
-    const struct tcphdr *hdr_tcp;
-    const struct udphdr *hdr_udp;
+    const struct tcphdr *hdr_tcp = NULL;
+    const struct udphdr *hdr_udp = NULL;
 
     const uint8_t *l3 = NULL, *l4 = NULL, *pkt = NULL;
     uint16_t l2_len, l3_len, l4_len = 0, pkt_len = 0;
