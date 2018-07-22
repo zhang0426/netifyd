@@ -763,7 +763,14 @@ void ndDetectionThread::ProcessPacket(void)
         id_src = new_flow->id_src;
         id_dst = new_flow->id_dst;
 
-        // Try to determine flow origin
+        // Set initial flow origin:
+        // XXX: A 50-50 guess based on which side we saw first.
+        if (addr_cmp < 0)
+            new_flow->origin = ndFlow::ORIGIN_LOWER;
+        else
+            new_flow->origin = ndFlow::ORIGIN_UPPER;
+
+        // Try to refine flow origin for TCP flows using SYN/ACK flags
         if (flow.ip_protocol == IPPROTO_TCP) {
 
             if ((hdr_tcp->th_flags & TH_SYN)) {
@@ -782,13 +789,6 @@ void ndDetectionThread::ProcessPacket(void)
                 }
             }
         }
-        else {
-            // XXX: A guess based on which side we see first.
-            if (addr_cmp < 0)
-                new_flow->origin = ndFlow::ORIGIN_LOWER;
-            else
-                new_flow->origin = ndFlow::ORIGIN_UPPER;
-        }
     }
     else {
         // Flow exists in map.
@@ -801,6 +801,8 @@ void ndDetectionThread::ProcessPacket(void)
         else
             id_src = new_flow->id_dst, id_dst = new_flow->id_src;
 
+        // Possibly discard TCP re-transmissions (duplicate packets),
+        // and out-of-order packets.
         if (new_flow->ip_protocol == IPPROTO_TCP && (hdr_tcp->th_flags & TH_PUSH)) {
 
             tcp_seq seq_new, seq_old;
@@ -830,12 +832,13 @@ void ndDetectionThread::ProcessPacket(void)
             }
 
             if (seq_new < seq_old) {
-                stats->pkt_discard++;
-                stats->pkt_discard_bytes += pkt_header->len;
+                //stats->pkt_discard++;
+                //stats->pkt_discard_bytes += pkt_header->len;
 #if 1 // _ND_LOG_PKT_DISCARD
-                nd_debug_printf("%s: discard: TCP out-of-order.\n", tag.c_str());
+                if (! new_flow->detection_complete)
+                    nd_debug_printf("%s: discard: TCP out-of-order.\n", tag.c_str());
 #endif
-                return;
+                //return;
             }
         }
     }
