@@ -293,9 +293,8 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 
     if (ND_DEBUG &&
         detected_protocol.master_protocol == NDPI_PROTOCOL_SSL &&
-        ssl.version == 0x0000) {
+        ! (detection_guessed & ND_FLOW_GUESS_PROTO) && ssl.version == 0x0000) {
         nd_debug_printf("%s: SSL with no SSL/TLS verison.\n", tag);
-        if (! (detection_guessed & ND_FLOW_GUESS_PROTO)) exit(1);
     }
 }
 
