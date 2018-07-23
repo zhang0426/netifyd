@@ -872,6 +872,9 @@ void ndDetectionThread::ProcessPacket(void)
 
     if (new_flow->detection_complete) return;
 
+    new_flow->detected_protocol.master_protocol = 0;
+    new_flow->detected_protocol.app_protocol = 0;
+
     new_flow->detected_protocol = ndpi_detection_process_packet(
         ndpi,
         new_flow->ndpi_flow,
@@ -883,7 +886,12 @@ void ndDetectionThread::ProcessPacket(void)
         id_dst
     );
 
-    if (new_flow->detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN
+//    nd_debug_printf("%s: %hhu.%hhu\n", tag.c_str(),
+//        new_flow->detected_protocol.master_protocol,
+//        new_flow->detected_protocol.app_protocol);
+
+    //if (new_flow->detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN
+    if (new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN
         || (new_flow->ip_protocol != IPPROTO_TCP &&
             new_flow->ip_protocol != IPPROTO_UDP)
         || (new_flow->ip_protocol == IPPROTO_UDP &&
@@ -928,7 +936,7 @@ void ndDetectionThread::ProcessPacket(void)
             // 'app_protocol' which then triggers a 'guess' (below).  If we have a
             // master_protocol that is UNKNOWN, and the app_protocol is less than our
             // custom_proto_base, move it to where it belongs.
-#if 0
+#if 1
                 nd_debug_printf("%s: App-protocol moved: master: %d <- app: %d\n",
                     tag.c_str(),
                     new_flow->detected_protocol.master_protocol,
