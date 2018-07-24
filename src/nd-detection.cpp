@@ -872,9 +872,6 @@ void ndDetectionThread::ProcessPacket(void)
 
     if (new_flow->detection_complete) return;
 
-    new_flow->detected_protocol.master_protocol = 0;
-    new_flow->detected_protocol.app_protocol = 0;
-
     new_flow->detected_protocol = ndpi_detection_process_packet(
         ndpi,
         new_flow->ndpi_flow,
@@ -890,7 +887,6 @@ void ndDetectionThread::ProcessPacket(void)
 //        new_flow->detected_protocol.master_protocol,
 //        new_flow->detected_protocol.app_protocol);
 
-    //if (new_flow->detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN
     if (new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN
         || (new_flow->ip_protocol != IPPROTO_TCP &&
             new_flow->ip_protocol != IPPROTO_UDP)
@@ -929,56 +925,30 @@ void ndDetectionThread::ProcessPacket(void)
             new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
         }
 #endif
-        if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN &&
-            new_flow->detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN &&
-            new_flow->detected_protocol.app_protocol < custom_proto_base) {
-            // XXX: nDPI likes to assign dissector (actual protocol) matches to
-            // 'app_protocol' which then triggers a 'guess' (below).  If we have a
-            // master_protocol that is UNKNOWN, and the app_protocol is less than our
-            // custom_proto_base, move it to where it belongs.
-#if 1
-                nd_debug_printf("%s: App-protocol moved: master: %d <- app: %d\n",
-                    tag.c_str(),
-                    new_flow->detected_protocol.master_protocol,
-                    new_flow->detected_protocol.app_protocol);
-#endif
-            new_flow->detected_protocol.master_protocol =
-                new_flow->detected_protocol.app_protocol;
-            new_flow->detected_protocol.app_protocol = NDPI_PROTOCOL_UNKNOWN;
-        }
-
+        // TODO: IP protocol/port guess
         if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
             new_flow->detection_guessed |= ND_FLOW_GUESS_PROTO;
-
-            if (new_flow->ndpi_flow->protos.stun_ssl.stun.num_processed_pkts > 0) {
-                ndpi_set_detected_protocol(
-                    ndpi,
-                    new_flow->ndpi_flow,
-                    NDPI_PROTOCOL_STUN,
-                    new_flow->detected_protocol.app_protocol
-                );
-            }
-            else {
-                new_flow->detected_protocol = ndpi_guess_undetected_protocol(
-                    ndpi,
-                    new_flow->ip_protocol,
-                    ntohl(
-                        (new_flow->ip_version == 4) ?
-                            new_flow->lower_addr.s_addr :
-                                new_flow->lower_addr6.s6_addr32[2] +
-                                new_flow->lower_addr6.s6_addr32[3]
-                    ),
-                    ntohs(new_flow->lower_port),
-                    ntohl(
-                        (new_flow->ip_version == 4) ?
-                            new_flow->upper_addr.s_addr :
-                                new_flow->upper_addr6.s6_addr32[2] +
-                                new_flow->upper_addr6.s6_addr32[3]
-                    ),
-                    ntohs(new_flow->upper_port)
-                );
-            }
+/*
+            new_flow->detected_protocol.master_protocol = ndpi_guess_undetected_protocol(
+                ndpi,
+                new_flow->ip_protocol,
+                ntohl(
+                    (new_flow->ip_version == 4) ?
+                        new_flow->lower_addr.s_addr :
+                            new_flow->lower_addr6.s6_addr32[2] +
+                            new_flow->lower_addr6.s6_addr32[3]
+                ),
+                ntohs(new_flow->lower_port),
+                ntohl(
+                    (new_flow->ip_version == 4) ?
+                        new_flow->upper_addr.s_addr :
+                            new_flow->upper_addr6.s6_addr32[2] +
+                            new_flow->upper_addr6.s6_addr32[3]
+                ),
+                ntohs(new_flow->upper_port)
+            );
+*/
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
@@ -1028,8 +998,8 @@ void ndDetectionThread::ProcessPacket(void)
                         ndpi,
                         new_flow->ndpi_flow,
                         (char *)new_flow->ndpi_flow->host_server_name,
-                        strlen((const char *)new_flow->ndpi_flow->host_server_name),
-                        new_flow->detected_protocol.master_protocol);
+                        strlen((const char *)new_flow->ndpi_flow->host_server_name)
+                    );
 #if 0
                     nd_debug_printf("%s: Found hostname for undetected app proto: %s [%hu]\n",
                         tag.c_str(), hostname.c_str(), new_flow->detected_protocol.app_protocol);

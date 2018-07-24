@@ -77,6 +77,7 @@ void ndpi_global_init(void)
         throw ndThreadException("Unable to initialize proto_ptree");
 
     ndpi_free_automa(ndpi_parent->host_automa.ac_automa);
+
     if (ndpi_parent->protocols_ptree != NULL)
         ndpi_free_ptree(ndpi_parent->protocols_ptree);
 
@@ -242,7 +243,9 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     ndpi_set_detection_preferences(ndpi, ndpi_pref_enable_category_substring_match, 0);
 
     ndpi_free_automa(ndpi->host_automa.ac_automa);
-    ndpi_free_ptree(ndpi->protocols_ptree);
+
+    if (ndpi->protocols_ptree != NULL)
+        ndpi_free_ptree(ndpi->protocols_ptree);
 
     ndpi->host_automa.ac_automa = ndpi_host_automa;
     ndpi->host_automa.lock = ndpi_host_automa_lock;
