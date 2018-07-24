@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
-SUBDIRS = libs/inih libs/ndpi src util deploy doc
+SUBDIRS = libs/inih libs/ndpi src deploy doc
 
 EXTRA_DIST = autogen.sh include debian/compat \
 	util/generate-json-include.sh util/generate-protocol-csv.sh \
