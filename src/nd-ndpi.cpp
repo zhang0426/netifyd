@@ -271,18 +271,18 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
         i++) {
         memcpy(&ndpi->proto_defaults[i], &ndpi_parent->proto_defaults[i],
             sizeof(ndpi_proto_defaults_t));
-        if (ndpi->proto_defaults[i].protoName != NULL) {
-            ndpi->proto_defaults[i].protoName = ndpi_strdup(
-                ndpi_parent->proto_defaults[i].protoName
+        if (ndpi->proto_defaults[i].proto_name != NULL) {
+            ndpi->proto_defaults[i].proto_name = ndpi_strdup(
+                ndpi_parent->proto_defaults[i].proto_name
             );
         }
     }
 
-    ndpi_tdestroy(ndpi->udpRoot, ndpi_free);
-    ndpi_tdestroy(ndpi->tcpRoot, ndpi_free);
+    ndpi_tdestroy(ndpi->udp_root_node, ndpi_free);
+    ndpi_tdestroy(ndpi->tcp_root_node, ndpi_free);
 
-    ndpi->udpRoot = ndpi_parent->udpRoot;
-    ndpi->tcpRoot = ndpi_parent->tcpRoot;
+    ndpi->udp_root_node = ndpi_parent->udp_root_node;
+    ndpi->tcp_root_node = ndpi_parent->tcp_root_node;
 
     ndpi->ndpi_num_supported_protocols = ndpi_parent->ndpi_num_supported_protocols;
     ndpi->ndpi_num_custom_protocols = ndpi_parent->ndpi_num_custom_protocols;
@@ -294,8 +294,8 @@ void nd_ndpi_free(struct ndpi_detection_module_struct *ndpi)
 {
     ndpi->host_automa.ac_automa = NULL;
     ndpi->protocols_ptree = NULL;
-    ndpi->udpRoot = NULL;
-    ndpi->tcpRoot = NULL;
+    ndpi->udp_root_node = NULL;
+    ndpi->tcp_root_node = NULL;
 
     ndpi_exit_detection_module(ndpi);
 }
