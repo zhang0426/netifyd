@@ -925,30 +925,17 @@ void ndDetectionThread::ProcessPacket(void)
             new_flow->upper_type = netlink->ClassifyAddress(upper_addr);
         }
 #endif
-        // TODO: IP protocol/port guess
         if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
             new_flow->detection_guessed |= ND_FLOW_GUESS_PROTO;
-/*
-            new_flow->detected_protocol.master_protocol = ndpi_guess_undetected_protocol(
-                ndpi,
-                new_flow->ip_protocol,
-                ntohl(
-                    (new_flow->ip_version == 4) ?
-                        new_flow->lower_addr.s_addr :
-                            new_flow->lower_addr6.s6_addr32[2] +
-                            new_flow->lower_addr6.s6_addr32[3]
-                ),
-                ntohs(new_flow->lower_port),
-                ntohl(
-                    (new_flow->ip_version == 4) ?
-                        new_flow->upper_addr.s_addr :
-                            new_flow->upper_addr6.s6_addr32[2] +
-                            new_flow->upper_addr6.s6_addr32[3]
-                ),
-                ntohs(new_flow->upper_port)
+
+            new_flow->detected_protocol.master_protocol =
+                ndpi_guess_undetected_protocol(
+                    ndpi,
+                    new_flow->ip_protocol,
+                    ntohs(new_flow->lower_port),
+                    ntohs(new_flow->upper_port)
             );
-*/
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
