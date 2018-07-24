@@ -748,7 +748,7 @@ void nd_json_protocols(string &json_string)
     for (unsigned i = 0; i < (unsigned)ndpi->ndpi_num_supported_protocols; i++) {
         json_object *json_proto = json.CreateObject();
         json.AddObject(json_proto, "id", i);
-        json.AddObject(json_proto, "tag", ndpi->proto_defaults[i].protoName);
+        json.AddObject(json_proto, "tag", ndpi->proto_defaults[i].proto_name);
         json.PushObject(jarray, json_proto);
     }
 
@@ -937,17 +937,39 @@ static void nd_json_add_file(
 
 static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
 {
+#ifndef _ND_LEAN_AND_MEAN
     struct timespec ts_now;
     static uint32_t flow_count_previous = 0;
+#if (SIZEOF_LONG == 4)
+    static uint32_t maxrss_kb_prev = 0;
+#elif (SIZEOF_LONG == 8)
+    static uint64_t maxrss_kb_prev = 0;
+#endif
 
     if (! ND_USE_NCURSES) {
         nd_debug_printf("\n");
         nd_debug_printf("Cumulative Packet Totals ");
         if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
-            fprintf(stderr, "(clock_gettime: %s):\n", strerror(errno));
+            fprintf(stderr, "[clock_gettime: %s]:\n", strerror(errno));
         else {
-            nd_debug_printf("(+%lus):\n",
-                ts_now.tv_sec - nd_ts_epoch.tv_sec);
+            struct rusage rusage_data;
+
+            getrusage(RUSAGE_SELF, &rusage_data);
+#if (SIZEOF_LONG == 4)
+            uint32_t maxrss_kb_delta = rusage_data.ru_maxrss - maxrss_kb_prev;
+#elif (SIZEOF_LONG == 8)
+            uint64_t maxrss_kb_delta = rusage_data.ru_maxrss - maxrss_kb_prev;
+#endif
+            nd_print_number(*nd_stats_os, rusage_data.ru_maxrss * 1024);
+
+            nd_debug_printf("[Uptime: +%lus RSS: %s (%c%lukB)]:\n",
+                ts_now.tv_sec - nd_ts_epoch.tv_sec,
+                (*nd_stats_os).str().c_str(),
+                (maxrss_kb_delta == 0) ? ' ' :
+                    (maxrss_kb_delta < 0) ? '-' : '+',
+                maxrss_kb_delta);
+
+            maxrss_kb_prev = rusage_data.ru_maxrss;
         }
 
         nd_print_number(*nd_stats_os, stats.pkt_raw, false);
@@ -1122,6 +1144,7 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
     }
 #endif
     flow_count_previous = flow_count;
+#endif // _ND_LEAN_AND_MEAN
 }
 
 static void nd_load_ethers(void)
@@ -1299,7 +1322,7 @@ static void nd_dump_protocols(void)
     ndpi = nd_ndpi_init("netifyd", custom_proto_base);
 
     for (unsigned i = 0; i < (unsigned)ndpi->ndpi_num_supported_protocols; i++)
-        printf("%4d: %s\n", i, ndpi->proto_defaults[i].protoName);
+        printf("%4d: %s\n", i, ndpi->proto_defaults[i].proto_name);
 
     ndpi_free(ndpi);
     ndpi_global_init();
