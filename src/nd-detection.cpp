@@ -981,7 +981,7 @@ void ndDetectionThread::ProcessPacket(void)
                         "%s", hostname.c_str()
                     );
 
-                    new_flow->detected_protocol.app_protocol = ndpi_match_host_subprotocol(
+                    new_flow->detected_protocol.app_protocol = ndpi_match_host_app_proto(
                         ndpi,
                         new_flow->ndpi_flow,
                         (char *)new_flow->ndpi_flow->host_server_name,
