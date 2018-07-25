@@ -365,18 +365,15 @@ pcap_t *ndDetectionThread::OpenCapture(void)
     return pcap_new;
 }
 
-int ndDetectionThread::GetCaptureStats(struct pcap_stat &stats, bool do_lock)
+// XXX: Not thread-safe!
+// XXX: Ensure the object is locked before calling.
+int ndDetectionThread::GetCaptureStats(struct pcap_stat &stats)
 {
-    int rc = 0;
-
     memset(&stats, 0, sizeof(struct pcap_stat));
-    if (pcap_file.size()) return 1;
 
-    if (do_lock) pthread_mutex_lock(&lock);
-    rc = pcap_stats(pcap, &stats);
-    if (do_lock) pthread_mutex_unlock(&lock);
+    if (pcap_file.size() || pcap == NULL) return 1;
 
-    return rc;
+    return pcap_stats(pcap, &stats);
 }
 
 void ndDetectionThread::ProcessPacket(void)

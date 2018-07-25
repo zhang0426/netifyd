@@ -1254,11 +1254,11 @@ static void nd_dump_stats(void)
         flow_count += flows[i->first]->size();
 
         if (ND_USE_SINK || ND_JSON_SAVE) {
-            struct pcap_stat pcap;
-            i->second->GetCaptureStats(pcap);
+            struct pcap_stat lpc_stat;
+            i->second->GetCaptureStats(lpc_stat);
 
             json_obj = json.CreateObject();
-            nd_json_add_stats(json_obj, stats[i->first], &pcap);
+            nd_json_add_stats(json_obj, stats[i->first], &lpc_stat);
 
             string iface_name;
             nd_iface_name(i->first, iface_name);
