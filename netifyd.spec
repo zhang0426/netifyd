@@ -30,7 +30,7 @@
 # RPM package details
 Name: netifyd
 Summary: Netify Agent
-Version: 2.73
+Version: 2.74
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPLv3
@@ -109,8 +109,7 @@ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libs/gperftools
 %{configure} \
     %{?_with_conntrack} \
     %{?_with_inotify} \
-    %{?_with_netlink} \
-    --disable-ncurses
+    %{?_with_netlink}
 
 # Build
 %build

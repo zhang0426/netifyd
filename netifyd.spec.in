@@ -109,8 +109,7 @@ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libs/gperftools
 %{configure} \
     %{?_with_conntrack} \
     %{?_with_inotify} \
-    %{?_with_netlink} \
-    --disable-ncurses
+    %{?_with_netlink}
 
 # Build
 %build
