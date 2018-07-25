@@ -86,19 +86,14 @@ void nd_printf(const char *format, ...)
     va_list ap;
     va_start(ap, format);
 
+    if (ND_DEBUG && ND_USE_NCURSES) {
 #ifdef _ND_USE_NCURSES
-    if (ND_DEBUG) {
         vwprintw(win_output, format, ap);
         wrefresh(win_output);
-
-        va_end(ap);
-
-        pthread_mutex_unlock(nd_printf_mutex);
-        return;
-    }
 #endif
-
-    vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
+    }
+    else if (! ND_USE_NCURSES)
+        vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
 
     va_end(ap);
 
@@ -113,16 +108,16 @@ void nd_debug_printf(const char *format, ...)
 
         va_list ap;
         va_start(ap, format);
-#ifndef _ND_USE_NCURSES
-        vfprintf(stderr, format, ap);
-#else
-        if (! ND_USE_NCURSES)
-            vfprintf(stderr, format, ap);
-        else {
+
+        if (ND_USE_NCURSES) {
+#ifdef _ND_USE_NCURSES
             vwprintw(win_output, format, ap);
             wrefresh(win_output);
-        }
 #endif
+        }
+        else
+            vfprintf(stderr, format, ap);
+
         va_end(ap);
 
         pthread_mutex_unlock(nd_printf_mutex);
@@ -132,7 +127,7 @@ void nd_debug_printf(const char *format, ...)
 #ifdef _ND_USE_NCURSES
 void nd_printw(WINDOW *win, const char *format, ...)
 {
-    if (ND_DEBUG) {
+    if (ND_DEBUG && ND_USE_NCURSES) {
         pthread_mutex_lock(nd_printf_mutex);
 
         va_list ap;
