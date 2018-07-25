@@ -676,22 +676,11 @@ void ndDetectionThread::ProcessPacket(void)
             if (addr_cmp < 0) {
                 flow.lower_port = hdr_tcp->th_sport;
                 flow.upper_port = hdr_tcp->th_dport;
-
-                flow.lower_tcp_seq = (uint32_t)ntohl(hdr_tcp->th_seq);
-                flow.upper_tcp_seq = (uint32_t)ntohl(hdr_tcp->th_ack);
             }
             else {
                 flow.lower_port = hdr_tcp->th_dport;
                 flow.upper_port = hdr_tcp->th_sport;
-
-                flow.lower_tcp_seq = (uint32_t)ntohl(hdr_tcp->th_ack);
-                flow.upper_tcp_seq = (uint32_t)ntohl(hdr_tcp->th_seq);
            }
-
-//            if ((hdr_tcp->th_flags & TH_PUSH)) {
-//                nd_debug_printf("%s: lower seq: %u, upper seq: %u\n", tag.c_str(),
-//                    flow.lower_tcp_seq, flow.upper_tcp_seq);
-//            }
 
             pkt = reinterpret_cast<const uint8_t *>(l4 + (hdr_tcp->th_off * 4));
             pkt_len = l4_len - (hdr_tcp->th_off * 4);
@@ -800,47 +789,6 @@ void ndDetectionThread::ProcessPacket(void)
             id_src = new_flow->id_src, id_dst = new_flow->id_dst;
         else
             id_src = new_flow->id_dst, id_dst = new_flow->id_src;
-
-        // Possibly discard TCP re-transmissions (duplicate packets),
-        // and out-of-order packets.
-        if (new_flow->ip_protocol == IPPROTO_TCP && (hdr_tcp->th_flags & TH_PUSH)) {
-
-            tcp_seq seq_new, seq_old;
-
-            if (addr_cmp < 0) {
-                seq_old = new_flow->lower_tcp_seq;
-                seq_new = flow.lower_tcp_seq;
-
-                if (seq_new > new_flow->lower_tcp_seq)
-                    new_flow->lower_tcp_seq = seq_new;
-            }
-            else {
-                seq_old = new_flow->upper_tcp_seq;
-                seq_new = flow.upper_tcp_seq;
-
-                if (seq_new > new_flow->upper_tcp_seq)
-                    new_flow->upper_tcp_seq = seq_new;
-            }
-
-            if (seq_new == seq_old) {
-                stats->pkt_discard++;
-                stats->pkt_discard_bytes += pkt_header->len;
-#ifdef _ND_LOG_PKT_DISCARD
-                nd_debug_printf("%s: discard: TCP re-transmission.\n", tag.c_str());
-#endif
-                return;
-            }
-
-            if (seq_new < seq_old) {
-                //stats->pkt_discard++;
-                //stats->pkt_discard_bytes += pkt_header->len;
-#if 1 // _ND_LOG_PKT_DISCARD
-                if (! new_flow->detection_complete)
-                    nd_debug_printf("%s: discard: TCP out-of-order.\n", tag.c_str());
-#endif
-                //return;
-            }
-        }
     }
 
     stats->pkt_wire_bytes += pkt_header->len + 24;
