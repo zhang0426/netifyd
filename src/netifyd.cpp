@@ -1654,7 +1654,7 @@ int main(int argc, char *argv[])
             break;
         case 'n':
 #if _ND_USE_NCURSES
-            nd_config.flags |= ndGF_DEBUG;
+            nd_config.flags |= ndGF_DEBUG | ndGF_USE_NCURSES;
 #else
             fprintf(stderr, "Sorry, ncurses was not enabled for this build.\n");
             return 1;
@@ -1743,6 +1743,13 @@ int main(int argc, char *argv[])
         }
     }
 
+#ifdef _ND_USE_NCURSES
+    if (ND_USE_NCURSES) {
+        initscr();
+        nd_create_windows();
+    }
+#endif
+
     nd_printf("%s\n", nd_get_version_and_features().c_str());
     nd_check_agent_uuid();
     nd_debug_printf("Flow entry size: %lu\n", sizeof(struct ndFlow) +
@@ -1764,13 +1771,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-#ifdef _ND_USE_NCURSES
-    if (ND_USE_NCURSES) {
-        initscr();
-        nd_create_windows();
-    }
-#endif
-    memset(&totals, 0, sizeof(nd_packet_stats));
+   memset(&totals, 0, sizeof(nd_packet_stats));
 
     if (ND_USE_DNS_CACHE) dns_cache.load();
 #ifndef _ND_LEAN_AND_MEAN
