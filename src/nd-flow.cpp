@@ -438,6 +438,34 @@ json_object *ndFlow::json_encode(const string &device,
         _upper_bytes = "other_bytes";
         _upper_packets = "other_packets";
     }
+    else if (lower_type == ndNETLINK_ATYPE_PRIVATE &&
+        upper_type == ndNETLINK_ATYPE_LOCALIP) {
+        other_type = "remote";
+        _lower_mac = "other_mac";
+        _lower_ip = "other_ip";
+        _lower_port = "other_port";
+        _lower_bytes = "other_bytes";
+        _lower_packets = "other_packets";
+        _upper_mac = "local_mac";
+        _upper_ip = "local_ip";
+        _upper_port = "local_port";
+        _upper_bytes = "local_bytes";
+        _upper_packets = "local_packets";
+    }
+    else if (lower_type == ndNETLINK_ATYPE_LOCALIP &&
+        upper_type == ndNETLINK_ATYPE_PRIVATE) {
+        other_type = "remote";
+        _lower_mac = "local_mac";
+        _lower_ip = "local_ip";
+        _lower_port = "local_port";
+        _lower_bytes = "local_bytes";
+        _lower_packets = "local_packets";
+        _upper_mac = "other_mac";
+        _upper_ip = "other_ip";
+        _upper_port = "other_port";
+        _upper_bytes = "other_bytes";
+        _upper_packets = "other_packets";
+    }
     else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
         upper_type == ndNETLINK_ATYPE_LOCALNET) {
         other_type = "local";
@@ -479,7 +507,9 @@ json_object *ndFlow::json_encode(const string &device,
         _upper_packets = "other_packets";
     }
 #ifndef _ND_LEAN_AND_MEAN
-    if (other_type == "unknown") {
+    // 10.110.80.1: address is: PRIVATE
+    // 67.204.229.236: address is: LOCALIP
+    if (ND_DEBUG && other_type == "unknown") {
         ndNetlink::PrintType(lower_ip, lower_type);
         ndNetlink::PrintType(upper_ip, upper_type);
         exit(1);
