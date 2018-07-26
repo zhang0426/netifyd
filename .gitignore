@@ -1,5 +1,6 @@
 aclocal.m4
 autom4te.cache/
+*bak
 compile
 confdefs.h
 config.*
@@ -13,6 +14,9 @@ Makefile
 /Makefile.in
 missing
 netifyd-*.tar.gz
+*orig
 osc
+*rej
 stamp-h1
+test-driver
 .ycm_extra_conf*
