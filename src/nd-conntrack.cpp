@@ -284,7 +284,7 @@ void ndConntrackThread::ProcessConntrackEvent(
         }
         else {
             if (flow_iter == ct_flow_map.end()) {
-                nd_printf("%s: [%u] Connection tracking flow not found!\n",
+                nd_debug_printf("%s: [%u] Connection tracking flow not found!\n",
                     tag.c_str(), id);
                 ct_id_map.erase(id_iter);
                 return;
@@ -296,7 +296,7 @@ void ndConntrackThread::ProcessConntrackEvent(
             ct_new_or_update = true;
 #endif
             if (ct_flow->digest != id_iter->second) {
-                nd_printf("%s: [%u] Connection tracking flow hash changed!\n",
+                nd_debug_printf("%s: [%u] Connection tracking flow hash changed!\n",
                     tag.c_str(), id);
                 ct_flow_map.erase(flow_iter);
                 ct_flow_map[ct_flow->digest] = ct_flow;
