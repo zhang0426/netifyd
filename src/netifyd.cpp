@@ -66,6 +66,10 @@ typedef bool atomic_bool;
 #include <ncurses.h>
 #endif
 
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+#include <gperftools/malloc_extension.h>
+#endif
+
 #include "INIReader.h"
 
 using namespace std;
@@ -636,7 +640,8 @@ static int nd_start_detection_threads(void)
                 netlink_dev,
                 netlink,
 #endif
-                (i->first) ? thread_socket : NULL,
+                thread_socket,
+//                (i->first) ? thread_socket : NULL,
 #ifdef _ND_USE_CONNTRACK
                 (i->first || ! ND_USE_CONNTRACK) ?
                     NULL : thread_conntrack,
@@ -753,6 +758,18 @@ void nd_json_protocols(string &json_string)
     }
 
     ndpi_free(ndpi);
+
+    json.ToString(json_string, false);
+    json_string.append("\n");
+
+    json.Destroy();
+}
+
+void nd_json_agent_info(string &json_string)
+{
+    ndJson json;
+    json.AddObject(NULL, "type", "agent_info");
+    json.AddObject(NULL, "version", nd_get_version_and_features());
 
     json.ToString(json_string, false);
     json_string.append("\n");
@@ -947,6 +964,12 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
 #endif
 
     if (! ND_USE_NCURSES) {
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+        char tcm_buffer[4096];
+        MallocExtension::instance()->GetStats(tcm_buffer, 4096);
+        nd_debug_printf("\n");
+        fprintf(stderr, "%s\n", tcm_buffer);
+#endif
         nd_debug_printf("\n");
         nd_debug_printf("Cumulative Packet Totals ");
         if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
@@ -1217,6 +1240,10 @@ static void nd_dump_stats(void)
     json_object *json_stats = NULL;
     json_object *json_flows = NULL;
 
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+    // Force tcmalloc to free unused memory
+    MallocExtension::instance()->ReleaseFreeMemory();
+#endif
     if (ND_USE_SINK || ND_JSON_SAVE) {
         json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
         json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
