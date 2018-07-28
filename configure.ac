@@ -2,7 +2,7 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify Agent], [2.74],
+AC_INIT([Netify Agent], [2.75],
     [https://gitlab.com/netify.ai/public/netify-agent/issues],
     [netifyd], [http://www.netify.ai/])
 AM_INIT_AUTOMAKE([1.9 tar-pax])
@@ -142,6 +142,9 @@ AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
         AC_SUBST([LIBTCMALLOC_LIBS])
     ])
     AM_CONDITIONAL(USE_LIBTCMALLOC, true)
+    AC_LANG_PUSH([C++])
+    AC_CHECK_HEADERS([gperftools/malloc_extension.h])
+    AC_LANG_POP([C++])
 ], [
     AM_CONDITIONAL(USE_LIBTCMALLOC, false)
 ])
@@ -162,7 +165,7 @@ AS_IF([test "x$enable_lean_and_mean" = "xyes"], [
 AC_ARG_ENABLE([watchdogs],
     [AS_HELP_STRING([--enable-watchdogs], [Enable run-time watchdogs [default=no]])],
     [],
-    [enable_inotify=no])
+    [enable_watchdogs=no])
 
 AS_IF([test "x$enable_watchdogs" = "xyes"], [
     AC_DEFINE([_ND_USE_WATCHDOGS], [1],
