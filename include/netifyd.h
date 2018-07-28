@@ -297,6 +297,7 @@ typedef struct nd_dns_cache_t
     void save(void);
 } nd_dns_cache;
 
+void nd_json_agent_info(string &json_string);
 void nd_json_protocols(string &json_string);
 
 #endif // _ND_H
