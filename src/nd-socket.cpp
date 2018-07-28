@@ -673,6 +673,10 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     string json_protos;
     nd_json_protocols(json_protos);
     buffer->Push(json_protos);
+
+    string json_agent_info;
+    nd_json_agent_info(json_agent_info);
+    buffer->Push(json_agent_info);
 }
 
 void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
