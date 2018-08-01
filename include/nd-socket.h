@@ -232,8 +232,6 @@ protected:
     void ClientAccept(ndSocketServerMap::iterator &si);
     void ClientHangup(ndSocketMap::iterator &ci);
 
-    bool terminate;
-    pthread_mutex_t lock;
     vector<string> queue_write;
     ndSocketMap clients;
     ndSocketServerMap servers;

@@ -603,7 +603,7 @@ void ndSocketBuffer::Pop(ssize_t length)
 }
 
 ndSocketThread::ndSocketThread()
-    : ndThread("nd-socket", -1), terminate(false)
+    : ndThread("nd-socket", -1)
 {
     vector<pair<string, string> >::const_iterator i;
     for (i = nd_config.socket_host.begin();
