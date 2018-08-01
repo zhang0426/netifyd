@@ -1835,10 +1835,8 @@ int main(int argc, char *argv[])
             thread_conntrack->Create();
         }
 #endif
-        if (nd_config.socket_host.size() || nd_config.socket_path.size()) {
+        if (nd_config.socket_host.size() || nd_config.socket_path.size())
             thread_socket = new ndSocketThread();
-            thread_socket->Create();
-        }
 
         if (ND_USE_SINK) {
             thread_upload = new ndUploadThread();
@@ -1908,6 +1906,15 @@ int main(int argc, char *argv[])
 
     if (nd_start_detection_threads() < 0)
         return 1;
+
+    try {
+        if (thread_socket != NULL)
+            thread_socket->Create();
+    }
+    catch (ndThreadException &e) {
+        nd_printf("Error starting socket thread: %s\n", e.what());
+        return 1;
+    }
 
     memset(&sigev, 0, sizeof(struct sigevent));
     sigev.sigev_notify = SIGEV_SIGNAL;
