@@ -53,10 +53,6 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
-#ifdef _ND_USE_NCURSES
-extern WINDOW *win_output;
-#endif
-
 void *nd_mem_alloc(size_t size)
 {
     return malloc(size);
@@ -68,33 +64,14 @@ void nd_mem_free(void *ptr)
 }
 
 extern pthread_mutex_t *nd_printf_mutex;
-#ifdef _ND_USE_NCURSES
-void nd_printf_lock(void)
-{
-    pthread_mutex_lock(nd_printf_mutex);
-}
 
-void nd_printf_unlock(void)
-{
-    pthread_mutex_unlock(nd_printf_mutex);
-}
-#endif
 void nd_printf(const char *format, ...)
 {
     pthread_mutex_lock(nd_printf_mutex);
 
     va_list ap;
     va_start(ap, format);
-
-    if (ND_DEBUG && ND_USE_NCURSES) {
-#ifdef _ND_USE_NCURSES
-        vwprintw(win_output, format, ap);
-        wrefresh(win_output);
-#endif
-    }
-    else if (! ND_USE_NCURSES)
-        vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
-
+    vsyslog(LOG_DAEMON | LOG_INFO, format, ap);
     va_end(ap);
 
     pthread_mutex_unlock(nd_printf_mutex);
@@ -108,38 +85,12 @@ void nd_debug_printf(const char *format, ...)
 
         va_list ap;
         va_start(ap, format);
-
-        if (ND_USE_NCURSES) {
-#ifdef _ND_USE_NCURSES
-            vwprintw(win_output, format, ap);
-            wrefresh(win_output);
-#endif
-        }
-        else
-            vfprintf(stderr, format, ap);
-
+        vfprintf(stderr, format, ap);
         va_end(ap);
 
         pthread_mutex_unlock(nd_printf_mutex);
     }
 }
-
-#ifdef _ND_USE_NCURSES
-void nd_printw(WINDOW *win, const char *format, ...)
-{
-    if (ND_DEBUG && ND_USE_NCURSES) {
-        pthread_mutex_lock(nd_printf_mutex);
-
-        va_list ap;
-        va_start(ap, format);
-        vwprintw(win, format, ap);
-        wrefresh(win);
-        va_end(ap);
-
-        pthread_mutex_unlock(nd_printf_mutex);
-    }
-}
-#endif
 
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
 void ndpi_debug_printf(uint32_t protocol, void *ndpi,
@@ -152,7 +103,7 @@ void ndpi_debug_printf(uint32_t protocol, void *ndpi,
 
         va_list ap;
         va_start(ap, format);
-#ifndef _ND_USE_NCURSES
+
         fprintf(stderr, "[nDPI:%08x:%p:%s]: %s/%s:%d: ", protocol, ndpi,
             (level == NDPI_LOG_ERROR) ? "ERROR" :
                 (level == NDPI_LOG_TRACE) ? "TRACE" :
@@ -162,32 +113,7 @@ void ndpi_debug_printf(uint32_t protocol, void *ndpi,
             file, func, line
         );
         vfprintf(stderr, format, ap);
-#else
-        if (! ND_USE_NCURSES) {
-            fprintf(stderr, "[nDPI:%08x:%p:%s]: %s/%s:%d: ", protocol, ndpi,
-                (level == NDPI_LOG_ERROR) ? "ERROR" :
-                    (level == NDPI_LOG_TRACE) ? "TRACE" :
-                        (level == NDPI_LOG_DEBUG) ? "DEBUG" :
-                            (level == NDPI_LOG_DEBUG_EXTRA) ? "DEXTRA" :
-                                "UNK???",
-                file, func, line
-            );
-            vfprintf(stderr, format, ap);
-            //fputc('\n', stderr);
-        }
-        else {
-            wprintw(win_output, "[nDPI:%08x:%p:%s]: %s/%s:%d: ", protocol, ndpi,
-                (level == NDPI_LOG_ERROR) ? "ERROR" :
-                    (level == NDPI_LOG_TRACE) ? "TRACE" :
-                        (level == NDPI_LOG_DEBUG) ? "DEBUG" :
-                            (level == NDPI_LOG_DEBUG_EXTRA) ? "DEXTRA" :
-                                "UNK???",
-                file, func, line
-            );
-            vwprintw(win_output, format, ap);
-            wrefresh(win_output);
-        }
-#endif // _ND_USE_NCURSES
+
         va_end(ap);
 
         pthread_mutex_unlock(nd_printf_mutex);

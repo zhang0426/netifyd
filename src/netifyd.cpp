@@ -62,10 +62,6 @@ typedef bool atomic_bool;
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #endif
 
-#ifdef _ND_USE_NCURSES
-#include <ncurses.h>
-#endif
-
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
 #include <gperftools/malloc_extension.h>
 #endif
@@ -117,10 +113,6 @@ static ndConntrackThread *thread_conntrack = NULL;
 #ifdef _ND_USE_INOTIFY
 static ndInotify *inotify = NULL;
 static nd_inotify_watch inotify_watches;
-#endif
-#ifdef _ND_USE_NCURSES
-static WINDOW *win_stats = NULL;
-WINDOW *win_output = NULL;
 #endif
 #ifdef _ND_USE_NETLINK
 static ndNetlink *netlink = NULL;
@@ -777,6 +769,18 @@ void nd_json_agent_info(string &json_string)
     json.Destroy();
 }
 
+void nd_json_agent_status(string &json_string)
+{
+    ndJson json;
+    json.AddObject(NULL, "type", "agent_status");
+    json.AddObject(NULL, "version", nd_get_version_and_features());
+
+    json.ToString(json_string, false);
+    json_string.append("\n");
+
+    json.Destroy();
+}
+
 static void nd_json_add_interfaces(json_object *parent)
 {
     json_object *jobj;
@@ -957,216 +961,116 @@ static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
 #ifndef _ND_LEAN_AND_MEAN
     struct timespec ts_now;
     static uint32_t flow_count_previous = 0;
+
 #if (SIZEOF_LONG == 4)
     static uint32_t maxrss_kb_prev = 0;
 #elif (SIZEOF_LONG == 8)
     static uint64_t maxrss_kb_prev = 0;
 #endif
 
-    if (! ND_USE_NCURSES) {
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
-        char tcm_buffer[4096];
-        MallocExtension::instance()->GetStats(tcm_buffer, 4096);
-        nd_debug_printf("\n");
-        fprintf(stderr, "%s\n", tcm_buffer);
+    char tcm_buffer[4096];
+
+    MallocExtension::instance()->GetStats(tcm_buffer, 4096);
+    nd_debug_printf("\n");
+    fprintf(stderr, "%s\n", tcm_buffer);
 #endif
-        nd_debug_printf("\n");
-        nd_debug_printf("Cumulative Packet Totals ");
-        if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
-            fprintf(stderr, "[clock_gettime: %s]:\n", strerror(errno));
-        else {
-            struct rusage rusage_data;
 
-            getrusage(RUSAGE_SELF, &rusage_data);
-#if (SIZEOF_LONG == 4)
-            uint32_t maxrss_kb_delta = rusage_data.ru_maxrss - maxrss_kb_prev;
-#elif (SIZEOF_LONG == 8)
-            uint64_t maxrss_kb_delta = rusage_data.ru_maxrss - maxrss_kb_prev;
-#endif
-            nd_print_number(*nd_stats_os, rusage_data.ru_maxrss * 1024);
-
-            nd_debug_printf("[Uptime: +%lus RSS: %s (%c%lukB)]:\n",
-                ts_now.tv_sec - nd_ts_epoch.tv_sec,
-                (*nd_stats_os).str().c_str(),
-                (maxrss_kb_delta == 0) ? ' ' :
-                    (maxrss_kb_delta < 0) ? '-' : '+',
-                maxrss_kb_delta);
-
-            maxrss_kb_prev = rusage_data.ru_maxrss;
-        }
-
-        nd_print_number(*nd_stats_os, stats.pkt_raw, false);
-        nd_debug_printf("%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_eth, false);
-        nd_debug_printf("%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_vlan, false);
-        nd_debug_printf("%12s: %s\n", "VLAN", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip, false);
-        nd_debug_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip4, false);
-        nd_debug_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip6, false);
-        nd_debug_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_icmp + stats.pkt_igmp, false);
-        nd_debug_printf("%12s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_udp, false);
-        nd_debug_printf("%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_tcp, false);
-        nd_debug_printf("%12s: %s\n", "TCP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_mpls, false);
-        nd_debug_printf("%12s: %s ", "MPLS", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_pppoe, false);
-        nd_debug_printf("%12s: %s\n", "PPPoE", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_frags, false);
-        nd_debug_printf("%12s: %s ", "Frags", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_discard, false);
-        nd_debug_printf("%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_maxlen);
-        nd_debug_printf("%12s: %s\n", "Largest", (*nd_stats_os).str().c_str());
-
-        nd_debug_printf("\nCumulative Byte Totals:\n");
-
-        nd_print_number(*nd_stats_os, stats.pkt_wire_bytes);
-        nd_debug_printf("%12s: %s\n", "Wire", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip_bytes);
-        nd_debug_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip4_bytes);
-        nd_debug_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip6_bytes);
-        nd_debug_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_discard_bytes);
-        nd_debug_printf("%39s: %s ", "Discarded", (*nd_stats_os).str().c_str());
-
-        (*nd_stats_os).str("");
-        (*nd_stats_os) << setw(8) << flow_count;
-
-        nd_debug_printf("%12s: %s (%s%d)", "Flows", (*nd_stats_os).str().c_str(),
-            (flow_count > flow_count_previous) ? "+" : "",
-            int(flow_count - flow_count_previous));
-        nd_debug_printf("\n\n");
-    }
-#ifdef _ND_USE_NCURSES
+    nd_debug_printf("\n");
+    nd_debug_printf("Cumulative Packet Totals ");
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
+        fprintf(stderr, "[clock_gettime: %s]:\n", strerror(errno));
     else {
-        //wclear(win_stats);
-        nd_printf_lock();
-        wmove(win_stats, 0, 0);
-        wattrset(win_stats, A_BOLD | A_REVERSE);
-        for (int i = 0; i < COLS; i++) waddch(win_stats, ' ');
-        wmove(win_stats, 0, 0);
-        nd_printf_unlock();
-        nd_printw(win_stats, "%s v%s", PACKAGE_NAME, PACKAGE_VERSION);
-        wattrset(win_stats, A_NORMAL);
-        wmove(win_stats, 1, 0);
+        struct rusage rusage_data;
 
-        nd_printw(win_stats, " Cumulative Packet Totals ");
-        if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
-            nd_printw(win_stats, "(clock_gettime: %s):\n", strerror(errno));
-        else {
-            nd_printw(win_stats, "(+%lus):\n",
-                ts_now.tv_sec - nd_ts_epoch.tv_sec);
-        }
-
-        nd_print_number(*nd_stats_os, stats.pkt_raw, false);
-        nd_printw(win_stats, "%10s: %s ", "Wire", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_eth, false);
-        nd_printw(win_stats, "%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_vlan, false);
-        nd_printw(win_stats, "%12s: %s", "VLAN", (*nd_stats_os).str().c_str());
-        wclrtoeol(win_stats);
-        nd_printw(win_stats, "\n");
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip, false);
-        nd_printw(win_stats, "%10s: %s ", "IP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip4, false);
-        nd_printw(win_stats, "%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip6, false);
-        nd_printw(win_stats, "%12s: %s", "IPv6", (*nd_stats_os).str().c_str());
-        wclrtoeol(win_stats);
-        nd_printw(win_stats, "\n");
-
-        nd_print_number(*nd_stats_os, stats.pkt_icmp + stats.pkt_igmp, false);
-        nd_printw(win_stats, "%10s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_udp, false);
-        nd_printw(win_stats, "%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_tcp, false);
-        nd_printw(win_stats, "%12s: %s", "TCP", (*nd_stats_os).str().c_str());
-        wclrtoeol(win_stats);
-        nd_printw(win_stats, "\n");
-
-        nd_print_number(*nd_stats_os, stats.pkt_mpls, false);
-        nd_printw(win_stats, "%10s: %s ", "MPLS", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_pppoe, false);
-        nd_printw(win_stats, "%12s: %s", "PPPoE", (*nd_stats_os).str().c_str());
-        wclrtoeol(win_stats);
-        nd_printw(win_stats, "\n");
-
-        nd_print_number(*nd_stats_os, stats.pkt_frags, false);
-        nd_printw(win_stats, "%10s: %s ", "Frags", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_discard, false);
-        nd_printw(win_stats, "%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_maxlen);
-        nd_printw(win_stats, "%12s: %s", "Largest", (*nd_stats_os).str().c_str());
-        wclrtoeol(win_stats);
-        nd_printw(win_stats, "\n");
-
-        nd_printw(win_stats, " Cumulative Byte Totals:\n");
-
-        nd_print_number(*nd_stats_os, stats.pkt_wire_bytes);
-        nd_printw(win_stats, "%10s: %s", "Wire", (*nd_stats_os).str().c_str());
-        wclrtoeol(win_stats);
-        nd_printw(win_stats, "\n");
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip_bytes);
-        nd_printw(win_stats, "%10s: %s ", "IP", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip4_bytes);
-        nd_printw(win_stats, "%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
-
-        nd_print_number(*nd_stats_os, stats.pkt_ip6_bytes);
-        nd_printw(win_stats, "%12s: %s", "IPv6", (*nd_stats_os).str().c_str());
-        wclrtoeol(win_stats);
-        nd_printw(win_stats, "\n");
-
-        nd_print_number(*nd_stats_os, stats.pkt_discard_bytes);
-        nd_printw(win_stats, "%37s: %s ", "Discarded", (*nd_stats_os).str().c_str());
-
-        (*nd_stats_os).str("");
-        (*nd_stats_os) << setw(8) << flow_count;
-
-        nd_printw(win_stats, "%12s: %s (%s%d)", "Flows", (*nd_stats_os).str().c_str(),
-            (flow_count > flow_count_previous) ? "+" : "",
-            int(flow_count - flow_count_previous));
-        wclrtoeol(win_stats);
-        wrefresh(win_stats);
-    }
+        getrusage(RUSAGE_SELF, &rusage_data);
+#if (SIZEOF_LONG == 4)
+        uint32_t maxrss_kb_delta = rusage_data.ru_maxrss - maxrss_kb_prev;
+#elif (SIZEOF_LONG == 8)
+        uint64_t maxrss_kb_delta = rusage_data.ru_maxrss - maxrss_kb_prev;
 #endif
+        nd_print_number(*nd_stats_os, rusage_data.ru_maxrss * 1024);
+
+        nd_debug_printf("[Uptime: +%lus RSS: %s (%c%lukB)]:\n",
+            ts_now.tv_sec - nd_ts_epoch.tv_sec,
+            (*nd_stats_os).str().c_str(),
+            (maxrss_kb_delta == 0) ? ' ' :
+                (maxrss_kb_delta < 0) ? '-' : '+',
+            maxrss_kb_delta);
+
+        maxrss_kb_prev = rusage_data.ru_maxrss;
+    }
+
+    nd_print_number(*nd_stats_os, stats.pkt_raw, false);
+    nd_debug_printf("%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_eth, false);
+    nd_debug_printf("%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_vlan, false);
+    nd_debug_printf("%12s: %s\n", "VLAN", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_ip, false);
+    nd_debug_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_ip4, false);
+    nd_debug_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_ip6, false);
+    nd_debug_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_icmp + stats.pkt_igmp, false);
+    nd_debug_printf("%12s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_udp, false);
+    nd_debug_printf("%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_tcp, false);
+    nd_debug_printf("%12s: %s\n", "TCP", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_mpls, false);
+    nd_debug_printf("%12s: %s ", "MPLS", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_pppoe, false);
+    nd_debug_printf("%12s: %s\n", "PPPoE", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_frags, false);
+    nd_debug_printf("%12s: %s ", "Frags", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_discard, false);
+    nd_debug_printf("%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_maxlen);
+    nd_debug_printf("%12s: %s\n", "Largest", (*nd_stats_os).str().c_str());
+
+    nd_debug_printf("\nCumulative Byte Totals:\n");
+
+    nd_print_number(*nd_stats_os, stats.pkt_wire_bytes);
+    nd_debug_printf("%12s: %s\n", "Wire", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_ip_bytes);
+    nd_debug_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_ip4_bytes);
+    nd_debug_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_ip6_bytes);
+    nd_debug_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
+
+    nd_print_number(*nd_stats_os, stats.pkt_discard_bytes);
+    nd_debug_printf("%39s: %s ", "Discarded", (*nd_stats_os).str().c_str());
+
+    (*nd_stats_os).str("");
+    (*nd_stats_os) << setw(8) << flow_count;
+
+    nd_debug_printf("%12s: %s (%s%d)", "Flows", (*nd_stats_os).str().c_str(),
+        (flow_count > flow_count_previous) ? "+" : "",
+        int(flow_count - flow_count_previous));
+
+    nd_debug_printf("\n\n");
+
     flow_count_previous = flow_count;
+
 #endif // _ND_LEAN_AND_MEAN
 }
 
@@ -1489,15 +1393,7 @@ static void nd_check_agent_uuid(void)
         nd_config.uuid = strdup(uuid.c_str());
     }
 }
-#ifdef _ND_USE_NCURSES
-static void nd_create_windows(void)
-{
-    win_stats = newwin(11, COLS, 0, 0);
-    win_output = newwin(LINES - 11, COLS, 11 + 1, 0);
-    scrollok(win_output, true);
-    curs_set(0);
-}
-#endif
+
 int main(int argc, char *argv[])
 {
     int rc = 0;
@@ -1547,7 +1443,6 @@ int main(int argc, char *argv[])
         { "device-netlink", 1, 0, 'N' },
         { "disable-conntrack", 0, 0, 't' },
         { "disable-netlink", 0, 0, 'l' },
-        { "enable-ncurses", 0, 0, 'n' },
         { "external", 1, 0, 'E' },
         { "hash-file", 1, 0, 'S' },
         { "help", 0, 0, 'h' },
@@ -1573,7 +1468,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?A:aC:c:DdE:eF:f:H:hI:i:j:lN:nPpRrS:s:tUu:V",
+            "?A:aC:c:DdE:eF:f:H:hI:i:j:lN:PpRrS:s:tUu:V",
             options, &o)) == -1) break;
         switch (rc) {
         case 0:
@@ -1679,14 +1574,6 @@ int main(int argc, char *argv[])
             return 1;
 #endif
             break;
-        case 'n':
-#if _ND_USE_NCURSES
-            nd_config.flags |= ndGF_DEBUG | ndGF_USE_NCURSES;
-#else
-            fprintf(stderr, "Sorry, ncurses was not enabled for this build.\n");
-            return 1;
-#endif
-            break;
         case 'P':
             nd_dump_protocols();
             exit(0);
@@ -1770,13 +1657,6 @@ int main(int argc, char *argv[])
         }
     }
 
-#ifdef _ND_USE_NCURSES
-    if (ND_USE_NCURSES) {
-        initscr();
-        nd_create_windows();
-    }
-#endif
-
     nd_printf("%s\n", nd_get_version_and_features().c_str());
     nd_check_agent_uuid();
     nd_debug_printf("Flow entry size: %lu\n", sizeof(struct ndFlow) +
@@ -1822,10 +1702,7 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, ND_SIG_UPDATE);
     sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
-#ifdef _ND_USE_NCURSES
-    if (ND_USE_NCURSES)
-        sigaddset(&sigset, SIGWINCH);
-#endif
+
     nd_load_ethers();
 
     try {
@@ -1931,13 +1808,11 @@ int main(int argc, char *argv[])
     it_spec.it_interval.tv_nsec = 0;
 
     timer_settime(timer_id, 0, &it_spec, NULL);
-#ifdef _ND_USE_NCURSES
-    if (ND_USE_NCURSES) nd_print_stats(0, totals);
-#endif
+
 #ifdef _ND_USE_NETLINK
-    if (ND_USE_NETLINK)
-        netlink->Refresh();
+    if (ND_USE_NETLINK) netlink->Refresh();
 #endif
+
     while (! terminate) {
         int sig;
         siginfo_t si;
@@ -2021,19 +1896,7 @@ int main(int argc, char *argv[])
 
             continue;
         }
-#ifdef _ND_USE_NCURSES
-        if (sig == SIGWINCH) {
-            nd_printf_lock();
-            delwin(win_stats);
-            delwin(win_output);
-            endwin();
-            refresh();
-            nd_create_windows();
-            nd_printf_unlock();
-            nd_print_stats(0, totals);
-            continue;
-        }
-#endif
+
         nd_printf("Unhandled signal: %s\n", strsignal(sig));
     }
 
@@ -2064,12 +1927,6 @@ int main(int argc, char *argv[])
     delete nd_printf_mutex;
 
     curl_global_cleanup();
-#ifdef _ND_USE_NCURSES
-    delwin(win_stats);
-    delwin(win_output);
-    refresh();
-    endwin();
-#endif
 
     closelog();
 

@@ -19,27 +19,19 @@
 
 #define ND_SHA1_BUFFER    4096
 
-#ifdef _ND_USE_NCURSES
-#include <ncurses.h>
-#endif
-
 void *nd_mem_alloc(size_t size);
 
 void nd_mem_free(void *ptr);
 
 void nd_printf(const char *format, ...);
-#ifdef _ND_USE_NCURSES
-void nd_printw(WINDOW *win, const char *format, ...);
-
-void nd_printf_lock(void);
-void nd_printf_unlock(void);
-#endif
 void nd_debug_printf(const char *format, ...);
+
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
 void ndpi_debug_printf(uint32_t protocol, void *ndpi,
     ndpi_log_level_t level, const char *file, const char *func, unsigned line,
     const char *format, ...);
 #endif
+
 void nd_print_address(const struct sockaddr_storage *addr);
 
 void nd_print_binary(uint32_t byte);
@@ -47,7 +39,6 @@ void nd_print_binary(uint32_t byte);
 void nd_print_number(ostringstream &os, uint64_t value, bool units_binary = true);
 
 int nd_sha1_file(const string &filename, uint8_t *digest);
-
 void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
 
 void nd_iface_name(const string &iface, string &result);
@@ -60,9 +51,11 @@ bool nd_save_uuid(const string &uuid, const char *path, size_t length);
 void nd_generate_uuid(string &uuid);
 
 string nd_get_version_and_features(void);
+
 #ifdef _ND_USE_WATCHDOGS
 int nd_touch(const string &filename);
 #endif
+
 class ndException : public runtime_error
 {
 public:

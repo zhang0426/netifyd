@@ -96,20 +96,6 @@ AS_IF([test "x$enable_inotify" = "xyes"], [
     AM_CONDITIONAL(USE_INOTIFY, false)
 ])
 
-AC_ARG_ENABLE([ncurses],
-    [AS_HELP_STRING([--enable-ncurses], [Enable ncurses debug screen [default=no]])],
-    [],
-    [enable_ncurses=no])
-
-AS_IF([test "x$enable_ncurses" = "xyes"], [
-    AC_DEFINE([_ND_USE_NCURSES], [1],
-        [Define to enable ncurses debug screen.])
-    AM_CONDITIONAL(USE_NCURSES, true)
-    PKG_CHECK_MODULES([LIBNCURSES], [ncurses])
-], [
-    AM_CONDITIONAL(USE_NCURSES, false)
-])
-
 AC_ARG_ENABLE([netlink],
     [AS_HELP_STRING([--enable-netlink], [Enable Netlink socket support [default=yes]])],
     [],

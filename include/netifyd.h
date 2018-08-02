@@ -160,7 +160,7 @@ enum nd_global_flags {
     ndGF_SSL_VERIFY_PEER = 0x100,
     ndGF_USE_CONNTRACK = 0x200,
     ndGF_USE_NETLINK = 0x400,
-    ndGF_USE_NCURSES = 0x800,
+    ndGF_FREE_0x800 = 0x800,
     ndGF_USE_SINK = 0x1000,
     ndGF_USE_DNS_CACHE = 0x2000,
     ndGF_DNS_CACHE_SAVE = 0x4000,
@@ -181,7 +181,6 @@ enum nd_global_flags {
 #define ND_SSL_VERIFY_PEER (nd_config.flags & ndGF_SSL_VERIFY_PEER)
 #define ND_USE_CONNTRACK (nd_config.flags & ndGF_USE_CONNTRACK)
 #define ND_USE_NETLINK (nd_config.flags & ndGF_USE_NETLINK)
-#define ND_USE_NCURSES (nd_config.flags & ndGF_USE_NCURSES)
 #define ND_USE_SINK (nd_config.flags & ndGF_USE_SINK)
 #define ND_USE_DNS_CACHE (nd_config.flags & ndGF_USE_DNS_CACHE)
 #define ND_DNS_CACHE_SAVE (nd_config.flags & ndGF_DNS_CACHE_SAVE)
