@@ -222,6 +222,25 @@ typedef struct nd_global_config_t {
     nd_device_filter device_filters;
 } nd_global_config;
 
+typedef struct nd_agent_stats_t
+{
+    struct timespec ts_epoch;
+    struct timespec ts_now;
+    uint32_t flows;
+    uint32_t flows_prev;
+#if (SIZEOF_LONG == 4)
+    uint32_t maxrss_kb;
+    uint32_t maxrss_kb_prev;
+#elif (SIZEOF_LONG == 8)
+    uint64_t maxrss_kb;
+    uint64_t maxrss_kb_prev;
+#endif
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+    size_t tcm_alloc_kb;
+    size_t tcm_alloc_kb_prev;
+#endif
+} nd_agent_stats;
+
 typedef struct nd_packet_stats_t
 {
     uint64_t pkt_raw;
@@ -296,7 +315,7 @@ typedef struct nd_dns_cache_t
     void save(void);
 } nd_dns_cache;
 
-void nd_json_agent_info(string &json_string);
+void nd_json_agent_status(string &json_string);
 void nd_json_protocols(string &json_string);
 
 #endif // _ND_H

@@ -1011,6 +1011,7 @@ bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
 #ifndef _ND_LEAN_AND_MEAN
 void ndNetlink::Dump(void)
 {
+#if 0 // TODO: Fix output mangling here
     for (ndNetlinkNetworks::iterator i = networks.begin();
         i != networks.end(); i++) {
         for (vector<ndNetlinkNetworkAddr *>::iterator j = i->second.begin();
@@ -1030,6 +1031,7 @@ void ndNetlink::Dump(void)
             nd_debug_printf("\n");
         }
     }
+#endif
 }
 
 void ndNetlink::PrintType(const string &prefix, const ndNetlinkAddressType &type)

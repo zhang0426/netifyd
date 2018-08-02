@@ -95,14 +95,14 @@ using namespace std;
 nd_global_config nd_config;
 pthread_mutex_t *nd_printf_mutex = NULL;
 
-static struct timespec nd_ts_epoch;
 static nd_ifaces ifaces;
 static nd_devices devices;
 nd_device_ethers device_ethers;
 static nd_flows flows;
 static nd_stats stats;
 static nd_threads threads;
-static nd_packet_stats totals;
+static nd_agent_stats nda_stats;
+static nd_packet_stats pkt_totals;
 static ostringstream *nd_stats_os = NULL;
 static ndUploadThread *thread_upload = NULL;
 static ndSocketThread *thread_socket = NULL;
@@ -732,6 +732,34 @@ static void nd_reap_detection_threads(void)
     }
 }
 
+void nd_json_agent_status(string &json_string)
+{
+    ndJson json;
+    json.AddObject(NULL, "type", "agent_status");
+    json.AddObject(NULL, "version", nd_get_version_and_features());
+    json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
+    json.AddObject(NULL, "uptime",
+        uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));
+    json.AddObject(NULL, "flows", nda_stats.flows);
+    json.AddObject(NULL, "flows_prev", nda_stats.flows_prev);
+    json.AddObject(NULL, "maxrss_kb", nda_stats.maxrss_kb);
+    json.AddObject(NULL, "maxrss_kb_prev", nda_stats.maxrss_kb_prev);
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+#if (SIZEOF_LONG == 4)
+    json.AddObject(NULL, "tcm_kb", (uint32_t)nda_stats.tcm_alloc_kb);
+    json.AddObject(NULL, "tcm_kb_prev", (uint32_t)nda_stats.tcm_alloc_kb);
+#elif (SIZEOF_LONG == 8)
+    json.AddObject(NULL, "tcm_kb", (uint64_t)nda_stats.tcm_alloc_kb);
+    json.AddObject(NULL, "tcm_kb_prev", (uint64_t)nda_stats.tcm_alloc_kb);
+#endif
+#endif // _ND_USE_LIBTCMALLOC
+
+    json.ToString(json_string, false);
+    json_string.append("\n");
+
+    json.Destroy();
+}
+
 void nd_json_protocols(string &json_string)
 {
     ndJson json;
@@ -750,30 +778,6 @@ void nd_json_protocols(string &json_string)
     }
 
     ndpi_free(ndpi);
-
-    json.ToString(json_string, false);
-    json_string.append("\n");
-
-    json.Destroy();
-}
-
-void nd_json_agent_info(string &json_string)
-{
-    ndJson json;
-    json.AddObject(NULL, "type", "agent_info");
-    json.AddObject(NULL, "version", nd_get_version_and_features());
-
-    json.ToString(json_string, false);
-    json_string.append("\n");
-
-    json.Destroy();
-}
-
-void nd_json_agent_status(string &json_string)
-{
-    ndJson json;
-    json.AddObject(NULL, "type", "agent_status");
-    json.AddObject(NULL, "version", nd_get_version_and_features());
 
     json.ToString(json_string, false);
     json_string.append("\n");
@@ -956,121 +960,95 @@ static void nd_json_add_file(
     fclose(fh);
 }
 
-static void nd_print_stats(uint32_t flow_count, nd_packet_stats &stats)
+static void nd_print_stats(void)
 {
 #ifndef _ND_LEAN_AND_MEAN
-    struct timespec ts_now;
-    static uint32_t flow_count_previous = 0;
-
 #if (SIZEOF_LONG == 4)
-    static uint32_t maxrss_kb_prev = 0;
+    uint32_t maxrss_kb_delta = nda_stats.maxrss_kb - nda_stats.maxrss_kb_prev;
 #elif (SIZEOF_LONG == 8)
-    static uint64_t maxrss_kb_prev = 0;
+    uint64_t maxrss_kb_delta = nda_stats.maxrss_kb - nda_stats.maxrss_kb_prev;
 #endif
-
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
-    char tcm_buffer[4096];
-
-    MallocExtension::instance()->GetStats(tcm_buffer, 4096);
-    nd_debug_printf("\n");
-    fprintf(stderr, "%s\n", tcm_buffer);
+    size_t tcm_alloc_delta = nda_stats.tcm_alloc_kb - nda_stats.tcm_alloc_kb_prev;
 #endif
 
     nd_debug_printf("\n");
     nd_debug_printf("Cumulative Packet Totals ");
-    if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts_now) != 0)
-        fprintf(stderr, "[clock_gettime: %s]:\n", strerror(errno));
-    else {
-        struct rusage rusage_data;
+    nd_print_number(*nd_stats_os, nda_stats.maxrss_kb * 1024);
+    nd_debug_printf("[Uptime: +%lus RSS: %s (%c%lukB)]:\n",
+        nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec,
+        (*nd_stats_os).str().c_str(),
+        (maxrss_kb_delta == 0) ? ' ' :
+            (maxrss_kb_delta < 0) ? '-' : '+',
+        maxrss_kb_delta);
 
-        getrusage(RUSAGE_SELF, &rusage_data);
-#if (SIZEOF_LONG == 4)
-        uint32_t maxrss_kb_delta = rusage_data.ru_maxrss - maxrss_kb_prev;
-#elif (SIZEOF_LONG == 8)
-        uint64_t maxrss_kb_delta = rusage_data.ru_maxrss - maxrss_kb_prev;
-#endif
-        nd_print_number(*nd_stats_os, rusage_data.ru_maxrss * 1024);
-
-        nd_debug_printf("[Uptime: +%lus RSS: %s (%c%lukB)]:\n",
-            ts_now.tv_sec - nd_ts_epoch.tv_sec,
-            (*nd_stats_os).str().c_str(),
-            (maxrss_kb_delta == 0) ? ' ' :
-                (maxrss_kb_delta < 0) ? '-' : '+',
-            maxrss_kb_delta);
-
-        maxrss_kb_prev = rusage_data.ru_maxrss;
-    }
-
-    nd_print_number(*nd_stats_os, stats.pkt_raw, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_raw, false);
     nd_debug_printf("%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_eth, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_eth, false);
     nd_debug_printf("%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_vlan, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_vlan, false);
     nd_debug_printf("%12s: %s\n", "VLAN", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_ip, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip, false);
     nd_debug_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_ip4, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip4, false);
     nd_debug_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_ip6, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip6, false);
     nd_debug_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_icmp + stats.pkt_igmp, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_icmp + pkt_totals.pkt_igmp, false);
     nd_debug_printf("%12s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_udp, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_udp, false);
     nd_debug_printf("%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_tcp, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_tcp, false);
     nd_debug_printf("%12s: %s\n", "TCP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_mpls, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_mpls, false);
     nd_debug_printf("%12s: %s ", "MPLS", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_pppoe, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_pppoe, false);
     nd_debug_printf("%12s: %s\n", "PPPoE", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_frags, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_frags, false);
     nd_debug_printf("%12s: %s ", "Frags", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_discard, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_discard, false);
     nd_debug_printf("%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_maxlen);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_maxlen);
     nd_debug_printf("%12s: %s\n", "Largest", (*nd_stats_os).str().c_str());
 
     nd_debug_printf("\nCumulative Byte Totals:\n");
 
-    nd_print_number(*nd_stats_os, stats.pkt_wire_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_wire_bytes);
     nd_debug_printf("%12s: %s\n", "Wire", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_ip_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip_bytes);
     nd_debug_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_ip4_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip4_bytes);
     nd_debug_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_ip6_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip6_bytes);
     nd_debug_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, stats.pkt_discard_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt_discard_bytes);
     nd_debug_printf("%39s: %s ", "Discarded", (*nd_stats_os).str().c_str());
 
     (*nd_stats_os).str("");
-    (*nd_stats_os) << setw(8) << flow_count;
+    (*nd_stats_os) << setw(8) << nda_stats.flows;
 
     nd_debug_printf("%12s: %s (%s%d)", "Flows", (*nd_stats_os).str().c_str(),
-        (flow_count > flow_count_previous) ? "+" : "",
-        int(flow_count - flow_count_previous));
+        (nda_stats.flows > nda_stats.flows_prev) ? "+" : "",
+        int(nda_stats.flows - nda_stats.flows_prev));
 
     nd_debug_printf("\n\n");
-
-    flow_count_previous = flow_count;
-
 #endif // _ND_LEAN_AND_MEAN
 }
 
@@ -1135,7 +1113,26 @@ static void nd_load_ethers(void)
 static void nd_dump_stats(void)
 {
     string digest;
-    uint32_t flow_count = 0;
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+    size_t tcm_alloc_bytes = 0;
+
+    // Force tcmalloc to free unused memory
+    MallocExtension::instance()->ReleaseFreeMemory();
+    MallocExtension::instance()->
+        GetNumericProperty("generic.current_allocated_bytes", &tcm_alloc_bytes);
+    nda_stats.tcm_alloc_kb_prev = nda_stats.tcm_alloc_kb;
+    nda_stats.tcm_alloc_kb = tcm_alloc_bytes / 1024;
+#endif
+    struct rusage rusage_data;
+    getrusage(RUSAGE_SELF, &rusage_data);
+    nda_stats.maxrss_kb_prev = nda_stats.maxrss_kb;
+    nda_stats.maxrss_kb = rusage_data.ru_maxrss;
+
+    nda_stats.flows_prev = nda_stats.flows;
+    nda_stats.flows = 0;
+
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &nda_stats.ts_now) != 0)
+        memcpy(&nda_stats.ts_now, &nda_stats.ts_epoch, sizeof(struct timespec));
 
     ndJson json;
     json_object *json_obj = NULL;
@@ -1144,13 +1141,19 @@ static void nd_dump_stats(void)
     json_object *json_stats = NULL;
     json_object *json_flows = NULL;
 
-#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
-    // Force tcmalloc to free unused memory
-    MallocExtension::instance()->ReleaseFreeMemory();
-#endif
     if (ND_USE_SINK || ND_JSON_SAVE) {
         json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
         json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
+        json.AddObject(NULL, "uptime",
+            uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));
+        json.AddObject(NULL, "maxrss_kb", nda_stats.maxrss_kb);
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+#if (SIZEOF_LONG == 4)
+        json.AddObject(NULL, "tcm_kb", (uint32_t)nda_stats.tcm_alloc_kb);
+#elif (SIZEOF_LONG == 8)
+        json.AddObject(NULL, "tcm_kb", (uint64_t)nda_stats.tcm_alloc_kb);
+#endif
+#endif // _ND_USE_LIBTCMALLOC
 #ifndef _ND_LEAN_AND_MEAN
         nd_sha1_to_string(nd_config.digest_content_match, digest);
         json.AddObject(NULL, "content_match_digest", digest);
@@ -1160,13 +1163,6 @@ static void nd_dump_stats(void)
         nd_sha1_to_string(nd_config.digest_custom_match, digest);
         json.AddObject(NULL, "custom_match_digest", digest);
 
-        struct rusage rusage_data;
-        getrusage(RUSAGE_SELF, &rusage_data);
-#if (SIZEOF_LONG == 4)
-        json.AddObject(NULL, "maxrss_kb", (uint32_t)rusage_data.ru_maxrss);
-#elif (SIZEOF_LONG == 8)
-        json.AddObject(NULL, "maxrss_kb", (uint64_t)rusage_data.ru_maxrss);
-#endif
         json_ifaces = json.CreateObject(NULL, "interfaces");
         json_devices = json.CreateObject(NULL, "devices");
         json_stats = json.CreateObject(NULL, "stats");
@@ -1181,8 +1177,8 @@ static void nd_dump_stats(void)
 
         i->second->Lock();
 
-        totals += *stats[i->first];
-        flow_count += flows[i->first]->size();
+        pkt_totals += *stats[i->first];
+        nda_stats.flows += flows[i->first]->size();
 
         if (ND_USE_SINK || ND_JSON_SAVE) {
             struct pcap_stat lpc_stat;
@@ -1239,7 +1235,7 @@ static void nd_dump_stats(void)
 
     if (ND_DEBUG) {
         if (ND_DEBUG_WITH_ETHERS) nd_load_ethers();
-        nd_print_stats(flow_count, totals);
+        nd_print_stats();
     }
 }
 
@@ -1673,12 +1669,13 @@ int main(int argc, char *argv[])
         fclose(hpid);
     }
 
-    if (clock_gettime(CLOCK_MONOTONIC_RAW, &nd_ts_epoch) != 0) {
+    memset(&nda_stats, 0, sizeof(nd_agent_stats));
+    memset(&pkt_totals, 0, sizeof(nd_packet_stats));
+
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &nda_stats.ts_epoch) != 0) {
         nd_printf("Error getting epoch time: %s\n", strerror(errno));
         return 1;
     }
-
-   memset(&totals, 0, sizeof(nd_packet_stats));
 
     if (ND_USE_DNS_CACHE) dns_cache.load();
 #ifndef _ND_LEAN_AND_MEAN
@@ -1843,6 +1840,11 @@ int main(int argc, char *argv[])
             inotify->RefreshWatches();
 #endif
             nd_dump_stats();
+            if (thread_socket) {
+                string json;
+                nd_json_agent_status(json);
+                thread_socket->QueueWrite(json);
+            }
 
             if (ND_USE_DNS_CACHE) {
                 dns_cache.purge();

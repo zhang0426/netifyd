@@ -670,13 +670,11 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     buffers[client->GetDescriptor()] = buffer;
     clients[client->GetDescriptor()] = client;
 
-    string json_protos;
-    nd_json_protocols(json_protos);
-    buffer->Push(json_protos);
-
-    string json_agent_info;
-    nd_json_agent_info(json_agent_info);
-    buffer->Push(json_agent_info);
+    string json;
+    nd_json_agent_status(json);
+    buffer->Push(json);
+    nd_json_protocols(json);
+    buffer->Push(json);
 }
 
 void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
