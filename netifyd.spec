@@ -30,7 +30,7 @@
 # RPM package details
 Name: netifyd
 Summary: Netify Agent
-Version: 2.75
+Version: 2.76
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 License: GPLv3
