@@ -18,4 +18,5 @@ netifyd-*.tar.gz
 osc
 *rej
 stamp-h1
+*.swp
 test-driver
