@@ -747,10 +747,10 @@ void nd_json_agent_status(string &json_string)
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
 #if (SIZEOF_LONG == 4)
     json.AddObject(NULL, "tcm_kb", (uint32_t)nda_stats.tcm_alloc_kb);
-    json.AddObject(NULL, "tcm_kb_prev", (uint32_t)nda_stats.tcm_alloc_kb);
+    json.AddObject(NULL, "tcm_kb_prev", (uint32_t)nda_stats.tcm_alloc_kb_prev);
 #elif (SIZEOF_LONG == 8)
     json.AddObject(NULL, "tcm_kb", (uint64_t)nda_stats.tcm_alloc_kb);
-    json.AddObject(NULL, "tcm_kb_prev", (uint64_t)nda_stats.tcm_alloc_kb);
+    json.AddObject(NULL, "tcm_kb_prev", (uint64_t)nda_stats.tcm_alloc_kb_prev);
 #endif
 #endif // _ND_USE_LIBTCMALLOC
 
