@@ -977,8 +977,8 @@ void ndDetectionThread::ProcessPacket(void)
                 flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
 
                 if (! flow_iter.second) {
-                    // TODO: The new_flow stat counters should be added
-                    // to the existing flow before being destroyed.
+                    *flow_iter.first->second += *new_flow;
+
                     new_flow->release();
                     delete new_flow;
 
@@ -1034,6 +1034,26 @@ void ndDetectionThread::ProcessPacket(void)
                 new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN,
                 "%s", new_flow->ndpi_flow->protos.mdns.answer
             );
+            // Rehash MDNS flows:
+            // This is done to uniquely track queries that originate from
+            // the same local port (5353).  Rehashing using the answer as an
+            // additional key guarantees that we see all MDNS responses as
+            // unique flows versus overwritting previous answers.
+            new_flow->hash(tag, digest, false,
+                (const uint8_t *)new_flow->mdns.answer,
+                strnlen(new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN));
+
+            flows->erase(flow_iter.first);
+            flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
+
+            if (! flow_iter.second) {
+                *flow_iter.first->second += *new_flow;
+
+                new_flow->release();
+                delete new_flow;
+
+                new_flow = flow_iter.first->second;
+            }
             break;
         }
 
