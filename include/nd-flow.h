@@ -163,6 +163,17 @@ struct ndFlow
         return false;
     }
 
+    inline ndFlow& operator+=(const ndFlow &f)
+    {
+        this->lower_bytes += f.lower_bytes;
+        this->upper_bytes += f.upper_bytes;
+        this->total_bytes += f.total_bytes;
+        this->lower_packets += f.lower_packets;
+        this->upper_packets += f.upper_packets;
+        this->total_packets += f.total_packets;
+        return *this;
+    }
+
     inline void release(void) {
         if (ndpi_flow != NULL) { ndpi_free_flow(ndpi_flow); ndpi_flow = NULL; }
         if (id_src != NULL) { delete id_src; id_src = NULL; }
