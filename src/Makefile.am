@@ -34,6 +34,10 @@ if USE_NETLINK
 netifyd_SOURCES += nd-netlink.cpp
 endif
 
+if USE_PLUGINS
+netifyd_SOURCES += nd-plugin.cpp
+endif
+
 if USE_LIBTCMALLOC
 # XXX: Recommended compiler flags
 AM_CFLAGS = -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free

@@ -2,7 +2,7 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify Agent], [2.77],
+AC_INIT([Netify Agent], [2.78],
     [https://gitlab.com/netify.ai/public/netify-agent/issues],
     [netifyd], [http://www.netify.ai/])
 AM_INIT_AUTOMAKE([1.9 tar-pax])
@@ -108,6 +108,22 @@ AS_IF([test "x$enable_netlink" = "xyes"], [
     AC_CHECK_HEADERS([linux/netlink.h], [], AC_MSG_ERROR([netlink header(s) not found.]))
 ], [
     AM_CONDITIONAL(USE_NETLINK, false)
+])
+
+AC_ARG_ENABLE([plugins],
+    [AS_HELP_STRING([--enable-plugins], [Enable Netify Plugin support [default=yes]])],
+    [],
+    [enable_plugins=yes])
+
+AS_IF([test "x$enable_plugins" = "xyes"], [
+    AC_DEFINE([_ND_USE_PLUGINS], [1],
+        [Define to enable Netify Plugin support.])
+    AC_CHECK_HEADERS([dlfcn.h], [], AC_MSG_ERROR([dlfcn.h header(s) not found.]))
+    AC_CHECK_LIB([dl],
+        [dlopen], [], [AC_MSG_ERROR([libdl/dlopen() not found.])])
+    AM_CONDITIONAL(USE_PLUGINS, true)
+], [
+    AM_CONDITIONAL(USE_PLUGINS, false)
 ])
 
 AC_ARG_ENABLE([libtcmalloc],
