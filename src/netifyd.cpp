@@ -38,6 +38,7 @@ typedef bool atomic_bool;
 #include <sys/socket.h>
 #include <sys/resource.h>
 
+#include <stdlib.h>
 #include <errno.h>
 #include <getopt.h>
 #include <signal.h>
@@ -732,11 +733,24 @@ static void nd_reap_detection_threads(void)
     }
 }
 
+void nd_json_agent_hello(string &json_string)
+{
+    ndJson json;
+    json.AddObject(NULL, "type", "agent_hello");
+    json.AddObject(NULL, "build_version", nd_get_version_and_features());
+    json.AddObject(NULL, "agent_version", strtod(PACKAGE_VERSION, NULL));
+    json.AddObject(NULL, "json_version", (double)ND_JSON_VERSION);
+
+    json.ToString(json_string, false);
+    json_string.append("\n");
+
+    json.Destroy();
+}
+
 void nd_json_agent_status(string &json_string)
 {
     ndJson json;
     json.AddObject(NULL, "type", "agent_status");
-    json.AddObject(NULL, "version", nd_get_version_and_features());
     json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
     json.AddObject(NULL, "uptime",
         uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));

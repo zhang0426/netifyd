@@ -315,6 +315,7 @@ typedef struct nd_dns_cache_t
     void save(void);
 } nd_dns_cache;
 
+void nd_json_agent_hello(string &json_string);
 void nd_json_agent_status(string &json_string);
 void nd_json_protocols(string &json_string);
 

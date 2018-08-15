@@ -671,6 +671,8 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     clients[client->GetDescriptor()] = client;
 
     string json;
+    nd_json_agent_hello(json);
+    buffer->Push(json);
     nd_json_agent_status(json);
     buffer->Push(json);
     nd_json_protocols(json);
