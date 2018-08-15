@@ -674,10 +674,20 @@ void ndDetectionThread::ProcessPacket(void)
                 flow.lower_port = hdr_tcp->th_sport;
                 flow.upper_port = hdr_tcp->th_dport;
             }
-            else {
+            else if (addr_cmp > 0) {
                 flow.lower_port = hdr_tcp->th_dport;
                 flow.upper_port = hdr_tcp->th_sport;
-           }
+            }
+            else {
+                if (hdr_tcp->th_sport < hdr_tcp->th_dport) {
+                    flow.lower_port = hdr_tcp->th_sport;
+                    flow.upper_port = hdr_tcp->th_dport;
+                }
+                else {
+                    flow.lower_port = hdr_tcp->th_dport;
+                    flow.upper_port = hdr_tcp->th_sport;
+                }
+            }
 
             pkt = reinterpret_cast<const uint8_t *>(l4 + (hdr_tcp->th_off * 4));
             pkt_len = l4_len - (hdr_tcp->th_off * 4);
@@ -693,9 +703,19 @@ void ndDetectionThread::ProcessPacket(void)
                 flow.lower_port = hdr_udp->uh_sport;
                 flow.upper_port = hdr_udp->uh_dport;
             }
-            else {
+            else if (addr_cmp > 0) {
                 flow.lower_port = hdr_udp->uh_dport;
                 flow.upper_port = hdr_udp->uh_sport;
+            }
+            else {
+                if (hdr_udp->uh_sport < hdr_udp->uh_dport) {
+                    flow.lower_port = hdr_udp->uh_sport;
+                    flow.upper_port = hdr_udp->uh_dport;
+                }
+                else {
+                    flow.lower_port = hdr_udp->uh_dport;
+                    flow.upper_port = hdr_udp->uh_sport;
+                }
             }
 
             pkt = reinterpret_cast<const uint8_t *>(l4 + sizeof(struct udphdr));
