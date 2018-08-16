@@ -977,24 +977,9 @@ static void nd_json_add_file(
 static void nd_print_stats(void)
 {
 #ifndef _ND_LEAN_AND_MEAN
-#if (SIZEOF_LONG == 4)
-    uint32_t maxrss_kb_delta = nda_stats.maxrss_kb - nda_stats.maxrss_kb_prev;
-#elif (SIZEOF_LONG == 8)
-    uint64_t maxrss_kb_delta = nda_stats.maxrss_kb - nda_stats.maxrss_kb_prev;
-#endif
-#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
-    size_t tcm_alloc_delta = nda_stats.tcm_alloc_kb - nda_stats.tcm_alloc_kb_prev;
-#endif
-
     nd_debug_printf("\n");
-    nd_debug_printf("Cumulative Packet Totals ");
-    nd_print_number(*nd_stats_os, nda_stats.maxrss_kb * 1024);
-    nd_debug_printf("[Uptime: +%lus RSS: %s (%c%lukB)]:\n",
-        nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec,
-        (*nd_stats_os).str().c_str(),
-        (maxrss_kb_delta == 0) ? ' ' :
-            (maxrss_kb_delta < 0) ? '-' : '+',
-        maxrss_kb_delta);
+    nd_debug_printf("Cumulative Packet Totals [Uptime: +%lus]:\n",
+        nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec);
 
     nd_print_number(*nd_stats_os, pkt_totals.pkt_raw, false);
     nd_debug_printf("%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
