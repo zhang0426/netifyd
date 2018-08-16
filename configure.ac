@@ -256,7 +256,7 @@ AC_SUBST([GIT_SOURCE_URL], [https://gitlab.com/netify.ai/public/netify-agent.git
 # Output files
 AC_CONFIG_FILES([deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.postinst deploy/debian/debian.rules deploy/debian/netifyd.dsc])
 AC_CONFIG_FILES([deploy/openwrt/Makefile deploy/openwrt/files/netifyd.init])
-AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile src/Makefile netifyd.spec])
+AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile include/Makefile src/Makefile netifyd.spec])
 AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
 AC_CONFIG_FILES([util/generate-protocol-csv.sh], [chmod +x util/generate-protocol-csv.sh])
 AC_OUTPUT
