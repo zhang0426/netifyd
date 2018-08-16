@@ -75,6 +75,16 @@ and applications.
 
 Report bugs to: @PACKAGE_BUGREPORT@
 
+%package devel
+Summary: Netify Agent Plugin API Files
+Group: Development/Libraries
+BuildArch: noarch
+
+%description devel
+Development files (headers) for developing Netify Agent Plugins.
+
+Report bugs to: @PACKAGE_BUGREPORT@
+
 # Prepare
 %prep
 %setup -q
@@ -124,7 +134,7 @@ touch %{EXTRA_DIST}
 make install DESTDIR=%{buildroot}
 
 rm -rf %{buildroot}/%{_bindir}
-rm -rf %{buildroot}/%{_includedir}
+rm -rf %{buildroot}/%{_includedir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}
 
 install -d -m 0750 %{buildroot}/%{statedir_pdata}
@@ -197,5 +207,10 @@ exit 0
 %{_sbindir}/%{name}
 %{_mandir}/man5/*
 %{_mandir}/man8/*
+
+# Developer files
+%files devel
+%defattr(-,root,root)
+%{_includedir}/%{name}
 
 # vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
