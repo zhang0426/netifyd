@@ -101,6 +101,7 @@ typedef bool atomic_bool;
 #include <signal.h>
 #include <netdb.h>
 #include <resolv.h>
+#include <ctype.h>
 
 #include <json.h>
 #include <pcap/pcap.h>
@@ -937,6 +938,7 @@ void ndDetectionThread::ProcessPacket(void)
                 }
 #endif
                 if (hostname.size()) {
+                    ndpi_protocol_match_result ret_match;
 
                     new_flow->detection_guessed |= ND_FLOW_GUESS_DNS;
 
@@ -950,7 +952,8 @@ void ndDetectionThread::ProcessPacket(void)
                         ndpi,
                         new_flow->ndpi_flow,
                         (char *)new_flow->ndpi_flow->host_server_name,
-                        strlen((const char *)new_flow->ndpi_flow->host_server_name)
+                        strlen((const char *)new_flow->ndpi_flow->host_server_name),
+                        &ret_match
                     );
 #if 0
                     nd_debug_printf("%s: Found hostname for undetected app proto: %s [%hu]\n",
@@ -1007,9 +1010,17 @@ void ndDetectionThread::ProcessPacket(void)
             }
             break;
         case NDPI_PROTOCOL_HTTP:
+            for (size_t i = 0;
+                i < strlen((const char *)new_flow->ndpi_flow->protos.http.user_agent); i++) {
+                if (! isprint(new_flow->ndpi_flow->protos.http.user_agent[i])) {
+                    // XXX: Sanitize user_agent of non-printable characters.
+                    new_flow->ndpi_flow->protos.http.user_agent[i] = '\0';
+                    break;
+                }
+            }
             snprintf(
                 new_flow->http.user_agent, ND_FLOW_UA_LEN,
-                "%s", new_flow->ndpi_flow->protos.http.detected_os
+                "%s", new_flow->ndpi_flow->protos.http.user_agent
             );
             break;
         case NDPI_PROTOCOL_SSL:
