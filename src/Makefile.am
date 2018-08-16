@@ -48,17 +48,3 @@ endif
 
 # For debugging ns_initparse
 #netifyd_SOURCES += ns-parse.c
-
-nodist_netifyd_SOURCES = nd-json-object-type.h nd-json-result-code.h nd-json-config-type.h
-BUILT_SOURCES = nd-json-object-type.h nd-json-result-code.h nd-json-config-type.h
-CLEANFILES = nd-json-object-type.h nd-json-result-code.h nd-json-config-type.h
-
-nd-json-object-type.h: ../include/nd-json-object-type.txt.in Makefile
-	../util/generate-json-include.sh c-object-type >$@
-
-nd-json-result-code.h: ../include/nd-json-result-code.txt.in Makefile
-	../util/generate-json-include.sh c-result-code >$@
-
-nd-json-config-type.h: ../include/nd-json-config-type.txt.in Makefile
-	../util/generate-json-include.sh c-config-type >$@
-
