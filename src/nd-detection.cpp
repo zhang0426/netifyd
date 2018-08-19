@@ -1102,12 +1102,17 @@ void ndDetectionThread::ProcessPacket(void)
             inet_ntop(AF_INET6, &new_flow->upper_addr6.s6_addr,
                 new_flow->upper_ip, INET6_ADDRSTRLEN);
             break;
+
+        default:
+            nd_printf("%s: ERROR: Unknown IP version: %d\n",
+                tag.c_str(), new_flow->ip_version);
+            throw ndDetectionThreadException(strerror(EINVAL));
         }
+
 #ifdef _ND_USE_NETLINK
         if (device_addrs != NULL) {
             string mac, ip;
             uint8_t *umac = NULL;
-            nd_device_addrs::iterator i;
 
             umac = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
                 new_flow->lower_mac : new_flow->upper_mac;
@@ -1124,6 +1129,7 @@ void ndDetectionThread::ProcessPacket(void)
                 ip = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
                     new_flow->lower_ip : new_flow->upper_ip;
 
+                nd_device_addrs::iterator i;
                 if ((i = device_addrs->find(mac)) == device_addrs->end())
                     (*device_addrs)[mac].push_back(ip);
                 else {
@@ -1142,7 +1148,9 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 #endif
+
         new_flow->release();
+
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
         if (thread_conntrack != NULL) {
             if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
