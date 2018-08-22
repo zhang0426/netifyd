@@ -105,6 +105,8 @@ typedef bool atomic_bool;
 
 #include <json.h>
 #include <pcap/pcap.h>
+#include <pcap/sll.h>
+#include <pcap/vlan.h>
 
 #ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
@@ -380,6 +382,7 @@ int ndDetectionThread::GetCaptureStats(struct pcap_stat &stats)
 void ndDetectionThread::ProcessPacket(void)
 {
     const struct ether_header *hdr_eth = NULL;
+    const struct sll_header *hdr_sll = NULL;
     const struct ip *hdr_ip = NULL;
     const struct ip6_hdr *hdr_ip6 = NULL;
     const struct tcphdr *hdr_tcp = NULL;
@@ -401,6 +404,7 @@ void ndDetectionThread::ProcessPacket(void)
     string digest;
 
     struct ndpi_id_struct *id_src, *id_dst;
+    uint16_t ndpi_proto = NDPI_PROTOCOL_UNKNOWN;
 
     uint64_t ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) *
             ND_DETECTION_TICKS +
@@ -463,20 +467,29 @@ void ndDetectionThread::ProcessPacket(void)
         break;
 
     case DLT_LINUX_SLL:
-        type = (pkt_data[14] << 8) + pkt_data[15];
-        l2_len = 16;
+        hdr_sll = reinterpret_cast<const struct sll_header *>(pkt_data);
+        type = hdr_sll->sll_protocol;
+        l2_len = SLL_HDR_LEN;
         break;
 
     default:
+        stats->pkt_discard++;
+        stats->pkt_discard_bytes += pkt_header->len;
+#ifdef _ND_LOG_PKT_DISCARD
+        nd_debug_printf("%s: discard: Unsupported datalink type: 0x%x\n",
+            tag.c_str(), (unsigned)pcap_datalink_type);
+#endif
         return;
     }
 
     while (true) {
         if (type == ETHERTYPE_VLAN) {
             vlan_packet = 1;
+            // TODO: Replace with struct vlan_tag from <pcap/vlan.h>
+            // See: https://en.wikipedia.org/wiki/IEEE_802.1Q
             flow.vlan_id = ((pkt_data[l2_len] << 8) + pkt_data[l2_len + 1]) & 0xFFF;
             type = (pkt_data[l2_len + 2] << 8) + pkt_data[l2_len + 3];
-            l2_len += 4;
+            l2_len += VLAN_TAG_LEN;
         }
         else if (type == ETHERTYPE_MPLS_UC || type == ETHERTYPE_MPLS_MC) {
             stats->pkt_mpls++;
@@ -980,34 +993,27 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         // Additional protocol-specific processing...
-        switch (new_flow->master_protocol()) {
+        ndpi_proto = new_flow->master_protocol();
 
-        case NDPI_PROTOCOL_DNS:
-            if (dns_cache != NULL && pkt != NULL && pkt_len > 12 &&
-                ProcessDNSResponse(new_flow->host_server_name, pkt, pkt_len)) {
+        switch (ndpi_proto) {
 
-                // Rehash DNS flows:
-                // This is done to uniquely track queries that originate from
-                // the same local port.  Some devices re-use their local port
-                // which would cause additional queries to not be processed.
-                // Rehashing using the host_server_name as an additional key
-                // guarantees that we see all DNS queries/responses.
-                new_flow->hash(tag, digest, false,
-                    (const uint8_t *)new_flow->host_server_name,
-                    strnlen(new_flow->host_server_name, HOST_NAME_MAX));
+        case NDPI_PROTOCOL_MDNS:
+            snprintf(
+                new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN,
+                "%s", new_flow->ndpi_flow->protos.mdns.answer
+            );
+            break;
 
-                flows->erase(flow_iter.first);
-                flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
+        case NDPI_PROTOCOL_SSL:
+            new_flow->ssl.version =
+                new_flow->ndpi_flow->protos.stun_ssl.ssl.version;
+            new_flow->ssl.cipher_suite =
+                new_flow->ndpi_flow->protos.stun_ssl.ssl.cipher_suite;
 
-                if (! flow_iter.second) {
-                    *flow_iter.first->second += *new_flow;
-
-                    new_flow->release();
-                    delete new_flow;
-
-                    new_flow = flow_iter.first->second;
-                }
-            }
+            snprintf(new_flow->ssl.client_certcn, ND_FLOW_SSL_CNLEN,
+                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate);
+            snprintf(new_flow->ssl.server_certcn, ND_FLOW_SSL_CNLEN,
+                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
             break;
         case NDPI_PROTOCOL_HTTP:
             for (size_t i = 0;
@@ -1023,23 +1029,6 @@ void ndDetectionThread::ProcessPacket(void)
                 "%s", new_flow->ndpi_flow->protos.http.user_agent
             );
             break;
-        case NDPI_PROTOCOL_SSL:
-            new_flow->ssl.version =
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.version;
-            new_flow->ssl.cipher_suite =
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.cipher_suite;
-
-            snprintf(new_flow->ssl.client_certcn, ND_FLOW_SSL_CNLEN,
-                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate);
-            snprintf(new_flow->ssl.server_certcn, ND_FLOW_SSL_CNLEN,
-                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
-            break;
-        case NDPI_PROTOCOL_SSH:
-            snprintf(new_flow->ssh.client_agent, ND_FLOW_SSH_UALEN,
-                "%s", new_flow->ndpi_flow->protos.ssh.client_signature);
-            snprintf(new_flow->ssh.server_agent, ND_FLOW_SSH_UALEN,
-                "%s", new_flow->ndpi_flow->protos.ssh.server_signature);
-            break;
         case NDPI_PROTOCOL_DHCP:
             snprintf(
                 new_flow->dhcp.fingerprint, ND_FLOW_DHCPFP_LEN,
@@ -1049,6 +1038,12 @@ void ndDetectionThread::ProcessPacket(void)
                 new_flow->dhcp.class_ident, ND_FLOW_DHCPCI_LEN,
                 "%s", new_flow->ndpi_flow->protos.dhcp.class_ident
             );
+            break;
+        case NDPI_PROTOCOL_SSH:
+            snprintf(new_flow->ssh.client_agent, ND_FLOW_SSH_UALEN,
+                "%s", new_flow->ndpi_flow->protos.ssh.client_signature);
+            snprintf(new_flow->ssh.server_agent, ND_FLOW_SSH_UALEN,
+                "%s", new_flow->ndpi_flow->protos.ssh.server_signature);
             break;
         case NDPI_PROTOCOL_BITTORRENT:
             if (new_flow->ndpi_flow->protos.bittorrent.hash_valid) {
@@ -1060,32 +1055,43 @@ void ndDetectionThread::ProcessPacket(void)
                 );
             }
             break;
-        case NDPI_PROTOCOL_MDNS:
-            snprintf(
-                new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN,
-                "%s", new_flow->ndpi_flow->protos.mdns.answer
-            );
-            // Rehash MDNS flows:
+        }
+
+        if ((ndpi_proto == NDPI_PROTOCOL_DNS &&
+            dns_cache != NULL && pkt != NULL && pkt_len > 12 &&
+            ProcessDNSResponse(new_flow->host_server_name, pkt, pkt_len)) ||
+            ndpi_proto == NDPI_PROTOCOL_MDNS) {
+
+            // Rehash M/DNS flows:
             // This is done to uniquely track queries that originate from
-            // the same local port (5353).  Rehashing using the answer as an
-            // additional key guarantees that we see all MDNS responses as
-            // unique flows versus overwritting previous answers.
-            new_flow->hash(tag, digest, false,
-                (const uint8_t *)new_flow->mdns.answer,
-                strnlen(new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN));
+            // the same local port.  Some devices re-use their local port
+            // which would cause additional queries to not be processed.
+            // Rehashing using the host_server_name as an additional key
+            // guarantees that we see all DNS queries/responses.
+
+            if (ndpi_proto == NDPI_PROTOCOL_DNS) {
+                new_flow->hash(tag, digest, false,
+                    (const uint8_t *)new_flow->host_server_name,
+                    strnlen(new_flow->host_server_name, HOST_NAME_MAX));
+            }
+            else {
+                new_flow->hash(tag, digest, false,
+                    (const uint8_t *)new_flow->mdns.answer,
+                    strnlen(new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN));
+            }
 
             flows->erase(flow_iter.first);
             flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
 
             if (! flow_iter.second) {
+                // Flow exists...  updated stats and return.
                 *flow_iter.first->second += *new_flow;
 
                 new_flow->release();
                 delete new_flow;
 
-                new_flow = flow_iter.first->second;
+                return;
             }
-            break;
         }
 
         switch (new_flow->ip_version) {
