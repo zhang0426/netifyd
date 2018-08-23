@@ -37,6 +37,7 @@
 using namespace std;
 
 #include "netifyd.h"
+
 #include "nd-ndpi.h"
 #include "nd-util.h"
 #ifdef _ND_USE_NETLINK

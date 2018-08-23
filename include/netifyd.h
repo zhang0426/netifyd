@@ -147,6 +147,10 @@ typedef vector<pair<string, string> > nd_device_addr;
 typedef map<string, string> nd_device_filter;
 typedef map<string, string> nd_device_netlink;
 typedef map<string, string> nd_inotify_watch;
+#ifdef _ND_USE_PLUGINS
+class ndPluginLoader;
+typedef map<string, ndPluginLoader *> nd_plugin;
+#endif
 
 enum nd_global_flags {
     ndGF_DEBUG = 0x1,
@@ -220,6 +224,9 @@ typedef struct nd_global_config_t {
     vector<struct sockaddr *> privacy_filter_host;
     vector<uint8_t *> privacy_filter_mac;
     nd_device_filter device_filters;
+#ifdef _ND_USE_PLUGINS
+    nd_plugin plugins;
+#endif
 } nd_global_config;
 
 typedef struct nd_agent_stats_t

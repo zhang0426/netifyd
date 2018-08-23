@@ -39,6 +39,7 @@ typedef bool atomic_bool;
 using namespace std;
 
 #include "netifyd.h"
+
 #include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-thread.h"
@@ -47,12 +48,12 @@ using namespace std;
 ndPlugin::ndPlugin(const string &tag)
     : ndThread(tag, -1)
 {
-    nd_debug_printf("Plugin initialized: %s", tag.c_str());
+    nd_debug_printf("Plugin initialized: %s\n", tag.c_str());
 }
 
 ndPlugin::~ndPlugin()
 {
-    nd_debug_printf("Plugin destroyed: %s", tag.c_str());
+    nd_debug_printf("Plugin destroyed: %s\n", tag.c_str());
 }
 
 ndPluginLoader::ndPluginLoader(const string &so_name, const string &tag)
@@ -80,12 +81,12 @@ ndPluginLoader::ndPluginLoader(const string &so_name, const string &tag)
         throw ndPluginException(tag, "ndPluginInit");
     }
 
-    nd_debug_printf("Plugin loaded: %s: %s", tag.c_str(), so_name.c_str());
+    nd_debug_printf("Plugin loaded: %s: %s\n", tag.c_str(), so_name.c_str());
 }
 
 ndPluginLoader::~ndPluginLoader()
 {
-    nd_debug_printf("Plugin dereferenced: %s: %s",
+    nd_debug_printf("Plugin dereferenced: %s: %s\n",
         plugin->GetTag().c_str(), so_name.c_str());
     if (so_handle != NULL) dlclose(so_handle);
 }

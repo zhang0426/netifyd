@@ -2,6 +2,9 @@
 *.core
 *.cpp-e
 .deps/
+*.la
+.libs
+*.lo
 Makefile
 Makefile.in
 nd-json-*.h

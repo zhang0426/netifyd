@@ -44,6 +44,8 @@ public:
     virtual void *Entry(void) = 0;
 };
 
+#ifdef _ND_INTERNAL
+
 class ndPluginLoader
 {
 public:
@@ -57,6 +59,7 @@ protected:
     void *so_handle;
     ndPlugin *plugin;
 };
+#endif // _ND_INTERNAL
 
 #endif // _ND_PLUGIN_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

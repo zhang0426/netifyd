@@ -47,6 +47,7 @@
 using namespace std;
 
 #include "netifyd.h"
+
 #include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-sha1.h"

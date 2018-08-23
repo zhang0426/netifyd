@@ -72,6 +72,7 @@ typedef bool atomic_bool;
 using namespace std;
 
 #include "netifyd.h"
+
 #include "nd-ndpi.h"
 #include "nd-util.h"
 #ifdef _ND_USE_INOTIFY
@@ -89,6 +90,9 @@ using namespace std;
 #include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-upload.h"
+#ifdef _ND_USE_PLUGINS
+#include "nd-plugin.h"
+#endif
 
 #define ND_SIG_UPDATE       SIGRTMIN
 #define ND_STR_ETHALEN     (ETH_ALEN * 2 + ETH_ALEN - 1)
@@ -534,6 +538,20 @@ static int nd_config_load(void)
     }
 #ifdef _ND_USE_INOTIFY
     reader.GetSection("watches", inotify_watches);
+#endif
+#ifdef _ND_USE_PLUGINS
+    map<string, string> plugins;
+    reader.GetSection("plugins", plugins);
+
+    for (map<string, string>::const_iterator i = plugins.begin();
+        i != plugins.end(); i++) {
+        try {
+            nd_config.plugins[i->first] = new ndPluginLoader(i->second, i->first);
+        } catch (ndPluginException &e) {
+            fprintf(stderr, "Error loading plugin: %s %s: %s\n",
+                i->first.c_str(), i->second.c_str(), e.what());
+        }
+    }
 #endif
     return 0;
 }
@@ -1788,6 +1806,19 @@ int main(int argc, char *argv[])
         nd_printf("Error starting socket thread: %s\n", e.what());
         return 1;
     }
+
+#ifdef _ND_USE_PLUGINS
+    try {
+        for (nd_plugin::const_iterator i = nd_config.plugins.begin();
+            i != nd_config.plugins.end(); i++) {
+            i->second->GetPlugin()->Create();
+        }
+    }
+    catch (ndThreadException &e) {
+        nd_printf("Error starting socket thread: %s\n", e.what());
+        return 1;
+    }
+#endif
 
     memset(&sigev, 0, sizeof(struct sigevent));
     sigev.sigev_notify = SIGEV_SIGNAL;
