@@ -16,6 +16,7 @@ missing
 netifyd-*.tar.gz
 *orig
 osc
+*.pc
 *rej
 stamp-h1
 *.swp
