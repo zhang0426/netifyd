@@ -10,6 +10,8 @@ EXTRA_DIST = autogen.sh debian/compat \
 DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 
+pkgconfig_DATA = lib@PACKAGE_TARNAME@.pc
+
 dist-git:
 	rm -f $(PACKAGE)-$(VERSION).tar*
 	git archive --prefix=$(PACKAGE)-$(VERSION)/ --output=$(PACKAGE)-$(VERSION).tar HEAD

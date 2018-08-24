@@ -20,6 +20,7 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG([0.23])
+PKG_INSTALLDIR
 AC_PATH_PROG([bash], [bash], [false])
 AC_PATH_PROG([osc], [osc])
 AM_CONDITIONAL([HAVE_OSC], [test x$osc != x])
@@ -224,10 +225,6 @@ AC_CHECK_FUNC([pthread_attr_setaffinity_np], [
     AC_DEFINE([HAVE_PTHREAD_ATTR_SETAFFINITY_NP], [1], [Define if pthread_attr_setaffinity_np is available.])
 ])
 
-# Compiler optimizations
-#CFLAGS+=" -fomit-frame-pointer -O3 -falign-functions=16 -falign-jumps=16 -falign-loops=16 -falign-labels=16"
-#CXXFLAGS+=" -fomit-frame-pointer -O3 -falign-functions=16 -falign-jumps=16 -falign-loops=16 -falign-labels=16"
-
 # Get git revision
 if test -d ".git"; then :
     GIT_TAG=`git log -1 --format=%h`
@@ -256,6 +253,7 @@ AC_SUBST([GIT_SOURCE_URL], [https://gitlab.com/netify.ai/public/netify-agent.git
 # Output files
 AC_CONFIG_FILES([deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.postinst deploy/debian/debian.rules deploy/debian/netifyd.dsc])
 AC_CONFIG_FILES([deploy/openwrt/Makefile deploy/openwrt/files/netifyd.init])
+AC_CONFIG_FILES([libnetifyd.pc])
 AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile include/Makefile src/Makefile netifyd.spec])
 AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
 AC_CONFIG_FILES([util/generate-protocol-csv.sh], [chmod +x util/generate-protocol-csv.sh])

@@ -25,7 +25,7 @@
 %define netifyd_tmpf deploy/%{name}.tmpf
 
 %define statedir_pdata %{_sysconfdir}/netify.d
-%define statedir_vdata %{_sharedstatedir}/netifyd
+%define statedir_vdata %{_sharedstatedir}/%{name}
 
 # RPM package details
 Name: netifyd
@@ -33,6 +33,7 @@ Summary: Netify Agent
 Version: 2.80
 Release: 1%{dist}
 Vendor: eGloo Incorporated
+URL: http://www.netify.ai/
 License: GPLv3
 Group: System/Daemons
 Packager: eGloo Incorporated
@@ -135,7 +136,7 @@ make install DESTDIR=%{buildroot}
 rm -rf %{buildroot}/%{_bindir}
 rm -rf %{buildroot}/%{_includedir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}/libndpi*
-rm -rf %{buildroot}/%{_libdir}/pkgconfig
+rm -rf %{buildroot}/%{_libdir}/pkgconfig/libndpi*
 
 install -d -m 0750 %{buildroot}/%{statedir_pdata}
 install -d -m 0750 %{buildroot}/%{statedir_vdata}
@@ -205,7 +206,7 @@ exit 0
 %config(noreplace) %attr(640,root,root) %{statedir_pdata}/netify-sink.conf
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
-%{_libdir}/libnetifyd.so*
+%{_libdir}/lib%{name}.so*
 %{_mandir}/man5/*
 %{_mandir}/man8/*
 
@@ -213,7 +214,8 @@ exit 0
 %files devel
 %defattr(-,root,root)
 %{_includedir}/%{name}
-%{_libdir}/libnetifyd.a
-%{_libdir}/libnetifyd.la
+%{_libdir}/pkgconfig/lib%{name}.pc
+%{_libdir}/lib%{name}.a
+%{_libdir}/lib%{name}.la
 
 # vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
