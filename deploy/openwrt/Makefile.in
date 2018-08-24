@@ -70,9 +70,10 @@ endef
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include/@PACKAGE_TARNAME@
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/@PACKAGE_TARNAME@/*.h $(1)/usr/include/@PACKAGE_TARNAME@
-
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/lib@PACKAGE_TARNAME@.{a,so*} $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/lib@PACKAGE_TARNAME@.pc $(1)/usr/lib/pkgconfig/
 endef
 
 define Package/@PACKAGE_TARNAME@/install
