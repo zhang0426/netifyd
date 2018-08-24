@@ -48,7 +48,8 @@ install: build
 
 	rm -rf $(DESTDIR)@bindir@
 	rm -rf $(DESTDIR)@includedir@
-	rm -rf $(DESTDIR)@libdir@
+	rm -rf $(DESTDIR)@libdir@/libndpi*
+	rm -rf $(DESTDIR)@libdir@/pkgconfig
 
 	install -d -m 0755 $(DESTDIR)@sysconfdir@/netify.d
 	install -d -m 0755 $(DESTDIR)@localstatedir@/run/@PACKAGE_TARNAME@
