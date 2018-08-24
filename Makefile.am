@@ -30,22 +30,22 @@ dist-git:
 
 if HAVE_OSC
 deploy-osc-update: netifyd.spec deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc dist-git
-	(cd ./osc/home\:egloo/netifyd && $(osc) update)
-	cp deploy/debian/debian.changelog ./osc/home\:egloo/netifyd
-	cp deploy/debian/debian.control ./osc/home\:egloo/netifyd
-	cp deploy/debian/debian.postinst ./osc/home\:egloo/netifyd
-	chmod a+x ./osc/home\:egloo/netifyd/debian.postinst
-	cp deploy/debian/debian.rules ./osc/home\:egloo/netifyd
-	cp deploy/debian/netifyd.dsc ./osc/home\:egloo/netifyd
-	cp netifyd.spec ./osc/home\:egloo/netifyd
-	grep -v 'gperftools-devel' netifyd.spec > ./osc/home\:egloo/netifyd/netifyd-CentOS_6.spec
-	(cd ./osc/home\:egloo/netifyd && $(osc) rm --force $(PACKAGE)-*.tar.gz || true)
-	cp $(PACKAGE)-$(VERSION).tar.gz ./osc/home\:egloo/netifyd
-	(cd ./osc/home\:egloo/netifyd && $(osc) add $(PACKAGE)-*.tar.gz)
-	(cd ./osc/home\:egloo/netifyd && $(osc) status)
+	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) update)
+	cp deploy/debian/debian.changelog $(HOME)/netify-osc/home\:egloo/netifyd
+	cp deploy/debian/debian.control $(HOME)/netify-osc/home\:egloo/netifyd
+	cp deploy/debian/debian.postinst $(HOME)/netify-osc/home\:egloo/netifyd
+	chmod a+x $(HOME)/netify-osc/home\:egloo/netifyd/debian.postinst
+	cp deploy/debian/debian.rules $(HOME)/netify-osc/home\:egloo/netifyd
+	cp deploy/debian/netifyd.dsc $(HOME)/netify-osc/home\:egloo/netifyd
+	cp netifyd.spec $(HOME)/netify-osc/home\:egloo/netifyd
+	grep -v 'gperftools-devel' netifyd.spec > $(HOME)/netify-osc/home\:egloo/netifyd/netifyd-CentOS_6.spec
+	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) rm --force $(PACKAGE)-*.tar.gz || true)
+	cp $(PACKAGE)-$(VERSION).tar.gz $(HOME)/netify-osc/home\:egloo/netifyd
+	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) add $(PACKAGE)-*.tar.gz)
+	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) status)
 
 deploy-osc-commit: deploy-osc-update
-	(cd ./osc/home\:egloo/netifyd && $(osc) commit -m 'Updated to latest sources.')
+	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) commit -m 'Updated to latest sources.')
 endif
 
 deploy-edgeos: src/netifyd
