@@ -47,7 +47,7 @@ function load_defaults
     options=$(echo "$options" |\
         sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
 
-    echo $options
+    echo "$options"
 }
 
 # ClearOS: Dynamically add all configured LAN/WAN interfaces.
@@ -82,7 +82,7 @@ function load_clearos
     options=$(echo "$options" |\
         sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
 
-    echo $options
+    echo "$options"
 }
 
 # NethServer: Dynamically add all configured LAN/WAN interfaces.
@@ -123,7 +123,7 @@ function load_nethserver
     options=$(echo "$options" |\
         sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
 
-    echo $options
+    echo "$options"
 }
 
 # OpenWrt: Dynamically add all configured LAN/WAN interfaces.
@@ -137,7 +137,7 @@ function load_openwrt
     options=$(echo "$options" |\
         sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
 
-    echo $options
+    echo "$options"
 }
 
 function load_modules
@@ -181,7 +181,7 @@ function auto_detect_options
         esac
     fi
 
-    echo $options
+    echo "$options"
 }
 
 function restart_netifyd
