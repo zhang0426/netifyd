@@ -338,10 +338,10 @@ void ndConntrackThread::PrintFlow(
         flow->l3_proto, flow->l4_proto);
     os << buffer;
 
-    switch (flow->orig_addr[ndCT_DIR_SRC]->ss_family) {
+    switch (flow->orig_addr[ndCT_DIR_SRC].ss_family) {
     case AF_INET:
-        sa_src = (struct sockaddr_in *)flow->orig_addr[ndCT_DIR_SRC];
-        sa_dst = (struct sockaddr_in *)flow->orig_addr[ndCT_DIR_DST];
+        sa_src = (struct sockaddr_in *)&flow->orig_addr[ndCT_DIR_SRC];
+        sa_dst = (struct sockaddr_in *)&flow->orig_addr[ndCT_DIR_DST];
         if (reorder) {
             addr_cmp = memcmp(&sa_src->sin_addr,
                 &sa_dst->sin_addr, sizeof(in_addr));
@@ -372,8 +372,8 @@ void ndConntrackThread::PrintFlow(
         }
         break;
     case AF_INET6:
-        sa6_src = (struct sockaddr_in6 *)flow->orig_addr[ndCT_DIR_SRC];
-        sa6_dst = (struct sockaddr_in6 *)flow->orig_addr[ndCT_DIR_DST];
+        sa6_src = (struct sockaddr_in6 *)&flow->orig_addr[ndCT_DIR_SRC];
+        sa6_dst = (struct sockaddr_in6 *)&flow->orig_addr[ndCT_DIR_DST];
         if (reorder) {
             addr_cmp = memcmp(&sa6_src->sin6_addr,
                 &sa6_dst->sin6_addr, sizeof(struct in6_addr));
@@ -421,15 +421,15 @@ void ndConntrackThread::PrintFlow(
     }
 
     if (! withreply ||
-        ! flow->repl_addr[ndCT_DIR_SRC] || ! flow->repl_addr[ndCT_DIR_DST]) {
+        ! flow->repl_addr_valid[ndCT_DIR_SRC] || ! flow->repl_addr_valid[ndCT_DIR_DST]) {
         text = os.str();
         return;
     }
 
-    switch (flow->repl_addr[ndCT_DIR_SRC]->ss_family) {
+    switch (flow->repl_addr[ndCT_DIR_SRC].ss_family) {
     case AF_INET:
-        sa_src = (struct sockaddr_in *)flow->repl_addr[ndCT_DIR_SRC];
-        sa_dst = (struct sockaddr_in *)flow->repl_addr[ndCT_DIR_DST];
+        sa_src = (struct sockaddr_in *)&flow->repl_addr[ndCT_DIR_SRC];
+        sa_dst = (struct sockaddr_in *)&flow->repl_addr[ndCT_DIR_DST];
         inet_ntop(AF_INET, &sa_src->sin_addr.s_addr,
             ip, INET_ADDRSTRLEN);
         os << ", repl_src_ip: " << ip;
@@ -438,8 +438,8 @@ void ndConntrackThread::PrintFlow(
         os << ", repl_dst_ip: " << ip;
         break;
     case AF_INET6:
-        sa6_src = (struct sockaddr_in6 *)flow->repl_addr[ndCT_DIR_SRC];
-        sa6_dst = (struct sockaddr_in6 *)flow->repl_addr[ndCT_DIR_DST];
+        sa6_src = (struct sockaddr_in6 *)&flow->repl_addr[ndCT_DIR_SRC];
+        sa6_dst = (struct sockaddr_in6 *)&flow->repl_addr[ndCT_DIR_DST];
         inet_ntop(AF_INET6, &sa6_src->sin6_addr.s6_addr,
             ip, INET6_ADDRSTRLEN);
         os << ", repl_src_ip: " << ip;
@@ -527,21 +527,21 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
 
     flow_iter = ct_flow_map.find(digest);
     if (flow_iter != ct_flow_map.end() &&
-        flow_iter->second->repl_addr[ndCT_DIR_SRC] &&
-        flow_iter->second->repl_addr[ndCT_DIR_DST]) {
+        flow_iter->second->repl_addr_valid[ndCT_DIR_SRC] &&
+        flow_iter->second->repl_addr_valid[ndCT_DIR_DST]) {
 
         ndConntrackFlow *ct_flow = flow_iter->second;
 
         switch (ct_flow->l3_proto) {
         case AF_INET:
             sa_orig_src = reinterpret_cast<struct sockaddr_in *>(
-                ct_flow->orig_addr[ndCT_DIR_SRC]);
+                &ct_flow->orig_addr[ndCT_DIR_SRC]);
             sa_orig_dst = reinterpret_cast<struct sockaddr_in *>(
-                ct_flow->orig_addr[ndCT_DIR_DST]);
+                &ct_flow->orig_addr[ndCT_DIR_DST]);
             sa_repl_src = reinterpret_cast<struct sockaddr_in *>(
-                ct_flow->repl_addr[ndCT_DIR_SRC]);
+                &ct_flow->repl_addr[ndCT_DIR_SRC]);
             sa_repl_dst = reinterpret_cast<struct sockaddr_in *>(
-                ct_flow->repl_addr[ndCT_DIR_DST]);
+                &ct_flow->repl_addr[ndCT_DIR_DST]);
 #if 0
             {
                 string flow_text;
@@ -557,13 +557,13 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
 
         case AF_INET6:
             sa6_orig_src = reinterpret_cast<struct sockaddr_in6 *>(
-                ct_flow->orig_addr[ndCT_DIR_SRC]);
+                &ct_flow->orig_addr[ndCT_DIR_SRC]);
             sa6_orig_dst = reinterpret_cast<struct sockaddr_in6 *>(
-                ct_flow->orig_addr[ndCT_DIR_DST]);
+                &ct_flow->orig_addr[ndCT_DIR_DST]);
             sa6_repl_src = reinterpret_cast<struct sockaddr_in6 *>(
-                ct_flow->repl_addr[ndCT_DIR_SRC]);
+                &ct_flow->repl_addr[ndCT_DIR_SRC]);
             sa6_repl_dst = reinterpret_cast<struct sockaddr_in6 *>(
-                ct_flow->repl_addr[ndCT_DIR_DST]);
+                &ct_flow->repl_addr[ndCT_DIR_DST]);
 #if 0
             {
                 string flow_text;
@@ -589,25 +589,16 @@ ndConntrackFlow::ndConntrackFlow(struct nf_conntrack *ct)
     orig_port[ndCT_DIR_DST] = 0;
     repl_port[ndCT_DIR_SRC] = 0;
     repl_port[ndCT_DIR_DST] = 0;
-    orig_addr[ndCT_DIR_SRC] = NULL;
-    orig_addr[ndCT_DIR_DST] = NULL;
-    repl_addr[ndCT_DIR_SRC] = NULL;
-    repl_addr[ndCT_DIR_DST] = NULL;
 
     Update(ct);
 }
 
-ndConntrackFlow::~ndConntrackFlow()
-{
-    if (orig_addr[ndCT_DIR_SRC] != NULL) delete orig_addr[ndCT_DIR_SRC];
-    if (orig_addr[ndCT_DIR_DST] != NULL) delete orig_addr[ndCT_DIR_DST];
-    if (repl_addr[ndCT_DIR_SRC] != NULL) delete repl_addr[ndCT_DIR_SRC];
-    if (repl_addr[ndCT_DIR_DST] != NULL) delete repl_addr[ndCT_DIR_DST];
-}
-
 void ndConntrackFlow::Update(struct nf_conntrack *ct)
 {
-    struct sockaddr_storage *ss_addr = NULL;
+    orig_addr_valid[ndCT_DIR_SRC] = false;
+    orig_addr_valid[ndCT_DIR_DST] = false;
+    repl_addr_valid[ndCT_DIR_SRC] = false;
+    repl_addr_valid[ndCT_DIR_DST] = false;
 
     if (! nfct_attr_is_set(ct, ATTR_ORIG_L3PROTO))
         throw ndConntrackFlowException("ATTR_ORIG_L3PROTO not set");
@@ -630,62 +621,26 @@ void ndConntrackFlow::Update(struct nf_conntrack *ct)
     switch (af) {
     case AF_INET:
         if (nfct_attr_is_set(ct, ATTR_ORIG_IPV4_SRC)) {
-            if (orig_addr[ndCT_DIR_SRC] != NULL)
-                ss_addr = orig_addr[ndCT_DIR_SRC];
-            else {
-                ss_addr = new struct sockaddr_storage;
-                if (ss_addr == NULL) {
-                    throw ndConntrackSystemException(
-                        __PRETTY_FUNCTION__, "new", ENOMEM);
-                }
-                orig_addr[ndCT_DIR_SRC] = ss_addr;
-            }
-
-            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_ORIG_IPV4_SRC));
+            CopyAddress(af, &orig_addr[ndCT_DIR_SRC],
+                nfct_get_attr(ct, ATTR_ORIG_IPV4_SRC));
+            orig_addr_valid[ndCT_DIR_SRC] = true;
         }
         if (nfct_attr_is_set(ct, ATTR_ORIG_IPV4_DST)) {
-            if (orig_addr[ndCT_DIR_DST] != NULL)
-                ss_addr = orig_addr[ndCT_DIR_DST];
-            else {
-                ss_addr = new struct sockaddr_storage;
-                if (ss_addr == NULL) {
-                    throw ndConntrackSystemException(
-                        __PRETTY_FUNCTION__, "new", ENOMEM);
-                }
-                orig_addr[ndCT_DIR_DST] = ss_addr;
-            }
-
-            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_ORIG_IPV4_DST));
+            CopyAddress(af, &orig_addr[ndCT_DIR_DST],
+                nfct_get_attr(ct, ATTR_ORIG_IPV4_DST));
+            orig_addr_valid[ndCT_DIR_DST] = true;
         }
         break;
     case AF_INET6:
         if (nfct_attr_is_set(ct, ATTR_ORIG_IPV6_SRC)) {
-            if (orig_addr[ndCT_DIR_SRC] != NULL)
-                ss_addr = orig_addr[ndCT_DIR_SRC];
-            else {
-                ss_addr = new struct sockaddr_storage;
-                if (ss_addr == NULL) {
-                    throw ndConntrackSystemException(
-                        __PRETTY_FUNCTION__, "new", ENOMEM);
-                }
-                orig_addr[ndCT_DIR_SRC] = ss_addr;
-            }
-
-            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_ORIG_IPV6_SRC));
+            CopyAddress(af, &orig_addr[ndCT_DIR_SRC],
+                nfct_get_attr(ct, ATTR_ORIG_IPV6_SRC));
+            orig_addr_valid[ndCT_DIR_SRC] = true;
         }
         if (nfct_attr_is_set(ct, ATTR_ORIG_IPV6_DST)) {
-            if (orig_addr[ndCT_DIR_DST] != NULL)
-                ss_addr = orig_addr[ndCT_DIR_DST];
-            else {
-                ss_addr = new struct sockaddr_storage;
-                if (ss_addr == NULL) {
-                    throw ndConntrackSystemException(
-                        __PRETTY_FUNCTION__, "new", ENOMEM);
-                }
-                orig_addr[ndCT_DIR_DST] = ss_addr;
-            }
-
-            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_ORIG_IPV6_DST));
+            CopyAddress(af, &orig_addr[ndCT_DIR_DST],
+                nfct_get_attr(ct, ATTR_ORIG_IPV6_DST));
+            orig_addr_valid[ndCT_DIR_DST] = true;
         }
         break;
     }
@@ -698,62 +653,26 @@ void ndConntrackFlow::Update(struct nf_conntrack *ct)
     switch (af) {
     case AF_INET:
         if (nfct_attr_is_set(ct, ATTR_REPL_IPV4_SRC)) {
-            if (repl_addr[ndCT_DIR_SRC] != NULL)
-                ss_addr = repl_addr[ndCT_DIR_SRC];
-            else {
-                ss_addr = new struct sockaddr_storage;
-                if (ss_addr == NULL) {
-                    throw ndConntrackSystemException(
-                        __PRETTY_FUNCTION__, "new", ENOMEM);
-                }
-                repl_addr[ndCT_DIR_SRC] = ss_addr;
-            }
-
-            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_REPL_IPV4_SRC));
+            CopyAddress(af, &repl_addr[ndCT_DIR_SRC],
+                nfct_get_attr(ct, ATTR_REPL_IPV4_SRC));
+            repl_addr_valid[ndCT_DIR_SRC] = true;
         }
         if (nfct_attr_is_set(ct, ATTR_REPL_IPV4_DST)) {
-            if (repl_addr[ndCT_DIR_DST] != NULL)
-                ss_addr = repl_addr[ndCT_DIR_DST];
-            else {
-                ss_addr = new struct sockaddr_storage;
-                if (ss_addr == NULL) {
-                    throw ndConntrackSystemException(
-                        __PRETTY_FUNCTION__, "new", ENOMEM);
-                }
-                repl_addr[ndCT_DIR_DST] = ss_addr;
-            }
-
-            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_REPL_IPV4_DST));
+            CopyAddress(af, &repl_addr[ndCT_DIR_DST],
+                nfct_get_attr(ct, ATTR_REPL_IPV4_DST));
+            repl_addr_valid[ndCT_DIR_DST] = true;
         }
         break;
     case AF_INET6:
         if (nfct_attr_is_set(ct, ATTR_REPL_IPV6_SRC)) {
-            if (repl_addr[ndCT_DIR_SRC] != NULL)
-                ss_addr = repl_addr[ndCT_DIR_SRC];
-            else {
-                ss_addr = new struct sockaddr_storage;
-                if (ss_addr == NULL) {
-                    throw ndConntrackSystemException(
-                        __PRETTY_FUNCTION__, "new", ENOMEM);
-                }
-                repl_addr[ndCT_DIR_SRC] = ss_addr;
-            }
-
-            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_REPL_IPV6_SRC));
+            CopyAddress(af, &repl_addr[ndCT_DIR_SRC],
+                nfct_get_attr(ct, ATTR_REPL_IPV6_SRC));
+            repl_addr_valid[ndCT_DIR_SRC] = true;
         }
         if (nfct_attr_is_set(ct, ATTR_REPL_IPV6_DST)) {
-            if (repl_addr[ndCT_DIR_DST] != NULL)
-                ss_addr = repl_addr[ndCT_DIR_DST];
-            else {
-                ss_addr = new struct sockaddr_storage;
-                if (ss_addr == NULL) {
-                    throw ndConntrackSystemException(
-                        __PRETTY_FUNCTION__, "new", ENOMEM);
-                }
-                repl_addr[ndCT_DIR_DST] = ss_addr;
-            }
-
-            CopyAddress(af, ss_addr, nfct_get_attr(ct, ATTR_REPL_IPV6_DST));
+            CopyAddress(af, &repl_addr[ndCT_DIR_DST],
+                nfct_get_attr(ct, ATTR_REPL_IPV6_DST));
+            repl_addr_valid[ndCT_DIR_DST] = true;
         }
         break;
     }
@@ -798,14 +717,14 @@ void ndConntrackFlow::Hash(void)
     sha1_write(&ctx, (const char *)&l3_proto, sizeof(sa_family_t));
     sha1_write(&ctx, (const char *)&l4_proto, sizeof(uint8_t));
 
-    switch (orig_addr[ndCT_DIR_SRC]->ss_family) {
+    switch (orig_addr[ndCT_DIR_SRC].ss_family) {
     case AF_INET:
-        sa_src = repl_addr[ndCT_DIR_SRC] ?
-            (struct sockaddr_in *)repl_addr[ndCT_DIR_SRC] :
-            (struct sockaddr_in *)orig_addr[ndCT_DIR_SRC];
-        sa_dst = repl_addr[ndCT_DIR_DST] ?
-            (struct sockaddr_in *)repl_addr[ndCT_DIR_DST] :
-            (struct sockaddr_in *)orig_addr[ndCT_DIR_DST];
+        sa_src = repl_addr_valid[ndCT_DIR_SRC] ?
+            (struct sockaddr_in *)&repl_addr[ndCT_DIR_SRC] :
+            (struct sockaddr_in *)&orig_addr[ndCT_DIR_SRC];
+        sa_dst = repl_addr_valid[ndCT_DIR_DST] ?
+            (struct sockaddr_in *)&repl_addr[ndCT_DIR_DST] :
+            (struct sockaddr_in *)&orig_addr[ndCT_DIR_DST];
         addr_cmp = memcmp(
             &sa_src->sin_addr, &sa_dst->sin_addr, sizeof(in_addr));
         if (addr_cmp < 0) {
@@ -822,12 +741,12 @@ void ndConntrackFlow::Hash(void)
         }
         break;
     case AF_INET6:
-        sa6_src = repl_addr[ndCT_DIR_SRC] ?
-            (struct sockaddr_in6 *)repl_addr[ndCT_DIR_SRC] :
-            (struct sockaddr_in6 *)orig_addr[ndCT_DIR_SRC];
-        sa6_dst = repl_addr[ndCT_DIR_DST] ?
-            (struct sockaddr_in6 *)repl_addr[ndCT_DIR_DST] :
-            (struct sockaddr_in6 *)orig_addr[ndCT_DIR_DST];
+        sa6_src = repl_addr_valid[ndCT_DIR_SRC] ?
+            (struct sockaddr_in6 *)&repl_addr[ndCT_DIR_SRC] :
+            (struct sockaddr_in6 *)&orig_addr[ndCT_DIR_SRC];
+        sa6_dst = repl_addr_valid[ndCT_DIR_DST] ?
+            (struct sockaddr_in6 *)&repl_addr[ndCT_DIR_DST] :
+            (struct sockaddr_in6 *)&orig_addr[ndCT_DIR_DST];
         addr_cmp = memcmp(
             &sa6_src->sin6_addr, &sa6_dst->sin6_addr, sizeof(struct in6_addr));
         if (addr_cmp < 0) {

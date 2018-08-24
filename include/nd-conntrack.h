@@ -49,7 +49,6 @@ class ndConntrackFlow
 {
 public:
     ndConntrackFlow(struct nf_conntrack *ct);
-    virtual ~ndConntrackFlow();
 
     void Update(struct nf_conntrack *ct);
 
@@ -64,8 +63,10 @@ protected:
     uint8_t l4_proto;
     uint16_t orig_port[2];
     uint16_t repl_port[2];
-    struct sockaddr_storage *orig_addr[2];
-    struct sockaddr_storage *repl_addr[2];
+    bool orig_addr_valid[2];
+    bool repl_addr_valid[2];
+    struct sockaddr_storage orig_addr[2];
+    struct sockaddr_storage repl_addr[2];
 };
 
 typedef unordered_map<uint32_t, string> nd_ct_id_map;
