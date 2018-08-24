@@ -78,7 +78,6 @@ Report bugs to: https://gitlab.com/netify.ai/public/netify-agent/issues
 %package devel
 Summary: Netify Agent Plugin API Files
 Group: Development/Libraries
-BuildArch: noarch
 
 %description devel
 Development files (headers) for developing Netify Agent Plugins.
