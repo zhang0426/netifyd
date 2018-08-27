@@ -798,9 +798,7 @@ void nd_json_protocols(string &json_string)
     json.AddObject(NULL, "type", "protocols");
     json_object *jarray = json.CreateArray(NULL, "protocols");
 
-    uint32_t custom_proto_base;
-    struct ndpi_detection_module_struct *ndpi;
-    ndpi = nd_ndpi_init("netifyd", custom_proto_base);
+    struct ndpi_detection_module_struct *ndpi = ndpi_get_parent();
 
     for (unsigned i = 0; i < (unsigned)ndpi->ndpi_num_supported_protocols; i++) {
         json_object *json_proto = json.CreateObject();
@@ -808,8 +806,6 @@ void nd_json_protocols(string &json_string)
         json.AddObject(json_proto, "tag", ndpi->proto_defaults[i].proto_name);
         json.PushObject(jarray, json_proto);
     }
-
-    ndpi_free(ndpi);
 
     json.ToString(json_string, false);
     json_string.append("\n");
