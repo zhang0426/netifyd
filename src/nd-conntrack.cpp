@@ -66,8 +66,10 @@ using namespace std;
 #include "nd-conntrack.h"
 
 // Enable Conntrack debug logging
-//#define _ND_LOG_CONNTRACK       1
-//#define _ND_LOG_CONNTRACK_INTV  15
+#define _ND_LOG_CONNTRACK       1
+#define _ND_LOG_CONNTRACK_INTV  15
+
+extern nd_global_config nd_config;
 
 static int nd_ct_event_callback(
     enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data)
@@ -247,80 +249,79 @@ void *ndConntrackThread::Entry(void)
 void ndConntrackThread::ProcessConntrackEvent(
     enum nf_conntrack_msg_type type, struct nf_conntrack *ct)
 {
-    uint32_t id = nfct_get_attr_u32(ct, ATTR_ID);
     ndConntrackFlow *ct_flow = NULL;
-    nd_ct_id_map::iterator id_iter = ct_id_map.find(id);
+    nd_ct_id_map::iterator id_iter;
     nd_ct_flow_map::iterator flow_iter;
-#ifdef _ND_LOG_CONNTRACK
-    bool ct_exists = false, ct_new_or_update = false;
-#endif
 
-    if (id_iter == ct_id_map.end()) {
+    uint32_t id = nfct_get_attr_u32(ct, ATTR_ID);
+
+    Lock();
+
+    if (type & NFCT_T_NEW) {
         try {
             ct_flow = new ndConntrackFlow(ct);
         }
         catch (ndConntrackFlowException &e) {
             nd_printf("%s: %s.\n", tag.c_str(), e.what());
-            return;
+            goto Unlock_ProcessConntrackEvent;
         }
 
         ct_id_map[id] = ct_flow->digest;
         ct_flow_map[ct_flow->digest] = ct_flow;
-#ifdef _ND_LOG_CONNTRACK
-        ct_new_or_update = true;
-#endif
     }
-    else {
-#ifdef _ND_LOG_CONNTRACK
-        ct_exists = true;
-#endif
-        flow_iter = ct_flow_map.find(id_iter->second);
+    else if (type & NFCT_T_UPDATE) {
 
-        if (type & NFCT_T_DESTROY) {
+        id_iter = ct_id_map.find(id);
+        if (id_iter == ct_id_map.end())
+            goto Unlock_ProcessConntrackEvent;
+
+        flow_iter = ct_flow_map.find(id_iter->second);
+        if (flow_iter == ct_flow_map.end())
+            goto Unlock_ProcessConntrackEvent;
+
+        ct_flow = flow_iter->second;
+
+        ct_flow->Update(ct);
+
+        if (ct_flow->digest != id_iter->second) {
+            nd_debug_printf("%s: [%u] Connection tracking flow hash changed!\n",
+                tag.c_str(), id);
+
+            ct_flow_map.erase(flow_iter);
+
+            ct_flow_map[ct_flow->digest] = ct_flow;
+            ct_id_map[id] = ct_flow->digest;
+        }
+    }
+    else if (type & NFCT_T_DESTROY) {
+
+        id_iter = ct_id_map.find(id);
+        if (id_iter != ct_id_map.end()) {
+
+            flow_iter = ct_flow_map.find(id_iter->second);
             if (flow_iter != ct_flow_map.end()) {
                 delete flow_iter->second;
                 ct_flow_map.erase(flow_iter);
             }
+
             ct_id_map.erase(id_iter);
         }
-        else {
-            if (flow_iter == ct_flow_map.end()) {
-                nd_debug_printf("%s: [%u] Connection tracking flow not found!\n",
-                    tag.c_str(), id);
-                ct_id_map.erase(id_iter);
-                return;
-            }
-
-            ct_flow = flow_iter->second;
-            ct_flow->Update(ct);
-#ifdef _ND_LOG_CONNTRACK
-            ct_new_or_update = true;
-#endif
-            if (ct_flow->digest != id_iter->second) {
-                nd_debug_printf("%s: [%u] Connection tracking flow hash changed!\n",
-                    tag.c_str(), id);
-                ct_flow_map.erase(flow_iter);
-                ct_flow_map[ct_flow->digest] = ct_flow;
-                ct_id_map[id] = ct_flow->digest;
-            }
-        }
+    }
+    else {
+        nd_debug_printf("%s: Unhandled connection tracking message type: 0x%02x\n",
+            tag.c_str(), type);
     }
 #ifdef _ND_LOG_CONNTRACK
-    if (nd_debug) {
+    if (ND_DEBUG) {
+#if 0
         char buffer[1024];
         nfct_snprintf(buffer, sizeof(buffer), ct, type, NFCT_O_PLAIN, NFCT_OF_TIME);
-
-        if (! ct_exists && ct_new_or_update)
-            nd_debug_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
-//        if (! ct_new_or_update && ! ct_exists)
-//            nd_printf("%s: [%u] %s\n", tag.c_str(), id, buffer);
-//        nd_printf("%s: [%s %u] %s\n", tag.c_str(),
-//            (ct_new_or_update && ! ct_exists) ?
-//                "INSERT" : (ct_new_or_update && ct_exists) ?
-//                "UPDATE" : (ct_exists && ! ct_new_or_update) ?
-//                "ERASE" : "UNKNOWN", id, buffer);
+        nd_debug_printf("%s: %02x [%u] %s\n", tag.c_str(), type, id, buffer);
+#endif
     }
 #endif
+Unlock_ProcessConntrackEvent:
+    Unlock();
 }
 
 void ndConntrackThread::PrintFlow(
