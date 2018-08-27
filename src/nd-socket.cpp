@@ -653,20 +653,21 @@ void ndSocketThread::QueueWrite(const string &data)
 void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
 {
     ndSocket *client = NULL;
-    ndSocketBuffer *buffer = NULL;
 
     try {
-        buffer = new ndSocketBuffer();
-        if (buffer == NULL)
-            throw ndSocketThreadException(__PRETTY_FUNCTION__, "new", ENOMEM);
-
         client = si->second->Accept();
     } catch (ndSocketGetAddrInfoException &e) {
-        if (client) delete client;
+        if (client != NULL) delete client;
         throw;
     } catch (ndSocketSystemException &e) {
-        if (client) delete client;
+        if (client != NULL) delete client;
         throw;
+    }
+
+    ndSocketBuffer *buffer = new ndSocketBuffer();
+    if (buffer == NULL) {
+        delete client;
+        throw ndSocketThreadException(__PRETTY_FUNCTION__, "new", ENOMEM);
     }
 
     buffers[client->GetDescriptor()] = buffer;
