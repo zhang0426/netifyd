@@ -27,5 +27,7 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
 
 void nd_ndpi_free(ndpi_detection_module_struct *ndpi);
 
+struct ndpi_detection_module_struct *ndpi_get_parent(void);
+
 #endif // _ND_NDPI_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

@@ -121,6 +121,11 @@ void ndpi_global_destroy(void)
     ndpi_proto_ptree = NULL;
 }
 
+struct ndpi_detection_module_struct *ndpi_get_parent(void)
+{
+    return ndpi_parent;
+}
+
 #if 0
 // XXX: Deprecated: Tue Jun  5 16:56:04 EDT 2018
 static void nd_ndpi_load_content_match(
