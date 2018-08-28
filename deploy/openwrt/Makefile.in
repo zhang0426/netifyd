@@ -60,7 +60,8 @@ CONFIGURE_ARGS += \
 	--disable-inotify \
 	--disable-ncurses \
 	--disable-libtcmalloc \
-	--without-systemdsystemunitdir
+	--without-systemdsystemunitdir \
+	--enable-lean-and-mean
 
 define Build/Configure
 	(cd $(PKG_BUILD_DIR); ./autogen.sh)
