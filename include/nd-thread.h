@@ -42,6 +42,8 @@ public:
 
     virtual void Terminate(void) { terminate = true; }
     bool ShouldTerminate(void) { return terminate; }
+
+    void SetTerminated(void) { terminated = true; }
     bool HasTerminated(void) { return terminated; }
 
     void Lock(void);
