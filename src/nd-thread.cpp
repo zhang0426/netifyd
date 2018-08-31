@@ -33,6 +33,8 @@ typedef bool atomic_bool;
 #include <signal.h>
 #include <pthread.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 
 using namespace std;
@@ -112,8 +114,7 @@ ndThread::~ndThread(void)
 
 void ndThread::SetProcName(void)
 {
-//#ifdef HAVE_PTHREAD_SETNAME_NP
-#if 0
+#if defined(HAVE_PTHREAD_SETNAME_NP) && ! defined(_ND_LEAN_AND_MEAN)
     char name[ND_THREAD_MAX_PROCNAMELEN];
 
     snprintf(name, ND_THREAD_MAX_PROCNAMELEN, "%s", tag.c_str());
