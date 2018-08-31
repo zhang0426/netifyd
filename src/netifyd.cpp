@@ -2068,13 +2068,13 @@ int main(int argc, char *argv[])
         }
 
         if (sig == ND_SIG_UPDATE) {
-#ifdef _ND_USE_PLUGINS
-            nd_reap_tasks();
-#endif
 #ifdef _ND_USE_INOTIFY
             inotify->RefreshWatches();
 #endif
             nd_dump_stats();
+#ifdef _ND_USE_PLUGINS
+            nd_reap_tasks();
+#endif
             if (thread_socket) {
                 string json;
                 nd_json_agent_status(json);
