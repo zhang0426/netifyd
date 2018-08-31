@@ -63,6 +63,7 @@ static void *nd_thread_entry(void *param)
         thread = reinterpret_cast<ndThread *>(param);
         thread->SetProcName();
         rv = thread->Entry();
+        thread->SetTerminated();
     }
     catch (exception &e) {
         nd_printf("%s: Exception: %s\n", thread->GetTag().c_str(), e.what());
