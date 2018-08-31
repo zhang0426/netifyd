@@ -315,8 +315,6 @@ void *ndDetectionThread::Entry(void)
     nd_debug_printf("%s: capture ended on CPU: %lu\n",
         tag.c_str(), cpu >= 0 ? cpu : 0);
 
-    terminated = true;
-
     return NULL;
 }
 
