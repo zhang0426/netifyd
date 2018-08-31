@@ -82,7 +82,7 @@
 
 #define ND_DNS_CACHE_FILE_NAME  ND_VOLATILE_STATEDIR "/dns-cache.csv"
 
-#define ND_JSON_VERSION         1.5     // JSON format version
+#define ND_JSON_VERSION         1.6     // JSON format version
 #ifndef ND_JSON_FILE_NAME
 #define ND_JSON_FILE_NAME       ND_VOLATILE_STATEDIR "/netifyd.json"
 #endif
@@ -131,9 +131,8 @@
 #define PACKAGE_URL             "http://www.egloo.ca/"
 #endif
 
-#define ND_CONF_CUSTOM_MATCH    ND_PERSISTENT_STATEDIR "/netify-sink.conf"
-#define ND_CONF_CONTENT_MATCH   ND_PERSISTENT_STATEDIR "/app-content-match.csv"
-#define ND_CONF_HOST_MATCH      ND_PERSISTENT_STATEDIR "/app-host-match.csv"
+#define ND_CONF_SINK_BASE       "netify-sink.conf"
+#define ND_CONF_SINK_PATH       ND_PERSISTENT_STATEDIR "/" ND_CONF_SINK_BASE
 
 #define ND_STR_ETHALEN          (ETH_ALEN * 2 + ETH_ALEN - 1)
 
@@ -149,7 +148,7 @@ typedef map<string, string> nd_device_netlink;
 typedef map<string, string> nd_inotify_watch;
 #ifdef _ND_USE_PLUGINS
 class ndPluginLoader;
-typedef map<string, ndPluginLoader *> nd_plugin;
+typedef map<string, ndPluginLoader *> nd_plugins;
 #endif
 
 enum nd_global_flags {
@@ -157,9 +156,9 @@ enum nd_global_flags {
     ndGF_DEBUG_UPLOAD = 0x2,
     ndGF_DEBUG_WITH_ETHERS = 0x4,
     ndGF_DEBUG_DNS_CACHE = 0x8,
-    ndGF_OVERRIDE_CONTENT_MATCH = 0x10,
-    ndGF_OVERRIDE_CUSTOM_MATCH = 0x20,
-    ndGF_OVERRIDE_HOST_MATCH = 0x40,
+    ndGF_OVERRIDE_SINK_CONFIG = 0x10,
+    ndGF_BITHOLE_0x20 = 0x20,
+    ndGF_BITHOLE_0x40 = 0x40,
     ndGF_SSL_USE_TLSv1 = 0x80,
     ndGF_SSL_VERIFY_PEER = 0x100,
     ndGF_USE_CONNTRACK = 0x200,
@@ -178,9 +177,7 @@ enum nd_global_flags {
 #define ND_DEBUG_UPLOAD (nd_config.flags & ndGF_DEBUG_UPLOAD)
 #define ND_DEBUG_WITH_ETHERS (nd_config.flags & ndGF_DEBUG_WITH_ETHERS)
 #define ND_DEBUG_DNS_CACHE (nd_config.flags & ndGF_DEBUG_DNS_CACHE)
-#define ND_OVERRIDE_CONTENT_MATCH (nd_config.flags & ndGF_OVERRIDE_CONTENT_MATCH)
-#define ND_OVERRIDE_CUSTOM_MATCH (nd_config.flags & ndGF_OVERRIDE_CUSTOM_MATCH)
-#define ND_OVERRIDE_HOST_MATCH (nd_config.flags & ndGF_OVERRIDE_HOST_MATCH)
+#define ND_OVERRIDE_SINK_CONFIG (nd_config.flags & ndGF_OVERRIDE_SINK_CONFIG)
 #define ND_SSL_USE_TLSv1 (nd_config.flags & ndGF_SSL_USE_TLSv1)
 #define ND_SSL_VERIFY_PEER (nd_config.flags & ndGF_SSL_VERIFY_PEER)
 #define ND_USE_CONNTRACK (nd_config.flags & ndGF_USE_CONNTRACK)
@@ -195,9 +192,7 @@ enum nd_global_flags {
 
 typedef struct nd_global_config_t {
     char *path_config;
-    char *path_content_match;
-    char *path_custom_match;
-    char *path_host_match;
+    char *path_sink_config;
     char *path_json;
     char *path_uuid;
     char *path_uuid_serial;
@@ -208,11 +203,7 @@ typedef struct nd_global_config_t {
     char *uuid_site;
     size_t max_backlog;
     uint32_t flags;
-    uint8_t digest_custom_match[SHA1_DIGEST_LENGTH];
-#ifndef _ND_LEAN_AND_MEAN
-    uint8_t digest_content_match[SHA1_DIGEST_LENGTH];
-    uint8_t digest_host_match[SHA1_DIGEST_LENGTH];
-#endif
+    uint8_t digest_sink_config[SHA1_DIGEST_LENGTH];
     unsigned max_tcp_pkts;
     unsigned max_udp_pkts;
     unsigned update_interval;
@@ -225,7 +216,8 @@ typedef struct nd_global_config_t {
     vector<uint8_t *> privacy_filter_mac;
     nd_device_filter device_filters;
 #ifdef _ND_USE_PLUGINS
-    nd_plugin plugins;
+    map<string, string> services;
+    map<string, string> tasks;
 #endif
 } nd_global_config;
 
