@@ -25,9 +25,12 @@
 #include <unordered_map>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
+
 #include <errno.h>
+
+#include <arpa/inet.h>
 
 #ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
