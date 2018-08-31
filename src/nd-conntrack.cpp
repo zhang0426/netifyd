@@ -89,7 +89,7 @@ static int nd_ct_netlink_callback(const struct nlmsghdr *nlh, void *data)
 
     if (nfct_nlmsg_parse(nlh, ct) == 0) {
         ndConntrackThread *thread = reinterpret_cast<ndConntrackThread *>(data);
-        thread->ProcessConntrackEvent(NFCT_T_UNKNOWN, ct);
+        thread->ProcessConntrackEvent(NFCT_T_NEW, ct);
     }
 
     nfct_destroy(ct);
@@ -272,19 +272,25 @@ void ndConntrackThread::ProcessConntrackEvent(
     else if (type & NFCT_T_UPDATE) {
 
         id_iter = ct_id_map.find(id);
-        if (id_iter == ct_id_map.end())
+        if (id_iter == ct_id_map.end()) {
+            nd_debug_printf("%s: [U:%u] ID not found.\n",
+                tag.c_str(), id);
             goto Unlock_ProcessConntrackEvent;
+        }
 
         flow_iter = ct_flow_map.find(id_iter->second);
-        if (flow_iter == ct_flow_map.end())
+        if (flow_iter == ct_flow_map.end()) {
+            nd_debug_printf("%s: [U:%u] Digest in flow map not found.\n",
+                tag.c_str(), id);
             goto Unlock_ProcessConntrackEvent;
+        }
 
         ct_flow = flow_iter->second;
 
         ct_flow->Update(ct);
 
         if (ct_flow->digest != id_iter->second) {
-            nd_debug_printf("%s: [%u] Connection tracking flow hash changed!\n",
+            nd_debug_printf("%s: [U:%u] Connection tracking flow hash changed!\n",
                 tag.c_str(), id);
 
             ct_flow_map.erase(flow_iter);
