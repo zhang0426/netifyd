@@ -1184,6 +1184,10 @@ static void nd_json_add_plugin_replies(
         case ndPlugin::TYPE_TASK:
             parent = &json_tasks;
             break;
+
+        default:
+            nd_debug_printf("%s: Unsupported plugin type: %d\n",
+                __PRETTY_FUNCTION__, (*i)->GetType());
         }
 
         if (parent != NULL) {
