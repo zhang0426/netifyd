@@ -24,6 +24,13 @@
     ndPlugin *ndPluginInit(const string &tag) { \
         class_name *p = new class_name(tag); \
         if (p == NULL) return NULL; \
+        if (p->GetType() != ndPlugin::TYPE_TASK && \
+            p->GetType() != ndPlugin::TYPE_SERVICE) { \
+                nd_printf("Invalid plugin type detected during init: %s\n", \
+                    tag.c_str()); \
+                delete p; \
+                return NULL; \
+        } \
         return dynamic_cast<ndPlugin *>(p); \
     } }
 
@@ -42,6 +49,39 @@ public:
     virtual ~ndPlugin();
 
     virtual void *Entry(void) = 0;
+
+    enum ndPluginType
+    {
+        TYPE_BASE,
+        TYPE_SERVICE,
+        TYPE_TASK,
+    };
+
+    ndPluginType GetType(void) { return type; };
+
+    virtual void SetParams(const ndJsonPluginParams &params);
+    virtual void GetReplies(ndJsonPluginReplies &replies);
+
+protected:
+    void PushReply(const string &key, const string &value);
+
+    ndPluginType type;
+    ndJsonPluginParams params;
+    ndJsonPluginReplies replies;
+};
+
+class ndPluginService : public ndPlugin
+{
+public:
+    ndPluginService(const string &tag);
+    virtual ~ndPluginService();
+};
+
+class ndPluginTask : public ndPlugin
+{
+public:
+    ndPluginTask(const string &tag);
+    virtual ~ndPluginTask();
 };
 
 #ifdef _ND_INTERNAL

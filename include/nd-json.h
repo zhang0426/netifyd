@@ -72,118 +72,56 @@ protected:
     json_object *root;
 };
 
-#include "nd-json-object-type.h"
+#include "nd-json-response-code.h"
 
-class ndJsonObject
+typedef vector<string> ndJsonDataChunks;
+typedef map<string, ndJsonDataChunks> ndJsonData;
+
+#ifdef _ND_USE_PLUGINS
+typedef map<string, string> ndJsonPluginParams;
+typedef ndJsonPluginParams ndJsonPluginReplies;
+
+typedef map<string, ndJsonPluginParams> ndJsonPlugins;
+#endif
+
+class ndJsonResponse
 {
 public:
-    ndJsonObject(ndJsonObjectType type)
-        : type(type) { }
-    virtual ~ndJsonObject() { }
-
-    ndJsonObjectType GetType(void) { return type; }
-
-protected:
-    ndJsonObjectType type;
-};
-
-class ndJsonObjectFactory
-{
-public:
-    ndJsonObjectFactory()
+    ndJsonResponse()
     {
         jtok = json_tokener_new_ex(ND_JSON_TOKENER_DEPTH);
         if (jtok == NULL)
             throw ndJsonInitException(strerror(ENOMEM));
     }
-    virtual ~ndJsonObjectFactory()
+
+    virtual ~ndJsonResponse()
     {
         if (jtok != NULL) json_tokener_free(jtok);
     }
 
-    ndJsonObjectType Parse(const string &jstring, ndJsonObject **result);
+    void Parse(const string &json);
+
+    double version;
+
+    ndJsonResponseCode resp_code;
+    string resp_message;
+
+    string uuid_site;
+
+    ndJsonData data;
+
+#ifdef _ND_USE_PLUGINS
+    ndJsonPlugins plugin_service_params;
+    ndJsonPlugins plugin_tasks;
+#endif
 
 protected:
+    void UnserializeData(json_object *jdata);
+#ifdef _ND_USE_PLUGINS
+    void UnserializePluginParams(json_object *jplugins, ndJsonPlugins &plugins);
+#endif
+
     json_tokener *jtok;
-};
-
-#include "nd-json-result-code.h"
-
-class ndJsonObjectResult : public ndJsonObject
-{
-public:
-    ndJsonObjectResult(json_object *jdata);
-
-    ndJsonObjectResultCode GetCode(void) { return code; }
-    string GetMessage(void) { return message; }
-
-protected:
-    ndJsonObjectResultCode code;
-    string message;
-};
-
-#include "nd-json-config-type.h"
-
-typedef struct
-{
-    string match;
-    string app_name;
-    uint32_t app_id;
-} ndJsonConfigContentMatch;
-
-typedef vector<ndJsonConfigContentMatch *> ndJsonConfigContentMatchList;
-
-typedef struct
-{
-    string rule;
-} ndJsonConfigCustomMatch;
-
-typedef vector<ndJsonConfigCustomMatch *> ndJsonConfigCustomMatchList;
-
-typedef struct
-{
-    struct sockaddr_storage ip_addr;
-    uint8_t ip_prefix;
-    uint32_t app_id;
-} ndJsonConfigHostMatch;
-
-typedef vector<ndJsonConfigHostMatch *> ndJsonConfigHostMatchList;
-
-class ndJsonObjectConfig : public ndJsonObject
-{
-public:
-    ndJsonObjectConfig(json_object *jdata);
-    virtual ~ndJsonObjectConfig();
-
-    bool IsPresent(ndJsonConfigType type) { return bool(present & (unsigned)type); }
-
-    size_t GetContentMatchCount(void) { return content_match_list.size(); }
-    size_t GetCustomMatchCount(void) { return custom_match_list.size(); }
-    size_t GetHostMatchCount(void) { return host_match_list.size(); }
-
-    ndJsonConfigContentMatch *GetFirstContentMatchEntry(void);
-    ndJsonConfigCustomMatch *GetFirstCustomMatchEntry(void);
-    ndJsonConfigHostMatch *GetFirstHostMatchEntry(void);
-
-    ndJsonConfigContentMatch *GetNextContentMatchEntry(void);
-    ndJsonConfigCustomMatch *GetNextCustomMatchEntry(void);
-    ndJsonConfigHostMatch *GetNextHostMatchEntry(void);
-
-protected:
-    void UnserializeConfig(ndJsonConfigType type, json_object *jarray);
-    void UnserializeContentMatch(json_object *jentry);
-    void UnserializeCustomMatch(json_object *jentry);
-    void UnserializeHostMatch(json_object *jentry);
-
-    unsigned present;
-
-    ndJsonConfigContentMatchList content_match_list;
-    ndJsonConfigCustomMatchList custom_match_list;
-    ndJsonConfigHostMatchList host_match_list;
-
-    ndJsonConfigContentMatchList::const_iterator content_match_iterator;
-    ndJsonConfigCustomMatchList::const_iterator custom_match_iterator;
-    ndJsonConfigHostMatchList::const_iterator host_match_iterator;
 };
 
 #endif // _ND_JSON_H

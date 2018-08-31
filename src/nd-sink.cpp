@@ -36,12 +36,18 @@
 typedef bool atomic_bool;
 #endif
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
+#include <fcntl.h>
 
 #include <curl/curl.h>
+
 #include <json.h>
+
 #include <zlib.h>
 
 using namespace std;
@@ -52,7 +58,7 @@ using namespace std;
 #include "nd-util.h"
 #include "nd-json.h"
 #include "nd-thread.h"
-#include "nd-upload.h"
+#include "nd-sink.h"
 
 extern nd_global_config nd_config;
 
@@ -96,11 +102,11 @@ static int nd_curl_debug(
     return 0;
 }
 
-static size_t ndUploadThread_read_data(
+static size_t ndSinkThread_read_data(
     char *data, size_t size, size_t nmemb, void *user)
 {
     size_t length = size * nmemb;
-    ndUploadThread *thread_upload = reinterpret_cast<ndUploadThread *>(user);
+    ndSinkThread *thread_upload = reinterpret_cast<ndSinkThread *>(user);
 
     thread_upload->AppendData((const char *)data, length);
 
@@ -108,28 +114,28 @@ static size_t ndUploadThread_read_data(
 }
 
 #if (LIBCURL_VERSION_NUM < 0x073200)
-static int ndUploadThread_progress(void *user,
+static int ndSinkThread_progress(void *user,
     double dltotal, double dlnow, double ultotal, double ulnow)
 #else
-static int ndUploadThread_progress(void *user,
+static int ndSinkThread_progress(void *user,
     curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
 #endif
 {
-    ndUploadThread *thread_upload = reinterpret_cast<ndUploadThread *>(user);
+    ndSinkThread *thread_upload = reinterpret_cast<ndSinkThread *>(user);
 
     if (thread_upload->ShouldTerminate()) return 1;
 
     return 0;
 }
 
-ndUploadThread::ndUploadThread()
+ndSinkThread::ndSinkThread()
     : ndThread("nd-sink", -1),
     headers(NULL), headers_gz(NULL), pending_size(0)
 {
     int rc;
 
     if ((ch = curl_easy_init()) == NULL)
-        throw ndUploadThreadException("curl_easy_init");
+        throw ndSinkThreadException("curl_easy_init");
 
     curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_upload);
     curl_easy_setopt(ch, CURLOPT_POST, 1);
@@ -138,15 +144,15 @@ ndUploadThread::ndUploadThread()
     curl_easy_setopt(ch, CURLOPT_NOSIGNAL, (long)1);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (ND_DEBUG_UPLOAD) ? ND_COOKIE_JAR : "");
 
-    curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndUploadThread_read_data);
+    curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndSinkThread_read_data);
     curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
 
     curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 0);
 #if (LIBCURL_VERSION_NUM < 0x073200)
-    curl_easy_setopt(ch, CURLOPT_PROGRESSFUNCTION, ndUploadThread_progress);
+    curl_easy_setopt(ch, CURLOPT_PROGRESSFUNCTION, ndSinkThread_progress);
     curl_easy_setopt(ch, CURLOPT_PROGRESSDATA, static_cast<void *>(this));
 #else
-    curl_easy_setopt(ch, CURLOPT_XFERINFOFUNCTION, ndUploadThread_progress);
+    curl_easy_setopt(ch, CURLOPT_XFERINFOFUNCTION, ndSinkThread_progress);
     curl_easy_setopt(ch, CURLOPT_XFERINFODATA, static_cast<void *>(this));
 #endif
 #if (LIBCURL_VERSION_NUM < 0x072106)
@@ -176,21 +182,37 @@ ndUploadThread::ndUploadThread()
     pthread_condattr_init(&cond_attr);
     pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
     if ((rc = pthread_cond_init(&uploads_cond, &cond_attr)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
     pthread_condattr_destroy(&cond_attr);
 
     if ((rc = pthread_mutex_init(&uploads_cond_mutex, NULL)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
+
+    if ((rc = pthread_mutex_init(&response_mutex, NULL)) != 0)
+        throw ndSinkThreadException(strerror(rc));
 }
 
-ndUploadThread::~ndUploadThread()
+ndSinkThread::~ndSinkThread()
 {
     Join();
     if (ch != NULL) curl_easy_cleanup(ch);
     FreeHeaders();
+
+    pthread_cond_destroy(&uploads_cond);
+    pthread_mutex_destroy(&uploads_cond_mutex);
+
+    pthread_mutex_lock(&response_mutex);
+
+    for (ndResponseQueue::const_iterator i = responses.begin();
+        i != responses.end(); i++) delete (*i);
+
+    responses.clear();
+
+    pthread_mutex_unlock(&response_mutex);
+    pthread_mutex_destroy(&response_mutex);
 }
 
-void *ndUploadThread::Entry(void)
+void *ndSinkThread::Entry(void)
 {
     int rc;
 
@@ -198,18 +220,18 @@ void *ndUploadThread::Entry(void)
 
     while (terminate == false) {
         if ((rc = pthread_mutex_lock(&lock)) != 0)
-            throw ndUploadThreadException(strerror(rc));
+            throw ndSinkThreadException(strerror(rc));
 
         if (uploads.size() == 0) {
             if ((rc = pthread_mutex_unlock(&lock)) != 0)
-                throw ndUploadThreadException(strerror(rc));
+                throw ndSinkThreadException(strerror(rc));
 
             if ((rc = pthread_mutex_lock(&uploads_cond_mutex)) != 0)
-                throw ndUploadThreadException(strerror(rc));
+                throw ndSinkThreadException(strerror(rc));
             if ((rc = pthread_cond_wait(&uploads_cond, &uploads_cond_mutex)) != 0)
-                throw ndUploadThreadException(strerror(rc));
+                throw ndSinkThreadException(strerror(rc));
             if ((rc = pthread_mutex_unlock(&uploads_cond_mutex)) != 0)
-                throw ndUploadThreadException(strerror(rc));
+                throw ndSinkThreadException(strerror(rc));
 
             continue;
         }
@@ -231,63 +253,88 @@ void *ndUploadThread::Entry(void)
         while (uploads.size() > 0);
 
         if ((rc = pthread_mutex_unlock(&lock)) != 0)
-            throw ndUploadThreadException(strerror(rc));
+            throw ndSinkThreadException(strerror(rc));
 
         if (terminate == false && pending.size() > 0) Upload();
     }
 
-    terminated = true;
-
     return NULL;
 }
 
-void ndUploadThread::Terminate(void)
+void ndSinkThread::Terminate(void)
 {
     int rc;
 
     if ((rc = pthread_mutex_lock(&lock)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
     if ((rc = pthread_cond_broadcast(&uploads_cond)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
 
     terminate = true;
 
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
 }
 
-void ndUploadThread::QueuePush(const string &json)
+void ndSinkThread::QueuePush(const string &json)
 {
     int rc;
 
     if ((rc = pthread_mutex_lock(&lock)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
 
     uploads.push(json);
 
     if ((rc = pthread_cond_broadcast(&uploads_cond)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
 }
 
-size_t ndUploadThread::QueuePendingSize(void)
+size_t ndSinkThread::QueuePendingSize(void)
 {
     int rc;
     size_t bytes;
 
     if ((rc = pthread_mutex_lock(&lock)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
 
     bytes = pending_size;
 
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
-        throw ndUploadThreadException(strerror(rc));
+        throw ndSinkThreadException(strerror(rc));
 
     return bytes;
 }
 
-void ndUploadThread::CreateHeaders(void)
+void ndSinkThread::PushResponse(ndJsonResponse *response)
+{
+    pthread_mutex_lock(&response_mutex);
+
+    responses.push_back(response);
+
+    pthread_mutex_unlock(&response_mutex);
+
+    kill(getpid(), SIGALRM);
+}
+
+ndJsonResponse *ndSinkThread::PopResponse(void)
+{
+    ndJsonResponse *response = NULL;
+
+    pthread_mutex_lock(&response_mutex);
+
+    if (responses.size()) {
+        response = responses.front();
+        responses.pop_front();
+    }
+
+    pthread_mutex_unlock(&response_mutex);
+
+    return response;
+}
+
+void ndSinkThread::CreateHeaders(void)
 {
     FreeHeaders();
 
@@ -333,7 +380,7 @@ void ndUploadThread::CreateHeaders(void)
     headers_gz = curl_slist_append(headers_gz, site_uuid.str().c_str());
 }
 
-void ndUploadThread::FreeHeaders(void)
+void ndSinkThread::FreeHeaders(void)
 {
     if (headers != NULL) {
         curl_slist_free_all(headers);
@@ -346,7 +393,7 @@ void ndUploadThread::FreeHeaders(void)
     }
 }
 
-void ndUploadThread::Upload(void)
+void ndSinkThread::Upload(void)
 {
     CURLcode curl_rc;
     size_t xfer = 0, total = pending.size();
@@ -414,7 +461,7 @@ void ndUploadThread::Upload(void)
     while (pending.size() > 0 && ! terminate);
 }
 
-string ndUploadThread::Deflate(const string &data)
+string ndSinkThread::Deflate(const string &data)
 {
     int rc;
     z_stream zs;
@@ -431,7 +478,7 @@ string ndUploadThread::Deflate(const string &data)
         Z_DEFLATED, 15 /* window bits */ | 16 /* enable GZIP format */,
         8,
         Z_DEFAULT_STRATEGY
-    ) != Z_OK) throw ndUploadThreadException("deflateInit2");
+    ) != Z_OK) throw ndSinkThreadException("deflateInit2");
 
     zs.next_in = (uint8_t *)data.data();
     zs.avail_in = data.size();
@@ -440,14 +487,14 @@ string ndUploadThread::Deflate(const string &data)
         zs.avail_out = ND_ZLIB_CHUNK_SIZE;
         zs.next_out = chunk;
         if ((rc = deflate(&zs, Z_FINISH)) == Z_STREAM_ERROR)
-            throw ndUploadThreadException("deflate");
+            throw ndSinkThreadException("deflate");
         buffer.append((const char *)chunk, ND_ZLIB_CHUNK_SIZE - zs.avail_out);
     } while (zs.avail_out == 0);
 
     deflateEnd(&zs);
 
     if (rc != Z_STREAM_END)
-        throw ndUploadThreadException("deflate");
+        throw ndSinkThreadException("deflate");
 
     if (ND_DEBUG || ND_DEBUG_UPLOAD) {
         nd_debug_printf("%s: payload compressed: %lu -> %lu\n",
@@ -457,205 +504,49 @@ string ndUploadThread::Deflate(const string &data)
     return buffer;
 }
 
-void ndUploadThread::ProcessResponse(void)
+void ndSinkThread::ProcessResponse(void)
 {
-    bool detection_module_reload = false;
-    ndJsonObject *json_obj = NULL;
-    ndJsonObjectType json_type = ndJSON_OBJ_TYPE_NULL;
-    ndJsonObjectResult *json_result = NULL;
-    ndJsonObjectConfig *json_config = NULL;
-    ndJsonObjectFactory json_factory;
+    ndJsonResponse *response = new ndJsonResponse();
 
     try {
-        json_type = json_factory.Parse(body_data, &json_obj);
-    } catch (ndJsonParseException &e) {
-        nd_printf("JSON parse error: %s\n", e.what());
-#ifndef _ND_LEAN_AND_MEAN
-        if (ND_DEBUG_UPLOAD) nd_debug_printf(
-            "%s: payload:\n\"%s\"\n", tag.c_str(), body_data.c_str());
-#endif
-    }
+        if (response == NULL)
+            throw runtime_error(strerror(ENOMEM));
 
-    switch (json_type) {
-    case ndJSON_OBJ_TYPE_OK:
-        if (ND_DEBUG_UPLOAD)
-            nd_debug_printf("%s: upload successful.\n", tag.c_str());
-        break;
-    case ndJSON_OBJ_TYPE_RESULT:
-        json_result = reinterpret_cast<ndJsonObjectResult *>(json_obj);
-        nd_debug_printf("%s: [%d] %s\n", tag.c_str(),
-            json_result->GetCode(),
-            (json_result->GetMessage().length() > 0) ?
-                json_result->GetMessage().c_str() : "(null)");
+        response->Parse(body_data);
 
-        if (json_result->GetCode() == ndJSON_RES_SET_SITE_UUID) {
-            if (json_result->GetMessage().length() == ND_SITE_UUID_LEN
+        switch (response->resp_code) {
+        case ndJSON_RESP_OK:
+            if (response->uuid_site.size() == ND_SITE_UUID_LEN
                 && nd_save_uuid(
-                    json_result->GetMessage(),
+                    response->uuid_site,
                     nd_config.path_uuid_site, ND_SITE_UUID_LEN
                 )) {
                 nd_printf("%s: saved new site UUID: %s\n", tag.c_str(),
-                    json_result->GetMessage().c_str());
+                    response->uuid_site.c_str());
                 CreateHeaders();
             }
-        }
-        break;
-    case ndJSON_OBJ_TYPE_CONFIG:
-        if (ND_DEBUG_UPLOAD)
-            nd_debug_printf("%s: upload successful (config returned).\n", tag.c_str());
 
-        json_config = reinterpret_cast<ndJsonObjectConfig *>(json_obj);
-#ifndef _ND_LEAN_AND_MEAN
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_CONTENT_MATCH) &&
-            ! ND_OVERRIDE_CONTENT_MATCH) {
-            ExportConfig(ndJSON_CFG_TYPE_CONTENT_MATCH, json_config);
-            detection_module_reload = true;
-        }
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_HOST_MATCH) &&
-            ! ND_OVERRIDE_HOST_MATCH) {
-            ExportConfig(ndJSON_CFG_TYPE_HOST_MATCH, json_config);
-            detection_module_reload = true;
-        }
-#endif
-        if (json_config->IsPresent(ndJSON_CFG_TYPE_CUSTOM_MATCH) &&
-            ! ND_OVERRIDE_CUSTOM_MATCH) {
-            detection_module_reload = ExportConfig(
-                ndJSON_CFG_TYPE_CUSTOM_MATCH, json_config
-            );
-        }
+            PushResponse(response);
 
-        if (detection_module_reload) kill(getpid(), SIGHUP);
+            nd_debug_printf("%s: [%d] %s\n", tag.c_str(),
+                response->resp_code,
+                (response->resp_message.size() > 0) ?
+                    response->resp_message.c_str() : "(no message)");
+            break;
 
-        break;
-    case ndJSON_OBJ_TYPE_NULL:
-    default:
-        nd_printf("%s: unexpected JSON result type.\n", tag.c_str());
-#ifndef _ND_LEAN_AND_MEAN
-        if (ND_DEBUG || ND_DEBUG_UPLOAD) {
-            FILE *hf = fopen(ND_JSON_FILE_BAD_RECV, "w");
-            if (hf != NULL) {
-                fwrite(body_data.c_str(), 1, body_data.size(), hf);
-                fclose(hf);
-                nd_debug_printf(
-                    "%s: wrote rejected payload to: %s\n",
-                    tag.c_str(), ND_JSON_FILE_BAD_RECV);
-            }
+        default:
+            nd_printf("%s: [%d] %s\n", tag.c_str(),
+                response->resp_code,
+                (response->resp_message.size() > 0) ?
+                    response->resp_message.c_str() : "(no message)");
+            if (response != NULL) delete response;
         }
-#endif
+    } catch (ndJsonParseException &e) {
+        if (response != NULL) delete response;
+        nd_printf("JSON response parse error: %s\n", e.what());
+    } catch (runtime_error &e) {
+        nd_printf("JSON response parse error: %s\n", e.what());
     }
-
-    if (json_obj != NULL) delete json_obj;
-}
-
-bool ndUploadThread::ExportConfig(ndJsonConfigType type, ndJsonObjectConfig *config)
-{
-    int rc = 0;
-    FILE *fp = NULL;
-    string config_type_string;
-    size_t entries = 0;
-    ndJsonConfigCustomMatch *custom_match;
-#ifndef _ND_LEAN_AND_MEAN
-    ndJsonConfigContentMatch *content_match;
-    ndJsonConfigHostMatch *host_match;
-    char ip_addr[INET6_ADDRSTRLEN];
-    struct sockaddr_in *saddr_ip4;
-    struct sockaddr_in6 *saddr_ip6;
-#endif
-    switch (type) {
-#ifndef _ND_LEAN_AND_MEAN
-    case ndJSON_CFG_TYPE_CONTENT_MATCH:
-        fp = fopen(nd_config.path_content_match, "w");
-        config_type_string = "content match";
-        entries = config->GetContentMatchCount();
-        break;
-    case ndJSON_CFG_TYPE_HOST_MATCH:
-        fp = fopen(nd_config.path_host_match, "w");
-        config_type_string = "host protocol";
-        entries = config->GetHostMatchCount();
-        break;
-#endif
-    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
-        fp = fopen(nd_config.path_custom_match, "w");
-        config_type_string = "custom protos";
-        entries = config->GetCustomMatchCount();
-        break;
-    default:
-        throw ndJsonParseException("Unsupported configuration type for export");
-    }
-
-    if (fp == NULL)
-        throw ndJsonParseException("Error opening file for configuration export");
-
-    switch (type) {
-#ifndef _ND_LEAN_AND_MEAN
-    case ndJSON_CFG_TYPE_CONTENT_MATCH:
-        content_match = config->GetFirstContentMatchEntry();
-        while (content_match != NULL) {
-            fprintf(fp, "\"%s\",\"%s\",%u\n",
-                content_match->match.c_str(),
-                content_match->app_name.c_str(),
-                content_match->app_id);
-            content_match = config->GetNextContentMatchEntry();
-        }
-        fclose(fp);
-        nd_sha1_file(
-            nd_config.path_content_match, nd_config.digest_content_match);
-        break;
-    case ndJSON_CFG_TYPE_HOST_MATCH:
-        host_match = config->GetFirstHostMatchEntry();
-        while (host_match != NULL) {
-            memset(ip_addr, '\0', INET6_ADDRSTRLEN);
-            switch (host_match->ip_addr.ss_family) {
-            case AF_INET:
-                saddr_ip4 = reinterpret_cast<struct sockaddr_in *>(&host_match->ip_addr);
-                if (inet_ntop(AF_INET, &saddr_ip4->sin_addr, ip_addr, INET6_ADDRSTRLEN))
-                    rc = 1;
-                break;
-            case AF_INET6:
-                saddr_ip6 = reinterpret_cast<struct sockaddr_in6 *>(&host_match->ip_addr);
-                if (inet_ntop(AF_INET6, &saddr_ip6->sin6_addr, ip_addr, INET6_ADDRSTRLEN))
-                    rc = 1;
-                break;
-            }
-            if (rc == 1) {
-                fprintf(fp, "\"%s\",%hhu,%u\n",
-                    ip_addr, host_match->ip_prefix, host_match->app_id);
-            }
-            host_match = config->GetNextHostMatchEntry();
-        }
-        fclose(fp);
-        nd_sha1_file(
-            nd_config.path_host_match, nd_config.digest_host_match);
-        break;
-#endif
-    case ndJSON_CFG_TYPE_CUSTOM_MATCH:
-        custom_match = config->GetFirstCustomMatchEntry();
-        while (custom_match != NULL) {
-            fprintf(fp, "%s",
-                custom_match->rule.c_str());
-            custom_match = config->GetNextCustomMatchEntry();
-        }
-        fclose(fp);
-        nd_sha1_file(
-            nd_config.path_custom_match, nd_config.digest_custom_match);
-        break;
-    default:
-        fclose(fp);
-        break;
-    }
-
-    if (ND_DEBUG) {
-        if (entries == 0) {
-            nd_debug_printf("%s: cleared %s configuration\n", tag.c_str(),
-                config_type_string.c_str());
-        }
-        else {
-            nd_debug_printf("%s: exported %lu %s configuration entries\n", tag.c_str(),
-                entries, config_type_string.c_str());
-        }
-    }
-
-    return true;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

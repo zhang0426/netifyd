@@ -89,9 +89,10 @@ using namespace std;
 #endif
 #include "nd-detection.h"
 #include "nd-socket.h"
-#include "nd-upload.h"
+#include "nd-sink.h"
 #ifdef _ND_USE_PLUGINS
 #include "nd-plugin.h"
+#include "nd-base64.h"
 #endif
 
 #define ND_SIG_UPDATE       SIGRTMIN
@@ -109,8 +110,12 @@ static nd_threads threads;
 static nd_agent_stats nda_stats;
 static nd_packet_stats pkt_totals;
 static ostringstream *nd_stats_os = NULL;
-static ndUploadThread *thread_upload = NULL;
+static ndSinkThread *thread_sink = NULL;
 static ndSocketThread *thread_socket = NULL;
+#ifdef _ND_USE_PLUGINS
+static nd_plugins plugin_services;
+static nd_plugins plugin_tasks;
+#endif
 static char *nd_conf_filename = NULL;
 #ifdef _ND_USE_CONNTRACK
 static ndConntrackThread *thread_conntrack = NULL;
@@ -335,9 +340,7 @@ static void nd_config_init(void)
     nd_conf_filename = strdup(ND_CONF_FILE_NAME);
 
     nd_config.path_config = NULL;
-    nd_config.path_content_match = NULL;
-    nd_config.path_custom_match = NULL;
-    nd_config.path_host_match = NULL;
+    nd_config.path_sink_config = NULL;
     nd_config.path_json = NULL;
     nd_config.path_uuid = NULL;
     nd_config.path_uuid_serial = NULL;
@@ -355,14 +358,8 @@ static void nd_config_init(void)
 #elif defined(_ND_USE_NETLINK)
     nd_config.flags = ndGF_USE_NETLINK;
 #endif
-    nd_config.path_custom_match = strdup(ND_CONF_CUSTOM_MATCH);
-    memset(nd_config.digest_custom_match, 0, SHA1_DIGEST_LENGTH);
-#ifndef _ND_LEAN_AND_MEAN
-    nd_config.path_content_match = strdup(ND_CONF_CONTENT_MATCH);
-    nd_config.path_host_match = strdup(ND_CONF_HOST_MATCH);
-    memset(nd_config.digest_content_match, 0, SHA1_DIGEST_LENGTH);
-    memset(nd_config.digest_host_match, 0, SHA1_DIGEST_LENGTH);
-#endif
+    nd_config.path_sink_config = strdup(ND_CONF_SINK_PATH);
+    memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
     nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
     nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
     nd_config.update_interval = ND_STATS_INTERVAL;
@@ -540,18 +537,8 @@ static int nd_config_load(void)
     reader.GetSection("watches", inotify_watches);
 #endif
 #ifdef _ND_USE_PLUGINS
-    map<string, string> plugins;
-    reader.GetSection("plugins", plugins);
-
-    for (map<string, string>::const_iterator i = plugins.begin();
-        i != plugins.end(); i++) {
-        try {
-            nd_config.plugins[i->first] = new ndPluginLoader(i->second, i->first);
-        } catch (ndPluginException &e) {
-            fprintf(stderr, "Error loading plugin: %s %s: %s\n",
-                i->first.c_str(), i->second.c_str(), e.what());
-        }
-    }
+    reader.GetSection("services", nd_config.services);
+    reader.GetSection("tasks", nd_config.tasks);
 #endif
     return 0;
 }
@@ -749,6 +736,187 @@ static void nd_reap_detection_threads(void)
         threads.erase(thread_iter);
         iface_iter = ifaces.erase(iface_iter);
     }
+}
+#ifdef _ND_USE_PLUGINS
+static int nd_start_services(void)
+{
+    for (map<string, string>::const_iterator i = nd_config.services.begin();
+        i != nd_config.services.end(); i++) {
+        try {
+            plugin_services[i->first] = new ndPluginLoader(i->second, i->first);
+            plugin_services[i->first]->GetPlugin()->Create();
+        }
+        catch (ndPluginException &e) {
+            nd_printf("Error loading service plugin: %s\n", e.what());
+            return 1;
+        }
+        catch (ndThreadException &e) {
+            nd_printf("Error starting service plugin: %s %s: %s\n",
+                i->first.c_str(), i->second.c_str(), e.what());
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static void nd_stop_services(void)
+{
+    for (nd_plugins::iterator i = plugin_services.begin();
+        i != plugin_services.end(); i++) {
+        delete i->second->GetPlugin();
+        delete i->second;
+    }
+
+    plugin_services.clear();
+}
+
+static int nd_save_response_data(const char *filename, const ndJsonDataChunks &data)
+{
+    try {
+        int chunks = 0;
+        for (ndJsonDataChunks::const_iterator i = data.begin(); i != data.end(); i++)
+            nd_file_save(filename, (*i), (0 != chunks++));
+    }
+    catch (runtime_error &e) {
+        nd_printf("Error saving file: %s: %s\n", filename, e.what());
+        return -1;
+    }
+
+    nd_sha1_file(nd_config.path_sink_config, nd_config.digest_sink_config);
+
+    return 0;
+}
+
+static int nd_dispatch_service_param(const string &name, const ndJsonPluginParams &params)
+{
+    int rc = 0;
+    nd_plugins::iterator plugin_iter = plugin_services.find(name);
+
+    if (plugin_iter == plugin_services.end()) {
+        nd_printf("Unable to dispatch parameters; service not found: %s\n",
+            name.c_str());
+        rc = -1;
+    }
+    else
+        plugin_iter->second->GetPlugin()->SetParams(params);
+
+    return rc;
+}
+
+static int nd_start_task(const string &name, const ndJsonPluginParams &params)
+{
+    int rc = 0;
+    map<string, string>::const_iterator task_iter = nd_config.tasks.find(name);
+    nd_plugins::iterator plugin_iter = plugin_tasks.find(name);
+
+    if (task_iter == nd_config.tasks.end()) {
+        nd_printf("Unable to initialize plugin; task not found: %s\n",
+            name.c_str());
+        rc = -1;
+    }
+    else if (plugin_iter != plugin_tasks.end()) {
+        nd_printf("Unable to initialize plugin; task exists: %s\n",
+            name.c_str());
+        rc = -1;
+    }
+    else {
+        try {
+            ndPluginLoader *plugin = new ndPluginLoader(
+                task_iter->second, task_iter->first
+            );
+
+            plugin->GetPlugin()->SetParams(params);
+            plugin->GetPlugin()->Create();
+
+            plugin_tasks[task_iter->first] = plugin;
+        }
+        catch (ndPluginException &e) {
+            nd_printf("Error loading task plugin: %s\n", e.what());
+            rc = -1;
+        }
+        catch (ndThreadException &e) {
+            nd_printf("Error starting task plugin: %s %s: %s\n",
+                task_iter->first.c_str(), task_iter->second.c_str(), e.what());
+            rc = -1;
+        }
+    }
+
+    return rc;
+}
+
+static void nd_stop_tasks(void)
+{
+    for (nd_plugins::iterator i = plugin_tasks.begin();
+        i != plugin_tasks.end(); i++) {
+        i->second->GetPlugin()->Terminate();
+    }
+}
+
+static void nd_reap_tasks(void)
+{
+    for (nd_plugins::iterator i = plugin_tasks.begin();
+        i != plugin_tasks.end(); i++) {
+        if (! i->second->GetPlugin()->HasTerminated()) continue;
+
+        nd_debug_printf("Reaping task plugin: %s\n", i->first.c_str());
+
+        delete i->second->GetPlugin();
+        delete i->second;
+
+        plugin_tasks.erase(i);
+    }
+}
+
+#endif
+static int nd_sink_process_responses(void)
+{
+    int count = 0;
+
+    while (true) {
+        ndJsonResponse *response = thread_sink->PopResponse();
+
+        if (response == NULL) break;
+
+        count++;
+
+        for (ndJsonData::const_iterator i = response->data.begin();
+            i != response->data.end(); i++) {
+
+            if (i->first == ND_CONF_SINK_BASE) {
+
+                if (nd_save_response_data(ND_CONF_SINK_PATH, i->second) == 0) {
+
+                    nd_stop_detection_threads();
+                    if (nd_start_detection_threads() < 0) return -1;
+
+                    if (thread_socket) {
+                        string json;
+                        nd_json_protocols(json);
+                        thread_socket->QueueWrite(json);
+                    }
+                }
+            }
+        }
+
+#ifdef _ND_USE_PLUGINS
+        for (ndJsonPlugins::const_iterator i = response->plugin_service_params.begin();
+            i != response->plugin_service_params.end(); i++) {
+
+            nd_dispatch_service_param(i->first, i->second);
+        }
+
+        for (ndJsonPlugins::const_iterator i = response->plugin_tasks.begin();
+            i != response->plugin_tasks.end(); i++) {
+
+            nd_start_task(i->first, i->second);
+        }
+#endif
+
+        delete response;
+    }
+
+    return count;
 }
 
 void nd_json_agent_hello(string &json_string)
@@ -988,6 +1156,61 @@ static void nd_json_add_file(
     fclose(fh);
 }
 
+#ifdef _ND_USE_PLUGINS
+static void nd_json_add_plugin_replies(
+    json_object *json_replies_services, json_object *json_replies_tasks)
+{
+    vector<ndPlugin *> plugins;
+    ndJson json_services(json_replies_services);
+    ndJson json_tasks(json_replies_tasks);
+
+    for (nd_plugins::const_iterator i = plugin_services.begin();
+        i != plugin_services.end(); i++)
+        plugins.push_back(i->second->GetPlugin());
+    for (nd_plugins::const_iterator i = plugin_tasks.begin();
+        i != plugin_tasks.end(); i++)
+        plugins.push_back(i->second->GetPlugin());
+
+    for (vector<ndPlugin *>::const_iterator i = plugins.begin();
+        i != plugins.end(); i++) {
+
+        ndJson *parent = NULL;
+
+        switch ((*i)->GetType()) {
+
+        case ndPlugin::TYPE_SERVICE:
+            parent = &json_services;
+            break;
+        case ndPlugin::TYPE_TASK:
+            parent = &json_tasks;
+            break;
+        }
+
+        if (parent != NULL) {
+
+            ndJsonPluginReplies replies;
+            (*i)->GetReplies(replies);
+
+            if (! replies.size()) continue;
+
+            json_object *jarray = parent->CreateArray(NULL, (*i)->GetTag().c_str());
+
+            for (ndJsonPluginReplies::const_iterator j = replies.begin();
+                j != replies.end(); j++) {
+
+                json_object *json_reply = parent->CreateObject();
+
+                parent->AddObject(json_reply, j->first,
+                    base64_encode((const unsigned char *)j->second.c_str(),
+                        j->second.size())
+                );
+                parent->PushObject(jarray, json_reply);
+            }
+        }
+    }
+}
+#endif
+
 static void nd_print_stats(void)
 {
 #ifndef _ND_LEAN_AND_MEAN
@@ -1153,6 +1376,10 @@ static void nd_dump_stats(void)
     json_object *json_devices = NULL;
     json_object *json_stats = NULL;
     json_object *json_flows = NULL;
+#ifdef _ND_USE_PLUGINS
+    json_object *json_replies_services = NULL;
+    json_object *json_replies_tasks = NULL;
+#endif
 
     if (ND_USE_SINK || ND_JSON_SAVE) {
         json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
@@ -1160,6 +1387,7 @@ static void nd_dump_stats(void)
         json.AddObject(NULL, "uptime",
             uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));
         json.AddObject(NULL, "maxrss_kb", nda_stats.maxrss_kb);
+
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
 #if (SIZEOF_LONG == 4)
         json.AddObject(NULL, "tcm_kb", (uint32_t)nda_stats.tcm_alloc_kb);
@@ -1167,20 +1395,18 @@ static void nd_dump_stats(void)
         json.AddObject(NULL, "tcm_kb", (uint64_t)nda_stats.tcm_alloc_kb);
 #endif
 #endif // _ND_USE_LIBTCMALLOC
-#ifndef _ND_LEAN_AND_MEAN
-        nd_sha1_to_string(nd_config.digest_content_match, digest);
-        json.AddObject(NULL, "content_match_digest", digest);
-        nd_sha1_to_string(nd_config.digest_host_match, digest);
-        json.AddObject(NULL, "host_match_digest", digest);
-#endif
-        nd_sha1_to_string(nd_config.digest_custom_match, digest);
+
+        nd_sha1_to_string(nd_config.digest_sink_config, digest);
         json.AddObject(NULL, "custom_match_digest", digest);
 
         json_ifaces = json.CreateObject(NULL, "interfaces");
         json_devices = json.CreateObject(NULL, "devices");
         json_stats = json.CreateObject(NULL, "stats");
         json_flows = json.CreateObject(NULL, "flows");
-
+#ifdef _ND_USE_PLUGINS
+        json_replies_services = json.CreateObject(NULL, "service_replies");
+        json_replies_tasks = json.CreateObject(NULL, "task_replies");
+#endif
         nd_json_add_interfaces(json_ifaces);
         nd_json_add_devices(json_devices);
     }
@@ -1214,6 +1440,10 @@ static void nd_dump_stats(void)
         i->second->Unlock();
     }
 
+#ifdef _ND_USE_PLUGINS
+    nd_json_add_plugin_replies(json_replies_services, json_replies_tasks);
+#endif
+
     if (ND_USE_SINK) {
         try {
 #ifdef _ND_USE_INOTIFY
@@ -1228,7 +1458,7 @@ static void nd_dump_stats(void)
 #ifdef _ND_USE_WATCHDOGS
             nd_touch(ND_WD_UPLOAD);
 #endif
-            thread_upload->QueuePush(json_string);
+            thread_sink->QueuePush(json_string);
         }
         catch (runtime_error &e) {
             nd_printf("Error pushing JSON payload to upload queue: %s\n", e.what());
@@ -1441,8 +1671,7 @@ int main(int argc, char *argv[])
     static struct option options[] =
     {
         { "config", 1, 0, 'c' },
-        { "content-match", 1, 0, 'C' },
-        { "custom-match", 1, 0, 'f' },
+        { "sink-config", 1, 0, 'f' },
         { "debug", 0, 0, 'd' },
         { "debug-dns-cache", 0, 0, 's' },
         { "debug-ether-names", 0, 0, 'e' },
@@ -1455,7 +1684,6 @@ int main(int argc, char *argv[])
         { "external", 1, 0, 'E' },
         { "hash-file", 1, 0, 'S' },
         { "help", 0, 0, 'h' },
-        { "host-match", 1, 0, 'H' },
         { "internal", 1, 0, 'I' },
         { "interval", 1, 0, 'i' },
         { "json", 1, 0, 'j' },
@@ -1477,7 +1705,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?A:aC:c:DdE:eF:f:H:hI:i:j:lN:PpRrS:s:tUu:V",
+            "?A:ac:DdE:eF:f:hI:i:j:lN:PpRrS:s:tUu:V",
             options, &o)) == -1) break;
         switch (rc) {
         case 0:
@@ -1508,11 +1736,6 @@ int main(int argc, char *argv[])
         case 'D':
             nd_config.flags |= ndGF_DEBUG_UPLOAD;
             break;
-        case 'C':
-            free(nd_config.path_content_match);
-            nd_config.path_content_match = strdup(optarg);
-            nd_config.flags |= ndGF_OVERRIDE_CONTENT_MATCH;
-            break;
         case 'E':
             for (nd_ifaces::iterator i = ifaces.begin();
                 i != ifaces.end(); i++) {
@@ -1540,14 +1763,9 @@ int main(int argc, char *argv[])
             nd_config.device_filters[last_device] = optarg;
             break;
         case 'f':
-            free(nd_config.path_custom_match);
-            nd_config.path_custom_match = strdup(optarg);
-            nd_config.flags |= ndGF_OVERRIDE_CUSTOM_MATCH;
-            break;
-        case 'H':
-            free(nd_config.path_host_match);
-            nd_config.path_host_match = strdup(optarg);
-            nd_config.flags |= ndGF_OVERRIDE_HOST_MATCH;
+            free(nd_config.path_sink_config);
+            nd_config.path_sink_config = strdup(optarg);
+            nd_config.flags |= ndGF_OVERRIDE_SINK_CONFIG;
             break;
         case 'h':
             nd_usage();
@@ -1691,14 +1909,9 @@ int main(int argc, char *argv[])
     }
 
     if (ND_USE_DNS_CACHE) dns_cache.load();
-#ifndef _ND_LEAN_AND_MEAN
+
     nd_sha1_file(
-        nd_config.path_content_match, nd_config.digest_content_match);
-    nd_sha1_file(
-        nd_config.path_host_match, nd_config.digest_host_match);
-#endif
-    nd_sha1_file(
-        nd_config.path_custom_match, nd_config.digest_custom_match);
+        nd_config.path_sink_config, nd_config.digest_sink_config);
 
     sigfillset(&sigset);
     //sigdelset(&sigset, SIGPROF);
@@ -1712,6 +1925,7 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, ND_SIG_UPDATE);
     sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
+    sigaddset(&sigset, SIGALRM);
 
     nd_load_ethers();
 
@@ -1726,11 +1940,11 @@ int main(int argc, char *argv[])
             thread_socket = new ndSocketThread();
 
         if (ND_USE_SINK) {
-            thread_upload = new ndUploadThread();
-            thread_upload->Create();
+            thread_sink = new ndSinkThread();
+            thread_sink->Create();
         }
     }
-    catch (ndUploadThreadException &e) {
+    catch (ndSinkThreadException &e) {
         nd_printf("Error starting upload thread: %s\n", e.what());
         return 1;
     }
@@ -1804,16 +2018,8 @@ int main(int argc, char *argv[])
     }
 
 #ifdef _ND_USE_PLUGINS
-    try {
-        for (nd_plugin::const_iterator i = nd_config.plugins.begin();
-            i != nd_config.plugins.end(); i++) {
-            i->second->GetPlugin()->Create();
-        }
-    }
-    catch (ndThreadException &e) {
-        nd_printf("Error starting socket thread: %s\n", e.what());
+    if (nd_start_services() < 0)
         return 1;
-    }
 #endif
 
     memset(&sigev, 0, sizeof(struct sigevent));
@@ -1862,6 +2068,9 @@ int main(int argc, char *argv[])
         }
 
         if (sig == ND_SIG_UPDATE) {
+#ifdef _ND_USE_PLUGINS
+            nd_reap_tasks();
+#endif
 #ifdef _ND_USE_INOTIFY
             inotify->RefreshWatches();
 #endif
@@ -1881,8 +2090,8 @@ int main(int argc, char *argv[])
             nd_reap_detection_threads();
 
             if (threads.size() == 0) {
-                if (thread_upload == NULL ||
-                    thread_upload->QueuePendingSize() == 0) {
+                if (thread_sink == NULL ||
+                    thread_sink->QueuePendingSize() == 0) {
                     nd_printf("Exiting, no remaining detection threads.\n");
                     terminate = true;
                     continue;
@@ -1912,16 +2121,13 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        if (sig == SIGALRM) {
+            if (ND_USE_SINK && nd_sink_process_responses() < 0) break;
+
+            continue;
+        }
+
         if (sig == SIGHUP) {
-            nd_stop_detection_threads();
-            if (nd_start_detection_threads() < 0) break;
-
-            if (thread_socket) {
-                string json;
-                nd_json_protocols(json);
-                thread_socket->QueueWrite(json);
-            }
-
             continue;
         }
 
@@ -1932,9 +2138,16 @@ int main(int argc, char *argv[])
 
     nd_stop_detection_threads();
 
-    if (thread_upload) {
-        thread_upload->Terminate();
-        delete thread_upload;
+#ifdef _ND_USE_PLUGINS
+    nd_stop_services();
+
+    nd_stop_tasks();
+    nd_reap_tasks();
+#endif
+
+    if (thread_sink) {
+        thread_sink->Terminate();
+        delete thread_sink;
     }
 
     if (thread_socket) {

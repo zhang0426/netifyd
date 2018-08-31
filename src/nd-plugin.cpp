@@ -34,7 +34,11 @@ typedef bool atomic_bool;
 #include <pthread.h>
 #include <dlfcn.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
+
+#include <json.h>
 
 using namespace std;
 
@@ -43,10 +47,11 @@ using namespace std;
 #include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-thread.h"
+#include "nd-json.h"
 #include "nd-plugin.h"
 
 ndPlugin::ndPlugin(const string &tag)
-    : ndThread(tag, -1)
+    : ndThread(tag, -1), type(TYPE_BASE)
 {
     nd_debug_printf("Plugin initialized: %s\n", tag.c_str());
 }
@@ -54,6 +59,65 @@ ndPlugin::ndPlugin(const string &tag)
 ndPlugin::~ndPlugin()
 {
     nd_debug_printf("Plugin destroyed: %s\n", tag.c_str());
+}
+
+void ndPlugin::SetParams(const ndJsonPluginParams &params)
+{
+    Lock();
+
+    for (ndJsonPluginParams::const_iterator i = params.begin();
+        i != params.end(); i++) {
+        this->params[i->first] = i->second;
+    }
+
+    Unlock();
+}
+
+void ndPlugin::GetReplies(ndJsonPluginReplies &replies)
+{
+    Lock();
+
+    for (ndJsonPluginReplies::const_iterator i = this->replies.begin();
+        i != this->replies.end(); i++) {
+        replies[i->first] = i->second;
+    }
+
+    this->replies.clear();
+
+    Unlock();
+}
+
+void ndPlugin::PushReply(const string &key, const string &value)
+{
+    Lock();
+
+    replies[key] = value;
+
+    Unlock();
+}
+
+ndPluginService::ndPluginService(const string &tag)
+    : ndPlugin(tag)
+{
+    type = TYPE_SERVICE;
+    nd_debug_printf("Plugin service initialized: %s\n", tag.c_str());
+}
+
+ndPluginService::~ndPluginService()
+{
+    nd_debug_printf("Plugin service destroyed: %s\n", tag.c_str());
+}
+
+ndPluginTask::ndPluginTask(const string &tag)
+    : ndPlugin(tag)
+{
+    type = TYPE_TASK;
+    nd_debug_printf("Plugin task initialized: %s\n", tag.c_str());
+}
+
+ndPluginTask::~ndPluginTask()
+{
+    nd_debug_printf("Plugin task destroyed: %s\n", tag.c_str());
 }
 
 ndPluginLoader::ndPluginLoader(const string &so_name, const string &tag)
