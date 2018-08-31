@@ -425,7 +425,7 @@ void ndJsonResponse::UnserializePluginParams(
     json_object_object_foreach(jplugins, jname, jparams) {
 
         if (! json_object_is_type(jparams, json_type_object))
-            throw ndJsonParseException("Unexpected plugin params array type");
+            throw ndJsonParseException("Unexpected plugin params type");
 
         json_object_object_foreach(jparams, jkey, jvalue) {
 
