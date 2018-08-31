@@ -31,15 +31,20 @@
 #include <deque>
 #include <unordered_map>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/file.h>
+#include <sys/socket.h>
+
 #include <unistd.h>
 #include <syslog.h>
 #include <fcntl.h>
 #include <errno.h>
 #ifdef _ND_USE_WATCHDOGS
 #include <time.h>
-#include <sys/stat.h>
 #endif
-#include <sys/socket.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -53,6 +58,44 @@ using namespace std;
 #include "nd-sha1.h"
 
 extern nd_global_config nd_config;
+
+ndException::ndException(const string &where_arg, const string &what_arg) throw()
+    : runtime_error(what_arg), where_arg(where_arg), what_arg(what_arg), message(NULL)
+{
+    ostringstream os;
+    os << where_arg << ": " << what_arg;
+    message = strdup(os.str().c_str());
+}
+
+ndException::~ndException() throw()
+{
+    if (message != NULL) free((void *)message);
+}
+
+const char *ndException::what() const throw()
+{
+    return message;
+}
+
+ndSystemException::ndSystemException(
+    const string &where_arg, const string &what_arg, int why_arg) throw()
+    : runtime_error(what_arg),
+    where_arg(where_arg), what_arg(what_arg), why_arg(why_arg), message(NULL)
+{
+    ostringstream os;
+    os << where_arg << ": " << what_arg << ": " << strerror(why_arg);
+    message = strdup(os.str().c_str());
+}
+
+ndSystemException::~ndSystemException() throw()
+{
+    if (message != NULL) free((void *)message);
+}
+
+const char *ndSystemException::what() const throw()
+{
+    return message;
+}
 
 void *nd_mem_alloc(size_t size)
 {
@@ -379,6 +422,7 @@ string nd_get_version_and_features(void)
 
     return ident.str();
 }
+
 #ifdef _ND_USE_WATCHDOGS
 int nd_touch(const string &filename)
 {
@@ -390,7 +434,6 @@ int nd_touch(const string &filename)
 
     if (fd < 0) return fd;
 
-
     clock_gettime(CLOCK_REALTIME, &now[0]);
     clock_gettime(CLOCK_REALTIME, &now[1]);
 
@@ -401,42 +444,53 @@ int nd_touch(const string &filename)
     return 0;
 }
 #endif
-ndException::ndException(const string &where_arg, const string &what_arg) throw()
-    : runtime_error(what_arg), where_arg(where_arg), what_arg(what_arg), message(NULL)
-{
-    ostringstream os;
-    os << where_arg << ": " << what_arg;
-    message = strdup(os.str().c_str());
-}
 
-ndException::~ndException() throw()
+void nd_file_save(const string &filename,
+    const string &data, bool append, mode_t mode, const char *user, const char *group)
 {
-    if (message != NULL) free((void *)message);
-}
+    int fd = open(filename.c_str(), O_WRONLY);
+    struct passwd *owner_user = NULL;
+    struct group *owner_group = NULL;
 
-const char *ndException::what() const throw()
-{
-    return message;
-}
+    if (fd < 0) {
+        if (errno != ENOENT)
+            throw runtime_error(strerror(errno));
+        fd = open(filename.c_str(), O_WRONLY | O_CREAT, mode);
+        if (fd < 0)
+            throw runtime_error(strerror(errno));
 
-ndSystemException::ndSystemException(
-    const string &where_arg, const string &what_arg, int why_arg) throw()
-    : runtime_error(what_arg),
-    where_arg(where_arg), what_arg(what_arg), why_arg(why_arg), message(NULL)
-{
-    ostringstream os;
-    os << where_arg << ": " << what_arg << ": " << strerror(why_arg);
-    message = strdup(os.str().c_str());
-}
+        if (user != NULL) {
+            owner_user = getpwnam(user);
+            if (owner_user == NULL)
+                throw runtime_error(strerror(errno));
+        }
 
-ndSystemException::~ndSystemException() throw()
-{
-    if (message != NULL) free((void *)message);
-}
+        if (group != NULL) {
+            owner_group = getgrnam(group);
+            if (owner_group == NULL)
+                throw runtime_error(strerror(errno));
+        }
 
-const char *ndSystemException::what() const throw()
-{
-    return message;
+        if (fchown(fd,
+            (owner_user != NULL) ? owner_user->pw_uid : -1,
+            (owner_group != NULL) ? owner_group->gr_gid : -1) < 0)
+            throw runtime_error(strerror(errno));
+    }
+
+    if (flock(fd, LOCK_EX) < 0)
+        throw runtime_error(strerror(errno));
+
+    if (lseek(fd, 0, (! append) ? SEEK_SET: SEEK_END) < 0)
+        throw runtime_error(strerror(errno));
+
+    if (! append && ftruncate(fd, 0) < 0)
+        throw runtime_error(strerror(errno));
+
+    if (write(fd, (const void *)data.c_str(), data.length()) < 0)
+        throw runtime_error(strerror(errno));
+
+    flock(fd, LOCK_UN);
+    close(fd);
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
