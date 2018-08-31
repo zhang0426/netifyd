@@ -55,7 +55,7 @@ static struct ndpi_detection_module_struct *ndpi_parent = NULL;
 
 void ndpi_global_init(void)
 {
-    struct stat path_custom_match_stat;
+    struct stat path_sink_config_stat;
 
     ndpi_parent = ndpi_init_detection_module();
 
@@ -100,12 +100,12 @@ void ndpi_global_init(void)
 
     ndpi_set_protocol_detection_bitmask2(ndpi_parent, &proto_all);
 
-    if (nd_config.path_custom_match != NULL &&
-        stat(nd_config.path_custom_match, &path_custom_match_stat) == 0) {
+    if (nd_config.path_sink_config != NULL &&
+        stat(nd_config.path_sink_config, &path_sink_config_stat) == 0) {
         nd_debug_printf("Loading custom protocols from%s: %s\n",
-            ND_OVERRIDE_CUSTOM_MATCH ? " override" : "",
-            nd_config.path_custom_match);
-        ndpi_load_protocols_file(ndpi_parent, nd_config.path_custom_match);
+            ND_OVERRIDE_SINK_CONFIG ? " override" : "",
+            nd_config.path_sink_config);
+        ndpi_load_protocols_file(ndpi_parent, nd_config.path_sink_config);
     }
 }
 
@@ -125,109 +125,6 @@ struct ndpi_detection_module_struct *ndpi_get_parent(void)
 {
     return ndpi_parent;
 }
-
-#if 0
-// XXX: Deprecated: Tue Jun  5 16:56:04 EDT 2018
-static void nd_ndpi_load_content_match(
-    const string &tag, struct ndpi_detection_module_struct *ndpi)
-{
-    int rc;
-    unsigned loaded = 0, line = 1;
-    char header[1024], *match, *name;
-    ndpi_protocol_match content_match;
-    FILE *fp = fopen(nd_config.path_content_match, "r");
-
-    if (fp == NULL) {
-        nd_debug_printf("%s: unable to open content match file: %s\n",
-            tag.c_str(), nd_config.path_content_match);
-        return;
-    }
-
-    content_match.protocol_breed = NDPI_PROTOCOL_UNRATED;
-
-    if (fgets(header, 1024, fp) == NULL) { fclose(fp); return; }
-
-    while (! feof(fp)) {
-        line++;
-        if ((rc = fscanf(fp,
-            " \"%m[0-9A-z*$^.-]\" , \"%m[0-9A-z_.()-]\" , %u\n",
-            &match, &name, &content_match.protocol_id)) != 3) {
-            nd_printf("%s: %s: parse error at line #%u [%d]\n",
-                tag.c_str(), nd_config.path_content_match, line, rc);
-            if (rc >= 1) free(match);
-            if (rc >= 2) free(name);
-            break;
-        }
-
-        content_match.string_to_match = match;
-        content_match.proto_name = name;
-
-        ndpi_init_protocol_match(ndpi, &content_match);
-
-        free(match);
-        free(name);
-
-        loaded++;
-    }
-
-    fclose(fp);
-
-    nd_debug_printf("%s: loaded %u content match records from: %s\n",
-        tag.c_str(), loaded, nd_config.path_content_match);
-}
-
-static void nd_ndpi_load_host_match(
-    const string &tag, struct ndpi_detection_module_struct *ndpi)
-{
-    int rc;
-    char header[1024];
-    char *ip_address;
-    struct sockaddr_in saddr_ip4;
-    struct sockaddr_in6 saddr_ip6;
-    unsigned loaded = 0, line = 1;
-    ndpi_network host_entry;
-    FILE *fp = fopen(nd_config.path_host_match, "r");
-
-    if (fp == NULL) {
-        nd_debug_printf("%s: unable to open host protocol file: %s\n",
-            tag.c_str(), nd_config.path_host_match);
-        return;
-    }
-
-    if (fgets(header, 1024, fp) == NULL) { fclose(fp); return; }
-
-    while (! feof(fp)) {
-        line++;
-        if ((rc = fscanf(fp,
-            " \"%m[0-9A-f:.]\" , %hhu , %hhu\n",
-            &ip_address, &host_entry.cidr, &host_entry.value)) != 3) {
-            nd_printf("%s: %s: parse error at line #%u [%d]\n",
-                tag.c_str(), nd_config.path_host_match, line, rc);
-            if (rc >= 1) free(ip_address);
-            break;
-        }
-
-        if (inet_pton(AF_INET6, ip_address, &saddr_ip6.sin6_addr) == 1) {
-            // TODO: nDPI doesn't support IPv6 for host_match yet.
-            nd_debug_printf("%s: %s: skipping IPv6 host protocol entry: %s/%hhu\n",
-                tag.c_str(), nd_config.path_host_match, ip_address, host_entry.cidr);
-        }
-        else if (inet_pton(AF_INET, ip_address, &saddr_ip4.sin_addr) == 1) {
-            host_entry.network = ntohl(saddr_ip4.sin_addr.s_addr);
-            ndpi_add_to_ptree_ipv4(ndpi, ndpi->protocols_ptree, &host_entry);
-
-            loaded++;
-        }
-
-        free(ip_address);
-    }
-
-    fclose(fp);
-
-    nd_debug_printf("%s: loaded %u host protocol records from: %s\n",
-        tag.c_str(), loaded, nd_config.path_host_match);
-}
-#endif // XXX: Deprecated
 
 struct ndpi_detection_module_struct *nd_ndpi_init(
     const string &tag, uint32_t &custom_proto_base)
@@ -256,17 +153,15 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     ndpi->host_automa.ac_automa = ndpi_host_automa;
     ndpi->host_automa.lock = ndpi_host_automa_lock;
     ndpi->protocols_ptree = ndpi_proto_ptree;
-#if 0
-    // XXX: Deprecated: Tue Jun  5 16:56:04 EDT 2018
-    nd_ndpi_load_content_match(tag, ndpi);
-    nd_ndpi_load_host_match(tag, ndpi);
-#endif
+
     ndpi_init_string_based_protocols(ndpi);
+
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
     ndpi->ndpi_log_level = NDPI_LOG_TRACE;
     //ndpi->ndpi_log_level = NDPI_LOG_DEBUG_EXTRA;
     set_ndpi_debug_function(ndpi, ndpi_debug_printf);
 #endif
+
     NDPI_PROTOCOL_BITMASK proto_all;
     NDPI_BITMASK_SET_ALL(proto_all);
 
