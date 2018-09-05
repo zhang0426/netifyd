@@ -442,6 +442,27 @@ json_object *ndFlow::json_encode(const string &device,
         _upper_bytes = "other_bytes";
         _upper_packets = "other_packets";
     }
+#if 0
+    // TODO: Further investigation required!
+    // This appears to catch corrupted IPv6 headers.
+    // Spend some time to figure out if there are any
+    // possible over-matches for different methods of
+    // deployment (gateway/port mirror modes).
+    else if (lower_type == ndNETLINK_ATYPE_PRIVATE &&
+        upper_type == ndNETLINK_ATYPE_PRIVATE) {
+        other_type = "local";
+        _lower_mac = "local_mac";
+        _lower_ip = "local_ip";
+        _lower_port = "local_port";
+        _lower_bytes = "local_bytes";
+        _lower_packets = "local_packets";
+        _upper_mac = "other_mac";
+        _upper_ip = "other_ip";
+        _upper_port = "other_port";
+        _upper_bytes = "other_bytes";
+        _upper_packets = "other_packets";
+    }
+#endif
     else if (lower_type == ndNETLINK_ATYPE_PRIVATE &&
         upper_type == ndNETLINK_ATYPE_LOCALIP) {
         other_type = "remote";
