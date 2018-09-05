@@ -764,7 +764,13 @@ static void nd_stop_services(void)
 {
     for (nd_plugins::iterator i = plugin_services.begin();
         i != plugin_services.end(); i++) {
-        delete i->second->GetPlugin();
+
+        ndPluginService *service = reinterpret_cast<ndPluginService *>(
+            i->second->GetPlugin()
+        );
+        service->Terminate();
+        delete service;
+
         delete i->second;
     }
 
@@ -788,9 +794,11 @@ static int nd_save_response_data(const char *filename, const ndJsonDataChunks &d
     return 0;
 }
 
-static int nd_dispatch_service_param(const string &name, const ndJsonPluginParams &params)
+static int nd_dispatch_service_param(
+    const string &name, const string &uuid_dispatch, const ndJsonPluginParams &params)
 {
     int rc = 0;
+
     nd_plugins::iterator plugin_iter = plugin_services.find(name);
 
     if (plugin_iter == plugin_services.end()) {
@@ -798,58 +806,73 @@ static int nd_dispatch_service_param(const string &name, const ndJsonPluginParam
             name.c_str());
         rc = -1;
     }
-    else
-        plugin_iter->second->GetPlugin()->SetParams(params);
+    else {
+        ndPluginService *service = reinterpret_cast<ndPluginService *>(
+            plugin_iter->second->GetPlugin()
+        );
+
+        service->SetParams(uuid_dispatch, params);
+    }
 
     return rc;
 }
 
-static int nd_start_task(const string &name, const ndJsonPluginParams &params)
+static int nd_start_task(
+    const string &name, const string &uuid_dispatch, const ndJsonPluginParams &params)
 {
-    int rc = 0;
     map<string, string>::const_iterator task_iter = nd_config.tasks.find(name);
-    nd_plugins::iterator plugin_iter = plugin_tasks.find(name);
 
     if (task_iter == nd_config.tasks.end()) {
         nd_printf("Unable to initialize plugin; task not found: %s\n",
             name.c_str());
-        rc = -1;
-    }
-    else if (plugin_iter != plugin_tasks.end()) {
-        nd_printf("Unable to initialize plugin; task exists: %s\n",
-            name.c_str());
-        rc = -1;
-    }
-    else {
-        try {
-            ndPluginLoader *plugin = new ndPluginLoader(
-                task_iter->second, task_iter->first
-            );
-
-            plugin->GetPlugin()->SetParams(params);
-            plugin->GetPlugin()->Create();
-
-            plugin_tasks[task_iter->first] = plugin;
-        }
-        catch (ndPluginException &e) {
-            nd_printf("Error loading task plugin: %s\n", e.what());
-            rc = -1;
-        }
-        catch (ndThreadException &e) {
-            nd_printf("Error starting task plugin: %s %s: %s\n",
-                task_iter->first.c_str(), task_iter->second.c_str(), e.what());
-            rc = -1;
-        }
+        return -1;
     }
 
-    return rc;
+    nd_plugins::iterator plugin_iter = plugin_tasks.find(uuid_dispatch);
+
+    if (plugin_iter != plugin_tasks.end()) {
+        nd_printf("Unable to initialize plugin; task exists: %s: %s\n",
+            name.c_str(), uuid_dispatch.c_str());
+        return -1;
+    }
+
+    try {
+        ndPluginLoader *plugin = new ndPluginLoader(
+            task_iter->second, task_iter->first
+        );
+
+        ndPluginTask *task = reinterpret_cast<ndPluginTask *>(
+            plugin->GetPlugin()
+        );
+
+        task->SetParams(uuid_dispatch, params);
+        task->Create();
+
+        plugin_tasks[uuid_dispatch] = plugin;
+    }
+    catch (ndPluginException &e) {
+        nd_printf("Error loading task plugin: %s\n", e.what());
+        return -1;
+    }
+    catch (ndThreadException &e) {
+        nd_printf("Error starting task plugin: %s %s: %s\n",
+            task_iter->first.c_str(), task_iter->second.c_str(), e.what());
+        return -1;
+    }
+
+    return 0;
 }
 
 static void nd_stop_tasks(void)
 {
     for (nd_plugins::iterator i = plugin_tasks.begin();
         i != plugin_tasks.end(); i++) {
-        i->second->GetPlugin()->Terminate();
+
+        ndPluginTask *task = reinterpret_cast<ndPluginTask *>(
+            i->second->GetPlugin()
+        );
+        task->Terminate();
+        delete task;
     }
 }
 
@@ -859,7 +882,9 @@ static void nd_reap_tasks(void)
         i != plugin_tasks.end(); i++) {
         if (! i->second->GetPlugin()->HasTerminated()) continue;
 
-        nd_debug_printf("Reaping task plugin: %s\n", i->first.c_str());
+        nd_debug_printf("Reaping task plugin: %s: %s\n",
+            i->second->GetPlugin()->GetTag().c_str(),
+            i->first.c_str());
 
         delete i->second->GetPlugin();
         delete i->second;
@@ -900,16 +925,38 @@ static int nd_sink_process_responses(void)
         }
 
 #ifdef _ND_USE_PLUGINS
-        for (ndJsonPlugins::const_iterator i = response->plugin_service_params.begin();
-            i != response->plugin_service_params.end(); i++) {
+        for (ndJsonPluginRequest::const_iterator
+            i = response->plugin_request_service_param.begin();
+            i != response->plugin_request_service_param.end(); i++) {
 
-            nd_dispatch_service_param(i->first, i->second);
+            ndJsonPluginDispatch::const_iterator iter_params;
+            iter_params = response->plugin_params.find(i->first);
+
+            if (iter_params != response->plugin_params.end()) {
+                const ndJsonPluginParams &params(iter_params->second);
+                nd_dispatch_service_param(i->second, i->first, params);
+            }
+            else {
+                const ndJsonPluginParams params;
+                nd_dispatch_service_param(i->second, i->first, params);
+            }
         }
 
-        for (ndJsonPlugins::const_iterator i = response->plugin_tasks.begin();
-            i != response->plugin_tasks.end(); i++) {
+        for (ndJsonPluginRequest::const_iterator
+            i = response->plugin_request_task_exec.begin();
+            i != response->plugin_request_task_exec.end(); i++) {
 
-            nd_start_task(i->first, i->second);
+            ndJsonPluginDispatch::const_iterator iter_params;
+            iter_params = response->plugin_params.find(i->first);
+
+            if (iter_params != response->plugin_params.end()) {
+                const ndJsonPluginParams &params(iter_params->second);
+                nd_start_task(i->second, i->first, params);
+            }
+            else {
+                const ndJsonPluginParams params;
+                nd_start_task(i->second, i->first, params);
+            }
         }
 #endif
 
@@ -1158,11 +1205,11 @@ static void nd_json_add_file(
 
 #ifdef _ND_USE_PLUGINS
 static void nd_json_add_plugin_replies(
-    json_object *json_replies_services, json_object *json_replies_tasks)
+    json_object *json_plugin_service_replies, json_object *json_plugin_task_replies)
 {
     vector<ndPlugin *> plugins;
-    ndJson json_services(json_replies_services);
-    ndJson json_tasks(json_replies_tasks);
+    ndJson json_services(json_plugin_service_replies);
+    ndJson json_tasks(json_plugin_task_replies);
 
     for (nd_plugins::const_iterator i = plugin_services.begin();
         i != plugin_services.end(); i++)
@@ -1174,7 +1221,7 @@ static void nd_json_add_plugin_replies(
     for (vector<ndPlugin *>::const_iterator i = plugins.begin();
         i != plugins.end(); i++) {
 
-        ndJson *parent = NULL;
+        ndJson *parent;
 
         switch ((*i)->GetType()) {
 
@@ -1190,23 +1237,24 @@ static void nd_json_add_plugin_replies(
                 __PRETTY_FUNCTION__, (*i)->GetType());
         }
 
-        if (parent != NULL) {
+        ndPluginReplies replies;
+        (*i)->GetReplies(replies);
 
-            ndJsonPluginReplies replies;
-            (*i)->GetReplies(replies);
+        if (! replies.size()) continue;
 
-            if (! replies.size()) continue;
+        for (ndPluginReplies::const_iterator iter_reply = replies.begin();
+            iter_reply != replies.end(); iter_reply++) {
 
-            json_object *jarray = parent->CreateArray(NULL, (*i)->GetTag().c_str());
+            json_object *jarray = parent->CreateArray(NULL, iter_reply->first.c_str());
 
-            for (ndJsonPluginReplies::const_iterator j = replies.begin();
-                j != replies.end(); j++) {
+            for (ndJsonPluginReplies::const_iterator iter_params = iter_reply->second.begin();
+                iter_params != iter_reply->second.end(); iter_params++) {
 
                 json_object *json_reply = parent->CreateObject();
 
-                parent->AddObject(json_reply, j->first,
-                    base64_encode((const unsigned char *)j->second.c_str(),
-                        j->second.size())
+                parent->AddObject(json_reply, iter_params->first,
+                    base64_encode((const unsigned char *)iter_params->second.c_str(),
+                        iter_params->second.size())
                 );
                 parent->PushObject(jarray, json_reply);
             }
@@ -1381,8 +1429,8 @@ static void nd_dump_stats(void)
     json_object *json_stats = NULL;
     json_object *json_flows = NULL;
 #ifdef _ND_USE_PLUGINS
-    json_object *json_replies_services = NULL;
-    json_object *json_replies_tasks = NULL;
+    json_object *json_plugin_service_replies = NULL;
+    json_object *json_plugin_task_replies = NULL;
 #endif
 
     if (ND_USE_SINK || ND_JSON_SAVE) {
@@ -1408,8 +1456,8 @@ static void nd_dump_stats(void)
         json_stats = json.CreateObject(NULL, "stats");
         json_flows = json.CreateObject(NULL, "flows");
 #ifdef _ND_USE_PLUGINS
-        json_replies_services = json.CreateObject(NULL, "service_replies");
-        json_replies_tasks = json.CreateObject(NULL, "task_replies");
+        json_plugin_service_replies = json.CreateObject(NULL, "service_replies");
+        json_plugin_task_replies = json.CreateObject(NULL, "task_replies");
 #endif
         nd_json_add_interfaces(json_ifaces);
         nd_json_add_devices(json_devices);
@@ -1445,7 +1493,9 @@ static void nd_dump_stats(void)
     }
 
 #ifdef _ND_USE_PLUGINS
-    nd_json_add_plugin_replies(json_replies_services, json_replies_tasks);
+    nd_json_add_plugin_replies(
+        json_plugin_service_replies, json_plugin_task_replies
+    );
 #endif
 
     if (ND_USE_SINK) {

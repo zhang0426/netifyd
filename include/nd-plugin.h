@@ -42,6 +42,9 @@ public:
         : ndException(where_arg, what_arg) { }
 };
 
+typedef map<string, ndJsonPluginParams> ndPluginParams;
+typedef map<string, ndJsonPluginReplies> ndPluginReplies;
+
 class ndPlugin : public ndThread
 {
 public:
@@ -59,15 +62,21 @@ public:
 
     ndPluginType GetType(void) { return type; };
 
-    virtual void SetParams(const ndJsonPluginParams &params);
-    virtual void GetReplies(ndJsonPluginReplies &replies);
+    virtual void SetParams(const string uuid_dispatch, const ndJsonPluginParams &params);
+
+    virtual void GetReplies(ndPluginReplies &replies);
 
 protected:
-    void PushReply(const string &key, const string &value);
+    virtual bool PopParams(string &uuid_dispatch, ndJsonPluginParams &params);
+
+    virtual void PushReply(
+        const string &uuid_dispatch, const string &key, const string &value);
+    virtual void PushReplies(
+        const string &uuid_dispatch, const ndJsonPluginReplies &replies);
 
     ndPluginType type;
-    ndJsonPluginParams params;
-    ndJsonPluginReplies replies;
+    ndPluginParams params;
+    ndPluginReplies replies;
 };
 
 class ndPluginService : public ndPlugin
@@ -82,6 +91,16 @@ class ndPluginTask : public ndPlugin
 public:
     ndPluginTask(const string &tag);
     virtual ~ndPluginTask();
+
+    virtual void SetParams(const string uuid_dispatch, const ndJsonPluginParams &params);
+
+protected:
+    virtual bool PopParams(ndJsonPluginParams &params);
+
+    virtual void PushReply(const string &key, const string &value);
+    virtual void PushReplies(const ndJsonPluginReplies &replies);
+
+    string uuid_dispatch;
 };
 
 #ifdef _ND_INTERNAL

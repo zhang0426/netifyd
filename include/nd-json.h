@@ -81,7 +81,8 @@ typedef map<string, ndJsonDataChunks> ndJsonData;
 typedef map<string, string> ndJsonPluginParams;
 typedef ndJsonPluginParams ndJsonPluginReplies;
 
-typedef map<string, ndJsonPluginParams> ndJsonPlugins;
+typedef map<string, string> ndJsonPluginRequest;
+typedef map<string, ndJsonPluginParams> ndJsonPluginDispatch;
 #endif
 
 class ndJsonResponse
@@ -111,14 +112,17 @@ public:
     ndJsonData data;
 
 #ifdef _ND_USE_PLUGINS
-    ndJsonPlugins plugin_service_params;
-    ndJsonPlugins plugin_tasks;
+    ndJsonPluginRequest plugin_request_service_param;
+    ndJsonPluginRequest plugin_request_task_exec;
+
+    ndJsonPluginDispatch plugin_params;
 #endif
 
 protected:
     void UnserializeData(json_object *jdata);
 #ifdef _ND_USE_PLUGINS
-    void UnserializePluginParams(json_object *jplugins, ndJsonPlugins &plugins);
+    void UnserializePluginRequest(json_object *jrequest, ndJsonPluginRequest &plugin_request);
+    void UnserializePluginDispatch(json_object *jdispatch);
 #endif
 
     json_tokener *jtok;

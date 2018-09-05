@@ -61,25 +61,48 @@ ndPlugin::~ndPlugin()
     nd_debug_printf("Plugin destroyed: %s\n", tag.c_str());
 }
 
-void ndPlugin::SetParams(const ndJsonPluginParams &params)
+void ndPlugin::SetParams(const string uuid_dispatch, const ndJsonPluginParams &params)
 {
     Lock();
 
     for (ndJsonPluginParams::const_iterator i = params.begin();
         i != params.end(); i++) {
-        this->params[i->first] = i->second;
+        this->params[uuid_dispatch][i->first] = i->second;
     }
 
     Unlock();
 }
 
-void ndPlugin::GetReplies(ndJsonPluginReplies &replies)
+bool ndPlugin::PopParams(string &uuid_dispatch, ndJsonPluginParams &params)
+{
+    bool popped = false;
+
+    Lock();
+
+    ndPluginParams::iterator i = this->params.begin();
+
+    if (i != this->params.end()) {
+        uuid_dispatch = i->first;
+        params = i->second;
+        this->params.erase(i);
+        popped = true;
+    }
+
+    Unlock();
+
+    return popped;
+}
+
+void ndPlugin::GetReplies(ndPluginReplies &replies)
 {
     Lock();
 
-    for (ndJsonPluginReplies::const_iterator i = this->replies.begin();
+    for (ndPluginReplies::const_iterator i = this->replies.begin();
         i != this->replies.end(); i++) {
-        replies[i->first] = i->second;
+
+        for (ndJsonPluginReplies::const_iterator j = i->second.begin();
+            j != i->second.end(); j++)
+                replies[i->first][j->first] = j->second;
     }
 
     this->replies.clear();
@@ -87,11 +110,22 @@ void ndPlugin::GetReplies(ndJsonPluginReplies &replies)
     Unlock();
 }
 
-void ndPlugin::PushReply(const string &key, const string &value)
+void ndPlugin::PushReply(
+    const string &uuid_dispatch, const string &key, const string &value)
 {
     Lock();
 
-    replies[key] = value;
+    replies[uuid_dispatch][key] = value;
+
+    Unlock();
+}
+
+void ndPlugin::PushReplies(
+    const string &uuid_dispatch, const ndJsonPluginReplies &replies)
+{
+    Lock();
+
+    this->replies[uuid_dispatch] = replies;
 
     Unlock();
 }
@@ -118,6 +152,31 @@ ndPluginTask::ndPluginTask(const string &tag)
 ndPluginTask::~ndPluginTask()
 {
     nd_debug_printf("Plugin task destroyed: %s\n", tag.c_str());
+}
+
+void ndPluginTask::SetParams(const string uuid_dispatch, const ndJsonPluginParams &params)
+{
+    Lock();
+    this->uuid_dispatch = uuid_dispatch;
+    Unlock();
+
+    ndPlugin::SetParams(uuid_dispatch, params);
+}
+
+bool ndPluginTask::PopParams(ndJsonPluginParams &params)
+{
+    string uuid_dispatch;
+    return ndPlugin::PopParams(uuid_dispatch, params);
+}
+
+void ndPluginTask::PushReply(const string &key, const string &value)
+{
+    ndPlugin::PushReply(uuid_dispatch, key, value);
+}
+
+void ndPluginTask::PushReplies(const ndJsonPluginReplies &replies)
+{
+    ndPlugin::PushReplies(uuid_dispatch, replies);
 }
 
 ndPluginLoader::ndPluginLoader(const string &so_name, const string &tag)

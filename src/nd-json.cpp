@@ -48,6 +48,8 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
+//#define _ND_DEBUG_JSON_RESPONSE 1
+
 ndJson::ndJson()
     : root(NULL)
 {
@@ -294,9 +296,18 @@ void ndJsonResponse::Parse(const string &json)
     json_object *jver, *jresp_code, *jresp_message;
     json_object *juuid_site, *jdata;
 #ifdef _ND_USE_PLUGINS
-    json_object *jplugin_service_params, *jplugin_tasks;
+    json_object *jplugin_params;
+    json_object *jplugin_request_service_param, *jplugin_request_task_exec;
 #endif
     json_tokener_reset(jtok);
+
+#ifdef _ND_DEBUG_JSON_RESPONSE
+    FILE *hf = fopen(ND_JSON_FILE_RESPONSE, "w");
+    if (hf != NULL) {
+        fprintf(hf, "%s\n", json.c_str());
+        fclose(hf);
+    }
+#endif
 
     json_object *jobj = json_tokener_parse_ex(
         jtok, json.c_str(), json.length()
@@ -368,15 +379,31 @@ void ndJsonResponse::Parse(const string &json)
             UnserializeData(jdata);
 
 #ifdef _ND_USE_PLUGINS
-        // Extract and validate optional service plugin parameters
-        if (json_object_object_get_ex(jobj, "plugin_service_params", &jplugin_service_params) &&
-            json_object_is_type(jplugin_service_params, json_type_object))
-            UnserializePluginParams(jplugin_service_params, plugin_service_params);
+        // Extract and validate optional service plugin requests
+        if (json_object_object_get_ex(
+            jobj, "plugin_request_service_param", &jplugin_request_service_param) &&
+            json_object_is_type(jplugin_request_service_param, json_type_object)) {
 
-        // Extract and validate optional task plugin parameters
-        if (json_object_object_get_ex(jobj, "plugin_tasks", &jplugin_tasks) &&
-            json_object_is_type(jplugin_tasks, json_type_object))
-            UnserializePluginParams(jplugin_tasks, plugin_tasks);
+            UnserializePluginRequest(
+                jplugin_request_service_param, plugin_request_service_param
+            );
+        }
+
+        // Extract and validate optional exec task plugin requests
+        if (json_object_object_get_ex(
+            jobj, "plugin_request_task_exec", &jplugin_request_task_exec) &&
+            json_object_is_type(jplugin_request_task_exec, json_type_object)) {
+
+            UnserializePluginRequest(
+                jplugin_request_task_exec, plugin_request_task_exec
+            );
+        }
+
+        // Extract and validate optional service plugin parameters
+        if (json_object_object_get_ex(
+            jobj, "plugin_params", &jplugin_params) &&
+            json_object_is_type(jplugin_params, json_type_object))
+            UnserializePluginDispatch(jplugin_params);
 #endif
     }
     catch (ndJsonParseException &e) {
@@ -409,6 +436,7 @@ void ndJsonResponse::UnserializeData(json_object *jdata)
                 throw ndJsonParseException("Unexpected data chunk type");
 
             string encoded(json_object_get_string(jchunk));
+
             data[jname].push_back(
                 base64_decode(encoded.c_str(), encoded.size())
             );
@@ -418,22 +446,35 @@ void ndJsonResponse::UnserializeData(json_object *jdata)
 
 #ifdef _ND_USE_PLUGINS
 
-void ndJsonResponse::UnserializePluginParams(
-    json_object *jplugins, ndJsonPlugins &plugins)
+void ndJsonResponse::UnserializePluginRequest(json_object *jrequest, ndJsonPluginRequest &plugin_request)
 {
-    // XXX: This is a macro; char *jname, json_object *jchunks
-    json_object_object_foreach(jplugins, jname, jparams) {
+    // XXX: This is a macro; char *juuid_dispatch, json_object *jname
+    json_object_object_foreach(jrequest, juuid_dispatch, jname) {
+
+        if (! json_object_is_type(jname, json_type_string))
+            throw ndJsonParseException("Unexpected plugin name type");
+
+        plugin_request[juuid_dispatch] = json_object_get_string(jname);
+    }
+}
+
+void ndJsonResponse::UnserializePluginDispatch(json_object *jdispatch)
+{
+    // XXX: This is a macro; char *juuid_dispatch, json_object *jparams
+    json_object_object_foreach(jdispatch, juuid_dispatch, jparams) {
 
         if (! json_object_is_type(jparams, json_type_object))
             throw ndJsonParseException("Unexpected plugin params type");
 
+        // XXX: This is a macro; char *jkey, json_object *jvalue
         json_object_object_foreach(jparams, jkey, jvalue) {
 
             if (! json_object_is_type(jvalue, json_type_string))
                 throw ndJsonParseException("Unexpected param value type");
 
             string encoded(json_object_get_string(jvalue));
-            plugins[jname][jkey] =
+
+            plugin_params[juuid_dispatch][jkey] =
                 base64_decode(encoded.c_str(), encoded.size());
         }
     }
