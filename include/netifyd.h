@@ -97,7 +97,7 @@
 #define ND_PCAP_SNAPLEN         1536    // Capture snap length
 #define ND_PCAP_READ_TIMEOUT    500     // Milliseconds
 
-#define ND_URL_UPLOAD           "https://sink.netify.ai/v1/"
+#define ND_URL_UPLOAD           "https://sink.netify.ai/v2/"
 #define ND_URL_PROVISION        "https://portal.netify.ai/app/provision/agent?uuid="
 #define ND_COOKIE_JAR           ND_VOLATILE_STATEDIR "/netifyd.cookies"
 #define ND_UPLOAD_TIMEOUT       300     // Default 5-minute upload timeout
