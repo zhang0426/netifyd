@@ -19,6 +19,9 @@
 
 #define _ND_PLUGIN_VER  0x20180813
 
+#define StartDetectionThreads() kill(getpid(), SIGUSR1)
+#define StopDetectionThreads()  kill(getpid(), SIGUSR2)
+
 #define ndPluginInit(class_name) \
     extern "C" { \
     ndPlugin *ndPluginInit(const string &tag) { \
@@ -42,6 +45,8 @@ public:
         : ndException(where_arg, what_arg) { }
 };
 
+typedef map<string, string> ndPluginFiles;
+
 typedef map<string, ndJsonPluginParams> ndPluginParams;
 typedef map<string, ndJsonPluginReplies> ndPluginReplies;
 
@@ -64,17 +69,25 @@ public:
 
     virtual void SetParams(const string uuid_dispatch, const ndJsonPluginParams &params);
 
-    virtual void GetReplies(ndPluginReplies &replies);
+    virtual void GetReplies(ndPluginFiles &files, ndPluginReplies &replies);
 
 protected:
     virtual bool PopParams(string &uuid_dispatch, ndJsonPluginParams &params);
 
+    virtual void PushFile(const string &tag, const string &filename);
+
     virtual void PushReply(
         const string &uuid_dispatch, const string &key, const string &value);
-    virtual void PushReplies(
-        const string &uuid_dispatch, const ndJsonPluginReplies &replies);
+    inline void PushReplyLock(
+        const string &uuid_dispatch, const string &key, const string &value)
+    {
+        Lock();
+        PushReply(uuid_dispatch, key, value);
+        Unlock();
+    }
 
     ndPluginType type;
+    ndPluginFiles files;
     ndPluginParams params;
     ndPluginReplies replies;
 };
@@ -98,7 +111,12 @@ protected:
     virtual bool PopParams(ndJsonPluginParams &params);
 
     virtual void PushReply(const string &key, const string &value);
-    virtual void PushReplies(const ndJsonPluginReplies &replies);
+    inline void PushReplyLock(const string &key, const string &value)
+    {
+        Lock();
+        PushReply(key, value);
+        Unlock();
+    }
 
     string uuid_dispatch;
 };

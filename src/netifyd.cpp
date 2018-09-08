@@ -46,6 +46,7 @@ typedef bool atomic_bool;
 #include <unistd.h>
 #include <locale.h>
 #include <syslog.h>
+#include <fcntl.h>
 
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
@@ -98,9 +99,6 @@ using namespace std;
 #define ND_SIG_UPDATE       SIGRTMIN
 #define ND_STR_ETHALEN     (ETH_ALEN * 2 + ETH_ALEN - 1)
 
-nd_global_config nd_config;
-pthread_mutex_t *nd_printf_mutex = NULL;
-
 static nd_ifaces ifaces;
 static nd_devices devices;
 nd_device_ethers device_ethers;
@@ -129,8 +127,11 @@ static ndNetlink *netlink = NULL;
 nd_device_netlink device_netlink;
 #endif
 static nd_device_filter device_filters;
-
+static bool nd_detection_stopped_by_signal = false;
 static time_t nd_ethers_mtime = 0;
+
+nd_global_config nd_config;
+pthread_mutex_t *nd_printf_mutex = NULL;
 
 void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hostname)
 {
@@ -597,6 +598,8 @@ static int nd_config_set_option(int option)
 
 static int nd_start_detection_threads(void)
 {
+    if (threads.size() > 0) return 1;
+
     ndpi_global_init();
 
     for (nd_ifaces::iterator i = ifaces.begin();
@@ -666,6 +669,8 @@ static int nd_start_detection_threads(void)
 
 static void nd_stop_detection_threads(void)
 {
+    if (threads.size() == 0) return;
+
     for (nd_ifaces::iterator i = ifaces.begin();
         i != ifaces.end(); i++) {
         threads[(*i).second]->Terminate();
@@ -912,8 +917,10 @@ static int nd_sink_process_responses(void)
 
                 if (nd_save_response_data(ND_CONF_SINK_PATH, i->second) == 0) {
 
-                    nd_stop_detection_threads();
-                    if (nd_start_detection_threads() < 0) return -1;
+                    if (! nd_detection_stopped_by_signal) {
+                        nd_stop_detection_threads();
+                        if (nd_start_detection_threads() < 0) return -1;
+                    }
 
                     if (thread_socket) {
                         string json;
@@ -1176,36 +1183,55 @@ static void nd_json_add_flows(
 }
 
 static void nd_json_add_file(
-    json_object *parent, const string &type, const string &filename)
+    json_object *parent, const string &tag, const string &filename)
 {
-    char *c, *p, buffer[ND_FILE_BUFSIZ];
-    FILE *fh = fopen(filename.c_str(), "r");
 
-    if (fh == NULL) {
+    string digest;
+    uint8_t _digest[SHA1_DIGEST_LENGTH];
+
+    if (nd_sha1_file(filename.c_str(), _digest) < 0) return;
+
+    nd_sha1_to_string(_digest, digest);
+
+    uint8_t buffer[ND_JSON_DATA_CHUNKSIZ];
+    int fd = open(filename.c_str(), O_RDONLY);
+
+    if (fd < 0) {
         nd_printf("Error opening file for upload: %s: %s\n",
             filename.c_str(), strerror(errno));
         return;
     }
 
-    ndJson json(parent);
-    json_object *json_lines = json.CreateArray(NULL, type.c_str());
-
-    p = buffer;
-    while (fgets(buffer, ND_FILE_BUFSIZ, fh) != NULL) {
-        while (*p == ' ' || *p == '\t') p++;
-        if (*p == '#' || *p == '\n' || *p == '\r') continue;
-        c = (char *)memchr((void *)p, '\n', ND_FILE_BUFSIZ - (p - buffer));
-        if (c != NULL) *c = '\0';
-
-        json.PushObject(json_lines, p);
+    struct stat file_stat;
+    if (fstat(fd, &file_stat) != 0) {
+        nd_printf("Error reading stats for upload file: %s: %s\n",
+            filename.c_str(), strerror(errno));
+        close(fd);
+        return;
     }
 
-    fclose(fh);
+    ndJson json(parent);
+    json_object *json_tag = json.CreateObject(NULL, tag.c_str());
+
+    json.AddObject(json_tag, "digest", digest);
+    json.AddObject(json_tag, "size", file_stat.st_size);
+
+    json_object *json_chunks = json.CreateArray(json_tag, "chunks");
+
+    size_t bytes;
+
+    do {
+        if ((bytes = read(fd, buffer, ND_JSON_DATA_CHUNKSIZ)) > 0)
+            json.PushObject(json_chunks, base64_encode(buffer, bytes));
+    }
+    while (bytes > 0);
+
+    close(fd);
 }
 
 #ifdef _ND_USE_PLUGINS
-static void nd_json_add_plugin_replies(
-    json_object *json_plugin_service_replies, json_object *json_plugin_task_replies)
+static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
+    json_object *json_plugin_task_replies, json_object *json_data)
 {
     vector<ndPlugin *> plugins;
     ndJson json_services(json_plugin_service_replies);
@@ -1237,8 +1263,9 @@ static void nd_json_add_plugin_replies(
                 __PRETTY_FUNCTION__, (*i)->GetType());
         }
 
+        ndPluginFiles files;
         ndPluginReplies replies;
-        (*i)->GetReplies(replies);
+        (*i)->GetReplies(files, replies);
 
         if (! replies.size()) continue;
 
@@ -1258,6 +1285,11 @@ static void nd_json_add_plugin_replies(
                 );
                 parent->PushObject(jarray, json_reply);
             }
+        }
+
+        for (ndPluginFiles::const_iterator iter_file = files.begin();
+            iter_file != files.end(); iter_file++) {
+            nd_json_add_file(json_data, iter_file->first, iter_file->second);
         }
     }
 }
@@ -1340,6 +1372,7 @@ static void nd_print_stats(void)
 #endif // _ND_LEAN_AND_MEAN
 }
 
+#ifndef _ND_LEAN_AND_MEAN
 static void nd_load_ethers(void)
 {
     char buffer[1024 + ND_STR_ETHALEN + 17];
@@ -1397,6 +1430,7 @@ static void nd_load_ethers(void)
     nd_debug_printf("Loaded %lu entries from: %s\n",
         device_ethers.size(), ND_ETHERS_FILE_NAME);
 }
+#endif
 
 static void nd_dump_stats(void)
 {
@@ -1428,6 +1462,7 @@ static void nd_dump_stats(void)
     json_object *json_devices = NULL;
     json_object *json_stats = NULL;
     json_object *json_flows = NULL;
+    json_object *json_data = NULL;
 #ifdef _ND_USE_PLUGINS
     json_object *json_plugin_service_replies = NULL;
     json_object *json_plugin_task_replies = NULL;
@@ -1455,6 +1490,7 @@ static void nd_dump_stats(void)
         json_devices = json.CreateObject(NULL, "devices");
         json_stats = json.CreateObject(NULL, "stats");
         json_flows = json.CreateObject(NULL, "flows");
+        json_data = json.CreateObject(NULL, "data");
 #ifdef _ND_USE_PLUGINS
         json_plugin_service_replies = json.CreateObject(NULL, "service_replies");
         json_plugin_task_replies = json.CreateObject(NULL, "task_replies");
@@ -1494,7 +1530,7 @@ static void nd_dump_stats(void)
 
 #ifdef _ND_USE_PLUGINS
     nd_json_add_plugin_replies(
-        json_plugin_service_replies, json_plugin_task_replies
+        json_plugin_service_replies, json_plugin_task_replies, json_data
     );
 #endif
 
@@ -1504,7 +1540,7 @@ static void nd_dump_stats(void)
             for (nd_inotify_watch::const_iterator i = inotify_watches.begin();
                 i != inotify_watches.end(); i++) {
                 if (! inotify->EventOccured(i->first)) continue;
-                nd_json_add_file(json.GetRoot(), i->first, i->second);
+                nd_json_add_file(json_data, i->first, i->second);
             }
 #endif
             string json_string;
@@ -1531,11 +1567,14 @@ static void nd_dump_stats(void)
     json.Destroy();
 
     if (ND_DEBUG) {
+#ifndef _ND_LEAN_AND_MEAN
         if (ND_DEBUG_WITH_ETHERS) nd_load_ethers();
+#endif
         nd_print_stats();
     }
 }
 
+#ifndef _ND_LEAN_AND_MEAN
 static void nd_dump_protocols(void)
 {
     uint32_t custom_proto_base;
@@ -1551,6 +1590,7 @@ static void nd_dump_protocols(void)
     ndpi_free(ndpi);
     ndpi_global_init();
 }
+#endif
 
 #ifdef _ND_USE_NETLINK
 static void nd_add_device_addresses(nd_device_addr &device_addresses)
@@ -1856,8 +1896,13 @@ int main(int argc, char *argv[])
 #endif
             break;
         case 'P':
+#ifndef _ND_LEAN_AND_MEAN
             nd_dump_protocols();
             exit(0);
+#else
+            fprintf(stderr, "Sorry, not available from this build profile.\n");
+            exit(1);
+#endif
         case 'p':
             if (nd_conf_filename == NULL)
                 nd_conf_filename = strdup(ND_CONF_FILE_NAME);
@@ -1875,6 +1920,7 @@ int main(int argc, char *argv[])
             nd_config.flags |= ndGF_REPLAY_DELAY;
             break;
         case 'S':
+#ifndef _ND_LEAN_AND_MEAN
             {
                 uint8_t digest[SHA1_DIGEST_LENGTH];
 
@@ -1886,7 +1932,10 @@ int main(int argc, char *argv[])
                     return 0;
                 }
             }
-            break;
+#else
+            fprintf(stderr, "Sorry, not available from this build profile.\n");
+            exit(1);
+#endif
         case 's':
             nd_config.uuid_serial = strdup(optarg);
             break;
@@ -1939,10 +1988,12 @@ int main(int argc, char *argv[])
     }
 
     nd_printf("%s\n", nd_get_version_and_features().c_str());
+
     nd_check_agent_uuid();
+#ifndef _ND_LEAN_AND_MEAN
     nd_debug_printf("Flow entry size: %lu\n", sizeof(struct ndFlow) +
         sizeof(struct ndpi_flow_struct) + sizeof(struct ndpi_id_struct) * 2);
-
+#endif
     if (! ND_DEBUG) {
         FILE *hpid = fopen(ND_PID_FILE_NAME, "w+");
         if (hpid == NULL) {
@@ -1965,7 +2016,8 @@ int main(int argc, char *argv[])
     if (ND_USE_DNS_CACHE) dns_cache.load();
 
     nd_sha1_file(
-        nd_config.path_sink_config, nd_config.digest_sink_config);
+        nd_config.path_sink_config, nd_config.digest_sink_config
+    );
 
     sigfillset(&sigset);
     //sigdelset(&sigset, SIGPROF);
@@ -1980,8 +2032,12 @@ int main(int argc, char *argv[])
     sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
     sigaddset(&sigset, SIGALRM);
+    sigaddset(&sigset, SIGUSR1);
+    sigaddset(&sigset, SIGUSR2);
 
-    nd_load_ethers();
+#ifndef _ND_LEAN_AND_MEAN
+    if (ND_DEBUG_WITH_ETHERS) nd_load_ethers();
+#endif
 
     try {
 #ifdef _ND_USE_CONNTRACK
@@ -2182,6 +2238,18 @@ int main(int argc, char *argv[])
         }
 
         if (sig == SIGHUP) {
+            continue;
+        }
+
+        if (sig == SIGUSR1) {
+            nd_start_detection_threads();
+            nd_detection_stopped_by_signal = false;
+            continue;
+        }
+
+        if (sig == SIGUSR2) {
+            nd_stop_detection_threads();
+            nd_detection_stopped_by_signal = true;
             continue;
         }
 

@@ -93,9 +93,12 @@ bool ndPlugin::PopParams(string &uuid_dispatch, ndJsonPluginParams &params)
     return popped;
 }
 
-void ndPlugin::GetReplies(ndPluginReplies &replies)
+void ndPlugin::GetReplies(ndPluginFiles &files, ndPluginReplies &replies)
 {
     Lock();
+
+    files = this->files;
+    this->files.clear();
 
     for (ndPluginReplies::const_iterator i = this->replies.begin();
         i != this->replies.end(); i++) {
@@ -110,24 +113,15 @@ void ndPlugin::GetReplies(ndPluginReplies &replies)
     Unlock();
 }
 
+void ndPlugin::PushFile(const string &tag, const string &filename)
+{
+    files[tag] = filename;
+}
+
 void ndPlugin::PushReply(
     const string &uuid_dispatch, const string &key, const string &value)
 {
-    Lock();
-
     replies[uuid_dispatch][key] = value;
-
-    Unlock();
-}
-
-void ndPlugin::PushReplies(
-    const string &uuid_dispatch, const ndJsonPluginReplies &replies)
-{
-    Lock();
-
-    this->replies[uuid_dispatch] = replies;
-
-    Unlock();
 }
 
 ndPluginService::ndPluginService(const string &tag)
@@ -172,11 +166,6 @@ bool ndPluginTask::PopParams(ndJsonPluginParams &params)
 void ndPluginTask::PushReply(const string &key, const string &value)
 {
     ndPlugin::PushReply(uuid_dispatch, key, value);
-}
-
-void ndPluginTask::PushReplies(const ndJsonPluginReplies &replies)
-{
-    ndPlugin::PushReplies(uuid_dispatch, replies);
 }
 
 ndPluginLoader::ndPluginLoader(const string &so_name, const string &tag)

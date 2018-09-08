@@ -48,7 +48,7 @@ deploy-osc-commit: deploy-osc-update
 	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) commit -m 'Updated to latest sources.')
 endif
 
-deploy-edgeos: src/netifyd
+deploy-edgeos: all
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	$(INSTALL) -d -m 0755 $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	$(INSTALL) -d -m 0750 $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/var/lib/netifyd
@@ -78,3 +78,7 @@ deploy-edgeos: src/netifyd
 	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu).tar.gz \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
+
+deploy-debug: all
+	scp src/.libs/netifyd gw:/usr/sbin/
+	scp src/.libs/libnetifyd.so.0.0.0 gw:/usr/lib64/

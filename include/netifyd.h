@@ -92,6 +92,7 @@
 #define ND_JSON_FILE_RESPONSE   ND_VOLATILE_STATEDIR "/netifyd-response.json"
 #define ND_JSON_FILE_BAD_SEND   ND_VOLATILE_STATEDIR "/netifyd-bad-send.json"
 #define ND_JSON_FILE_BAD_RECV   ND_VOLATILE_STATEDIR "/netifyd-bad-recv.json"
+#define ND_JSON_DATA_CHUNKSIZ   4096
 
 #define ND_PCAP_SNAPLEN         1536    // Capture snap length
 #define ND_PCAP_READ_TIMEOUT    500     // Milliseconds
@@ -120,8 +121,6 @@
 // Compress data if it's over this size (bytes)
 #define ND_COMPRESS_SIZE       (1024 * 10)
 #define ND_ZLIB_CHUNK_SIZE      16384   // Compress this many bytes at a time
-
-#define ND_FILE_BUFSIZ          4096
 
 #define ND_SOCKET_PORT          "7150"
 #define ND_SOCKET_PATH_MODE     0640

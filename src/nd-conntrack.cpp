@@ -128,8 +128,6 @@ ndConntrackThread::ndConntrackThread()
 
 ndConntrackThread::~ndConntrackThread()
 {
-    terminate = true;
-
     Join();
 
     if (cth != NULL) {
@@ -211,7 +209,7 @@ void *ndConntrackThread::Entry(void)
 #ifdef _ND_LOG_CONNTRACK
     time_t log_stats = time(NULL) + _ND_LOG_CONNTRACK_INTV;
 #endif
-    while (! terminate) {
+    while (! ShouldTerminate()) {
         fd_set fds_read;
 
         FD_ZERO(&fds_read);
