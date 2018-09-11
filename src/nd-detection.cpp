@@ -1158,7 +1158,7 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->release();
 
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
-        if (thread_conntrack != NULL) {
+        if (internal && thread_conntrack != NULL) {
             if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
                 new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
                 (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
