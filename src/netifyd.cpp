@@ -2276,12 +2276,14 @@ int main(int argc, char *argv[])
         thread_socket->Terminate();
         delete thread_socket;
     }
+
 #ifdef _ND_USE_CONNTRACK
-    if (ND_USE_CONNTRACK) {
+    if (ND_USE_CONNTRACK && thread_conntrack) {
         thread_conntrack->Terminate();
         delete thread_conntrack;
     }
 #endif
+
     if (ND_USE_DNS_CACHE && ND_DNS_CACHE_SAVE)
         dns_cache.save();
     pthread_mutex_destroy(&dns_cache.lock);
