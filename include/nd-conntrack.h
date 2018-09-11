@@ -78,8 +78,6 @@ public:
     ndConntrackThread();
     virtual ~ndConntrackThread();
 
-    virtual void Terminate(void) { terminate = true; }
-
     virtual void *Entry(void);
 
     void ProcessConntrackEvent(
@@ -96,7 +94,6 @@ protected:
 
     int ctfd;
     nfct_handle *cth;
-    bool terminate;
     int cb_registered;
     nd_ct_id_map ct_id_map;
     nd_ct_flow_map ct_flow_map;

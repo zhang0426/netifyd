@@ -99,7 +99,7 @@ static int nd_ct_netlink_callback(const struct nlmsghdr *nlh, void *data)
 
 ndConntrackThread::ndConntrackThread()
     : ndThread("nd-conntrack", -1),
-    ctfd(-1), cth(NULL), terminate(false), cb_registered(-1)
+    ctfd(-1), cth(NULL), cb_registered(-1)
 {
     cth = nfct_open(NFNL_SUBSYS_CTNETLINK, NFCT_ALL_CT_GROUPS);
     if (cth == NULL) {
