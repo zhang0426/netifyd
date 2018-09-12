@@ -179,6 +179,7 @@ AS_IF([test "x$enable_watchdogs" = "xyes"], [
 ])
 
 # Checks for required header files.
+AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h net/ethernet.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/socket.h sys/types.h sys/time.h sys/un.h syslog.h unistd.h], [], AC_MSG_ERROR([required header(s) not found.]))
 AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC_MSG_ERROR([required netinet header(s) not found.]),
 [[#ifdef HAVE_SYS_TYPES_H
@@ -190,7 +191,7 @@ AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC
 ]])
 
 # Check for optional header files.
-AC_CHECK_HEADERS([atomic net/ppp_defs.h linux/ppp_defs.h stdalign.h])
+AC_CHECK_HEADERS([atomic libgen.h linux/ppp_defs.h net/ppp_defs.h stdalign.h])
 
 # Check compiler flags (gnu++11)
 m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
@@ -214,10 +215,14 @@ AC_TYPE_UINT8_T
 AC_CHECK_SIZEOF([long])
 
 # Checks for library functions.
+AC_FUNC_CHOWN
 AC_FUNC_STRNLEN
 
 AC_CHECK_FUNCS([ftruncate memchr memset pathconf select socket strcasecmp strdup strerror])
 
+AC_CHECK_FUNC([dirname], [
+    AC_DEFINE([HAVE_DIRNAME], [1], [Define if dirname is available.])
+])
 AC_CHECK_FUNC([pthread_setname_np], [
     AC_DEFINE([HAVE_PTHREAD_SETNAME_NP], [1], [Define if pthread_setname_np is available.])
 ])
