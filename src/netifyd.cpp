@@ -355,13 +355,15 @@ static void nd_config_init(void)
     nd_config.uuid_site = NULL;
 
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
-#if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
-    nd_config.flags = ndGF_USE_CONNTRACK | ndGF_USE_NETLINK;
-#elif defined(_ND_USE_CONNTRACK)
-    nd_config.flags = ndGF_USE_CONNTRACK;
-#elif defined(_ND_USE_NETLINK)
-    nd_config.flags = ndGF_USE_NETLINK;
+
+    nd_config.flags |= ndGF_SSL_VERIFY_PEER;
+#ifdef _ND_USE_CONNTRACK
+    nd_config.flags |= ndGF_USE_CONNTRACK;
 #endif
+#ifdef _ND_USE_NETLINK
+    nd_config.flags |= ndGF_USE_NETLINK;
+#endif
+
     nd_config.path_sink_config = strdup(ND_CONF_SINK_PATH);
     memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
     nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
