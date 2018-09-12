@@ -411,11 +411,14 @@ string nd_get_version_and_features(void)
     if (ND_USE_CONNTRACK) ident << "; conntrack";
     if (ND_USE_NETLINK) ident << "; netlink";
     if (ND_USE_DNS_CACHE) ident << "; dns-cache";
-    if (ND_SSL_USE_TLSv1) ident << "; ssl-tlsv1";
-    if (ND_SSL_VERIFY_PEER) ident << "; ssl-verify-peer";
+#ifdef _ND_USE_PLUGINS
+    ident << "; plugins";
+#endif
 #ifdef _ND_USE_LIBTCMALLOC
     ident << "; tcmalloc";
 #endif
+    if (ND_SSL_USE_TLSv1) ident << "; ssl-tlsv1";
+    if (! ND_SSL_VERIFY_PEER) ident << "; ssl-no-verify-peer";
     ident << ")" <<
         " nDPI/" << ndpi_revision() <<
         " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION;
