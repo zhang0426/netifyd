@@ -47,6 +47,9 @@ typedef bool atomic_bool;
 #include <locale.h>
 #include <syslog.h>
 #include <fcntl.h>
+#if defined(HAVE_LIBGEN_H) && defined(HAVE_DIRNAME)
+#include <libgen.h>
+#endif
 
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
@@ -1996,11 +1999,28 @@ int main(int argc, char *argv[])
 #endif
     if (! ND_DEBUG) {
         FILE *hpid = fopen(ND_PID_FILE_NAME, "w+");
-        if (hpid == NULL) {
-            nd_printf("Error opening PID file: %s: %s\n",
-                ND_PID_FILE_NAME, strerror(errno));
-            return 1;
-        }
+
+        do {
+            if (hpid == NULL) {
+                nd_printf("Error opening PID file: %s: %s\n",
+                    ND_PID_FILE_NAME, strerror(errno));
+#if defined(HAVE_LIBGEN_H) && defined(HAVE_DIRNAME)
+                char *pid_path = strdup(ND_PID_FILE_NAME);
+                if (pid_path == NULL) return 1;
+
+                rc = mkdir(dirname(pid_path), 0755);
+                free(pid_path);
+
+                if (rc == 0)
+                    hpid = fopen(ND_PID_FILE_NAME, "w+");
+                else
+                    return 1;
+#else
+                return 1;
+#endif
+            }
+        } while(hpid == NULL);
+
         fprintf(hpid, "%d\n", getpid());
         fclose(hpid);
     }
@@ -2294,6 +2314,8 @@ int main(int argc, char *argv[])
     curl_global_cleanup();
 
     closelog();
+
+    if (! ND_DEBUG) unlink(ND_PID_FILE_NAME);
 
     return 0;
 }
