@@ -13,17 +13,11 @@
 
 %{?_unitdir:%define _with_systemd 1}
 
-# Configuration files
-%define netifyd_conf deploy/%{name}.conf
+# RH-specific configuration files/paths
 %define netifyd_default deploy/%{name}.default
-%define netifyd_env deploy/systemd/env.sh
-%define netifyd_exec_pre deploy/systemd/exec-pre.sh
-%define netifyd_functions deploy/functions.sh
 %define netifyd_init deploy/%{name}.init
-%define netifyd_sink_conf deploy/netify-sink.conf
-%define netifyd_systemd_unit deploy/systemd/%{name}.service
-%define netifyd_tmpf deploy/systemd/%{name}.conf
 
+# Persistent and volatile state paths
 %define statedir_pdata %{_sysconfdir}/netify.d
 %define statedir_vdata %{_sharedstatedir}/%{name}
 
@@ -138,25 +132,12 @@ rm -rf %{buildroot}/%{_includedir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}/pkgconfig/libndpi*
 
-install -d -m 0750 %{buildroot}/%{statedir_pdata}
-install -d -m 0750 %{buildroot}/%{statedir_vdata}
-install -d -m 0755 %{buildroot}/%{_localstatedir}/run/%{name}
-
-install -D -m 0644 %{netifyd_sink_conf} %{buildroot}/%{statedir_pdata}/netify-sink.conf
-install -D -m 0660 %{netifyd_conf} %{buildroot}/%{_sysconfdir}/%{name}.conf
 install -D -m 0660 %{netifyd_default} %{buildroot}/%{_sysconfdir}/sysconfig/%{name}
-install -D -m 0755 %{netifyd_exec_pre} %{buildroot}/%{_datadir}/%{name}/exec-pre.sh
-install -D -m 0755 %{netifyd_functions} %{buildroot}/%{_datadir}/%{name}/functions.sh
 install -D -m 0755 %{netifyd_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
 
 %if %{?_with_systemd:1}%{!?_with_systemd:0}
-install -D -m 0644 %{netifyd_systemd_unit} %{buildroot}/%{_unitdir}/%{name}.service
 echo "%{_unitdir}/%{name}.service" >> %{EXTRA_DIST}
-
-install -D -m 0644 %{netifyd_tmpf} %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 echo "%{_tmpfilesdir}/%{name}.conf" >> %{EXTRA_DIST}
-
-install -D -m 0640 %{netifyd_env} %{buildroot}/%{_datadir}/%{name}/env.sh
 echo "%config(noreplace) %attr(640,root,root) %{_datadir}/%{name}/env.sh" >> %{EXTRA_DIST}
 %endif
 
