@@ -62,7 +62,7 @@ install: build
 		$(DESTDIR)@libexecdir@/@PACKAGE_TARNAME@/env.sh
 
 	install -D -m 0755 deploy/@PACKAGE_TARNAME@.tmpf \
-		$(DESTDIR)@libdir@/tmpfiles.d/@PACKAGE_TARNAME@.conf
+		$(DESTDIR)@tmpfilesdir@/@PACKAGE_TARNAME@.conf
 
 	install -D -m 0755 deploy/@PACKAGE_TARNAME@.service \
 		$(DESTDIR)@systemdsystemunitdir@/@PACKAGE_TARNAME@.service
