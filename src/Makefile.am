@@ -10,14 +10,12 @@ AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
 	-I ../libs/ndpi/src/include -I ../libs/inih/cpp \
 	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS) $(LIBTCMALLOC_CFLAGS) \
 	-D_ND_INTERNAL=1 \
-	-DNDPI_LIB_COMPILATION=1 \
-	-D'ND_VOLATILE_STATEDIR="$(volatilestatedir)"' \
-	-D'ND_PERSISTENT_STATEDIR="$(persistentstatedir)"'
-	-D'ND_PID_FILE_NAME="$(piddir)/$(PACKAGE_TARNAME).pid"' \
 	-D'ND_CONF_FILE_NAME="$(sysconfdir)/$(PACKAGE_TARNAME).conf"' \
-	-D'ND_DATADIR="$(datadir)/$(PACKAGE_TARNAME)"'
-
-#EXTRA_DIST =
+	-D'ND_DATADIR="$(datadir)/$(PACKAGE_TARNAME)"' \
+	-D'ND_PERSISTENT_STATEDIR="$(persistentstatedir)"'
+	-D'ND_PID_FILE_NAME="$(volatilestatedir)/$(PACKAGE_TARNAME).pid"' \
+	-D'ND_VOLATILE_STATEDIR="$(volatilestatedir)"' \
+	-D NDPI_LIB_COMPILATION=1
 
 lib_LTLIBRARIES = libnetifyd.la
 libnetifyd_la_SOURCES = nd-detection.cpp nd-flow.cpp \

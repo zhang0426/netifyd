@@ -10,7 +10,7 @@
 #
 # processname: @PACKAGE_TARNAME@
 # config: @sysconfdir@/@PACKAGE_TARNAME@.conf
-# pidfile: @piddir@/@PACKAGE_TARNAME@.pid
+# pidfile: @volatilestatedir@/@PACKAGE_TARNAME@.pid
 
 ### BEGIN INIT INFO
 # Provides: @PACKAGE_TARNAME@
@@ -29,7 +29,7 @@
 
 RETVAL=0
 prog="@PACKAGE_TARNAME@"
-PID_FILE=@piddir@/@PACKAGE_TARNAME@.pid
+PID_FILE=@volatilestatedir@/@PACKAGE_TARNAME@.pid
 
 start() {
     # Load defaults.

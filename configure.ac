@@ -215,14 +215,12 @@ AX_CXX_COMPILE_STDCXX_11([ext], [optional])
 AS_IF([test "$HAVE_CXX11" = "0"], [AX_CXX_COMPILE_STDCXX_0X])
 
 # Convience substitutions
-AC_SUBST([volatilestatedir], [$libdir/$PACKAGE_TARNAME])
 AC_SUBST([persistentstatedir], [$sysconfdir/netify.d])
-AC_SUBST([piddir], [$localstatedir/run/$PACKAGE_TARNAME])
+AC_SUBST([volatilestatedir], [$localstatedir/run/$PACKAGE_TARNAME])
 
 # Check for optional parameters
 
 # Checks for typedefs, structures, sizes, and compiler characteristics.
-#AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T

@@ -13,14 +13,13 @@ EXTRA_DIST = $(DEBFILES_IN)
 %: %.in
 	$(SED) \
 		-e 's|[@]bindir@|$(bindir)|g' \
-		-e 's|[@]build_triplet@|$(build_triplet)|g' \
 		-e 's|[@]datadir@|$(datadir)/$(PACKAGE_TARNAME)|g' \
 		-e 's|[@]includedir@|$(includedir)|g' \
 		-e 's|[@]libdir@|$(libdir)|g' \
 		-e 's|[@]PACKAGE_BUGREPORT@|$(PACKAGE_BUGREPORT)|g' \
 		-e 's|[@]PACKAGE_TARNAME@|$(PACKAGE_TARNAME)|g' \
 		-e 's|[@]PACKAGE_VERSION@|$(PACKAGE_VERSION)|g' \
-		-e 's|[@]piddir@|$(piddir)|g' \
 		-e 's|[@]sbindir@|$(sbindir)|g' \
 		-e 's|[@]sysconfdir@|$(sysconfdir)|g' \
+		-e 's|[@]volatilestatedir@|$(volatilestatedir)|g' \
 		< "$<" > "$@"

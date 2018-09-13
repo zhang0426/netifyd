@@ -24,6 +24,6 @@ EXTRA_DIST = $(TEMPLATEFILES_IN) netifyd.conf netifyd.default netify-sink.conf
 		-e 's|[@]localstatedir@|$(localstatedir)/lib/$(PACKAGE_TARNAME)|g' \
 		-e 's|[@]PACKAGE_NAME@|$(PACKAGE_NAME)|g' \
 		-e 's|[@]PACKAGE_TARNAME@|$(PACKAGE_TARNAME)|g' \
-		-e 's|[@]piddir@|$(piddir)|g' \
 		-e 's|[@]sysconfdir@|$(sysconfdir)|g' \
+		-e 's|[@]volatilestatedir@|$(volatilestatedir)|g' \
 		< "$<" > "$@"

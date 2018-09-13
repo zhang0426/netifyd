@@ -24,6 +24,6 @@ EXTRA_DIST = $(SYSTEMDFILES_IN) env.sh
 		-e 's|[@]datadir@|$(datadir)|g' \
 		-e 's|[@]PACKAGE_NAME@|$(PACKAGE_NAME)|g' \
 		-e 's|[@]PACKAGE_TARNAME@|$(PACKAGE_TARNAME)|g' \
-		-e 's|[@]piddir@|$(piddir)|g' \
 		-e 's|[@]sbindir@|$(sbindir)|g' \
+		-e 's|[@]volatilestatedir@|$(volatilestatedir)|g' \
 		< "$<" > "$@"
