@@ -16,13 +16,13 @@
 # Configuration files
 %define netifyd_conf deploy/%{name}.conf
 %define netifyd_default deploy/%{name}.default
-%define netifyd_env deploy/env.sh
-%define netifyd_exec_pre deploy/exec-pre.sh
+%define netifyd_env deploy/systemd/env.sh
+%define netifyd_exec_pre deploy/systemd/exec-pre.sh
 %define netifyd_functions deploy/functions.sh
-%define netifyd_init deploy/%{name}-sysv.init
-%define netifyd_sink_conf deploy/app-custom-match.conf
-%define netifyd_systemd_unit deploy/%{name}.service
-%define netifyd_tmpf deploy/%{name}.tmpf
+%define netifyd_init deploy/%{name}.init
+%define netifyd_sink_conf deploy/netify-sink.conf
+%define netifyd_systemd_unit deploy/systemd/%{name}.service
+%define netifyd_tmpf deploy/systemd/%{name}.conf
 
 %define statedir_pdata %{_sysconfdir}/netify.d
 %define statedir_vdata %{_sharedstatedir}/%{name}
@@ -30,7 +30,7 @@
 # RPM package details
 Name: netifyd
 Summary: Netify Agent
-Version: 2.81
+Version: 2.82
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 URL: http://www.netify.ai/
@@ -145,8 +145,8 @@ install -d -m 0755 %{buildroot}/%{_localstatedir}/run/%{name}
 install -D -m 0644 %{netifyd_sink_conf} %{buildroot}/%{statedir_pdata}/netify-sink.conf
 install -D -m 0660 %{netifyd_conf} %{buildroot}/%{_sysconfdir}/%{name}.conf
 install -D -m 0660 %{netifyd_default} %{buildroot}/%{_sysconfdir}/sysconfig/%{name}
-install -D -m 0755 %{netifyd_exec_pre} %{buildroot}/%{_libexecdir}/%{name}/exec-pre.sh
-install -D -m 0755 %{netifyd_functions} %{buildroot}/%{_libexecdir}/%{name}/functions.sh
+install -D -m 0755 %{netifyd_exec_pre} %{buildroot}/%{_datadir}/%{name}/exec-pre.sh
+install -D -m 0755 %{netifyd_functions} %{buildroot}/%{_datadir}/%{name}/functions.sh
 install -D -m 0755 %{netifyd_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
 
 %if %{?_with_systemd:1}%{!?_with_systemd:0}
@@ -156,8 +156,8 @@ echo "%{_unitdir}/%{name}.service" >> %{EXTRA_DIST}
 install -D -m 0644 %{netifyd_tmpf} %{buildroot}/%{_tmpfilesdir}/%{name}.conf
 echo "%{_tmpfilesdir}/%{name}.conf" >> %{EXTRA_DIST}
 
-install -D -m 0640 %{netifyd_env} %{buildroot}/%{_libexecdir}/%{name}/env.sh
-echo "%config(noreplace) %attr(640,root,root) %{_libexecdir}/%{name}/env.sh" >> %{EXTRA_DIST}
+install -D -m 0640 %{netifyd_env} %{buildroot}/%{_datadir}/%{name}/env.sh
+echo "%config(noreplace) %attr(640,root,root) %{_datadir}/%{name}/env.sh" >> %{EXTRA_DIST}
 %endif
 
 # Clean-up
@@ -200,9 +200,9 @@ exit 0
 %dir %{_localstatedir}/lib/%{name}
 %dir %attr(750,root,root) %{statedir_pdata}
 %dir %attr(750,root,root) %{statedir_vdata}
-%attr(644,root,root) %{_sysconfdir}/sysconfig/%{name}
-%attr(755,root,root) %{_libexecdir}/%{name}/
+%attr(755,root,root) %{_datadir}/%{name}/
 %attr(755,root,root) %{_sysconfdir}/init.d/%{name}
+%attr(644,root,root) %{_sysconfdir}/sysconfig/%{name}
 %config(noreplace) %attr(640,root,root) %{statedir_pdata}/netify-sink.conf
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}

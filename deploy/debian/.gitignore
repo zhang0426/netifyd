@@ -1,5 +1,8 @@
 debian.changelog
 debian.control
+debian.init
 debian.postinst
 debian.rules
+Makefile
+Makefile.in
 netifyd.dsc

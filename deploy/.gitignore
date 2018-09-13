@@ -1,4 +1,5 @@
-.app-host-match.csv
 functions.sh
-/Makefile.in
-openwrt/files/netifyd.init
+Makefile.in
+netifyd.init
+watchdog.cron
+watchdog.sh

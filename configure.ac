@@ -2,7 +2,7 @@
 # GNU Autoconf configuration
 
 AC_PREREQ([2.63])
-AC_INIT([Netify Agent], [2.81],
+AC_INIT([Netify Agent], [2.82],
     [https://gitlab.com/netify.ai/public/netify-agent/issues],
     [netifyd], [http://www.netify.ai/])
 AM_INIT_AUTOMAKE([1.9 tar-pax])
@@ -213,6 +213,11 @@ m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
 AX_CXX_COMPILE_STDCXX_11([ext], [optional])
 AS_IF([test "$HAVE_CXX11" = "0"], [AX_CXX_COMPILE_STDCXX_0X])
 
+# Convience substitutions
+AC_SUBST([volatilestatedir], [$libdir/$PACKAGE_TARNAME])
+AC_SUBST([persistentstatedir], [$sysconfdir/netify.d])
+AC_SUBST([piddir], [$localstatedir/run/$PACKAGE_TARNAME])
+
 # Check for optional parameters
 
 # Checks for typedefs, structures, sizes, and compiler characteristics.
@@ -270,10 +275,9 @@ AC_DEFINE_UNQUOTED(GIT_DATE, "${GIT_DATE}", [Last GIT change])
 AC_SUBST([GIT_SOURCE_URL], [https://gitlab.com/netify.ai/public/netify-agent.git])
 
 # Output files
-AC_CONFIG_FILES([deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.postinst deploy/debian/debian.rules deploy/debian/netifyd.dsc])
 AC_CONFIG_FILES([deploy/openwrt/Makefile deploy/openwrt/files/netifyd.init])
 AC_CONFIG_FILES([libnetifyd.pc])
-AC_CONFIG_FILES([Makefile deploy/Makefile doc/Makefile include/Makefile src/Makefile netifyd.spec])
+AC_CONFIG_FILES([Makefile src/Makefile include/Makefile doc/Makefile deploy/Makefile deploy/debian/Makefile deploy/systemd/Makefile netifyd.spec])
 AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
 AC_CONFIG_FILES([util/generate-protocol-csv.sh], [chmod +x util/generate-protocol-csv.sh])
 AC_OUTPUT

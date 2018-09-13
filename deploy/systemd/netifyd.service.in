@@ -4,16 +4,16 @@
 # This is free software, licensed under the GNU General Public License v3.
 
 [Unit]
-Description=Netify Agent
+Description=@PACKAGE_NAME@
 After=syslog.target network-online.target
 
 [Service]
 Type=forking
-PIDFile=/var/run/netifyd/netifyd.pid
+PIDFile=@piddir@/@PACKAGE_TARNAME@.pid
 User=root
-EnvironmentFile=/usr/libexec/netifyd/env.sh
-ExecStartPre=/usr/libexec/netifyd/exec-pre.sh
-ExecStart=/usr/sbin/netifyd $NETIFYD_OPTS
+EnvironmentFile=@datadir@/@PACKAGE_TARNAME@/env.sh
+ExecStartPre=@datadir@/@PACKAGE_TARNAME@/exec-pre.sh
+ExecStart=@sbindir@/@PACKAGE_TARNAME@ $NETIFYD_OPTS
 Restart=on-failure
 RestartSec=3
 

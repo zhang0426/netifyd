@@ -555,7 +555,7 @@ static int nd_config_load(void)
 static int nd_config_set_option(int option)
 {
     ostringstream os;
-    os << "sh -c \"source " << ND_LIBEXECDIR << "/functions.sh && config_";
+    os << "sh -c \"source " << ND_DATADIR << "/functions.sh && config_";
 
     switch (option) {
     case _ND_LO_ENABLE_SINK:
@@ -1219,7 +1219,7 @@ static void nd_json_add_file(
     json_object *json_tag = json.CreateObject(NULL, tag.c_str());
 
     json.AddObject(json_tag, "digest", digest);
-    json.AddObject(json_tag, "size", file_stat.st_size);
+    json.AddObject(json_tag, "size", (int64_t)file_stat.st_size);
 
     json_object *json_chunks = json.CreateArray(json_tag, "chunks");
 

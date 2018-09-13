@@ -7,7 +7,7 @@
 # At least one -I, --internal and/or -E, --external parameters are required.
 # See man netifyd(8) for all options.
 
-source /usr/libexec/netifyd/functions.sh
+source @datadir@/@PACKAGE_TARNAME@/functions.sh
 
 load_modules
 

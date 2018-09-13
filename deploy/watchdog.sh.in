@@ -1,0 +1,13 @@
+#!/bin/sh
+
+UPLOAD_WD="@localstatedir@/upload.wd"
+
+[ ! -f "$UPLOAD_WD" ] && exit 0
+ 
+if [ $[ $(date '+%s') - 30 ] -gt $(stat -c '%Y' "$UPLOAD_WD") ]; then
+	@sysconfdir@/init.d/@PACKAGE_TARNAME@ restart
+	#service @PACKAGE_TARNAME@ restart
+	#systemctl @PACKAGE_TARNAME@ netifyd
+fi
+
+exit 0

@@ -4,22 +4,22 @@
 # This is free software, licensed under the GNU General Public License v3.
 
 ### BEGIN INIT INFO
-# Provides: netifyd
+# Provides: @PACKAGE_TARNAME@
 # Required-Start: $local_fs $network $syslog
 # Required-Stop: $local_fs $syslog
 # Should-Start: $syslog
 # Should-Stop: $network $syslog
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
-# Short-Description: Start up the Netify daemon
-# Description: Netify daemon
+# Short-Description: Start up the @PACKAGE_NAME@
+# Description: @PACKAGE_NAME@
 ### END INIT INFO
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/sbin/netifyd
-NAME="netifyd"
-PIDFILE=/var/run/netifyd/netifyd.pid
-DESC="Netify Agent"
+DAEMON=@sbindir@/@PACKAGE_TARNAME@
+NAME="@PACKAGE_TARNAME@"
+PIDFILE=@runstatedir@/netifyd.pid
+DESC="@PACKAGE_NAME@"
 
 unset TMPDIR
 
@@ -33,8 +33,8 @@ test -x $DAEMON || exit 0
 
 start() {
     # Load defaults.
-    if [ -f /usr/libexec/netifyd/functions.sh ]; then
-        source /usr/libexec/netifyd/functions.sh
+    if [ -f @datadir@/functions.sh ]; then
+        source @datadir@/functions.sh
         load_modules
     fi
 

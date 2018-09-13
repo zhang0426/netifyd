@@ -6,11 +6,11 @@ AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
 	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS) $(LIBTCMALLOC_CFLAGS) \
 	-D_ND_INTERNAL=1 \
 	-DNDPI_LIB_COMPILATION=1 \
-	-D'ND_VOLATILE_STATEDIR="$(sharedstatedir)/$(PACKAGE_TARNAME)"' \
-	-D'ND_PERSISTENT_STATEDIR="$(sysconfdir)/netify.d"'
-	-D'ND_PID_FILE_NAME="$(localstatedir)/run/$(PACKAGE_TARNAME)/$(PACKAGE_TARNAME).pid"' \
+	-D'ND_VOLATILE_STATEDIR="$(volatilestatedir)"' \
+	-D'ND_PERSISTENT_STATEDIR="$(persistentstatedir)"'
+	-D'ND_PID_FILE_NAME="$(piddir)/$(PACKAGE_TARNAME).pid"' \
 	-D'ND_CONF_FILE_NAME="$(sysconfdir)/$(PACKAGE_TARNAME).conf"' \
-	-D'ND_LIBEXECDIR="$(libexecdir)/$(PACKAGE_TARNAME)"'
+	-D'ND_DATADIR="$(datadir)/$(PACKAGE_TARNAME)"'
 
 #EXTRA_DIST =
 

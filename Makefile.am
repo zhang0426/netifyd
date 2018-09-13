@@ -8,7 +8,8 @@ EXTRA_DIST = autogen.sh debian/compat \
 	libs/gperftools libs/libmnl libs/libnetfilter-conntrack libs/libnfnetlink
 
 DISTCHECK_CONFIGURE_FLAGS = \
-	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
+	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \
+	--with-tmpfilesdir=$$dc_install_base/$(tmpfilesdir)
 
 pkgconfig_DATA = lib@PACKAGE_TARNAME@.pc
 

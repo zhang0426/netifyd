@@ -48,39 +48,23 @@ install: build
 
 	rm -rf $(DESTDIR)@bindir@
 	rm -rf $(DESTDIR)@includedir@
+	rm -rf $(DESTDIR)@libdir@/*.a
+	rm -rf $(DESTDIR)@libdir@/*.la
 	rm -rf $(DESTDIR)@libdir@/libndpi*
 	rm -rf $(DESTDIR)@libdir@/pkgconfig
 
 	install -d -m 0755 $(DESTDIR)@sysconfdir@/netify.d
-	install -d -m 0755 $(DESTDIR)@localstatedir@/run/@PACKAGE_TARNAME@
-
-	install -D -m 0755 deploy/functions.sh \
-		$(DESTDIR)@libexecdir@/@PACKAGE_TARNAME@/functions.sh
-	install -D -m 0755 deploy/exec-pre.sh \
-		$(DESTDIR)@libexecdir@/@PACKAGE_TARNAME@/exec-pre.sh
-	install -D -m 0755 deploy/env.sh \
-		$(DESTDIR)@libexecdir@/@PACKAGE_TARNAME@/env.sh
-
-	install -D -m 0755 deploy/@PACKAGE_TARNAME@.tmpf \
-		$(DESTDIR)@tmpfilesdir@/@PACKAGE_TARNAME@.conf
-
-	install -D -m 0755 deploy/@PACKAGE_TARNAME@.service \
-		$(DESTDIR)@systemdsystemunitdir@/@PACKAGE_TARNAME@.service
+	install -d -m 0755 $(DESTDIR)@runstatedir@
 
 	dh_systemd_enable
 
-	install -D -m 0755 deploy/@PACKAGE_TARNAME@-debian.init \
+	install -D -m 0755 deploy/debian/debian.init \
 		$(DESTDIR)@sysconfdir@/init.d/@PACKAGE_TARNAME@
 
 	dh_systemd_start
 
-	install -D -m 0644 deploy/app-custom-match.conf \
-		$(DESTDIR)@sysconfdir@/netify.d/netify-sink.conf
-
 	install -D -m 0644 deploy/@PACKAGE_TARNAME@.default \
 		$(DESTDIR)@sysconfdir@/default/@PACKAGE_TARNAME@
-	install -D -m 0660 deploy/@PACKAGE_TARNAME@.conf \
-		$(DESTDIR)@sysconfdir@/@PACKAGE_TARNAME@.conf
 
 # Build architecture-independent files here.
 binary-indep: build install

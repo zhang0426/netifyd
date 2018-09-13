@@ -1,17 +1,29 @@
-EXTRA_DIST = app-custom-match.conf env.sh exec-pre.sh functions.sh.in \
-	netifyd.conf netifyd.default netifyd-debian.init netifyd-sysv.init \
-	netifyd.service netifyd.tmpf
+# Netify systemd Automake File
+# Copyright (C) 2016-2018 eGloo, Incorporated
+#
+# This is free software, licensed under the GNU General Public License v3.
 
-BUILT_SOURCES = functions.sh
-CLEANFILES = functions.sh
+SUBDIRS = debian systemd
 
-functions.sh: functions.sh.in
+TEMPLATEFILES = functions.sh netifyd.init watchdog.cron watchdog.sh
+TEMPLATEFILES_IN = functions.sh.in netifyd.init.in watchdog.cron.in watchdog.sh.in
+
+sharedatadir = $(datadir)/netifyd
+sharedata_DATA = functions.sh watchdog.sh
+sysconf_DATA = netifyd.conf
+
+persistentstate_DATA = netify-sink.conf
+
+BUILT_SOURCES = $(TEMPLATEFILES)
+CLEANFILES = $(TEMPLATEFILES)
+EXTRA_DIST = $(TEMPLATEFILES_IN) netifyd.default
+
+%: %.in
 	$(SED) \
+		-e 's|[@]datadir@|$(datadir)/$(PACKAGE_TARNAME)|g' \
+		-e 's|[@]localstatedir@|$(localstatedir)/lib/$(PACKAGE_TARNAME)|g' \
+		-e 's|[@]PACKAGE_NAME@|$(PACKAGE_NAME)|g' \
 		-e 's|[@]PACKAGE_TARNAME@|$(PACKAGE_TARNAME)|g' \
+		-e 's|[@]piddir@|$(piddir)|g' \
 		-e 's|[@]sysconfdir@|$(sysconfdir)|g' \
 		< "$<" > "$@"
-
-if HAVE_SYSTEMD
-systemdsystemunit_DATA = \
-	netifyd.service
-endif
