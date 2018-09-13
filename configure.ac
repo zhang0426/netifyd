@@ -67,6 +67,20 @@ AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
       [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
 AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])
 
+AC_ARG_WITH([tmpfilesdir],
+     [AS_HELP_STRING([--with-tmpfilesdir=DIR], [Directory for systemd tmpfiles configuration])],,
+     [with_tmpfilesdir=auto])
+
+AS_IF([test "x$with_tmpfilesdir" = "xyes" -o "x$with_tmpfilesdir" = "xauto"], [
+     def_tmpfilesdir=$($PKG_CONFIG --variable=tmpfilesdir systemd)
+     AS_IF([test "x$def_tmpfilesdir" = "x"],
+   [AS_IF([test "x$with_tmpfilesdir" = "xyes"],
+    [AC_MSG_ERROR([tmpfiles support requested but pkg-config unable to query systemd package])])
+    with_tmpfilesdir=no],
+   [with_tmpfilesdir="$def_tmpfilesdir"])])
+AS_IF([test "x$with_tmpfilesdir" != "xno"],
+      [AC_SUBST([tmpfilesdir], [$with_tmpfilesdir])])
+
 # Parameters: --enable/disable
 AC_ARG_ENABLE([conntrack],
     [AS_HELP_STRING([--enable-conntrack], [Enable connection tracking support [default=yes]])],
