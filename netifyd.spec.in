@@ -132,6 +132,7 @@ rm -rf %{buildroot}/%{_includedir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}/pkgconfig/libndpi*
 
+install -d -m 0750 %{buildroot}/%{statedir_vdata}
 install -d -m 0755 %{buildroot}/%{_localstatedir}/run/%{name}
 
 install -D -m 0660 %{netifyd_default} %{buildroot}/%{_sysconfdir}/sysconfig/%{name}
