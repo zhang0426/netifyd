@@ -20,7 +20,8 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG([0.23])
-PKG_INSTALLDIR
+m4_include([m4/ax_pkg_installdir.m4])
+AX_PKG_INSTALLDIR
 AC_PATH_PROG([bash], [bash], [false])
 AC_PATH_PROG([osc], [osc])
 AM_CONDITIONAL([HAVE_OSC], [test x$osc != x])
