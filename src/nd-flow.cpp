@@ -537,7 +537,7 @@ json_object *ndFlow::json_encode(const string &device,
     if (ND_DEBUG && other_type == "unknown") {
         ndNetlink::PrintType(lower_ip, lower_type);
         ndNetlink::PrintType(upper_ip, upper_type);
-        exit(1);
+        //exit(1);
     }
 #endif
 #endif
