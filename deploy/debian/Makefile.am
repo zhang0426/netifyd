@@ -19,7 +19,7 @@ EXTRA_DIST = $(DEBFILES_IN)
 		-e 's|[@]PACKAGE_BUGREPORT@|$(PACKAGE_BUGREPORT)|g' \
 		-e 's|[@]PACKAGE_TARNAME@|$(PACKAGE_TARNAME)|g' \
 		-e 's|[@]PACKAGE_VERSION@|$(PACKAGE_VERSION)|g' \
-		-e 's|[@]runstatedir@|$(rundir)/$(PACKAGE_TARNAME)|g' \
+		-e 's|[@]piddir@|$(piddir)|g' \
 		-e 's|[@]sbindir@|$(sbindir)|g' \
 		-e 's|[@]sysconfdir@|$(sysconfdir)|g' \
 		< "$<" > "$@"

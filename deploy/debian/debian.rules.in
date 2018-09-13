@@ -53,8 +53,8 @@ install: build
 	rm -rf $(DESTDIR)@libdir@/libndpi*
 	rm -rf $(DESTDIR)@libdir@/pkgconfig
 
+	install -d -m 0755 $(DESTDIR)@piddir@
 	install -d -m 0755 $(DESTDIR)@sysconfdir@/netify.d
-	install -d -m 0755 $(DESTDIR)@runstatedir@
 
 	dh_systemd_enable
 

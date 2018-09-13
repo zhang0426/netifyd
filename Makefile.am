@@ -30,7 +30,12 @@ dist-git:
 	gzip $(PACKAGE)-$(VERSION).tar
 
 if HAVE_OSC
-deploy-osc-update: netifyd.spec deploy/debian/debian.changelog deploy/debian/debian.control deploy/debian/debian.rules deploy/debian/netifyd.dsc dist-git
+deploy-osc-update: dist-git
+	./autogen.sh && \
+		./configure --prefix=/usr --includedir=\${prefix}/include \
+		--mandir=\${prefix}/share/man --sysconfdir=/etc --localstatedir=/var
+	make clean
+	make -C deploy/debian
 	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) update)
 	cp deploy/debian/debian.changelog $(HOME)/netify-osc/home\:egloo/netifyd
 	cp deploy/debian/debian.control $(HOME)/netify-osc/home\:egloo/netifyd
