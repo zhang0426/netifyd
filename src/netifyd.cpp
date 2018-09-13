@@ -1219,7 +1219,8 @@ static void nd_json_add_file(
     json_object *json_tag = json.CreateObject(NULL, tag.c_str());
 
     json.AddObject(json_tag, "digest", digest);
-    json.AddObject(json_tag, "size", (int64_t)file_stat.st_size);
+    // XXX: Cast down to 32-bit unsigned:
+    json.AddObject(json_tag, "size", (uint32_t)file_stat.st_size);
 
     json_object *json_chunks = json.CreateArray(json_tag, "chunks");
 
