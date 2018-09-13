@@ -25,7 +25,7 @@ void ndpi_global_destroy(void);
 struct ndpi_detection_module_struct *nd_ndpi_init(
     const string &tag, uint32_t &custom_proto_base);
 
-void nd_ndpi_free(ndpi_detection_module_struct *ndpi);
+void nd_ndpi_free(struct ndpi_detection_module_struct *ndpi);
 
 struct ndpi_detection_module_struct *ndpi_get_parent(void);
 
