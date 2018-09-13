@@ -13,6 +13,7 @@ EXTRA_DIST = $(DEBFILES_IN)
 %: %.in
 	$(SED) \
 		-e 's|[@]bindir@|$(bindir)|g' \
+		-e 's|[@]build_triplet@|$(build_triplet)|g' \
 		-e 's|[@]datadir@|$(datadir)/$(PACKAGE_TARNAME)|g' \
 		-e 's|[@]includedir@|$(includedir)|g' \
 		-e 's|[@]libdir@|$(libdir)|g' \

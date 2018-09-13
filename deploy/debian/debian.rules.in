@@ -48,10 +48,10 @@ install: build
 
 	rm -rf $(DESTDIR)@bindir@
 	rm -rf $(DESTDIR)@includedir@
-	rm -rf $(DESTDIR)@libdir@/*.a
-	rm -rf $(DESTDIR)@libdir@/*.la
-	rm -rf $(DESTDIR)@libdir@/libndpi*
-	rm -rf $(DESTDIR)@libdir@/pkgconfig
+	rm -rf $(DESTDIR)@libdir@/@build_triplet@/*.a
+	rm -rf $(DESTDIR)@libdir@/@build_triplet@/*.la
+	rm -rf $(DESTDIR)@libdir@/@build_triplet@/libndpi*
+	rm -rf $(DESTDIR)@libdir@/@build_triplet@/pkgconfig
 
 	install -d -m 0755 $(DESTDIR)@piddir@
 	install -d -m 0755 $(DESTDIR)@sysconfdir@/netify.d
