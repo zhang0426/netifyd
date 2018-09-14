@@ -18,7 +18,7 @@ function load_defaults
 
     for entry in $NETIFYD_INTNET; do
         if [ "$entry" == "${entry/,/}" ]; then
-            options="$NETIFYD_OPTS -I $entry"
+            options="$options -I $entry"
             continue
         fi
         for net in ${entry//,/ }; do
