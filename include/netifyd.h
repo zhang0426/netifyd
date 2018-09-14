@@ -61,7 +61,7 @@
 #define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
 
 #ifndef ND_VOLATILE_STATEDIR
-#define ND_VOLATILE_STATEDIR    "/var/lib/netifyd"
+#define ND_VOLATILE_STATEDIR    "/var/run/netifyd"
 #endif
 
 #ifndef ND_PERSISTENT_STATEDIR
@@ -69,15 +69,15 @@
 #endif
 
 #ifndef ND_DATADIR
-#define ND_DATADIR              "/usr/libexec/netifyd"
-#endif
-
-#ifndef ND_PID_FILE_NAME
-#define ND_PID_FILE_NAME        "/var/run/netifyd/netifyd.pid"
+#define ND_DATADIR              "/usr/share/netifyd"
 #endif
 
 #ifndef ND_CONF_FILE_NAME
 #define ND_CONF_FILE_NAME       "/etc/netifyd.conf"
+#endif
+
+#ifndef ND_PID_FILE_NAME
+#define ND_PID_FILE_NAME        ND_VOLATILE_STATEDIR "/netifyd.pid"
 #endif
 
 #define ND_DNS_CACHE_FILE_NAME  ND_VOLATILE_STATEDIR "/dns-cache.csv"
