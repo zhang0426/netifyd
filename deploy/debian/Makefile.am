@@ -17,6 +17,7 @@ EXTRA_DIST = $(DEBFILES_IN)
 		-e 's|[@]includedir@|$(includedir)|g' \
 		-e 's|[@]libdir@|$(libdir)|g' \
 		-e 's|[@]PACKAGE_BUGREPORT@|$(PACKAGE_BUGREPORT)|g' \
+		-e 's|[@]PACKAGE_NAME@|$(PACKAGE_NAME)|g' \
 		-e 's|[@]PACKAGE_TARNAME@|$(PACKAGE_TARNAME)|g' \
 		-e 's|[@]PACKAGE_VERSION@|$(PACKAGE_VERSION)|g' \
 		-e 's|[@]sbindir@|$(sbindir)|g' \

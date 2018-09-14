@@ -56,6 +56,8 @@ install: build
 	install -d -m 0755 $(DESTDIR)@volatilestatedir@
 	install -d -m 0755 $(DESTDIR)@sysconfdir@/netify.d
 
+	chmod a+x $(DESTDIR)@datadir@/*.sh
+
 	dh_systemd_enable
 
 	install -D -m 0755 deploy/debian/debian.init \
