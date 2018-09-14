@@ -1250,7 +1250,7 @@ static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
     for (vector<ndPlugin *>::const_iterator i = plugins.begin();
         i != plugins.end(); i++) {
 
-        ndJson *parent;
+        ndJson *parent = NULL;
 
         switch ((*i)->GetType()) {
 
@@ -1265,6 +1265,8 @@ static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
             nd_debug_printf("%s: Unsupported plugin type: %d\n",
                 __PRETTY_FUNCTION__, (*i)->GetType());
         }
+
+        if (parent == NULL) continue;
 
         ndPluginFiles files;
         ndPluginReplies replies;
