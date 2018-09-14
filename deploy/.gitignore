@@ -1,5 +1,6 @@
 functions.sh
 Makefile.in
+netifyd.conf
 netifyd.init
 watchdog.cron
 watchdog.sh

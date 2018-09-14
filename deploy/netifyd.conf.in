@@ -9,3 +9,6 @@ enable_sink = no
 
 [dns_cache]
 cache_ttl = 1800
+
+[socket]
+listen_path[0] = @volatilestatedir@/@PACKAGE_TARNAME@.sock
