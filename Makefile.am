@@ -39,8 +39,10 @@ deploy-osc-update: dist-git
 	./autogen.sh && \
 		./configure --prefix=/usr --includedir=\${prefix}/include \
 		--mandir=\${prefix}/share/man --sysconfdir=/etc --localstatedir=/var
-	make clean
-	make -C deploy/debian
+
+	$(MAKE) clean
+	$(MAKE) -C deploy/debian
+
 	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) update)
 	cp deploy/debian/debian.changelog $(HOME)/netify-osc/home\:egloo/netifyd
 	cp deploy/debian/debian.control $(HOME)/netify-osc/home\:egloo/netifyd
@@ -59,31 +61,36 @@ deploy-osc-commit: deploy-osc-update
 	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) commit -m 'Updated to latest sources.')
 endif
 
-deploy-edgeos: all
+deploy-edgeos:
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
-	$(INSTALL) -d -m 0755 $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
-	$(INSTALL) -d -m 0750 $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/var/lib/netifyd
-	$(INSTALL) -d -m 0755 $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/run/netifyd
+	./autogen.sh && \
+		PKG_CONFIG=${BUILDROOT}/target-usg-3p/output/host/bin/pkg-config \
+		./configure \
+		--build=x86_64-pc-linux-gnu --host=mips-linux \
+		--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sharedstatedir=/var/lib \
+		--disable-shared --enable-static --enable-watchdogs --enable-lean-and-mean \
+		--disable-json-c --disable-libtcmalloc --disable-plugins --without-systemdsystemunitdir
 
-	$(INSTALL) -D -m 0755 src/netifyd \
-		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/sbin/netifyd
+	$(MAKE) clean
+	$(MAKE) -j 17
+	$(MAKE) DESTDIR=$(abs_top_builddir)/$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu) install
+
 	$(STRIP) $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/sbin/netifyd
-	$(INSTALL) -D -m 0640 deploy/app-custom-match.conf \
-		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/netify.d/netify-sink.conf
-	$(INSTALL) -D -m 0640 deploy/netifyd.conf \
-		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/netifyd.conf
+
+	$(INSTALL) -d -m 0755 \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/var/run/netifyd
 	$(INSTALL) -D -m 0640 deploy/watchdog.cron \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/cron.d/netifyd
-	$(INSTALL) -D -m 0755 deploy/netifyd-debian.init \
+	$(INSTALL) -D -m 0755 deploy/debian/debian.init \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/init.d/netifyd
-	$(INSTALL) -D -m 0755 deploy/functions.sh \
-		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/libexec/netifyd/functions.sh
-	$(INSTALL) -D -m 0755 deploy/watchdog.sh \
-		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/libexec/netifyd/watchdog.sh
 	$(INSTALL) -D -m 0640 deploy/netifyd.default \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/default/netifyd
 	$(INSTALL) -D -m 0755 deploy/install-edgeos.sh \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/install.sh
+
+	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/lib
+	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/include
+	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/share/man
 
 	rm -f $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu).tar.gz
 	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu).tar.gz \
