@@ -7,12 +7,11 @@ SYSTEMDFILES = exec-pre.sh netifyd.conf netifyd.service
 SYSTEMDFILES_IN = exec-pre.sh.in netifyd.conf.in netifyd.service.in
 
 sharedatadir = $(datadir)/netifyd
-sharedata_DATA = exec-pre.sh
 
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = netifyd.service
 tmpfiles_DATA = netifyd.conf
-sharedata_DATA += env.sh
+sharedata_DATA = env.sh exec-pre.sh
 endif
 
 BUILT_SOURCES = $(SYSTEMDFILES)
