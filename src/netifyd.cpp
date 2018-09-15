@@ -91,9 +91,9 @@ using namespace std;
 #include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-sink.h"
+#include "nd-base64.h"
 #ifdef _ND_USE_PLUGINS
 #include "nd-plugin.h"
-#include "nd-base64.h"
 #endif
 
 #define ND_SIG_UPDATE       SIGRTMIN
@@ -784,23 +784,6 @@ static void nd_stop_services(void)
     plugin_services.clear();
 }
 
-static int nd_save_response_data(const char *filename, const ndJsonDataChunks &data)
-{
-    try {
-        int chunks = 0;
-        for (ndJsonDataChunks::const_iterator i = data.begin(); i != data.end(); i++)
-            nd_file_save(filename, (*i), (0 != chunks++));
-    }
-    catch (runtime_error &e) {
-        nd_printf("Error saving file: %s: %s\n", filename, e.what());
-        return -1;
-    }
-
-    nd_sha1_file(nd_config.path_sink_config, nd_config.digest_sink_config);
-
-    return 0;
-}
-
 static int nd_dispatch_service_param(
     const string &name, const string &uuid_dispatch, const ndJsonPluginParams &params)
 {
@@ -900,7 +883,25 @@ static void nd_reap_tasks(void)
     }
 }
 
-#endif
+#endif // _USE_ND_PLUGINS
+
+static int nd_save_response_data(const char *filename, const ndJsonDataChunks &data)
+{
+    try {
+        int chunks = 0;
+        for (ndJsonDataChunks::const_iterator i = data.begin(); i != data.end(); i++)
+            nd_file_save(filename, (*i), (0 != chunks++));
+    }
+    catch (runtime_error &e) {
+        nd_printf("Error saving file: %s: %s\n", filename, e.what());
+        return -1;
+    }
+
+    nd_sha1_file(nd_config.path_sink_config, nd_config.digest_sink_config);
+
+    return 0;
+}
+
 static int nd_sink_process_responses(void)
 {
     int count = 0;

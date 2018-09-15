@@ -42,9 +42,7 @@ using namespace std;
 #include "nd-ndpi.h"
 #include "nd-util.h"
 #include "nd-json.h"
-#ifdef _ND_USE_PLUGINS
 #include "nd-base64.h"
-#endif
 
 extern nd_global_config nd_config;
 
