@@ -1,6 +1,6 @@
 #!/bin/sh
 
-UPLOAD_WD="@localstatedir@/upload.wd"
+UPLOAD_WD="@volatilestatedir@/upload.wd"
 
 [ ! -f "$UPLOAD_WD" ] && exit 0
  
