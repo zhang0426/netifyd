@@ -10,3 +10,8 @@ fi
 sudo cp -r usr/* /usr/
 sudo cp -r var/* /var/
 
+sudo cp etc/cron.d/* /etc/cron.d/
+sudo /etc/init.d/cron restart
+
+sudo /usr/sbin/netifyd --provision
+
