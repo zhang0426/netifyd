@@ -88,24 +88,24 @@ Report bugs to: https://gitlab.com/netify.ai/public/netify-agent/issues
 
 %if 0%{?_with_bundled_libs:1}
 
-(cd libs/libmnl && ./autogen.sh &&\
-    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix="$(pwd)" --disable-shared --enable-static --with-pic &&\
+(cd libs/libmnl && ./autogen.sh && \
+    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix="$(pwd)" --disable-shared --enable-static --with-pic && \
     make %{?_smp_mflags} && ln -s src lib)
 
-(cd libs/libnfnetlink && ./autogen.sh &&\
-    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix="$(pwd)" --disable-shared --enable-static --with-pic &&\
+(cd libs/libnfnetlink && ./autogen.sh && \
+    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix="$(pwd)" --disable-shared --enable-static --with-pic && \
     make %{?_smp_mflags} && ln -s src lib)
 
 export PKG_CONFIG_PATH=$(pwd)/libs/libmnl:$(pwd)/libs/libnfnetlink
 
-(cd libs/libnetfilter-conntrack && ./autogen.sh &&\
-    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix="$(pwd)" --disable-shared --enable-static --with-pic &&\
+(cd libs/libnetfilter-conntrack && ./autogen.sh && \
+    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix="$(pwd)" --disable-shared --enable-static --with-pic && \
     make %{?_smp_mflags} && ln -s src lib)
 
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libs/libnetfilter-conntrack
 
-(cd libs/gperftools && ./autogen.sh &&\
-    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix="$(pwd)" --disable-shared --enable-static --with-pic &&\
+(cd libs/gperftools && ./autogen.sh && \
+    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix="$(pwd)" --disable-shared --enable-static --with-pic && \
     make %{?_smp_mflags} && ln -s .libs lib)
 
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libs/gperftools
@@ -113,10 +113,7 @@ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(pwd)/libs/gperftools
 %endif
 
 ./autogen.sh
-%{configure} \
-    %{?_with_conntrack} \
-    %{?_with_inotify} \
-    %{?_with_netlink}
+%{configure} %{?_with_conntrack} %{?_with_inotify} %{?_with_netlink}
 
 # Build
 %build
