@@ -48,53 +48,43 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
-static void *ndpi_host_automa = NULL;
 static pthread_mutex_t *ndpi_host_automa_lock = NULL;
-static void *ndpi_proto_ptree = NULL;
 static struct ndpi_detection_module_struct *ndpi_parent = NULL;
 
 void ndpi_global_init(void)
 {
     struct stat path_sink_config_stat;
 
+    set_ndpi_malloc(nd_mem_alloc);
+    set_ndpi_free(nd_mem_free);
+
     ndpi_parent = ndpi_init_detection_module();
 
     if (ndpi_parent == NULL)
         throw ndThreadException("Detection module initialization failure");
 
+#ifdef NDPI_ENABLE_DEBUG_MESSAGES
+    ndpi_parent->ndpi_log_level = NDPI_LOG_TRACE;
+    //ndpi_parent->ndpi_log_level = NDPI_LOG_DEBUG_EXTRA;
+    set_ndpi_debug_function(ndpi_parent, nd_ndpi_debug_printf);
+#endif
+
     if (ndpi_parent->host_automa.ac_automa == NULL)
         throw ndThreadException("Detection host_automa initialization failure");
-
-    ndpi_host_automa = ndpi_init_automa();
-    if (ndpi_host_automa == NULL)
-        throw ndThreadException("Unable to initialize host_automa");
 
     ndpi_host_automa_lock = new pthread_mutex_t;
     if (pthread_mutex_init(ndpi_host_automa_lock, NULL) != 0)
         throw ndThreadException("Unable to initialize pthread_mutex");
-
-    ndpi_proto_ptree = ndpi_init_ptree(32); // 32-bit for IPv4
-    if (ndpi_proto_ptree == NULL)
-        throw ndThreadException("Unable to initialize proto_ptree");
-
-    ndpi_free_automa(ndpi_parent->host_automa.ac_automa);
-
-    if (ndpi_parent->protocols_ptree != NULL)
-        ndpi_free_ptree(ndpi_parent->protocols_ptree);
-
-    ndpi_parent->host_automa.ac_automa = ndpi_host_automa;
     ndpi_parent->host_automa.lock = ndpi_host_automa_lock;
-    ndpi_parent->protocols_ptree = ndpi_proto_ptree;
+
+    if (ndpi_parent->protocols_ptree == NULL) {
+        ndpi_parent->protocols_ptree = ndpi_init_ptree(32); // 32-bit for IPv4
+        if (ndpi_parent->protocols_ptree == NULL)
+            throw ndThreadException("Unable to initialize proto_ptree");
+    }
 
     ndpi_init_string_based_protocols(ndpi_parent);
 
-    set_ndpi_malloc(nd_mem_alloc);
-    set_ndpi_free(nd_mem_free);
-#ifdef NDPI_ENABLE_DEBUG_MESSAGES
-    ndpi_parent->ndpi_log_level = NDPI_LOG_TRACE;
-    //ndpi_parent->ndpi_log_level = NDPI_LOG_DEBUG_EXTRA;
-    set_ndpi_debug_function(ndpi_parent, ndpi_debug_printf);
-#endif
     NDPI_PROTOCOL_BITMASK proto_all;
     NDPI_BITMASK_SET_ALL(proto_all);
 
@@ -112,13 +102,11 @@ void ndpi_global_init(void)
 void ndpi_global_destroy(void)
 {
     pthread_mutex_destroy(ndpi_host_automa_lock);
+    delete ndpi_host_automa_lock;
     ndpi_host_automa_lock = NULL;
 
     ndpi_exit_detection_module(ndpi_parent);
     ndpi_parent = NULL;
-
-    ndpi_host_automa = NULL;
-    ndpi_proto_ptree = NULL;
 }
 
 struct ndpi_detection_module_struct *ndpi_get_parent(void)
@@ -145,21 +133,22 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     ndpi_set_detection_preferences(ndpi, ndpi_pref_disable_metadata_export, 0);
     ndpi_set_detection_preferences(ndpi, ndpi_pref_enable_category_substring_match, 0);
 
-    ndpi_free_automa(ndpi->host_automa.ac_automa);
+    if (ndpi->host_automa.ac_automa != NULL)
+        ndpi_free_automa(ndpi->host_automa.ac_automa);
 
     if (ndpi->protocols_ptree != NULL)
         ndpi_free_ptree(ndpi->protocols_ptree);
 
-    ndpi->host_automa.ac_automa = ndpi_host_automa;
-    ndpi->host_automa.lock = ndpi_host_automa_lock;
-    ndpi->protocols_ptree = ndpi_proto_ptree;
+    ndpi->host_automa.ac_automa = ndpi_parent->host_automa.ac_automa;
+    ndpi->host_automa.lock = ndpi_parent->host_automa.lock;
+    ndpi->protocols_ptree = ndpi_parent->protocols_ptree;
 
-    ndpi_init_string_based_protocols(ndpi);
+    //ndpi_init_string_based_protocols(ndpi);
 
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
     ndpi->ndpi_log_level = NDPI_LOG_TRACE;
     //ndpi->ndpi_log_level = NDPI_LOG_DEBUG_EXTRA;
-    set_ndpi_debug_function(ndpi, ndpi_debug_printf);
+    set_ndpi_debug_function(ndpi, nd_ndpi_debug_printf);
 #endif
 
     NDPI_PROTOCOL_BITMASK proto_all;
@@ -170,8 +159,13 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
     for (int i = 0;
         i < NDPI_MAX_SUPPORTED_PROTOCOLS + NDPI_MAX_NUM_CUSTOM_PROTOCOLS;
         i++) {
+
+        if (ndpi->proto_defaults[i].proto_name != NULL)
+            ndpi_free(ndpi->proto_defaults[i].proto_name);
+
         memcpy(&ndpi->proto_defaults[i], &ndpi_parent->proto_defaults[i],
             sizeof(ndpi_proto_defaults_t));
+
         if (ndpi->proto_defaults[i].proto_name != NULL) {
             ndpi->proto_defaults[i].proto_name = ndpi_strdup(
                 ndpi_parent->proto_defaults[i].proto_name
@@ -193,6 +187,8 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
 
 void nd_ndpi_free(struct ndpi_detection_module_struct *ndpi)
 {
+    nd_debug_printf("%p: %s\n", ndpi, __PRETTY_FUNCTION__);
+
     ndpi->host_automa.ac_automa = NULL;
     ndpi->protocols_ptree = NULL;
     ndpi->udp_root_node = NULL;
