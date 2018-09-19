@@ -137,7 +137,7 @@ void nd_debug_printf(const char *format, ...)
 }
 
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
-void ndpi_debug_printf(uint32_t protocol, void *ndpi,
+void nd_ndpi_debug_printf(uint32_t protocol, void *ndpi,
     ndpi_log_level_t level, const char *file, const char *func, unsigned line,
     const char *format, ...)
 {
