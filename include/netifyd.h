@@ -160,7 +160,7 @@ enum nd_global_flags {
     ndGF_BITHOLE_0x20 = 0x20,
     ndGF_BITHOLE_0x40 = 0x40,
     ndGF_SSL_USE_TLSv1 = 0x80,
-    ndGF_SSL_VERIFY_PEER = 0x100,
+    ndGF_SSL_VERIFY = 0x100,
     ndGF_USE_CONNTRACK = 0x200,
     ndGF_USE_NETLINK = 0x400,
     ndGF_FREE_0x800 = 0x800,
@@ -179,7 +179,7 @@ enum nd_global_flags {
 #define ND_DEBUG_DNS_CACHE (nd_config.flags & ndGF_DEBUG_DNS_CACHE)
 #define ND_OVERRIDE_SINK_CONFIG (nd_config.flags & ndGF_OVERRIDE_SINK_CONFIG)
 #define ND_SSL_USE_TLSv1 (nd_config.flags & ndGF_SSL_USE_TLSv1)
-#define ND_SSL_VERIFY_PEER (nd_config.flags & ndGF_SSL_VERIFY_PEER)
+#define ND_SSL_VERIFY (nd_config.flags & ndGF_SSL_VERIFY)
 #define ND_USE_CONNTRACK (nd_config.flags & ndGF_USE_CONNTRACK)
 #define ND_USE_NETLINK (nd_config.flags & ndGF_USE_NETLINK)
 #define ND_USE_SINK (nd_config.flags & ndGF_USE_SINK)
@@ -189,6 +189,12 @@ enum nd_global_flags {
 #define ND_VERBOSE (nd_config.flags & ndGF_VERBOSE)
 #define ND_REPLAY_DELAY (nd_config.flags & ndGF_REPLAY_DELAY)
 #define ND_REMAIN_IN_FOREGROUND (nd_config.flags & ndGF_REMAIN_IN_FOREGROUND)
+
+#define ND_GF_SET_FLAG(flag, value) \
+{ \
+    if (value) nd_config.flags |= flag; \
+    else nd_config.flags &= ~flag; \
+}
 
 typedef struct nd_global_config_t {
     char *path_config;

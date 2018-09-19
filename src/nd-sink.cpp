@@ -167,7 +167,7 @@ ndSinkThread::ndSinkThread()
         curl_easy_setopt(ch, CURLOPT_COOKIEJAR, ND_COOKIE_JAR);
     }
 
-    if (! ND_SSL_VERIFY_PEER) {
+    if (! ND_SSL_VERIFY) {
         curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(ch, CURLOPT_SSL_VERIFYHOST, 0);
     }

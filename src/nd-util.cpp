@@ -418,7 +418,7 @@ string nd_get_version_and_features(void)
     ident << "; tcmalloc";
 #endif
     if (ND_SSL_USE_TLSv1) ident << "; ssl-tlsv1";
-    if (! ND_SSL_VERIFY_PEER) ident << "; ssl-no-verify-peer";
+    if (! ND_SSL_VERIFY) ident << "; ssl-no-verify";
     ident << ")" <<
         " nDPI/" << ndpi_revision() <<
         " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION;

@@ -353,7 +353,7 @@ static void nd_config_init(void)
 
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
 
-    nd_config.flags |= ndGF_SSL_VERIFY_PEER;
+    nd_config.flags |= ndGF_SSL_VERIFY;
 #ifdef _ND_USE_CONNTRACK
     nd_config.flags |= ndGF_USE_CONNTRACK;
 #endif
@@ -372,6 +372,9 @@ static void nd_config_init(void)
 
 static int nd_config_load(void)
 {
+    bool flag;
+    typedef map<string, string> nd_config_section;
+
     if (nd_conf_filename == NULL) {
         fprintf(stderr, "Configuration file not defined.\n");
         return -1;
@@ -397,6 +400,10 @@ static int nd_config_load(void)
         if (uuid.size() > 0)
             nd_config.uuid = strdup(uuid.c_str());
     }
+
+    // Netify section
+    nd_config_section netifyd_section;
+    reader.GetSection("netifyd", netifyd_section);
 
     string path_uuid = reader.Get(
         "netifyd", "path_uuid", ND_AGENT_UUID_PATH);
@@ -428,32 +435,25 @@ static int nd_config_load(void)
     nd_config.upload_timeout = (unsigned)reader.GetInteger(
         "netifyd", "upload_timeout", ND_UPLOAD_TIMEOUT);
 
-    nd_config.flags |= (reader.GetBoolean(
-        "netifyd", "json_save", false)) ? ndGF_JSON_SAVE : 0;
-
-    nd_config.flags |= (reader.GetBoolean(
-        "dns_cache", "enable", true)) ? ndGF_USE_DNS_CACHE : 0;
-
-    nd_config.flags |= (reader.GetBoolean(
-        "dns_cache", "save", true)) ? ndGF_DNS_CACHE_SAVE : 0;
-
-    nd_config.dns_cache_ttl = (unsigned)reader.GetInteger(
-        "dns_cache", "cache_ttl", ND_IDLE_DNS_CACHE_TTL);
+    ND_GF_SET_FLAG(ndGF_JSON_SAVE,
+        reader.GetBoolean("netifyd", "json_save", false));
 
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
 
-    nd_config.flags |= (reader.GetBoolean(
-        "netifyd", "enable_sink", false)) ? ndGF_USE_SINK : 0;
+    ND_GF_SET_FLAG(ndGF_USE_SINK,
+        reader.GetBoolean("netifyd", "enable_sink", false));
 
-    nd_config.flags |= (reader.GetBoolean(
-        "netifyd", "enable_netify_sink", false)) ? ndGF_USE_SINK : 0;
+    if (netifyd_section.find("ssl_verify") != netifyd_section.end()) {
+        ND_GF_SET_FLAG(ndGF_SSL_VERIFY,
+            reader.GetBoolean("netifyd", "ssl_verify", true));
+    } else if (netifyd_section.find("ssl_verify_peer") != netifyd_section.end()) {
+        ND_GF_SET_FLAG(ndGF_SSL_VERIFY,
+            reader.GetBoolean("netifyd", "ssl_verify_peer", true));
+    }
 
-    nd_config.flags |= (reader.GetBoolean(
-        "netifyd", "ssl_verify_peer", true)) ? ndGF_SSL_VERIFY_PEER : 0;
-
-    nd_config.flags |= (reader.GetBoolean(
-        "netifyd", "ssl_use_tlsv1", false)) ? ndGF_SSL_USE_TLSv1 : 0;
+    ND_GF_SET_FLAG(ndGF_SSL_USE_TLSv1,
+        reader.GetBoolean("netifyd", "ssl_use_tlsv1", false));
 
     nd_config.max_tcp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_tcp_pkts", ND_MAX_TCP_PKTS);
@@ -461,6 +461,17 @@ static int nd_config_load(void)
     nd_config.max_udp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_udp_pkts", ND_MAX_UDP_PKTS);
 
+    // DNS Cache section
+    ND_GF_SET_FLAG(ndGF_USE_DNS_CACHE,
+        reader.GetBoolean("dns_cache", "enable", true));
+
+    ND_GF_SET_FLAG(ndGF_DNS_CACHE_SAVE,
+        reader.GetBoolean("dns_cache", "save", true));
+
+    nd_config.dns_cache_ttl = (unsigned)reader.GetInteger(
+        "dns_cache", "cache_ttl", ND_IDLE_DNS_CACHE_TTL);
+
+    // Socket section
     for (int i = 0; ; i++) {
         ostringstream os;
         os << "listen_address[" << i << "]";
@@ -487,6 +498,7 @@ static int nd_config_load(void)
         break;
     }
 
+    // Privacy filter section
     for (int i = 0; ; i++) {
         ostringstream os;
         os << "mac[" << i << "]";
@@ -537,9 +549,11 @@ static int nd_config_load(void)
         freeaddrinfo(result);
     }
 #ifdef _ND_USE_INOTIFY
+    // Watches section
     reader.GetSection("watches", inotify_watches);
 #endif
 #ifdef _ND_USE_PLUGINS
+    // Plugins section
     reader.GetSection("services", nd_config.services);
     reader.GetSection("tasks", nd_config.tasks);
 #endif
