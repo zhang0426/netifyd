@@ -700,6 +700,8 @@ static void nd_stop_detection_threads(void)
 
 static void nd_reap_detection_threads(void)
 {
+    if (threads.size() == 0) return;
+
     nd_threads::iterator thread_iter;
     nd_flows::iterator flow_iter;
     nd_stats::iterator stat_iter;
@@ -743,8 +745,12 @@ static void nd_reap_detection_threads(void)
         threads.erase(thread_iter);
         iface_iter = ifaces.erase(iface_iter);
     }
+
+    if (threads.size() == 0) ndpi_global_destroy();
 }
+
 #ifdef _ND_USE_PLUGINS
+
 static int nd_start_services(void)
 {
     for (map<string, string>::const_iterator i = nd_config.services.begin();
@@ -1594,7 +1600,7 @@ static void nd_dump_protocols(void)
         printf("%4d: %s\n", i, ndpi->proto_defaults[i].proto_name);
 
     ndpi_free(ndpi);
-    ndpi_global_init();
+    ndpi_global_destroy();
 }
 #endif
 
