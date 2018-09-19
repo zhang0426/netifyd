@@ -198,8 +198,7 @@ ndPluginLoader::ndPluginLoader(const string &so_name, const string &tag)
 
 ndPluginLoader::~ndPluginLoader()
 {
-    nd_debug_printf("Plugin dereferenced: %s: %s\n",
-        plugin->GetTag().c_str(), so_name.c_str());
+    nd_debug_printf("Plugin dereferenced: %s\n", so_name.c_str());
     if (so_handle != NULL) dlclose(so_handle);
 }
 
