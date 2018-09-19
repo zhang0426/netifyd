@@ -29,17 +29,13 @@ Normally these shouldn't be adjusted.  The defaults have been fine tuned for per
 .PP
 For some platforms it may be necessary to enforce the use of TLSv1.  The default is false.
 .PP
-\fBssl_verify_peer\fR=\fIBOOLEAN\fR
+\fBssl_verify\fR=\fIBOOLEAN\fR
 .PP
-This option disables peer certificate validation.  You can use this option for testing against a server with a self-signed certificate.  The default is false.
+This option disables host (SNI) and peer certificate verification.  You can use this option for testing against a server with a self-signed certificate.  The default is false.
 .PP
 \fBjson_save\fR=\fIBOOLEAN\fR
 .PP
 Enable/disable the \fBjson_save\fR parameter to set whether the current state is output to a JSON file.  The default is false.
-.PP
-\fBupdate_interval\fR=\fISECONDS\fR
-.PP
-Specifiy the number of seconds between update intervals.  The default and recommended value is 15 seconds.
 .PP
 \fBuuid\fR=\fIUUID\fR
 .PP
@@ -118,8 +114,7 @@ max_backlog_kb = 2048
 max_tcp_pkts = 10
 max_udp_pkts = 8
 ssl_use_tlsv1 = false
-ssl_verify_peer = true
-update_interval = 15
+ssl_verify = true
 uuid = 00-00-00-00
 uuid_serial = abc123
 
