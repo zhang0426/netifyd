@@ -38,13 +38,16 @@ typedef bool atomic_bool;
 
 #include <arpa/inet.h>
 
+#include <json.h>
+
 using namespace std;
 
 #include "netifyd.h"
 
-#include "nd-ndpi.h"
-#include "nd-util.h"
 #include "nd-thread.h"
+#include "nd-json.h"
+#include "nd-util.h"
+#include "nd-ndpi.h"
 
 extern nd_global_config nd_config;
 

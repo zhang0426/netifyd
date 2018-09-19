@@ -49,13 +49,16 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include <json.h>
+
 using namespace std;
 
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
 #include "nd-sha1.h"
+#include "nd-json.h"
+#include "nd-util.h"
 
 extern nd_global_config nd_config;
 
@@ -494,6 +497,21 @@ void nd_file_save(const string &filename,
 
     flock(fd, LOCK_UN);
     close(fd);
+}
+
+int nd_save_response_data(const char *filename, const ndJsonDataChunks &data)
+{
+    try {
+        int chunks = 0;
+        for (ndJsonDataChunks::const_iterator i = data.begin(); i != data.end(); i++)
+            nd_file_save(filename, (*i), (0 != chunks++));
+    }
+    catch (runtime_error &e) {
+        nd_printf("Error saving file: %s: %s\n", filename, e.what());
+        return -1;
+    }
+
+    return 0;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

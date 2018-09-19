@@ -55,9 +55,9 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
 #include "nd-json.h"
 #include "nd-thread.h"
+#include "nd-util.h"
 #include "nd-sink.h"
 
 extern nd_global_config nd_config;
@@ -366,11 +366,18 @@ void ndSinkThread::CreateHeaders(void)
             site_uuid << "X-UUID-Site: " << nd_config.uuid_site;
     }
 
+    string digest;
+    nd_sha1_to_string(nd_config.digest_sink_config, digest);
+
+    ostringstream conf_digest;
+    conf_digest << "X-Digest-Sink: " << digest;
+
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, uuid.str().c_str());
     headers = curl_slist_append(headers, serial.str().c_str());
     headers = curl_slist_append(headers, site_uuid.str().c_str());
+    headers = curl_slist_append(headers, conf_digest.str().c_str());
 
     headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
     headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
@@ -378,6 +385,7 @@ void ndSinkThread::CreateHeaders(void)
     headers_gz = curl_slist_append(headers_gz, uuid.str().c_str());
     headers_gz = curl_slist_append(headers_gz, serial.str().c_str());
     headers_gz = curl_slist_append(headers_gz, site_uuid.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, conf_digest.str().c_str());
 }
 
 void ndSinkThread::FreeHeaders(void)
@@ -506,6 +514,7 @@ string ndSinkThread::Deflate(const string &data)
 
 void ndSinkThread::ProcessResponse(void)
 {
+    bool create_headers = false;
     ndJsonResponse *response = new ndJsonResponse();
 
     try {
@@ -523,8 +532,26 @@ void ndSinkThread::ProcessResponse(void)
                 )) {
                 nd_printf("%s: saved new site UUID: %s\n", tag.c_str(),
                     response->uuid_site.c_str());
-                CreateHeaders();
+
+                create_headers = true;
             }
+
+            for (ndJsonData::const_iterator i = response->data.begin();
+                i != response->data.end(); i++) {
+
+                if (i->first == ND_CONF_SINK_BASE) {
+
+                    if (nd_save_response_data(ND_CONF_SINK_PATH, i->second) == 0 &&
+                        nd_sha1_file(
+                            nd_config.path_sink_config, nd_config.digest_sink_config
+                        ) == 0)
+                        create_headers = true;
+
+                    break;
+                }
+            }
+
+            if (create_headers) CreateHeaders();
 
             PushResponse(response);
 

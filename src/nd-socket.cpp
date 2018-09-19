@@ -78,7 +78,6 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
 #ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
 #endif
@@ -88,6 +87,7 @@ using namespace std;
 #ifdef _ND_USE_CONNTRACK
 #include "nd-conntrack.h"
 #endif
+#include "nd-util.h"
 #include "nd-socket.h"
 
 #define _ND_SOCKET_PROC_NET_UNIX    "/proc/net/unix"

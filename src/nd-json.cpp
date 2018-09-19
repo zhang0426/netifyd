@@ -40,9 +40,9 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
-#include "nd-json.h"
 #include "nd-base64.h"
+#include "nd-json.h"
+#include "nd-util.h"
 
 extern nd_global_config nd_config;
 

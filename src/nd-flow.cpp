@@ -42,11 +42,11 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
 #ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
 #endif
 #include "nd-json.h"
+#include "nd-util.h"
 #include "nd-flow.h"
 
 extern nd_global_config nd_config;

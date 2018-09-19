@@ -75,7 +75,6 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
 #ifdef _ND_USE_INOTIFY
 #include "nd-inotify.h"
 #endif
@@ -95,6 +94,7 @@ using namespace std;
 #ifdef _ND_USE_PLUGINS
 #include "nd-plugin.h"
 #endif
+#include "nd-util.h"
 
 #define ND_SIG_UPDATE       SIGRTMIN
 #define ND_STR_ETHALEN     (ETH_ALEN * 2 + ETH_ALEN - 1)
@@ -905,26 +905,10 @@ static void nd_reap_tasks(void)
 
 #endif // _USE_ND_PLUGINS
 
-static int nd_save_response_data(const char *filename, const ndJsonDataChunks &data)
-{
-    try {
-        int chunks = 0;
-        for (ndJsonDataChunks::const_iterator i = data.begin(); i != data.end(); i++)
-            nd_file_save(filename, (*i), (0 != chunks++));
-    }
-    catch (runtime_error &e) {
-        nd_printf("Error saving file: %s: %s\n", filename, e.what());
-        return -1;
-    }
-
-    nd_sha1_file(nd_config.path_sink_config, nd_config.digest_sink_config);
-
-    return 0;
-}
-
 static int nd_sink_process_responses(void)
 {
     int count = 0;
+    bool reloaded = false;
 
     while (true) {
         ndJsonResponse *response = thread_sink->PopResponse();
@@ -936,21 +920,20 @@ static int nd_sink_process_responses(void)
         for (ndJsonData::const_iterator i = response->data.begin();
             i != response->data.end(); i++) {
 
-            if (i->first == ND_CONF_SINK_BASE) {
+            if (! reloaded && i->first == ND_CONF_SINK_BASE) {
 
-                if (nd_save_response_data(ND_CONF_SINK_PATH, i->second) == 0) {
-
-                    if (! nd_detection_stopped_by_signal) {
-                        nd_stop_detection_threads();
-                        if (nd_start_detection_threads() < 0) return -1;
-                    }
-
-                    if (thread_socket) {
-                        string json;
-                        nd_json_protocols(json);
-                        thread_socket->QueueWrite(json);
-                    }
+                if (! nd_detection_stopped_by_signal) {
+                    nd_stop_detection_threads();
+                    if (nd_start_detection_threads() < 0) return -1;
                 }
+
+                if (thread_socket) {
+                    string json;
+                    nd_json_protocols(json);
+                    thread_socket->QueueWrite(json);
+                }
+
+                reloaded = true;
             }
         }
 
@@ -1460,7 +1443,6 @@ static void nd_load_ethers(void)
 
 static void nd_dump_stats(void)
 {
-    string digest;
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
     size_t tcm_alloc_bytes = 0;
 
@@ -1508,9 +1490,6 @@ static void nd_dump_stats(void)
         json.AddObject(NULL, "tcm_kb", (uint64_t)nda_stats.tcm_alloc_kb);
 #endif
 #endif // _ND_USE_LIBTCMALLOC
-
-        nd_sha1_to_string(nd_config.digest_sink_config, digest);
-        json.AddObject(NULL, "custom_match_digest", digest);
 
         json_ifaces = json.CreateObject(NULL, "interfaces");
         json_devices = json.CreateObject(NULL, "devices");

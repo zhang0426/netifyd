@@ -19,35 +19,6 @@
 
 #define ND_SHA1_BUFFER    4096
 
-class ndException : public runtime_error
-{
-public:
-    explicit ndException(
-        const string &where_arg, const string &what_arg) throw();
-    virtual ~ndException() throw();
-
-    virtual const char *what() const throw();
-
-    string where_arg;
-    string what_arg;
-    const char *message;
-};
-
-class ndSystemException : public runtime_error
-{
-public:
-    explicit ndSystemException(
-        const string &where_arg, const string &what_arg, int why_arg) throw();
-    virtual ~ndSystemException() throw();
-
-    virtual const char *what() const throw();
-
-    string where_arg;
-    string what_arg;
-    int why_arg;
-    const char *message;
-};
-
 void *nd_mem_alloc(size_t size);
 
 void nd_mem_free(void *ptr);
@@ -88,6 +59,8 @@ int nd_touch(const string &filename);
 void nd_file_save(const string &filename, const string &data,
     bool append = false, mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP,
     const char *user = NULL, const char *group = NULL);
+
+int nd_save_response_data(const char *filename, const ndJsonDataChunks &data);
 
 #endif // _ND_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

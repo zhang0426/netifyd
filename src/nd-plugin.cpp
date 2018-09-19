@@ -45,9 +45,9 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
 #include "nd-thread.h"
 #include "nd-json.h"
+#include "nd-util.h"
 #include "nd-plugin.h"
 
 ndPlugin::ndPlugin(const string &tag)

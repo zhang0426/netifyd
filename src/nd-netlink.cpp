@@ -38,11 +38,14 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
+#include <json.h>
+
 using namespace std;
 
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
+#include "nd-json.h"
 #include "nd-util.h"
 #include "nd-netlink.h"
 

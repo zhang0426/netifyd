@@ -124,7 +124,6 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
 #ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
 #endif
@@ -134,8 +133,9 @@ using namespace std;
 #ifdef _ND_USE_CONNTRACK
 #include "nd-conntrack.h"
 #endif
-#include "nd-detection.h"
 #include "nd-socket.h"
+#include "nd-util.h"
+#include "nd-detection.h"
 
 // Enable to log discarded packets
 //#define _ND_LOG_PKT_DISCARD     1

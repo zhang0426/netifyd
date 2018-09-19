@@ -22,6 +22,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <deque>
+#include <vector>
 #include <map>
 
 #include <unistd.h>
@@ -31,12 +32,15 @@
 #include <signal.h>
 #include <errno.h>
 
+#include <json.h>
+
 using namespace std;
 
 #include "nd-ndpi.h"
+#include "nd-sha1.h"
+#include "nd-json.h"
 #include "nd-util.h"
 #include "nd-inotify.h"
-#include "nd-sha1.h"
 
 ndInotify::ndInotify()
 {

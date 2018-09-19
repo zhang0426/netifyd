@@ -56,13 +56,13 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-ndpi.h"
-#include "nd-util.h"
 #ifdef _ND_USE_NETLINK
 #include "nd-netlink.h"
 #endif
 #include "nd-json.h"
 #include "nd-flow.h"
 #include "nd-thread.h"
+#include "nd-util.h"
 #include "nd-conntrack.h"
 
 // Enable Conntrack debug logging
