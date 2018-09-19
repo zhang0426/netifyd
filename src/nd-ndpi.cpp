@@ -187,8 +187,6 @@ struct ndpi_detection_module_struct *nd_ndpi_init(
 
 void nd_ndpi_free(struct ndpi_detection_module_struct *ndpi)
 {
-    nd_debug_printf("%p: %s\n", ndpi, __PRETTY_FUNCTION__);
-
     ndpi->host_automa.ac_automa = NULL;
     ndpi->protocols_ptree = NULL;
     ndpi->udp_root_node = NULL;
