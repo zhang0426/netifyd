@@ -1191,7 +1191,6 @@ static void nd_json_add_flows(
 static void nd_json_add_file(
     json_object *parent, const string &tag, const string &filename)
 {
-
     string digest;
     uint8_t _digest[SHA1_DIGEST_LENGTH];
 
@@ -1236,6 +1235,45 @@ static void nd_json_add_file(
     close(fd);
 }
 
+static void nd_json_add_data(
+    json_object *parent, const string &tag, const string &data)
+{
+    sha1 ctx;
+    string digest;
+    uint8_t _digest[SHA1_DIGEST_LENGTH];
+
+    sha1_init(&ctx);
+
+    ndJson json(parent);
+    json_object *json_tag = json.CreateObject(NULL, tag.c_str());
+
+    json_object *json_chunks = json.CreateArray(json_tag, "chunks");
+
+    // XXX: Cast down to 32-bit unsigned:
+    json.AddObject(json_tag, "size", (uint32_t)data.size());
+
+    size_t offset = 0;
+
+    do {
+        const string chunk = data.substr(offset, ND_JSON_DATA_CHUNKSIZ);
+
+        if (! chunk.size()) break;
+
+        sha1_write(&ctx, chunk.c_str(), chunk.size());
+        json.PushObject(json_chunks,
+            base64_encode((const unsigned char *)chunk.c_str(), chunk.size()));
+
+        if (chunk.size() != ND_JSON_DATA_CHUNKSIZ) break;
+
+        offset += ND_JSON_DATA_CHUNKSIZ;
+    }
+    while (offset < data.size());
+
+    digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
+    nd_sha1_to_string(_digest, digest);
+    json.AddObject(json_tag, "digest", digest);
+}
+
 #ifdef _ND_USE_PLUGINS
 static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
     json_object *json_plugin_task_replies, json_object *json_data)
@@ -1272,9 +1310,12 @@ static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
 
         if (parent == NULL) continue;
 
-        ndPluginFiles files;
+        ndPluginFiles files, data;
         ndPluginReplies replies;
-        (*i)->GetReplies(files, replies);
+        (*i)->GetReplies(files, data, replies);
+
+        nd_debug_printf("%s: files: %ld, data: %ld, replies: %ld\n",
+            __PRETTY_FUNCTION__, files.size(), data.size(), replies.size());
 
         if (! replies.size()) continue;
 
@@ -1299,6 +1340,11 @@ static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
         for (ndPluginFiles::const_iterator iter_file = files.begin();
             iter_file != files.end(); iter_file++) {
             nd_json_add_file(json_data, iter_file->first, iter_file->second);
+        }
+
+        for (ndPluginFiles::const_iterator iter_file = data.begin();
+            iter_file != data.end(); iter_file++) {
+            nd_json_add_data(json_data, iter_file->first, iter_file->second);
         }
     }
 }

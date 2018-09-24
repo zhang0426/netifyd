@@ -69,12 +69,14 @@ public:
 
     virtual void SetParams(const string uuid_dispatch, const ndJsonPluginParams &params);
 
-    virtual void GetReplies(ndPluginFiles &files, ndPluginReplies &replies);
+    virtual void GetReplies(
+        ndPluginFiles &files, ndPluginFiles &data, ndPluginReplies &replies);
 
 protected:
     virtual bool PopParams(string &uuid_dispatch, ndJsonPluginParams &params);
 
     virtual void PushFile(const string &tag, const string &filename);
+    virtual void PushData(const string &tag, const string &data);
 
     virtual void PushReply(
         const string &uuid_dispatch, const string &key, const string &value);
@@ -88,6 +90,7 @@ protected:
 
     ndPluginType type;
     ndPluginFiles files;
+    ndPluginFiles data;
     ndPluginParams params;
     ndPluginReplies replies;
 };

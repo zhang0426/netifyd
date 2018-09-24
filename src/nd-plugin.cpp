@@ -93,12 +93,16 @@ bool ndPlugin::PopParams(string &uuid_dispatch, ndJsonPluginParams &params)
     return popped;
 }
 
-void ndPlugin::GetReplies(ndPluginFiles &files, ndPluginReplies &replies)
+void ndPlugin::GetReplies(
+    ndPluginFiles &files, ndPluginFiles &data, ndPluginReplies &replies)
 {
     Lock();
 
     files = this->files;
     this->files.clear();
+
+    data = this->data;
+    this->data.clear();
 
     for (ndPluginReplies::const_iterator i = this->replies.begin();
         i != this->replies.end(); i++) {
@@ -116,6 +120,11 @@ void ndPlugin::GetReplies(ndPluginFiles &files, ndPluginReplies &replies)
 void ndPlugin::PushFile(const string &tag, const string &filename)
 {
     files[tag] = filename;
+}
+
+void ndPlugin::PushData(const string &tag, const string &data)
+{
+    this->data[tag] = data;
 }
 
 void ndPlugin::PushReply(
