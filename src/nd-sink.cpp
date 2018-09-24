@@ -138,16 +138,17 @@ ndSinkThread::ndSinkThread()
         throw ndSinkThreadException("curl_easy_init");
 
     curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_upload);
-    curl_easy_setopt(ch, CURLOPT_POST, 1);
-    curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_easy_setopt(ch, CURLOPT_POST, 1L);
+    curl_easy_setopt(ch, CURLOPT_POSTREDIR, 3L);
+    curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)nd_config.upload_timeout);
-    curl_easy_setopt(ch, CURLOPT_NOSIGNAL, (long)1);
+    curl_easy_setopt(ch, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (ND_DEBUG_UPLOAD) ? ND_COOKIE_JAR : "");
 
     curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, ndSinkThread_read_data);
     curl_easy_setopt(ch, CURLOPT_WRITEDATA, static_cast<void *>(this));
 
-    curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 0);
+    curl_easy_setopt(ch, CURLOPT_NOPROGRESS, 0L);
 #if (LIBCURL_VERSION_NUM < 0x073200)
     curl_easy_setopt(ch, CURLOPT_PROGRESSFUNCTION, ndSinkThread_progress);
     curl_easy_setopt(ch, CURLOPT_PROGRESSDATA, static_cast<void *>(this));
@@ -161,15 +162,15 @@ ndSinkThread::ndSinkThread()
     curl_easy_setopt(ch, CURLOPT_ACCEPT_ENCODING, "gzip");
 #endif
     if (ND_DEBUG_UPLOAD) {
-        curl_easy_setopt(ch, CURLOPT_VERBOSE, 1);
+        curl_easy_setopt(ch, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, nd_curl_debug);
         curl_easy_setopt(ch, CURLOPT_DEBUGDATA, static_cast<void *>(this));
         curl_easy_setopt(ch, CURLOPT_COOKIEJAR, ND_COOKIE_JAR);
     }
 
     if (! ND_SSL_VERIFY) {
-        curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_easy_setopt(ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_easy_setopt(ch, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(ch, CURLOPT_SSL_VERIFYHOST, 0L);
     }
 
     if (ND_SSL_USE_TLSv1)
