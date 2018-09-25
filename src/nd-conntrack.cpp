@@ -77,7 +77,7 @@ static int nd_ct_event_callback(
     ndConntrackThread *thread = reinterpret_cast<ndConntrackThread *>(data);
     thread->ProcessConntrackEvent(type, ct);
 
-    return NFCT_CB_STOP;
+    return (thread->ShouldTerminate()) ? NFCT_CB_STOP : NFCT_CB_CONTINUE;
 }
 
 static int nd_ct_netlink_callback(const struct nlmsghdr *nlh, void *data)
@@ -111,6 +111,14 @@ ndConntrackThread::ndConntrackThread()
     }
 
     ctfd = nfct_fd(cth);
+
+    int on = 1;
+
+    setsockopt(ctfd, SOL_NETLINK,
+        NETLINK_BROADCAST_SEND_ERROR, &on, sizeof(int));
+
+    setsockopt(ctfd, SOL_NETLINK,
+        NETLINK_NO_ENOBUFS, &on, sizeof(int));
 
     if ((cb_registered = nfct_callback_register(
         cth,
