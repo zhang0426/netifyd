@@ -1,12 +1,24 @@
 .TH NETIFYD 8
 .SH NAME
-netifyd \- The Netify Agent
+@PACKAGE_TARNAME@ \- @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .SH DESCRIPTION
-The Netify Agent is a deep-packet inspection server.  The Agent is built on top of nDPI (\fIhttp://www.ntop.org/products/deep-packet-inspection/ndpi/\fR) (formerly OpenDPI) to detect network protocols and applications.  These detections can be saved locally, served over a UNIX or TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party server.  Flow metadata, network statistics, and detection classifications are stored using JSON encoding.
+The @PACKAGE_NAME@ is a deep-packet inspection server.  The Agent is built on top of nDPI (\fIhttp://www.ntop.org/products/deep-packet-inspection/ndpi/\fR) (formerly OpenDPI) to detect network protocols and applications.  These detections can be saved locally, served over a UNIX or TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party server.  Flow metadata, network statistics, and detection classifications are stored using JSON encoding.
 
-Optionally, the Netify Agent can be coupled with a Netify Cloud (\fIhttps://www.netify.ai/\fR) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
+Optionally, the @PACKAGE_NAME@ can be coupled with a Netify Cloud (\fIhttps://www.netify.ai/\fR) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
 .SH SYNOPSIS
-.B netifyd
+.B @PACKAGE_TARNAME@
+[\fB\-p\fR, \fB\-\-provision\fR]
+.IR
+
+.B @PACKAGE_TARNAME@
+[\fB\-P\fR, \fB\-\-protocols\fR]
+.IR
+
+.B @PACKAGE_TARNAME@
+[\fB\-U\fR, \fB\-\-uuidgen\fR]
+.IR
+
+.B @PACKAGE_TARNAME@
 [\fB\-d\fR, \fB\-\-debug\fR]
 [\fB\-e\fR, \fB\-\-debug-ether-names\fR]
 [\fB\-D\fR, \fB\-\-debug-uploads\fR]
@@ -21,17 +33,6 @@ Optionally, the Netify Agent can be coupled with a Netify Cloud (\fIhttps://www.
 [\fB\-C\fR, \fB\-\-content-match\fR=\fIFILENAME\fR]
 [\fB\-H\fR, \fB\-\-host-match\fR=\fIFILENAME\fR]
 .IR
-
-.B netifyd
-[\fB\-U\fR, \fB\-\-uuidgen\fR]
-.IR
-
-.B netifyd
-[\fB\-P\fR, \fB\-\-protocols\fR]
-.IR
-.SH DESCRIPTION
-.B netifyd
-provides visibility into the traffic on your network along with the option to take an active role (on supported platforms) in stopping/shaping undesirable traffic from recurring on a local area network.
 .SH OPTIONS
 .TP
 .BR \-d ", " \-\-debug
@@ -59,7 +60,7 @@ Capture packets on this external (WAN) interface.  Can be specified more than on
 For interfaces receiving mirrored traffic, or when netlink is disabled or unavailable, use this to specify the addresses local to the previous interface (-I, or -E) parameter.  Can be specified more than once for multiple addresses.
 .TP
 .BR \-c ", " \-\-config=\fICONFIG\fR
-Specify an alternate configuration file.  Default: /etc/netifyd.conf
+Specify an alternate configuration file.  Default: /etc/@PACKAGE_TARNAME@.conf
 .TP
 .BR \-s ", " \-\-serial=\fIUUID\fR
 Specify a client serial number (UUID).  Used for device identification with the Netify Cloud Sync server(s).  Normally, the auto-generated client UUID is used for this purpose.
@@ -73,15 +74,18 @@ Specify an alternate content-match configuration (CSV) file.
 .BR \-H ", " \-\-host-match=\fIFILENAME\fR
 Specify an alternate host-match configuration (CSV) file.
 .TP
-.BR \-U ", " \-\-uuidgen
-Generate a client UUID.
+.BR \-p ", " \-\-provision
+Generate a new client UUID if one hasn't already been set.  Display the URL used to provision this Agent.
 .TP
 .BR \-P ", " \-\-protocols
 Display the current protocol and service ID list.
+.TP
+.BR \-U ", " \-\-uuidgen
+Generate a client UUID.
 .SH BUGS
-Report bugs to: https://github.com/eglooca/netify-daemon/issues
+I'm sure there are many!  If you find one, please report it here: \fI@PACKAGE_BUGREPORT@\fR
 .SH SEE ALSO
-netifyd.conf(5)
+@PACKAGE_TARNAME@.conf(5)
 .SH COPYRIGHT
 Copyright (C) 2015-2018 eGloo Incorporated <\fIhttp://www.egloo.ca\fR>
 .SH LICENSE

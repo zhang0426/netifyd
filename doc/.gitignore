@@ -1,1 +1,3 @@
 Makefile.in
+netifyd.8
+netifyd.conf.5

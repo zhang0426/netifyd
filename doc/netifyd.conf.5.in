@@ -1,16 +1,16 @@
-.TH netifyd.conf 5
+.TH @PACKAGE_TARNAME@.conf 5
 .SH NAME
-netifyd.conf - The Netify Agent Configuration File Format
+@PACKAGE_TARNAME@.conf - @PACKAGE_NAME@ Configuration File Format v@PACKAGE_VERSION@
 .SH DESCRIPTION
-The netifyd.conf file...
+The @PACKAGE_TARNAME@.conf file...
 .IP \(bu 2
 follows the standard INI-style file format.
 .IP \(bu 2
-contains configuration parameters for \fBnetifyd(8)\fR, a deep-packet inspection daemon.
+contains configuration parameters for \fB@PACKAGE_TARNAME@(8)\fR, a deep-packet inspection server.
 .IP \(bu 2
 contains configuration parameters for the Netify Portal service (\fIhttps://www.netify.ai/\fR).
 .SH MAIN SECTION
-The main server options are defined within the [\fBnetifyd\fR] section.
+The main server options are defined within the [\fB@PACKAGE_TARNAME@\fR] section.
 .PP
 \fBenable_sink\fR=\fIBOOLEAN\fR
 .PP
@@ -37,19 +37,6 @@ This option disables host (SNI) and peer certificate verification.  You can use 
 .PP
 Enable/disable the \fBjson_save\fR parameter to set whether the current state is output to a JSON file.  The default is false.
 .PP
-\fBuuid\fR=\fIUUID\fR
-.PP
-An Agent UUID is a base-35 alpha-numeric string (0-9, A-N, P-Z) comprised of 8 digits in four groups of two seperated by dashes.  The letter "\fUO\fR" is removed to avoid confusion with zero "\fU0\fR".  An example Agent UUID: 00-11-AB-YZ  You can use \fBnetifyd(8)\fR to generate a new UUID:
-
-.nf
-# netifyd -U
-.fi
-
-The Agent UUID is used by the Netify Portal to provision an Agent to a site.
-.PP
-\fBuuid_serial\fR=\fIUUID\fR
-.PP
-Specify an supplemental UUID (serial number).  This is usually taken from the device hardware, such as a BIOS UUID or MAC address, or a hash of several unique system properties.  Normally only the Agent UUID is needed.  There is no default value.
 .SH DNS CACHE SECTION
 DNS hint cache options are set within the [\fBdns_cache\fR] section.
 
@@ -69,7 +56,7 @@ The number of seconds DNS hints should be cached.  New hints will have their ini
 .SH SOCKET SECTION
 All socket related configuration options are specified under the [\fBsocket\fR] section.
 
-The Netify Agent can be configured to listen on one or more sockets (TCP/IP socket, or UNIX-domain socket).  Upon a client connection, \fBnetifyd(8)\fR will pass real-time JSON-encoded flow detections.  This is designed for interfacing with third-party applications.  Take care to protect these sockets as there is no authentication or encryption performed.
+The @PACKAGE_NAME@ can be configured to listen on one or more sockets (TCP/IP socket, or UNIX-domain socket).  Upon a client connection, \fB@PACKAGE_TARNAME@(8)\fR will pass real-time JSON-encoded flow detections.  This is designed for interfacing with third-party applications.  Take care to protect these sockets as there is no authentication or encryption performed.
 
 Declare these paramters as arrays with a starting index[\fIn\fR] of zero.
 .PP
@@ -85,7 +72,7 @@ Create and bind a TCP/IP socket on \fIADDRESS\fR for incoming network connection
 .PP
 For TCP/IP sockets, you can specify a corresponding \fISERVICE\fR or \fIPORT\fR.  If not specified, the default TCP port 7150 is used.
 .SH PRIVACY FILTER SECTION
-The Netify Agent can be configured to obfuscate flow addresses (MAC and IP) that match rules in the [\fBprivacy_filter\fR] section.  You can match by MAC or IP address.  When a match is found, the MAC and IP address will be replaced with the following bogus addresses:
+The @PACKAGE_NAME@ can be configured to obfuscate flow addresses (MAC and IP) that match rules in the [\fBprivacy_filter\fR] section.  You can match by MAC or IP address.  When a match is found, the MAC and IP address will be replaced with the following bogus addresses:
 
  \fBMAC\fR: 01:02:03:04:05:06 (lower addresses) 0a:0b:0c:0d:0e:0f (upper addresses)
 
@@ -102,21 +89,19 @@ Privacy filter by MAC address.
 .PP
 Privacy filter by IP address.
 .SH SAMPLE
-The following sample configuration file contains all possible options.
+The following sample configuration file contains most common options with their default values.
 
 .nf
-# Netify Agent sample configuration
+# @PACKAGE_NAME@ sample configuration for version @PACKAGE_VERSION@
 
-[netifyd]
-enable_sink = true
-json_save = true
+[@PACKAGE_TARNAME@]
+enable_sink = false
+json_save = false
 max_backlog_kb = 2048
 max_tcp_pkts = 10
 max_udp_pkts = 8
 ssl_use_tlsv1 = false
 ssl_verify = true
-uuid = 00-00-00-00
-uuid_serial = abc123
 
 [dns_cache]
 cache_ttl = 1800
@@ -125,16 +110,22 @@ save = true
 
 [socket]
 listen_address[0] = 0.0.0.0
-listen_port[0] = 7150
-listen_path[0] = /var/lib/netifyd/netifyd.sock
+listen_port[0] = 2100
+listen_path[0] = /var/lib/@PACKAGE_TARNAME@/@PACKAGE_TARNAME@.sock
 
 [privacy_filter]
 mac[0] = 00:11:22:33:44:55
 host[0] = 192.168.0.1
 host[1] = fe80::226:c6ff::1
+
+[tasks]
+example-task = libexample-task.so
+
+[services]
+example-service = libexample-service.so
 .fi
 .SH SEE ALSO
-netifyd(8)
+@PACKAGE_TARNAME@(8)
 .SH COPYRIGHT
 Copyright (C) 2015-2018 eGloo Incorporated <\fIhttp://www.egloo.ca\fR>
 .SH LICENSE
