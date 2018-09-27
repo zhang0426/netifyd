@@ -374,7 +374,6 @@ static void nd_config_init(void)
 
 static int nd_config_load(void)
 {
-    bool flag;
     typedef map<string, string> nd_config_section;
 
     if (nd_conf_filename == NULL) {
