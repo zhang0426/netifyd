@@ -215,6 +215,7 @@ typedef struct nd_global_config_t {
     unsigned update_interval;
     unsigned upload_timeout;
     unsigned dns_cache_ttl;
+    FILE *h_flow;
 
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
