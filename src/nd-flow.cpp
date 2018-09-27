@@ -264,8 +264,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     string digest;
     nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
 
-    //"%s: [%c%c%c%c%c%c] %s %s:%hu <+> %s:%hu%s%s%s%s%s%s%s%s%s\n",
-    nd_debug_printf(
+    nd_flow_printf(
         "%s: [%c%c%c%c%c%c] %s %s:%hu %c%c%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
         tag,
         (internal) ? 'i' : 'e',
