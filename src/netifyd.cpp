@@ -340,9 +340,11 @@ static void nd_config_init(void)
 {
     nd_conf_filename = strdup(ND_CONF_FILE_NAME);
 
+    nd_config.h_flow = stderr;
+
     nd_config.path_config = NULL;
-    nd_config.path_sink_config = NULL;
     nd_config.path_json = NULL;
+    nd_config.path_sink_config = strdup(ND_CONF_SINK_PATH);
     nd_config.path_uuid = NULL;
     nd_config.path_uuid_serial = NULL;
     nd_config.path_uuid_site = NULL;
@@ -361,13 +363,13 @@ static void nd_config_init(void)
     nd_config.flags |= ndGF_USE_NETLINK;
 #endif
 
-    nd_config.path_sink_config = strdup(ND_CONF_SINK_PATH);
-    memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
     nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
     nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
     nd_config.update_interval = ND_STATS_INTERVAL;
     nd_config.upload_timeout = ND_UPLOAD_TIMEOUT;
     nd_config.dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL;
+
+    memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
 }
 
 static int nd_config_load(void)
@@ -658,7 +660,6 @@ static int nd_start_detection_threads(void)
                 netlink,
 #endif
                 thread_socket,
-//                (i->first) ? thread_socket : NULL,
 #ifdef _ND_USE_CONNTRACK
                 (i->first || ! ND_USE_CONNTRACK) ?
                     NULL : thread_conntrack,
@@ -1816,7 +1817,6 @@ int main(int argc, char *argv[])
     static struct option options[] =
     {
         { "config", 1, 0, 'c' },
-        { "sink-config", 1, 0, 'f' },
         { "debug", 0, 0, 'd' },
         { "debug-dns-cache", 0, 0, 's' },
         { "debug-ether-names", 0, 0, 'e' },
@@ -1837,6 +1837,8 @@ int main(int argc, char *argv[])
         { "remain-in-foreground", 0, 0, 'R' },
         { "replay-delay", 0, 0, 'r' },
         { "serial", 1, 0, 's' },
+        { "sink-config", 1, 0, 'f' },
+        { "test-output", 1, 0, 'T' },
         { "uuid", 1, 0, 'u' },
         { "uuidgen", 0, 0, 'U' },
         { "version", 0, 0, 'V' },
@@ -1850,7 +1852,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?A:ac:DdE:eF:f:hI:i:j:lN:PpRrS:s:tUu:V",
+            "?A:ac:DdE:eF:f:hI:i:j:lN:PpRrS:s:tT:Uu:V",
             options, &o)) == -1) break;
         switch (rc) {
         case 0:
@@ -1993,6 +1995,13 @@ int main(int argc, char *argv[])
         case 't':
             nd_config.flags &= ~ndGF_USE_CONNTRACK;
             break;
+        case 'T':
+            if ((nd_config.h_flow = fopen(optarg, "w")) == NULL) {
+                fprintf(stderr, "Error while opening test output log: %s: %s\n",
+                    optarg, strerror(errno));
+                exit(1);
+            }
+            break;
         case 'U':
             {
                 string uuid;
@@ -2018,6 +2027,21 @@ int main(int argc, char *argv[])
 
     if (nd_config_load() < 0)
         return 1;
+
+    if (nd_config.h_flow != stderr) {
+        // Test mode enabled, disable/set certain config parameters
+        ND_GF_SET_FLAG(ndGF_USE_DNS_CACHE, true);
+        ND_GF_SET_FLAG(ndGF_DNS_CACHE_SAVE, false);
+        ND_GF_SET_FLAG(ndGF_USE_SINK, false);
+        ND_GF_SET_FLAG(ndGF_JSON_SAVE, false);
+        ND_GF_SET_FLAG(ndGF_REMAIN_IN_FOREGROUND, true);
+
+        nd_config.update_interval = 1;
+#ifdef _ND_USE_PLUGINS
+        nd_config.services.clear();
+        nd_config.tasks.clear();
+#endif
+    }
 
     if (ifaces.size() == 0) {
         fprintf(stderr,
@@ -2075,7 +2099,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (ND_USE_DNS_CACHE) dns_cache.load();
+    if (ND_USE_DNS_CACHE && ND_DNS_CACHE_SAVE) dns_cache.load();
 
     nd_sha1_file(
         nd_config.path_sink_config, nd_config.digest_sink_config
