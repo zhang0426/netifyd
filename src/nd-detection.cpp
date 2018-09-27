@@ -1210,7 +1210,7 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 
-        if (ND_DEBUG)
+        if (ND_DEBUG || nd_config.h_flow != stderr)
             new_flow->print(tag.c_str(), ndpi);
 
         if (thread_socket) {
