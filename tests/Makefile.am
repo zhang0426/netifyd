@@ -6,7 +6,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 test:
-	TESTDIR="$(abs_srcdir)" ./test-pcap-samples.sh
+	TESTDIR="$(abs_srcdir)" ./test-pcap-regression.sh
 
 clean-local: clean-local-check
 clean-local-check:
