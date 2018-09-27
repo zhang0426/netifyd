@@ -25,6 +25,7 @@ void nd_mem_free(void *ptr);
 
 void nd_printf(const char *format, ...);
 void nd_debug_printf(const char *format, ...);
+void nd_flow_printf(const char *format, ...);
 
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
 void nd_ndpi_debug_printf(uint32_t protocol, void *ndpi,

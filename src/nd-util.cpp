@@ -139,6 +139,18 @@ void nd_debug_printf(const char *format, ...)
     }
 }
 
+void nd_flow_printf(const char *format, ...)
+{
+    pthread_mutex_lock(nd_printf_mutex);
+
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(nd_config.h_flow, format, ap);
+    va_end(ap);
+
+    pthread_mutex_unlock(nd_printf_mutex);
+}
+
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
 void nd_ndpi_debug_printf(uint32_t protocol, void *ndpi,
     ndpi_log_level_t level, const char *file, const char *func, unsigned line,
