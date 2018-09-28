@@ -4,17 +4,17 @@
 .SH DESCRIPTION
 The @PACKAGE_TARNAME@.conf file...
 .IP \(bu 2
-follows the standard INI-style file format.
+follows the standard INI-style format.
 .IP \(bu 2
 contains configuration parameters for \fB@PACKAGE_TARNAME@(8)\fR, a deep-packet inspection server.
 .IP \(bu 2
-contains configuration parameters for the Netify Portal service (\fIhttps://www.netify.ai/\fR).
-.SH MAIN SECTION
+contains configuration parameters for the Netify Cloud service (\fIhttps://www.netify.ai/\fR).
+.SS Main
 The main server options are defined within the [\fB@PACKAGE_TARNAME@\fR] section.
 .PP
 \fBenable_sink\fR=\fIBOOLEAN\fR
 .PP
-Uploading detection flow metadata to the Netify Portal can be enabled or disabled by setting the \fBenable_sink\fR option.  When enabled, detection flow metadata is JSON-encoded, compressed, and uploaded to the Netify Sink server for further analysis and reporting.  A Netify Portal account is required for registration and provisioning at: \fIhttps://www.netify.ai/\rR
+Uploading detection flow metadata to the Netify Cloud can be enabled or disabled by setting the \fBenable_sink\fR option.  When enabled, detection flow metadata is JSON-encoded, compressed, and uploaded to the Netify Sink server for further analysis and reporting.  A Netify Portal account is required for registration and provisioning at: \fIhttps://www.netify.ai/\fR
 .PP
 \fBmax_backlog_kb\fR=\fIINTEGER\fR
 .PP
@@ -37,7 +37,7 @@ This option disables host (SNI) and peer certificate verification.  You can use 
 .PP
 Enable/disable the \fBjson_save\fR parameter to set whether the current state is output to a JSON file.  The default is false.
 .PP
-.SH DNS CACHE SECTION
+.SS DNS cache
 DNS hint cache options are set within the [\fBdns_cache\fR] section.
 
 The DNS hint cache stores DNS response records for a period of time.  These hints are used when application detection fails.  A cache look-up is performed and any matching hostname is used to 'hint' the application detection logic.  In most cases this significantly improves application detection.
@@ -53,7 +53,7 @@ Enable or disable periodic saving of the DNS hint cache.  When reasonably fast s
 \fBcache_ttl\fR=\fISECONDS\fR
 .PP
 The number of seconds DNS hints should be cached.  New hints will have their initial TTL set to this value.  Existing hints will have their TTL reset to this value on a cache hit (look-up match).  This value should be adjusted according to available memory and network traffic.  Larger networks will generate significantly more DNS traffic.  The default value is 30 minutes (1800 seconds).
-.SH SOCKET SECTION
+.SS Sockets
 All socket related configuration options are specified under the [\fBsocket\fR] section.
 
 The @PACKAGE_NAME@ can be configured to listen on one or more sockets (TCP/IP socket, or UNIX-domain socket).  Upon a client connection, \fB@PACKAGE_TARNAME@(8)\fR will pass real-time JSON-encoded flow detections.  This is designed for interfacing with third-party applications.  Take care to protect these sockets as there is no authentication or encryption performed.
@@ -71,7 +71,7 @@ Create and bind a TCP/IP socket on \fIADDRESS\fR for incoming network connection
 \fBsocket_port\fR[\fIn\fR]\fR=[\fISERVICE\fR|\fIPORT\fR]
 .PP
 For TCP/IP sockets, you can specify a corresponding \fISERVICE\fR or \fIPORT\fR.  If not specified, the default TCP port 7150 is used.
-.SH PRIVACY FILTER SECTION
+.SS Privacy filtering
 The @PACKAGE_NAME@ can be configured to obfuscate flow addresses (MAC and IP) that match rules in the [\fBprivacy_filter\fR] section.  You can match by MAC or IP address.  When a match is found, the MAC and IP address will be replaced with the following bogus addresses:
 
  \fBMAC\fR: 01:02:03:04:05:06 (lower addresses) 0a:0b:0c:0d:0e:0f (upper addresses)
@@ -88,10 +88,12 @@ Privacy filter by MAC address.
 \fBhost\fR[\fIn\fR]\fR=\fIADDRESS\fR
 .PP
 Privacy filter by IP address.
-.SH SAMPLE
+.SH SAMPLE CONFIGURATION
 The following sample configuration file contains most common options with their default values.
 
-.nf
+.PP
+.in +4n
+.EX
 # @PACKAGE_NAME@ sample configuration for version @PACKAGE_VERSION@
 
 [@PACKAGE_TARNAME@]
@@ -123,7 +125,9 @@ example-task = libexample-task.so
 
 [services]
 example-service = libexample-service.so
-.fi
+.EE
+.in
+.PP
 .SH SEE ALSO
 @PACKAGE_TARNAME@(8)
 .SH COPYRIGHT

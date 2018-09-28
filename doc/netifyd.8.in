@@ -29,9 +29,7 @@ Optionally, the @PACKAGE_NAME@ can be coupled with a Netify Cloud (\fIhttps://ww
 [\fB\-A\fR, \fB\-\-device-address\fR=\fIADDRESS\fR]
 [\fB\-c\fR, \fB\-\-config\fR=\fICONFIG\fR]
 [\fB\-s\fR, \fB\-\-serial\fR=\fIUUID\fR]
-[\fB\-f\fR, \fB\-\-custom-match\fR=\fIFILENAME\fR]
-[\fB\-C\fR, \fB\-\-content-match\fR=\fIFILENAME\fR]
-[\fB\-H\fR, \fB\-\-host-match\fR=\fIFILENAME\fR]
+[\fB\-C\fR, \fB\-\-sink-conf\fR=\fIFILENAME\fR]
 .IR
 .SH OPTIONS
 .TP
@@ -65,14 +63,8 @@ Specify an alternate configuration file.  Default: /etc/@PACKAGE_TARNAME@.conf
 .BR \-s ", " \-\-serial=\fIUUID\fR
 Specify a client serial number (UUID).  Used for device identification with the Netify Cloud Sync server(s).  Normally, the auto-generated client UUID is used for this purpose.
 .TP
-.BR \-f ", " \-\-custom-match=\fIFILENAME\fR
-Specify an alternate custom-match configuration file.
-.TP
-.BR \-C ", " \-\-content-match=\fIFILENAME\fR
-Specify an alternate content-match configuration (CSV) file.
-.TP
-.BR \-H ", " \-\-host-match=\fIFILENAME\fR
-Specify an alternate host-match configuration (CSV) file.
+.BR \-f ", " \-\-sink-conf=\fIFILENAME\fR
+Specify an alternate Netify Cloud Sink configuration file.
 .TP
 .BR \-p ", " \-\-provision
 Generate a new client UUID if one hasn't already been set.  Display the URL used to provision this Agent.
@@ -83,7 +75,7 @@ Display the current protocol and service ID list.
 .BR \-U ", " \-\-uuidgen
 Generate a client UUID.
 .SH BUGS
-I'm sure there are many!  If you find one, please report it here: \fI@PACKAGE_BUGREPORT@\fR
+If you find a bug or have a feature request, please report it here: \fI@PACKAGE_BUGREPORT@\fR
 .SH SEE ALSO
 @PACKAGE_TARNAME@.conf(5)
 .SH COPYRIGHT
