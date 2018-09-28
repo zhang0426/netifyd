@@ -17,6 +17,10 @@
 #ifndef _ND_CONNTRACK_H
 #define _ND_CONNTRACK_H
 
+#ifndef _ND_CT_FLOW_TTL
+#define _ND_CT_FLOW_TTL     30
+#endif
+
 class ndConntrackThreadException : public runtime_error
 {
 public:
@@ -48,9 +52,16 @@ enum ndConntrackFlowDirection
 class ndConntrackFlow
 {
 public:
-    ndConntrackFlow(struct nf_conntrack *ct);
+    ndConntrackFlow(uint32_t id, struct nf_conntrack *ct);
 
     void Update(struct nf_conntrack *ct);
+
+    inline uint32_t GetId(void) { return id; }
+
+    inline bool HasExpired(void)
+    {
+        return (created_at + _ND_CT_FLOW_TTL <= time(NULL)) ? true : false;
+    }
 
 protected:
     friend class ndConntrackThread;
@@ -58,6 +69,8 @@ protected:
     void CopyAddress(sa_family_t af, struct sockaddr_storage *dst, const void *src);
     void Hash(void);
 
+    uint32_t id;
+    time_t created_at;
     string digest;
     sa_family_t l3_proto;
     uint8_t l4_proto;
@@ -84,6 +97,11 @@ public:
         enum nf_conntrack_msg_type type, struct nf_conntrack *ct);
 
     void ClassifyFlow(ndFlow *flow);
+    void PurgeFlows(void);
+
+#ifdef _ND_LOG_CONNTRACK
+    void DumpStats(void);
+#endif
 
 protected:
     void DumpConntrackTable(void);

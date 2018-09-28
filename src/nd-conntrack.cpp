@@ -63,19 +63,32 @@ using namespace std;
 #include "nd-flow.h"
 #include "nd-thread.h"
 #include "nd-util.h"
-#include "nd-conntrack.h"
 
 // Enable Conntrack debug logging
 #define _ND_LOG_CONNTRACK       1
-#define _ND_LOG_CONNTRACK_INTV  15
+
+#include "nd-conntrack.h"
 
 extern nd_global_config nd_config;
+
+static time_t nd_ct_last_flow_purge_at = 0;
 
 static int nd_ct_event_callback(
     enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data)
 {
     ndConntrackThread *thread = reinterpret_cast<ndConntrackThread *>(data);
+
     thread->ProcessConntrackEvent(type, ct);
+
+    time_t now = time(NULL);
+
+    if (now > nd_ct_last_flow_purge_at) {
+        thread->PurgeFlows();
+#ifdef _ND_LOG_CONNTRACK
+        thread->DumpStats();
+#endif
+        nd_ct_last_flow_purge_at = now + _ND_CT_FLOW_TTL + (_ND_CT_FLOW_TTL / 10);
+    }
 
     return (thread->ShouldTerminate()) ? NFCT_CB_STOP : NFCT_CB_CONTINUE;
 }
@@ -214,9 +227,9 @@ void *ndConntrackThread::Entry(void)
 {
     int rc;
     struct timeval tv;
-#ifdef _ND_LOG_CONNTRACK
-    time_t log_stats = time(NULL) + _ND_LOG_CONNTRACK_INTV;
-#endif
+
+    nd_ct_last_flow_purge_at = time(NULL) + _ND_CT_FLOW_TTL;
+
     while (! ShouldTerminate()) {
         fd_set fds_read;
 
@@ -239,13 +252,6 @@ void *ndConntrackThread::Entry(void)
                     __PRETTY_FUNCTION__, "nfct_catch", errno);
             }
         }
-#ifdef _ND_LOG_CONNTRACK
-        if (time(NULL) > log_stats) {
-            nd_debug_printf("%s: entries: ids: %lu, flows: %lu\n",
-                tag.c_str(), ct_id_map.size(), ct_flow_map.size());
-            log_stats = time(NULL) + _ND_LOG_CONNTRACK_INTV;
-        }
-#endif
     }
 
     nd_debug_printf("%s: Exit.\n", tag.c_str());
@@ -263,9 +269,17 @@ void ndConntrackThread::ProcessConntrackEvent(
 
     Lock();
 
-    if (type & NFCT_T_NEW) {
+    switch (type) {
+    case NFCT_T_NEW:
+
+        id_iter = ct_id_map.find(id);
+        if (id_iter != ct_id_map.end()) {
+            nd_debug_printf("%s: [N:%u] ID exists for new flow.\n",
+                tag.c_str(), id);
+        }
+
         try {
-            ct_flow = new ndConntrackFlow(ct);
+            ct_flow = new ndConntrackFlow(id, ct);
         }
         catch (ndConntrackFlowException &e) {
             nd_printf("%s: %s.\n", tag.c_str(), e.what());
@@ -274,19 +288,17 @@ void ndConntrackThread::ProcessConntrackEvent(
 
         ct_id_map[id] = ct_flow->digest;
         ct_flow_map[ct_flow->digest] = ct_flow;
-    }
-    else if (type & NFCT_T_UPDATE) {
+        break;
+
+    case NFCT_T_UPDATE:
 
         id_iter = ct_id_map.find(id);
-        if (id_iter == ct_id_map.end()) {
-            nd_debug_printf("%s: [U:%u] ID not found.\n",
-                tag.c_str(), id);
+        if (id_iter == ct_id_map.end())
             goto Unlock_ProcessConntrackEvent;
-        }
 
         flow_iter = ct_flow_map.find(id_iter->second);
         if (flow_iter == ct_flow_map.end()) {
-            nd_debug_printf("%s: [U:%u] Digest in flow map not found.\n",
+            nd_debug_printf("%s: [U:%u] Digest not found in flow map.\n",
                 tag.c_str(), id);
             goto Unlock_ProcessConntrackEvent;
         }
@@ -304,8 +316,9 @@ void ndConntrackThread::ProcessConntrackEvent(
             ct_flow_map[ct_flow->digest] = ct_flow;
             ct_id_map[id] = ct_flow->digest;
         }
-    }
-    else if (type & NFCT_T_DESTROY) {
+        break;
+
+    case NFCT_T_DESTROY:
 
         id_iter = ct_id_map.find(id);
         if (id_iter != ct_id_map.end()) {
@@ -318,8 +331,9 @@ void ndConntrackThread::ProcessConntrackEvent(
 
             ct_id_map.erase(id_iter);
         }
-    }
-    else {
+        break;
+
+    default:
         nd_debug_printf("%s: Unhandled connection tracking message type: 0x%02x\n",
             tag.c_str(), type);
     }
@@ -595,9 +609,41 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
     Unlock();
 }
 
-ndConntrackFlow::ndConntrackFlow(struct nf_conntrack *ct)
-    : l3_proto(0), l4_proto(0)
+void ndConntrackThread::PurgeFlows(void)
 {
+    Lock();
+
+    for (nd_ct_flow_map::iterator i = ct_flow_map.begin();
+        i != ct_flow_map.end(); ) {
+
+        if (i->second->HasExpired()) {
+            ct_id_map.erase(i->second->GetId());
+            delete i->second;
+            i = ct_flow_map.erase(i);
+        }
+        else i++;
+    }
+
+    Unlock();
+}
+
+#ifdef _ND_LOG_CONNTRACK
+void ndConntrackThread::DumpStats(void)
+{
+    Lock();
+
+    nd_debug_printf("%s: entries: ids: %lu, flows: %lu\n",
+        tag.c_str(), ct_id_map.size(), ct_flow_map.size());
+
+    Unlock();
+}
+#endif
+
+ndConntrackFlow::ndConntrackFlow(uint32_t id, struct nf_conntrack *ct)
+    : id(id), created_at(0), l3_proto(0), l4_proto(0)
+{
+    created_at = time(NULL);
+
     orig_port[ndCT_DIR_SRC] = 0;
     orig_port[ndCT_DIR_DST] = 0;
     repl_port[ndCT_DIR_SRC] = 0;
