@@ -71,7 +71,7 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
-static time_t nd_ct_last_flow_purge_at = 0;
+static time_t nd_ct_last_flow_purge_ttl = 0;
 
 static int nd_ct_event_callback(
     enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data)
@@ -82,12 +82,12 @@ static int nd_ct_event_callback(
 
     time_t now = time(NULL);
 
-    if (now > nd_ct_last_flow_purge_at) {
+    if (now > nd_ct_last_flow_purge_ttl) {
         thread->PurgeFlows();
 #ifdef _ND_LOG_CONNTRACK
         thread->DumpStats();
 #endif
-        nd_ct_last_flow_purge_at = now + _ND_CT_FLOW_TTL + (_ND_CT_FLOW_TTL / 10);
+        nd_ct_last_flow_purge_ttl = now + _ND_CT_FLOW_TTL + (_ND_CT_FLOW_TTL / 10);
     }
 
     return (thread->ShouldTerminate()) ? NFCT_CB_STOP : NFCT_CB_CONTINUE;
@@ -228,7 +228,7 @@ void *ndConntrackThread::Entry(void)
     int rc;
     struct timeval tv;
 
-    nd_ct_last_flow_purge_at = time(NULL) + _ND_CT_FLOW_TTL;
+    nd_ct_last_flow_purge_ttl = time(NULL) + _ND_CT_FLOW_TTL;
 
     while (! ShouldTerminate()) {
         fd_set fds_read;
@@ -287,6 +287,14 @@ void ndConntrackThread::ProcessConntrackEvent(
         }
 
         ct_id_map[id] = ct_flow->digest;
+
+        flow_iter = ct_flow_map.find(ct_flow->digest);
+        if (flow_iter != ct_flow_map.end()) {
+            nd_printf("%s: [N:%u] Digest found in flow map.\n",
+                tag.c_str(), id);
+            delete flow_iter->second;
+        }
+
         ct_flow_map[ct_flow->digest] = ct_flow;
         break;
 
@@ -298,8 +306,9 @@ void ndConntrackThread::ProcessConntrackEvent(
 
         flow_iter = ct_flow_map.find(id_iter->second);
         if (flow_iter == ct_flow_map.end()) {
-            nd_debug_printf("%s: [U:%u] Digest not found in flow map.\n",
+            nd_printf("%s: [U:%u] Digest not found in flow map.\n",
                 tag.c_str(), id);
+            ct_id_map.erase(id_iter);
             goto Unlock_ProcessConntrackEvent;
         }
 
@@ -308,7 +317,7 @@ void ndConntrackThread::ProcessConntrackEvent(
         ct_flow->Update(ct);
 
         if (ct_flow->digest != id_iter->second) {
-            nd_debug_printf("%s: [U:%u] Connection tracking flow hash changed!\n",
+            nd_debug_printf("%s: [U:%u] Flow hash updated.\n",
                 tag.c_str(), id);
 
             ct_flow_map.erase(flow_iter);
