@@ -87,9 +87,9 @@ define Package/@PACKAGE_TARNAME@/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/lib@PACKAGE_TARNAME@.so.* $(1)/usr/lib/
 	$(INSTALL_DIR) $(1)/etc/netify.d
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/app-custom-match.conf $(1)/etc/netify.d/netify-sink.conf
-	$(INSTALL_DIR) $(1)/usr/libexec/netifyd
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/functions.sh $(1)/usr/libexec/netifyd
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/netify-sink.conf $(1)/etc/netify.d/netify-sink.conf
+	$(INSTALL_DIR) $(1)/usr/share/netifyd
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/deploy/functions.sh $(1)/usr/share/netifyd
 endef
 
 $(eval $(call BuildPackage,@PACKAGE_TARNAME@))
