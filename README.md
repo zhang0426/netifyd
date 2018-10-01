@@ -1,6 +1,6 @@
 Netify Agent
 ============
-Copyright ©2015-2018 eGloo Incorporated [https://www.egloo.ca](www.egloo.ca)
+Copyright ©2015-2018 eGloo Incorporated ([https://www.egloo.ca](www.egloo.ca))
 
 Deep-Packet Inspection Server
 -----------------------------
