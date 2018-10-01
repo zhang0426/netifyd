@@ -99,7 +99,7 @@ public:
     void ClassifyFlow(ndFlow *flow);
     void PurgeFlows(void);
 
-#ifdef _ND_LOG_CONNTRACK
+#ifdef _ND_DEBUG_CONNTRACK
     void DumpStats(void);
 #endif
 

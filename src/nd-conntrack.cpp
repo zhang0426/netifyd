@@ -65,7 +65,7 @@ using namespace std;
 #include "nd-util.h"
 
 // Enable Conntrack debug logging
-#define _ND_LOG_CONNTRACK       1
+//#define _ND_DEBUG_CONNTRACK     1
 
 #include "nd-conntrack.h"
 
@@ -84,7 +84,7 @@ static int nd_ct_event_callback(
 
     if (now > nd_ct_last_flow_purge_ttl) {
         thread->PurgeFlows();
-#ifdef _ND_LOG_CONNTRACK
+#ifdef _ND_DEBUG_CONNTRACK
         thread->DumpStats();
 #endif
         nd_ct_last_flow_purge_ttl = now + _ND_CT_FLOW_TTL + (_ND_CT_FLOW_TTL / 10);
@@ -272,11 +272,13 @@ void ndConntrackThread::ProcessConntrackEvent(
     switch (type) {
     case NFCT_T_NEW:
 
+#ifdef _ND_DEBUG_CONNTRACK
         id_iter = ct_id_map.find(id);
         if (id_iter != ct_id_map.end()) {
             nd_debug_printf("%s: [N:%u] ID exists for new flow.\n",
                 tag.c_str(), id);
         }
+#endif
 
         try {
             ct_flow = new ndConntrackFlow(id, ct);
@@ -290,8 +292,10 @@ void ndConntrackThread::ProcessConntrackEvent(
 
         flow_iter = ct_flow_map.find(ct_flow->digest);
         if (flow_iter != ct_flow_map.end()) {
-            nd_printf("%s: [N:%u] Digest found in flow map.\n",
+#ifdef _ND_DEBUG_CONNTRACK
+            nd_debug_printf("%s: [N:%u] Digest found in flow map.\n",
                 tag.c_str(), id);
+#endif
             delete flow_iter->second;
         }
 
@@ -317,9 +321,10 @@ void ndConntrackThread::ProcessConntrackEvent(
         ct_flow->Update(ct);
 
         if (ct_flow->digest != id_iter->second) {
+#ifdef _ND_DEBUG_CONNTRACK
             nd_debug_printf("%s: [U:%u] Flow hash updated.\n",
                 tag.c_str(), id);
-
+#endif
             ct_flow_map.erase(flow_iter);
 
             ct_flow_map[ct_flow->digest] = ct_flow;
@@ -343,10 +348,10 @@ void ndConntrackThread::ProcessConntrackEvent(
         break;
 
     default:
-        nd_debug_printf("%s: Unhandled connection tracking message type: 0x%02x\n",
+        nd_printf("%s: Unhandled connection tracking message type: 0x%02x\n",
             tag.c_str(), type);
     }
-#ifdef _ND_LOG_CONNTRACK
+#ifdef _ND_DEBUG_CONNTRACK
     if (ND_DEBUG) {
 #if 0
         char buffer[1024];
@@ -636,7 +641,7 @@ void ndConntrackThread::PurgeFlows(void)
     Unlock();
 }
 
-#ifdef _ND_LOG_CONNTRACK
+#ifdef _ND_DEBUG_CONNTRACK
 void ndConntrackThread::DumpStats(void)
 {
     Lock();
