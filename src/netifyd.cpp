@@ -1785,7 +1785,8 @@ int main(int argc, char *argv[])
     sigset_t sigset;
     struct sigevent sigev;
     timer_t timer_id;
-    struct itimerspec it_spec;
+    struct timespec tspec_sigwait;
+    struct itimerspec itspec_update;
     string last_device;
     nd_device_addr device_addresses;
 
@@ -2226,28 +2227,27 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    it_spec.it_value.tv_sec = nd_config.update_interval;
-    it_spec.it_value.tv_nsec = 0;
-    it_spec.it_interval.tv_sec = nd_config.update_interval;
-    it_spec.it_interval.tv_nsec = 0;
-
-    timer_settime(timer_id, 0, &it_spec, NULL);
-
 #ifdef _ND_USE_NETLINK
     if (ND_USE_NETLINK) netlink->Refresh();
 #endif
+
+    itspec_update.it_value.tv_sec = nd_config.update_interval;
+    itspec_update.it_value.tv_nsec = 0;
+    itspec_update.it_interval.tv_sec = nd_config.update_interval;
+    itspec_update.it_interval.tv_nsec = 0;
+
+    timer_settime(timer_id, 0, &itspec_update, NULL);
+
+    tspec_sigwait.tv_sec = 1;
+    tspec_sigwait.tv_nsec = 0;
 
     while (! terminate) {
         int sig;
         siginfo_t si;
 
-        if ((sig = sigwaitinfo(&sigset, &si)) < 0) {
-            if (errno == EINTR) {
-                usleep(50000);
-                continue;
-            }
-
-            nd_printf("sigwaitinfo: %s\n", strerror(errno));
+        if ((sig = sigtimedwait(&sigset, &si, &tspec_sigwait)) < 0) {
+            if (errno == EAGAIN) continue;
+            if (errno != EINTR) nd_printf("sigwaitinfo: %s\n", strerror(errno));
             rc = -1;
             terminate = true;
             continue;
