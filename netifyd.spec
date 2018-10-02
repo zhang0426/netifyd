@@ -22,12 +22,13 @@
 
 # Persistent and volatile state paths
 %define statedir_pdata %{_sysconfdir}/netify.d
-%define statedir_vdata %{_sharedstatedir}/%{name}
+%define statedir_vdata %{_localstatedir}/run/%{name}
+%define statedir_vdata_old %{_sharedstatedir}/%{name}
 
 # RPM package details
 Name: netifyd
 Summary: Netify Agent
-Version: 2.83
+Version: 2.84
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 URL: http://www.netify.ai/
@@ -133,7 +134,6 @@ rm -rf %{buildroot}/%{_libdir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}/pkgconfig/libndpi*
 
 install -d -m 0750 %{buildroot}/%{statedir_vdata}
-install -d -m 0755 %{buildroot}/%{_localstatedir}/run/%{name}
 
 install -D -m 0660 %{netifyd_default} %{buildroot}/%{_sysconfdir}/sysconfig/%{name}
 install -D -m 0755 %{netifyd_init} %{buildroot}/%{_sysconfdir}/init.d/%{name}
@@ -154,14 +154,16 @@ echo "%config(noreplace) %attr(640,root,root) %{_datadir}/%{name}/env.sh" >> %{E
 %systemd_post %{name}.service
 %endif
 
-# Remove old CSV configuration files
-rm -f %{statedir_vdata}/*.csv
-[ -f %{statedir_vdata}/agent.uuid ] && \
-    mv -f %{statedir_vdata}/agent.uuid %{statedir_pdata}
-[ -f %{statedir_vdata}/site.uuid ] && \
-    mv -f %{statedir_vdata}/site.uuid %{statedir_pdata}
-[ -f %{statedir_vdata}/app-custom-match.conf ] && \
-    mv -f %{statedir_vdata}/app-custom-match.conf %{statedir_pdata}/netify-sink.conf
+# Preserve configuration files from old volatile directory
+if [ -d %{statedir_vdata_old} ]; then
+
+    [ -f %{statedir_vdata_old}/agent.uuid ] && \
+        mv -f %{statedir_vdata_old}/agent.uuid %{statedir_pdata}
+    [ -f %{statedir_vdata_old}/site.uuid ] && \
+        mv -f %{statedir_vdata_old}/site.uuid %{statedir_pdata}
+
+    rm -rf %{statedir_vdata_old}
+fi
 
 exit 0
 
@@ -181,7 +183,6 @@ exit 0
 %files -f %{EXTRA_DIST}
 %defattr(-,root,root)
 %dir %{_localstatedir}/run/%{name}
-%dir %{_localstatedir}/lib/%{name}
 %dir %attr(750,root,root) %{statedir_pdata}
 %dir %attr(750,root,root) %{statedir_vdata}
 %attr(755,root,root) %{_datadir}/%{name}/
