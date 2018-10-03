@@ -14,7 +14,7 @@ export LD_LIBRARY_PATH="${TESTDIR}/../src/.libs/"
 echo -e "\nStarting capture tests..."
 
 for PCAP in $PCAPS; do
-    BASE=$(echo $PCAP | sed -e 's/\.cap.*$//')
+    BASE=$(echo $PCAP | sed -e 's/\.[pc]*ap.*$//')
     LOG=$(printf "%s/test-pcap-logs/%s.log" ${TESTDIR} $(basename ${BASE}))
     if echo $PCAP | egrep -q '\.gz$'; then
         zcat $PCAP > ${BASE}-test.cap || exit $?
