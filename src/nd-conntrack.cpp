@@ -46,7 +46,9 @@ typedef bool atomic_bool;
 #ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
 #endif
+
 #include <json.h>
+#include <pcap/pcap.h>
 
 #include <libmnl/libmnl.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -545,9 +547,9 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
     switch (family) {
     case AF_INET:
         sha1_write(&ctx,
-            (const char *)&flow->lower_addr, sizeof(struct in_addr));
+            (const char *)&flow->lower_addr4, sizeof(struct in_addr));
         sha1_write(&ctx,
-            (const char *)&flow->upper_addr, sizeof(struct in_addr));
+            (const char *)&flow->upper_addr4, sizeof(struct in_addr));
         break;
     case AF_INET6:
         sha1_write(&ctx,

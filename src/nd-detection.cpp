@@ -406,6 +406,8 @@ void ndDetectionThread::ProcessPacket(void)
     struct ndpi_id_struct *id_src, *id_dst;
     uint16_t ndpi_proto = NDPI_PROTOCOL_UNKNOWN;
 
+    bool capture_unknown_flows = ND_CAPTURE_UNKNOWN_FLOWS;
+
     uint64_t ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) *
             ND_DETECTION_TICKS +
             pkt_header->ts.tv_usec /
@@ -606,16 +608,16 @@ void ndDetectionThread::ProcessPacket(void)
         addr_cmp = memcmp(&hdr_ip->ip_src, &hdr_ip->ip_dst, 4);
 
         if (addr_cmp < 0) {
-            flow.lower_addr.s_addr = hdr_ip->ip_src.s_addr;
-            flow.upper_addr.s_addr = hdr_ip->ip_dst.s_addr;
+            flow.lower_addr4.s_addr = hdr_ip->ip_src.s_addr;
+            flow.upper_addr4.s_addr = hdr_ip->ip_dst.s_addr;
             if (pcap_datalink_type == DLT_EN10MB) {
                 memcpy(flow.lower_mac, hdr_eth->ether_shost, ETH_ALEN);
                 memcpy(flow.upper_mac, hdr_eth->ether_dhost, ETH_ALEN);
             }
         }
         else {
-            flow.lower_addr.s_addr = hdr_ip->ip_dst.s_addr;
-            flow.upper_addr.s_addr = hdr_ip->ip_src.s_addr;
+            flow.lower_addr4.s_addr = hdr_ip->ip_dst.s_addr;
+            flow.upper_addr4.s_addr = hdr_ip->ip_src.s_addr;
             if (pcap_datalink_type == DLT_EN10MB) {
                 memcpy(flow.lower_mac, hdr_eth->ether_dhost, ETH_ALEN);
                 memcpy(flow.upper_mac, hdr_eth->ether_shost, ETH_ALEN);
@@ -851,6 +853,8 @@ void ndDetectionThread::ProcessPacket(void)
 
     if (new_flow->detection_complete) return;
 
+    if (capture_unknown_flows) new_flow->push(pkt_header, pkt_data);
+
     new_flow->detected_protocol = ndpi_detection_process_packet(
         ndpi,
         new_flow->ndpi_flow,
@@ -882,9 +886,9 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (new_flow->ip_version == 4) {
             lower.sin_family = AF_INET;
-            memcpy(&lower.sin_addr, &new_flow->lower_addr, sizeof(struct in_addr));
+            memcpy(&lower.sin_addr, &new_flow->lower_addr4, sizeof(struct in_addr));
             upper.sin_family = AF_INET;
-            memcpy(&upper.sin_addr, &new_flow->upper_addr, sizeof(struct in_addr));
+            memcpy(&upper.sin_addr, &new_flow->upper_addr4, sizeof(struct in_addr));
             lower_addr = reinterpret_cast<struct sockaddr_storage *>(&lower);
             upper_addr = reinterpret_cast<struct sockaddr_storage *>(&upper);
         }
@@ -927,13 +931,13 @@ void ndDetectionThread::ProcessPacket(void)
 #ifdef _ND_USE_NETLINK
                 if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN) {
                     if (new_flow->ip_version == 4)
-                        dns_cache->lookup(new_flow->lower_addr, hostname);
+                        dns_cache->lookup(new_flow->lower_addr4, hostname);
                     else
                         dns_cache->lookup(new_flow->lower_addr6, hostname);
                 }
                 else if (new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
                     if (new_flow->ip_version == 4)
-                        dns_cache->lookup(new_flow->upper_addr, hostname);
+                        dns_cache->lookup(new_flow->upper_addr4, hostname);
                     else
                         dns_cache->lookup(new_flow->upper_addr6, hostname);
                 }
@@ -1084,7 +1088,7 @@ void ndDetectionThread::ProcessPacket(void)
             flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
 
             if (! flow_iter.second) {
-                // Flow exists...  updated stats and return.
+                // Flow exists...  update stats and return.
                 *flow_iter.first->second += *new_flow;
 
                 new_flow->release();
@@ -1096,9 +1100,9 @@ void ndDetectionThread::ProcessPacket(void)
 
         switch (new_flow->ip_version) {
         case 4:
-            inet_ntop(AF_INET, &new_flow->lower_addr.s_addr,
+            inet_ntop(AF_INET, &new_flow->lower_addr4.s_addr,
                 new_flow->lower_ip, INET_ADDRSTRLEN);
-            inet_ntop(AF_INET, &new_flow->upper_addr.s_addr,
+            inet_ntop(AF_INET, &new_flow->upper_addr4.s_addr,
                 new_flow->upper_ip, INET_ADDRSTRLEN);
             break;
 
@@ -1154,6 +1158,10 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 #endif
+        if (capture_unknown_flows &&
+            new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
+            new_flow->dump(pcap, (const uint8_t *)digest.c_str());
+        }
 
         new_flow->release();
 
@@ -1191,10 +1199,10 @@ void ndDetectionThread::ProcessPacket(void)
             switch ((*i)->sa_family) {
             case AF_INET:
                 sa_in = reinterpret_cast<struct sockaddr_in *>((*i));
-                if (! memcmp(&new_flow->lower_addr, &sa_in->sin_addr,
+                if (! memcmp(&new_flow->lower_addr4, &sa_in->sin_addr,
                     sizeof(struct in_addr)))
                     new_flow->privacy_mask |= ndFlow::PRIVATE_LOWER;
-                if (! memcmp(&new_flow->upper_addr, &sa_in->sin_addr,
+                if (! memcmp(&new_flow->upper_addr4, &sa_in->sin_addr,
                     sizeof(struct in_addr)))
                     new_flow->privacy_mask |= ndFlow::PRIVATE_UPPER;
                 break;

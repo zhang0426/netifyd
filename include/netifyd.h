@@ -157,7 +157,7 @@ enum nd_global_flags {
     ndGF_DEBUG_WITH_ETHERS = 0x4,
     ndGF_DEBUG_DNS_CACHE = 0x8,
     ndGF_OVERRIDE_SINK_CONFIG = 0x10,
-    ndGF_BITHOLE_0x20 = 0x20,
+    ndGF_CAPTURE_UNKNOWN_FLOWS = 0x20,
     ndGF_BITHOLE_0x40 = 0x40,
     ndGF_SSL_USE_TLSv1 = 0x80,
     ndGF_SSL_VERIFY = 0x100,
@@ -178,6 +178,7 @@ enum nd_global_flags {
 #define ND_DEBUG_WITH_ETHERS (nd_config.flags & ndGF_DEBUG_WITH_ETHERS)
 #define ND_DEBUG_DNS_CACHE (nd_config.flags & ndGF_DEBUG_DNS_CACHE)
 #define ND_OVERRIDE_SINK_CONFIG (nd_config.flags & ndGF_OVERRIDE_SINK_CONFIG)
+#define ND_CAPTURE_UNKNOWN_FLOWS (nd_config.flags & ndGF_CAPTURE_UNKNOWN_FLOWS)
 #define ND_SSL_USE_TLSv1 (nd_config.flags & ndGF_SSL_USE_TLSv1)
 #define ND_SSL_VERIFY (nd_config.flags & ndGF_SSL_VERIFY)
 #define ND_USE_CONNTRACK (nd_config.flags & ndGF_USE_CONNTRACK)

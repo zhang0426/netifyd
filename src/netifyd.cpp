@@ -462,6 +462,9 @@ static int nd_config_load(void)
     nd_config.max_udp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_udp_pkts", ND_MAX_UDP_PKTS);
 
+    ND_GF_SET_FLAG(ndGF_CAPTURE_UNKNOWN_FLOWS,
+        reader.GetBoolean("netifyd", "capture_unknown_flows", false));
+
     // DNS Cache section
     ND_GF_SET_FLAG(ndGF_USE_DNS_CACHE,
         reader.GetBoolean("dns_cache", "enable", true));

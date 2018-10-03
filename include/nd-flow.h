@@ -37,6 +37,17 @@
 #define ND_FLOW_GUESS_PROTO 0x01    // Protocol guesses (ports)
 #define ND_FLOW_GUESS_DNS   0x02    // Application guessed by DNS cache hint
 
+// Capture filename template
+#define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX"
+#define ND_FLOW_CAPTURE_SUB_OFFSET  (sizeof(ND_FLOW_CAPTURE_TEMPLATE) - 8 - 1)
+
+typedef unordered_map<string, struct ndFlow *> nd_flow_map;
+typedef map<string, nd_flow_map *> nd_flows;
+typedef pair<string, struct ndFlow *> nd_flow_pair;
+typedef pair<nd_flow_map::iterator, bool> nd_flow_insert;
+typedef pair<const struct pcap_pkthdr *, const uint8_t *> nd_flow_push;
+typedef vector<nd_flow_push> nd_flow_capture;
+
 struct ndFlow
 {
     bool internal;
@@ -54,14 +65,19 @@ struct ndFlow
     uint8_t lower_mac[ETH_ALEN];
     uint8_t upper_mac[ETH_ALEN];
 
+// TODO: Look into using sockaddr_storage for both IPv4/6
 //    struct sockaddr_storage lower_addr;
 //    struct sockaddr_storage upper_addr;
 
-    struct in_addr lower_addr;
-    struct in_addr upper_addr;
+    union {
+        struct in_addr lower_addr4;
+        struct in6_addr lower_addr6;
+    };
 
-    struct in6_addr lower_addr6;
-    struct in6_addr upper_addr6;
+    union {
+        struct in_addr upper_addr4;
+        struct in6_addr upper_addr6;
+    };
 
     char lower_ip[INET6_ADDRSTRLEN];
     char upper_ip[INET6_ADDRSTRLEN];
@@ -143,15 +159,41 @@ struct ndFlow
 
     uint8_t origin;
 
+    nd_flow_capture capture;
+    char capture_filename[sizeof(ND_FLOW_CAPTURE_TEMPLATE)];
+
     void hash(const string &device, string &digest,
         bool full_hash = false, const uint8_t *key = NULL, size_t key_length = 0);
+
+    void push(const struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data);
+
+    int dump(pcap_t *pcap, const uint8_t *digest);
+
+    void release(void);
+
+    uint16_t master_protocol(void);
+
+    bool has_dhcp_fingerprint(void);
+    bool has_dhcp_class_ident(void);
+    bool has_http_user_agent(void);
+    bool has_ssh_client_agent(void);
+    bool has_ssh_server_agent(void);
+    bool has_ssl_client_certcn(void);
+    bool has_ssl_server_certcn(void);
+    bool has_bt_info_hash(void);
+    bool has_mdns_answer(void);
+
+    void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
+
+    json_object *json_encode(const string &device, ndJson &json,
+        struct ndpi_detection_module_struct *ndpi, bool include_stats = true);
 
     inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;
         switch (ip_version) {
         case 4:
-            if (memcmp(&lower_addr, &f.lower_addr, sizeof(struct in_addr)) == 0 &&
-                memcmp(&upper_addr, &f.upper_addr, sizeof(struct in_addr)) == 0)
+            if (memcmp(&lower_addr4, &f.lower_addr4, sizeof(struct in_addr)) == 0 &&
+                memcmp(&upper_addr4, &f.upper_addr4, sizeof(struct in_addr)) == 0)
                 return true;
             break;
         case 6:
@@ -173,35 +215,7 @@ struct ndFlow
         this->total_packets += f.total_packets;
         return *this;
     }
-
-    inline void release(void) {
-        if (ndpi_flow != NULL) { ndpi_free_flow(ndpi_flow); ndpi_flow = NULL; }
-        if (id_src != NULL) { delete id_src; id_src = NULL; }
-        if (id_dst != NULL) { delete id_dst; id_dst = NULL; }
-    }
-
-    uint16_t master_protocol(void);
-
-    bool has_dhcp_fingerprint(void);
-    bool has_dhcp_class_ident(void);
-    bool has_http_user_agent(void);
-    bool has_ssh_client_agent(void);
-    bool has_ssh_server_agent(void);
-    bool has_ssl_client_certcn(void);
-    bool has_ssl_server_certcn(void);
-    bool has_bt_info_hash(void);
-    bool has_mdns_answer(void);
-
-    void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
-
-    json_object *json_encode(const string &device, ndJson &json,
-        struct ndpi_detection_module_struct *ndpi, bool include_stats = true);
 };
-
-typedef unordered_map<string, struct ndFlow *> nd_flow_map;
-typedef map<string, nd_flow_map *> nd_flows;
-typedef pair<string, struct ndFlow *> nd_flow_pair;
-typedef pair<nd_flow_map::iterator, bool> nd_flow_insert;
 
 #endif // _ND_FLOW_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
