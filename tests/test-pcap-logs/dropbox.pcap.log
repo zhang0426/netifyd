@@ -1,9 +1,0 @@
-lo: [i4-g--] Dropbox 192.168.56.1:50311 --> 192.168.56.101:17500
-lo: [i4-g--] Dropbox 192.168.56.1:50318 --> 192.168.56.101:17500
-lo: [i4-g--] Dropbox 192.168.56.1:50312 --> 192.168.56.101:17500
-lo: [i4-g--] Dropbox 192.168.56.1:50319 --> 192.168.56.101:17500
-lo: [i4----] DNS.netify.dropbox 192.168.1.105:55407 --> 192.168.1.254:53 H: client.dropbox.com
-lo: [i4----] DNS.netify.dropbox 192.168.1.105:49112 --> 192.168.1.254:53 H: client-cf.dropbox.com
-lo: [i4----] DNS.netify.dropbox 192.168.1.105:50789 --> 192.168.1.254:53 H: d.dropbox.com
-lo: [i4----] DNS.netify.dropbox 192.168.1.105:36173 --> 192.168.1.254:53 H: log.getdropbox.com
-lo: [i4----] DNS.netify.dropbox 192.168.1.105:33189 --> 192.168.1.254:53 H: notify.dropbox.com

@@ -1,9 +1,0 @@
-lo: [i4----] QUIC.netify.gmail 192.168.1.109:57833 --> 216.58.212.101:443 H: mail.google.com
-lo: [i4----] QUIC.netify.google 172.217.16.4:443 <-- 192.168.1.105:45669 H: www.google.com
-lo: [i4----] QUIC.netify.google 172.217.16.3:443 <-- 192.168.1.105:40461
-lo: [i4----] QUIC.netify.youtube 192.168.1.105:34438 --> 216.58.210.238:443 H: www.youtube.com
-lo: [i4----] QUIC.netify.youtube 192.168.1.105:48445 --> 216.58.214.110:443 H: i.ytimg.com
-lo: [i4----] QUIC.netify.google 192.168.1.105:40030 --> 216.58.201.227:443 H: fonts.gstatic.com
-lo: [i4----] QUIC.netify.youtube 192.168.1.105:55934 --> 216.58.201.238:443 H: s.ytimg.com
-lo: [i4----] QUIC.netify.youtube 192.168.1.105:53817 --> 216.58.210.225:443 H: yt3.ggpht.com
-lo: [i4----] QUIC.netify.youtube 192.168.1.109:35236 --> 216.58.210.206:443 H: www.youtube.com
