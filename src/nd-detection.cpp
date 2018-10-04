@@ -135,6 +135,7 @@ using namespace std;
 #endif
 #include "nd-socket.h"
 #include "nd-util.h"
+#include "nd-dns-cache.h"
 #include "nd-detection.h"
 
 // Enable to log discarded packets
@@ -142,8 +143,6 @@ using namespace std;
 
 // Enable DNS response debug logging
 //#define _ND_LOG_DNS_RESPONSE    1
-
-extern bool nd_debug;
 
 extern nd_global_config nd_config;
 

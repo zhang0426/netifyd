@@ -80,8 +80,6 @@
 #define ND_PID_FILE_NAME        ND_VOLATILE_STATEDIR "/netifyd.pid"
 #endif
 
-#define ND_DNS_CACHE_FILE_NAME  ND_VOLATILE_STATEDIR "/dns-cache.csv"
-
 #define ND_JSON_VERSION         1.6     // JSON format version
 #ifndef ND_JSON_FILE_NAME
 #define ND_JSON_FILE_NAME       ND_VOLATILE_STATEDIR "/netifyd.json"
@@ -298,29 +296,6 @@ typedef struct nd_packet_stats_t
 } nd_packet_stats;
 
 typedef map<string, nd_packet_stats *> nd_stats;
-
-typedef pair<time_t, string> nd_dns_tuple;
-typedef unordered_map<string, nd_dns_tuple> nd_dns_ar;
-typedef pair<nd_dns_ar::iterator, bool> nd_dns_cache_insert;
-typedef pair<string, nd_dns_tuple> nd_dns_cache_insert_pair;
-
-typedef struct nd_dns_cache_t
-{
-    pthread_mutex_t lock;
-    nd_dns_ar map_ar;
-
-    void insert(sa_family_t af, const uint8_t *addr, const string &hostname);
-    void insert(const string &digest, const string &hostname);
-
-    bool lookup(const struct in_addr &addr, string &hostname);
-    bool lookup(const struct in6_addr &addr, string &hostname);
-    bool lookup(const string &digest, string &hostname);
-
-    size_t purge(void);
-
-    void load(void);
-    void save(void);
-} nd_dns_cache;
 
 void nd_json_agent_hello(string &json_string);
 void nd_json_agent_status(string &json_string);
