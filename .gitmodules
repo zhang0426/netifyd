@@ -17,3 +17,6 @@
 	path = libs/libnfnetlink
 	url = https://gitlab.com/netify.ai/public/netify-agent-libs/libnfnetlink.git
 
+[submodule "libs/json"]
+	path = libs/json
+	url = https://github.com/nlohmann/json.git
