@@ -1002,7 +1002,7 @@ static void nd_json_add_stats(json_object *parent,
 static void nd_json_add_flows(
     const string &device, json_object *parent,
     struct ndpi_detection_module_struct *ndpi,
-    const nd_flow_map *flows, bool unknown = true)
+    const nd_flow_map *flows)
 {
     ndJson json(parent);
 
@@ -1010,9 +1010,6 @@ static void nd_json_add_flows(
         i != flows->end(); i++) {
 
         if (i->second->detection_complete == false)
-            continue;
-        if (unknown == false &&
-            i->second->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN)
             continue;
         if (i->second->lower_packets == 0 && i->second->upper_packets == 0)
             continue;
