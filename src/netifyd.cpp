@@ -102,7 +102,6 @@ using namespace std;
 
 static nd_ifaces ifaces;
 static nd_devices devices;
-nd_device_ethers device_ethers;
 static nd_flows flows;
 static nd_stats stats;
 static nd_threads threads;
@@ -129,12 +128,13 @@ nd_device_netlink device_netlink;
 #endif
 static nd_device_filter device_filters;
 static bool nd_detection_stopped_by_signal = false;
+static nd_dns_cache dns_cache;
 static time_t nd_ethers_mtime = 0;
+
+nd_device_ethers device_ethers;
 
 nd_global_config nd_config;
 pthread_mutex_t *nd_printf_mutex = NULL;
-
-static nd_dns_cache dns_cache;
 
 static void nd_usage(int rc = 0, bool version = false)
 {
@@ -634,7 +634,18 @@ static int nd_dispatch_service_param(
     const string &name, const string &uuid_dispatch, const ndJsonPluginParams &params)
 {
     int rc = 0;
-
+#if 0
+    if (name == "netifyd.service.capture.start") {
+        nd_printf("Unclassified flow capture started by service parameter request.\n");
+        ND_GF_SET_FLAG(ndGF_CAPTURE_UNKNOWN_FLOWS, true);
+        return 0;
+    }
+    else if (name == "netifyd.service.capture.stop") {
+        nd_printf("Unclassified flow capture stopped by service parameter request.\n");
+        ND_GF_SET_FLAG(ndGF_CAPTURE_UNKNOWN_FLOWS, false);
+        return 0;
+    }
+#endif
     nd_plugins::iterator plugin_iter = plugin_services.find(name);
 
     if (plugin_iter == plugin_services.end()) {
