@@ -5,9 +5,8 @@
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4
-
-AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I ../include \
-	-I ../libs/ndpi/src/include -I ../libs/inih/cpp \
+AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I $(top_srcdir)/include \
+	-I $(top_srcdir)/libs/ndpi/src/include -I $(top_srcdir)/libs/inih/cpp \
 	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS) $(LIBTCMALLOC_CFLAGS) \
 	-D_ND_INTERNAL=1 \
 	-D'ND_CONF_FILE_NAME="$(sysconfdir)/$(PACKAGE_TARNAME).conf"' \
@@ -22,7 +21,7 @@ libnetifyd_la_SOURCES = nd-base64.cpp nd-detection.cpp nd-dns-cache.cpp \
 	nd-flow.cpp nd-json.cpp nd-ndpi.cpp nd-sha1.c nd-sink.cpp nd-socket.cpp \
 	nd-thread.cpp nd-util.cpp
 
-libnetifyd_la_LIBADD = ../libs/ndpi/src/lib/libndpi.la
+libnetifyd_la_LIBADD = $(top_srcdir)/libs/ndpi/src/lib/libndpi.la
 
 if USE_INOTIFY
 libnetifyd_la_SOURCES += nd-inotify.cpp
@@ -45,7 +44,7 @@ endif
 sbin_PROGRAMS = netifyd
 netifyd_SOURCES = netifyd.cpp
 netifyd_LDFLAGS = $(JSONC_LIBS) $(LIBCURL_LIBS) $(ZLIB_LIBS)
-netifyd_LDADD = ./libnetifyd.la ../libs/inih/libini.la
+netifyd_LDADD = ./libnetifyd.la $(top_srcdir)/libs/inih/libini.la
 
 if USE_LIBTCMALLOC
 # XXX: Recommended compiler flags
