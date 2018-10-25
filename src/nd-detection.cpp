@@ -1120,39 +1120,54 @@ void ndDetectionThread::ProcessPacket(void)
 
 #ifdef _ND_USE_NETLINK
         if (device_addrs != NULL) {
-            string mac, ip;
-            uint8_t *umac = NULL;
+            for (int t = ndFlow::TYPE_LOWER; t < ndFlow::TYPE_MAX; t++) {
+                string ip;
+                uint8_t *umac = NULL;
 
-            umac = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
-                new_flow->lower_mac : new_flow->upper_mac;
+                if (t == ndFlow::TYPE_LOWER &&
+                    (new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP ||
+                     new_flow->lower_type == ndNETLINK_ATYPE_LOCALNET ||
+                     new_flow->lower_type == ndNETLINK_ATYPE_PRIVATE)) {
 
-            // Filter out reserved MAC prefixes...
-            // ...IANA RFC7042, IPv4 uni/multicast:
-            if (! ((umac[0] == 0x00 || umac[0] == 0x01) &&
-                umac[1] == 0x00 && umac[2] == 0x5e) &&
-                // IPv6 multicast:
-                ! (umac[0] == 0x33 && umac[1] == 0x33)) {
+                    umac = new_flow->lower_mac;
+                    ip = new_flow->lower_ip;
+                }
+                else if (t == ndFlow::TYPE_UPPER &&
+                    (new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP ||
+                     new_flow->upper_type == ndNETLINK_ATYPE_LOCALNET ||
+                     new_flow->upper_type == ndNETLINK_ATYPE_PRIVATE)) {
 
-                mac.assign((const char *)umac, ETH_ALEN);
+                    umac = new_flow->upper_mac;
+                    ip = new_flow->upper_ip;
+                }
+                else continue;
 
-                ip = (new_flow->lower_type != ndNETLINK_ATYPE_UNKNOWN) ?
-                    new_flow->lower_ip : new_flow->upper_ip;
+                // Filter out reserved MAC prefixes...
+                // ...IANA RFC7042, IPv4 uni/multicast:
+                if (! ((umac[0] == 0x00 || umac[0] == 0x01) &&
+                    umac[1] == 0x00 && umac[2] == 0x5e) &&
+                    // IPv6 multicast:
+                    ! (umac[0] == 0x33 && umac[1] == 0x33)) {
 
-                nd_device_addrs::iterator i;
-                if ((i = device_addrs->find(mac)) == device_addrs->end())
-                    (*device_addrs)[mac].push_back(ip);
-                else {
-                    bool duplicate = false;
-                    vector<string>::iterator j;
-                    for (j = (*device_addrs)[mac].begin();
-                        j != (*device_addrs)[mac].end(); j++) {
-                        if (ip != (*j)) continue;
-                        duplicate = true;
-                        break;
-                    }
+                    string mac;
+                    mac.assign((const char *)umac, ETH_ALEN);
 
-                    if (! duplicate)
+                    nd_device_addrs::iterator i;
+                    if ((i = device_addrs->find(mac)) == device_addrs->end())
                         (*device_addrs)[mac].push_back(ip);
+                    else {
+                        bool duplicate = false;
+                        vector<string>::iterator j;
+                        for (j = (*device_addrs)[mac].begin();
+                            j != (*device_addrs)[mac].end(); j++) {
+                            if (ip != (*j)) continue;
+                            duplicate = true;
+                            break;
+                        }
+
+                        if (! duplicate)
+                            (*device_addrs)[mac].push_back(ip);
+                    }
                 }
             }
         }

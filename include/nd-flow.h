@@ -142,6 +142,13 @@ struct ndFlow
     };
 
     enum {
+        TYPE_LOWER,
+        TYPE_UPPER,
+
+        TYPE_MAX
+    };
+
+    enum {
         PRIVATE_LOWER = 0x01,
         PRIVATE_UPPER = 0x02
     };
