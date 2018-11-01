@@ -1232,9 +1232,6 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 
-        if (ND_DEBUG || nd_config.h_flow != stderr)
-            new_flow->print(tag.c_str(), ndpi);
-
         if (thread_socket) {
             ndJson json;
 
@@ -1253,6 +1250,9 @@ void ndDetectionThread::ProcessPacket(void)
 
             json.Destroy();
         }
+
+        if (ND_DEBUG || nd_config.h_flow != stderr)
+            new_flow->print(tag.c_str(), ndpi);
     }
 
     if (ts_last_idle_scan + ND_IDLE_SCAN_TIME < ts_pkt_last) {
