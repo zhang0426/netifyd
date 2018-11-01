@@ -38,8 +38,8 @@
 #define ND_FLOW_GUESS_DNS   0x02    // Application guessed by DNS cache hint
 
 // Capture filename template
-#define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX"
-#define ND_FLOW_CAPTURE_SUB_OFFSET  (sizeof(ND_FLOW_CAPTURE_TEMPLATE) - 8 - 1)
+#define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX.cap"
+#define ND_FLOW_CAPTURE_SUB_OFFSET  (sizeof(ND_FLOW_CAPTURE_TEMPLATE) - 8 - 4 - 1)
 
 typedef unordered_map<string, struct ndFlow *> nd_flow_map;
 typedef map<string, nd_flow_map *> nd_flows;

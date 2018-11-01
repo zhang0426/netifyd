@@ -140,6 +140,7 @@ int ndFlow::dump(pcap_t *pcap, const uint8_t *digest)
 
     p += ND_FLOW_CAPTURE_SUB_OFFSET;
     for (int i = 0; i < 4; i++, p += 2) sprintf(p, "%02x", digest[i]);
+    strcat(p, ".cap");
 
     pcap_dumper_t *pcap_dumper = pcap_dump_open(pcap, capture_filename);
 
