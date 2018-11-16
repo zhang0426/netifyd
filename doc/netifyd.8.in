@@ -11,6 +11,10 @@ Optionally, the @PACKAGE_NAME@ can be coupled with a Netify Cloud (\fIhttps://ww
 .IR
 
 .B @PACKAGE_TARNAME@
+[\fB\-\-enable/disable-sink\fR]
+.IR
+
+.B @PACKAGE_TARNAME@
 [\fB\-P\fR, \fB\-\-protocols\fR]
 .IR
 
@@ -32,6 +36,18 @@ Optionally, the @PACKAGE_NAME@ can be coupled with a Netify Cloud (\fIhttps://ww
 [\fB\-C\fR, \fB\-\-sink-conf\fR=\fIFILENAME\fR]
 .IR
 .SH OPTIONS
+.BR \-p ", " \-\-provision
+.TP
+Generate a new client UUID if one hasn't already been set.  Display the URL used to provision this Agent.
+.TP
+.BR \-\-enable-sink ", " \-\-disable-sink
+Enable or disable access to the Netify Cloud.  When enabled, flow metadata and DPI detection information will be uploaded to the Cloud for further processing and analysis.  A Netify Cloud Subscription (\fIhttps://netify.ai/\fR) is required.  This option is disabled by default.
+.TP
+.BR \-P ", " \-\-protocols
+Display the current protocol and service ID list.
+.TP
+.BR \-U ", " \-\-uuidgen
+Generate a client UUID.
 .TP
 .BR \-d ", " \-\-debug
 Enable debug mode.  Remain in the foreground and emit debug messages.
@@ -65,15 +81,6 @@ Specify a client serial number (UUID).  Used for device identification with the 
 .TP
 .BR \-f ", " \-\-sink-conf=\fIFILENAME\fR
 Specify an alternate Netify Cloud Sink configuration file.
-.TP
-.BR \-p ", " \-\-provision
-Generate a new client UUID if one hasn't already been set.  Display the URL used to provision this Agent.
-.TP
-.BR \-P ", " \-\-protocols
-Display the current protocol and service ID list.
-.TP
-.BR \-U ", " \-\-uuidgen
-Generate a client UUID.
 .SH BUGS
 If you find a bug or have a feature request, please report it here: \fI@PACKAGE_BUGREPORT@\fR
 .SH SEE ALSO
