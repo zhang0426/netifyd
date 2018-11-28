@@ -914,6 +914,7 @@ void ndDetectionThread::ProcessPacket(void)
             new_flow->detected_protocol.master_protocol =
                 ndpi_guess_undetected_protocol(
                     ndpi,
+                    NULL,
                     new_flow->ip_protocol,
                     ntohs(new_flow->lower_port),
                     ntohs(new_flow->upper_port)
