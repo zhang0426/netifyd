@@ -562,20 +562,14 @@ void ndSocket::Create(void)
     nd_debug_printf("%s: created\n", __PRETTY_FUNCTION__);
 }
 
-size_t ndSocketBuffer::GetLength(void)
+const uint8_t *ndSocketBuffer::GetBuffer(size_t &bytes)
 {
-    if (buffer.size() == 0) return 0;
-    return length - offset;
-}
-
-const uint8_t *ndSocketBuffer::GetBuffer(ssize_t &length)
-{
-    if (buffer.size() == 0) {
-        length = 0;
+    if (GetLength() == 0) {
+        bytes = 0;
         return NULL;
     }
 
-    length = buffer.front().size() - offset;
+    bytes = buffer.front().size() - offset;
     return (const uint8_t *)(buffer.front().c_str() + offset);
 }
 
@@ -583,23 +577,27 @@ void ndSocketBuffer::Push(const string &data)
 {
     ostringstream header;
     header << "{\"length\": " << data.size() << "}\n";
+
     buffer.push_back(header.str());
     buffer.push_back(data);
-    length += data.size();
+
+    length += header.str().size() + data.size();
 }
 
-void ndSocketBuffer::Pop(ssize_t length)
+void ndSocketBuffer::Pop(size_t bytes)
 {
-    if (length <= 0 || buffer.size() == 0) return;
-    size_t bytes = buffer.front().size() - offset;
-    if (bytes <= 0) return;
-    if ((size_t)length > bytes) return;
-    if ((size_t)length == bytes) {
+    if (bytes == 0 || buffer.size() == 0) return;
+
+    size_t remaining = buffer.front().size() - offset;
+
+    if (bytes > remaining) bytes = remaining;
+
+    if (bytes == remaining) {
         offset = 0;
         buffer.pop_front();
     }
-    else if ((size_t)length < bytes)
-        offset += length;
+    else
+        offset += bytes;
 
     length -= bytes;
 }
@@ -746,7 +744,6 @@ void *ndSocketThread::Entry(void)
         }
 
         for (si = servers.begin(); si != servers.end(); si++) {
-
             FD_SET(si->first, &fds_read);
             if (si->first > max_fd) max_fd = si->first;
         }
@@ -781,16 +778,25 @@ void *ndSocketThread::Entry(void)
                         "buffers.find", ENOENT);
                 }
 
-                ssize_t length;
-                const uint8_t *p = bi->second->GetBuffer(length);
+                ssize_t length = 0;
+                const uint8_t *p = bi->second->GetBuffer((size_t &)length);
 
-                try {
-                    ssize_t bytes = ci->second->Write(p, length);
-                    bi->second->Pop(bytes);
-                } catch (ndSocketHangupException &e) {
-                    ClientHangup(ci);
-                } catch (ndSocketSystemException &e) {
-                    ClientHangup(ci);
+                while (p != NULL && length > 0) {
+                    try {
+                        ssize_t bytes = ci->second->Write(p, length);
+                        bi->second->Pop(bytes);
+
+                        if (bytes != length) break;
+
+                    } catch (ndSocketHangupException &e) {
+                        ClientHangup(ci);
+                        break;
+                    } catch (ndSocketSystemException &e) {
+                        ClientHangup(ci);
+                        break;
+                    }
+
+                    p = bi->second->GetBuffer((size_t &)length);
                 }
 
                 if (--rc == 0) break;

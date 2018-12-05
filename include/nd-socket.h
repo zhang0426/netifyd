@@ -200,11 +200,11 @@ class ndSocketBuffer
 public:
     ndSocketBuffer() : offset(0), length(0) { }
 
-    size_t GetLength(void);
-    const uint8_t *GetBuffer(ssize_t &length);
+    inline size_t GetLength(void) { return length - offset; }
+    const uint8_t *GetBuffer(size_t &bytes);
 
     void Push(const string &data);
-    void Pop(ssize_t length);
+    void Pop(size_t bytes);
 
 protected:
     size_t offset;
