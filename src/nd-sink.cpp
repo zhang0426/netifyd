@@ -195,10 +195,7 @@ ndSinkThread::ndSinkThread()
 
 ndSinkThread::~ndSinkThread()
 {
-    int rc;
-
-    if ((rc = pthread_cond_broadcast(&uploads_cond)) != 0)
-        throw ndSinkThreadException(strerror(rc));
+    pthread_cond_broadcast(&uploads_cond);
 
     Join();
 
