@@ -1594,7 +1594,8 @@ static void nd_add_device_addresses(nd_device_addr &device_addresses)
     if (token != NULL) free(token);
 }
 #endif // _ND_USE_NETLINK
-static void nd_check_agent_uuid(void)
+
+static int nd_check_agent_uuid(void)
 {
     if (nd_config.uuid == NULL ||
         ! strncmp(nd_config.uuid, ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
@@ -1603,13 +1604,16 @@ static void nd_check_agent_uuid(void)
             ! uuid.size() ||
             ! strncmp(uuid.c_str(), ND_AGENT_UUID_NULL, ND_AGENT_UUID_LEN)) {
             nd_generate_uuid(uuid);
-            printf("Generated a new UUID: %s\n", uuid.c_str());
-            nd_save_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN);
+            printf("Generated a new Agent UUID: %s\n", uuid.c_str());
+            if (! nd_save_uuid(uuid, ND_AGENT_UUID_PATH, ND_AGENT_UUID_LEN))
+                return 1;
         }
         if (nd_config.uuid != NULL)
             free(nd_config.uuid);
         nd_config.uuid = strdup(uuid.c_str());
     }
+
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -1795,10 +1799,8 @@ int main(int argc, char *argv[])
                 nd_conf_filename = strdup(ND_CONF_FILE_NAME);
             if (nd_config_load() < 0)
                 return 1;
-            nd_check_agent_uuid();
-            if (nd_config.uuid == NULL) return 1;
-            printf("Netify Agent Provisioning UUID: %s\n", nd_config.uuid);
-            printf("%s%s\n", ND_URL_PROVISION, nd_config.uuid);
+            if (nd_check_agent_uuid() || nd_config.uuid == NULL) return 1;
+            printf("Agent UUID: %s\n", nd_config.uuid);
             return 0;
         case 'R':
             nd_config.flags |= ndGF_REMAIN_IN_FOREGROUND;

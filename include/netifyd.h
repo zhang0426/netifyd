@@ -99,10 +99,6 @@
 #define ND_URL_UPLOAD           "https://sink.netify.ai/v2/"
 #endif
 
-#ifndef ND_URL_PROVISION
-#define ND_URL_PROVISION        "https://portal.netify.ai/app/provision/agent?uuid="
-#endif
-
 #define ND_COOKIE_JAR           ND_VOLATILE_STATEDIR "/netifyd.cookies"
 #define ND_UPLOAD_TIMEOUT       300     // Default 5-minute upload timeout
 
