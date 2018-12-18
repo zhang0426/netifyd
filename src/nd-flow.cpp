@@ -668,9 +668,9 @@ json_object *ndFlow::json_encode(const string &device,
     json.AddObject(json_flow, "detected_protocol_name",
         ndpi_get_proto_name(ndpi, detected_protocol.master_protocol));
 
-    json.AddObject(json_flow, "detected_service",
+    json.AddObject(json_flow, "detected_application",
         (int32_t)detected_protocol.app_protocol);
-    json.AddObject(json_flow, "detected_service_name",
+    json.AddObject(json_flow, "detected_application_name",
         ndpi_get_proto_name(ndpi, detected_protocol.app_protocol));
 
     json.AddObject(json_flow, "detection_guessed", detection_guessed);
