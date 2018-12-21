@@ -30,6 +30,7 @@ typedef bool atomic_bool;
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 #include <pthread.h>
 #include <dlfcn.h>
@@ -39,6 +40,7 @@ typedef bool atomic_bool;
 #include <sys/socket.h>
 
 #include <json.h>
+#include <pcap/pcap.h>
 
 using namespace std;
 

@@ -47,6 +47,7 @@ typedef bool atomic_bool;
 #include <curl/curl.h>
 
 #include <json.h>
+#include <pcap/pcap.h>
 
 #include <zlib.h>
 

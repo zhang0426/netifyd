@@ -37,6 +37,7 @@
 #include <sys/socket.h>
 
 #include <unistd.h>
+#include <string.h>
 #include <syslog.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -50,6 +51,7 @@
 #include <netdb.h>
 
 #include <json.h>
+#include <pcap/pcap.h>
 
 using namespace std;
 

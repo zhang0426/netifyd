@@ -39,6 +39,7 @@
 #include <linux/rtnetlink.h>
 
 #include <json.h>
+#include <pcap/pcap.h>
 
 using namespace std;
 

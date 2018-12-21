@@ -39,6 +39,7 @@ typedef bool atomic_bool;
 #include <sys/resource.h>
 
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <getopt.h>
 #include <signal.h>
@@ -974,29 +975,34 @@ static void nd_json_add_devices(json_object *parent)
 }
 
 static void nd_json_add_stats(json_object *parent,
-    const nd_packet_stats *stats, struct pcap_stat *pcap)
+    nd_packet_stats *stats, struct pcap_stat *pcap)
 {
     ndJson json(parent);
 
-    json.AddObject(NULL, "raw", stats->pkt_raw);
-    json.AddObject(NULL, "ethernet", stats->pkt_eth);
-    json.AddObject(NULL, "mpls", stats->pkt_mpls);
-    json.AddObject(NULL, "pppoe", stats->pkt_pppoe);
-    json.AddObject(NULL, "vlan", stats->pkt_vlan);
-    json.AddObject(NULL, "fragmented", stats->pkt_frags);
-    json.AddObject(NULL, "discarded", stats->pkt_discard);
-    json.AddObject(NULL, "discarded_bytes", stats->pkt_discard_bytes);
-    json.AddObject(NULL, "largest_bytes", stats->pkt_maxlen);
-    json.AddObject(NULL, "ip", stats->pkt_ip);
-    json.AddObject(NULL, "tcp", stats->pkt_tcp);
-    json.AddObject(NULL, "udp", stats->pkt_udp);
-    json.AddObject(NULL, "icmp", stats->pkt_icmp);
-    json.AddObject(NULL, "igmp", stats->pkt_igmp);
-    json.AddObject(NULL, "ip_bytes", stats->pkt_ip_bytes);
-    json.AddObject(NULL, "wire_bytes", stats->pkt_wire_bytes);
-    json.AddObject(NULL, "pcap_recv", pcap->ps_recv);
-    json.AddObject(NULL, "pcap_drop", pcap->ps_drop);
-    json.AddObject(NULL, "pcap_ifdrop", pcap->ps_ifdrop);
+    json.AddObject(NULL, "raw", stats->pkt.raw);
+    json.AddObject(NULL, "ethernet", stats->pkt.eth);
+    json.AddObject(NULL, "mpls", stats->pkt.mpls);
+    json.AddObject(NULL, "pppoe", stats->pkt.pppoe);
+    json.AddObject(NULL, "vlan", stats->pkt.vlan);
+    json.AddObject(NULL, "fragmented", stats->pkt.frags);
+    json.AddObject(NULL, "discarded", stats->pkt.discard);
+    json.AddObject(NULL, "discarded_bytes", stats->pkt.discard_bytes);
+    json.AddObject(NULL, "largest_bytes", stats->pkt.maxlen);
+    json.AddObject(NULL, "ip", stats->pkt.ip);
+    json.AddObject(NULL, "tcp", stats->pkt.tcp);
+    json.AddObject(NULL, "udp", stats->pkt.udp);
+    json.AddObject(NULL, "icmp", stats->pkt.icmp);
+    json.AddObject(NULL, "igmp", stats->pkt.igmp);
+    json.AddObject(NULL, "ip_bytes", stats->pkt.ip_bytes);
+    json.AddObject(NULL, "wire_bytes", stats->pkt.wire_bytes);
+
+    json.AddObject(NULL, "pcap_recv", pcap->ps_recv - stats->pcap_last.ps_recv);
+    json.AddObject(NULL, "pcap_drop", pcap->ps_drop - stats->pcap_last.ps_drop);
+    json.AddObject(NULL, "pcap_ifdrop", pcap->ps_ifdrop - stats->pcap_last.ps_ifdrop);
+
+    stats->pcap_last.ps_recv = pcap->ps_recv;
+    stats->pcap_last.ps_drop = pcap->ps_drop;
+    stats->pcap_last.ps_ifdrop = pcap->ps_ifdrop;
 }
 
 static void nd_json_add_flows(
@@ -1191,63 +1197,63 @@ static void nd_print_stats(void)
     nd_debug_printf("Cumulative Packet Totals [Uptime: +%lus]:\n",
         nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec);
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_raw, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.raw, false);
     nd_debug_printf("%12s: %s ", "Wire", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_eth, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.eth, false);
     nd_debug_printf("%12s: %s ", "ETH", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_vlan, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.vlan, false);
     nd_debug_printf("%12s: %s\n", "VLAN", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.ip, false);
     nd_debug_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip4, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.ip4, false);
     nd_debug_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip6, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.ip6, false);
     nd_debug_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_icmp + pkt_totals.pkt_igmp, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.icmp + pkt_totals.pkt.igmp, false);
     nd_debug_printf("%12s: %s ", "ICMP/IGMP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_udp, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.udp, false);
     nd_debug_printf("%12s: %s ", "UDP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_tcp, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.tcp, false);
     nd_debug_printf("%12s: %s\n", "TCP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_mpls, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.mpls, false);
     nd_debug_printf("%12s: %s ", "MPLS", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_pppoe, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.pppoe, false);
     nd_debug_printf("%12s: %s\n", "PPPoE", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_frags, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.frags, false);
     nd_debug_printf("%12s: %s ", "Frags", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_discard, false);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.discard, false);
     nd_debug_printf("%12s: %s ", "Discarded", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_maxlen);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.maxlen);
     nd_debug_printf("%12s: %s\n", "Largest", (*nd_stats_os).str().c_str());
 
     nd_debug_printf("\nCumulative Byte Totals:\n");
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_wire_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.wire_bytes);
     nd_debug_printf("%12s: %s\n", "Wire", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.ip_bytes);
     nd_debug_printf("%12s: %s ", "IP", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip4_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.ip4_bytes);
     nd_debug_printf("%12s: %s ", "IPv4", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_ip6_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.ip6_bytes);
     nd_debug_printf("%12s: %s\n", "IPv6", (*nd_stats_os).str().c_str());
 
-    nd_print_number(*nd_stats_os, pkt_totals.pkt_discard_bytes);
+    nd_print_number(*nd_stats_os, pkt_totals.pkt.discard_bytes);
     nd_debug_printf("%39s: %s ", "Discarded", (*nd_stats_os).str().c_str());
 
     (*nd_stats_os).str("");
@@ -1408,7 +1414,7 @@ static void nd_dump_stats(void)
                 i->second->GetDetectionModule(), flows[i->first]);
         }
 
-        memset(stats[i->first], 0, sizeof(nd_packet_stats));
+        stats[i->first]->reset();
 
         i->second->Unlock();
     }

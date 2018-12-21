@@ -40,6 +40,7 @@ typedef bool atomic_bool;
 #include <arpa/inet.h>
 
 #include <json.h>
+#include <pcap/pcap.h>
 
 using namespace std;
 

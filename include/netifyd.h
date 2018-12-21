@@ -250,50 +250,61 @@ typedef struct nd_agent_stats_t
 
 typedef struct nd_packet_stats_t
 {
-    uint64_t pkt_raw;
-    uint64_t pkt_eth;
-    uint64_t pkt_mpls;
-    uint64_t pkt_pppoe;
-    uint64_t pkt_vlan;
-    uint64_t pkt_frags;
-    uint64_t pkt_discard;
-    uint32_t pkt_maxlen;
-    uint64_t pkt_ip;
-    uint64_t pkt_ip4;
-    uint64_t pkt_ip6;
-    uint64_t pkt_icmp;
-    uint64_t pkt_igmp;
-    uint64_t pkt_tcp;
-    uint64_t pkt_udp;
-    uint64_t pkt_ip_bytes;
-    uint64_t pkt_ip4_bytes;
-    uint64_t pkt_ip6_bytes;
-    uint64_t pkt_wire_bytes;
-    uint64_t pkt_discard_bytes;
+    struct pkt_t {
+        uint64_t raw;
+        uint64_t eth;
+        uint64_t mpls;
+        uint64_t pppoe;
+        uint64_t vlan;
+        uint64_t frags;
+        uint64_t discard;
+        uint32_t maxlen;
+        uint64_t ip;
+        uint64_t ip4;
+        uint64_t ip6;
+        uint64_t icmp;
+        uint64_t igmp;
+        uint64_t tcp;
+        uint64_t udp;
+        uint64_t ip_bytes;
+        uint64_t ip4_bytes;
+        uint64_t ip6_bytes;
+        uint64_t wire_bytes;
+        uint64_t discard_bytes;
+    } pkt;
+
+    struct pcap_stat pcap_last;
 
     inline nd_packet_stats_t& operator+=(const nd_packet_stats_t &rhs) {
-        pkt_raw += rhs.pkt_raw;
-        pkt_eth += rhs.pkt_eth;
-        pkt_mpls += rhs.pkt_mpls;
-        pkt_pppoe += rhs.pkt_pppoe;
-        pkt_vlan += rhs.pkt_vlan;
-        pkt_frags += rhs.pkt_frags;
-        pkt_discard += rhs.pkt_discard;
-        if (rhs.pkt_maxlen > pkt_maxlen)
-            pkt_maxlen = rhs.pkt_maxlen;
-        pkt_ip += rhs.pkt_ip;
-        pkt_ip4 += rhs.pkt_ip4;
-        pkt_ip6 += rhs.pkt_ip6;
-        pkt_icmp += rhs.pkt_icmp;
-        pkt_igmp += rhs.pkt_igmp;
-        pkt_tcp += rhs.pkt_tcp;
-        pkt_udp += rhs.pkt_udp;
-        pkt_ip_bytes += rhs.pkt_ip_bytes;
-        pkt_ip4_bytes += rhs.pkt_ip4_bytes;
-        pkt_ip6_bytes += rhs.pkt_ip6_bytes;
-        pkt_wire_bytes += rhs.pkt_wire_bytes;
-        pkt_discard_bytes += rhs.pkt_discard_bytes;
+        pkt.raw += rhs.pkt.raw;
+        pkt.eth += rhs.pkt.eth;
+        pkt.mpls += rhs.pkt.mpls;
+        pkt.pppoe += rhs.pkt.pppoe;
+        pkt.vlan += rhs.pkt.vlan;
+        pkt.frags += rhs.pkt.frags;
+        pkt.discard += rhs.pkt.discard;
+        if (rhs.pkt.maxlen > pkt.maxlen)
+            pkt.maxlen = rhs.pkt.maxlen;
+        pkt.ip += rhs.pkt.ip;
+        pkt.ip4 += rhs.pkt.ip4;
+        pkt.ip6 += rhs.pkt.ip6;
+        pkt.icmp += rhs.pkt.icmp;
+        pkt.igmp += rhs.pkt.igmp;
+        pkt.tcp += rhs.pkt.tcp;
+        pkt.udp += rhs.pkt.udp;
+        pkt.ip_bytes += rhs.pkt.ip_bytes;
+        pkt.ip4_bytes += rhs.pkt.ip4_bytes;
+        pkt.ip6_bytes += rhs.pkt.ip6_bytes;
+        pkt.wire_bytes += rhs.pkt.wire_bytes;
+        pkt.discard_bytes += rhs.pkt.discard_bytes;
+        pcap_last.ps_recv += rhs.pcap_last.ps_recv;
+        pcap_last.ps_drop += rhs.pcap_last.ps_drop;
+        pcap_last.ps_ifdrop += rhs.pcap_last.ps_ifdrop;
         return *this;
+    }
+
+    inline void reset(void) {
+        memset(&pkt, 0, sizeof(struct pkt_t));
     }
 } nd_packet_stats;
 

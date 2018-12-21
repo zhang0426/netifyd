@@ -426,9 +426,9 @@ void ndDetectionThread::ProcessPacket(void)
 
     ts_pkt_last = ts_pkt;
 
-    stats->pkt_raw++;
-    if (pkt_header->len > stats->pkt_maxlen)
-        stats->pkt_maxlen = pkt_header->len;
+    stats->pkt.raw++;
+    if (pkt_header->len > stats->pkt.maxlen)
+        stats->pkt.maxlen = pkt_header->len;
 #if 0
     if (pkt_header->caplen < pkt_header->len) {
         // XXX: Warning: capture size less than packet size.
@@ -450,15 +450,15 @@ void ndDetectionThread::ProcessPacket(void)
         hdr_eth = reinterpret_cast<const struct ether_header *>(pkt_data);
         type = ntohs(hdr_eth->ether_type);
         l2_len = sizeof(struct ether_header);
-        stats->pkt_eth++;
+        stats->pkt.eth++;
 
         // STP?
         if ((hdr_eth->ether_shost[0] == 0x01 && hdr_eth->ether_shost[1] == 0x80 &&
             hdr_eth->ether_shost[2] == 0xC2) ||
             (hdr_eth->ether_dhost[0] == 0x01 && hdr_eth->ether_dhost[1] == 0x80 &&
             hdr_eth->ether_dhost[2] == 0xC2)) {
-            stats->pkt_discard++;
-            stats->pkt_discard_bytes += pkt_header->len;
+            stats->pkt.discard++;
+            stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: STP protocol.\n", tag.c_str());
 #endif
@@ -474,8 +474,8 @@ void ndDetectionThread::ProcessPacket(void)
         break;
 
     default:
-        stats->pkt_discard++;
-        stats->pkt_discard_bytes += pkt_header->len;
+        stats->pkt.discard++;
+        stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
         nd_debug_printf("%s: discard: Unsupported datalink type: 0x%x\n",
             tag.c_str(), (unsigned)pcap_datalink_type);
@@ -493,7 +493,7 @@ void ndDetectionThread::ProcessPacket(void)
             l2_len += VLAN_TAG_LEN;
         }
         else if (type == ETHERTYPE_MPLS_UC || type == ETHERTYPE_MPLS_MC) {
-            stats->pkt_mpls++;
+            stats->pkt.mpls++;
             union mpls {
                 uint32_t u32;
                 struct nd_mpls_header_t mpls;
@@ -508,14 +508,14 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
         else if (type == ETHERTYPE_PPPOE) {
-            stats->pkt_pppoe++;
+            stats->pkt.pppoe++;
             type = ETHERTYPE_IP;
             ppp_proto = (uint16_t)(
                 _ND_PPP_PROTOCOL(pkt_data + l2_len + 6)
             );
             if (ppp_proto != PPP_IP && ppp_proto != PPP_IPV6) {
-                stats->pkt_discard++;
-                stats->pkt_discard_bytes += pkt_header->len;
+                stats->pkt.discard++;
+                stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
                 nd_debug_printf("%s: discard: unsupported PPP protocol: 0x%04hx\n",
                     tag.c_str(), ppp_proto);
@@ -526,9 +526,9 @@ void ndDetectionThread::ProcessPacket(void)
             l2_len += 8;
         }
         else if (type == ETHERTYPE_PPPOEDISC) {
-            stats->pkt_pppoe++;
-            stats->pkt_discard++;
-            stats->pkt_discard_bytes += pkt_header->len;
+            stats->pkt.pppoe++;
+            stats->pkt.discard++;
+            stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: PPPoE discovery protocol.\n", tag.c_str());
 #endif
@@ -538,7 +538,7 @@ void ndDetectionThread::ProcessPacket(void)
             break;
     }
 
-    stats->pkt_vlan += vlan_packet;
+    stats->pkt.vlan += vlan_packet;
 
     hdr_ip = reinterpret_cast<const struct ip *>(&pkt_data[l2_len]);
     flow.ip_version = hdr_ip->ip_v;
@@ -554,8 +554,8 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (pkt_header->len - l2_len < sizeof(struct ip)) {
             // XXX: header too small
-            stats->pkt_discard++;
-            stats->pkt_discard_bytes += pkt_header->len;
+            stats->pkt.discard++;
+            stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: header too small\n", tag.c_str());
 #endif
@@ -564,9 +564,9 @@ void ndDetectionThread::ProcessPacket(void)
 
         if ((frag_off & 0x3FFF) != 0) {
             // XXX: fragmented packets are not supported
-            stats->pkt_frags++;
-            stats->pkt_discard++;
-            stats->pkt_discard_bytes += pkt_header->len;
+            stats->pkt.frags++;
+            stats->pkt.discard++;
+            stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: fragmented 0x3FFF\n", tag.c_str());
 #endif
@@ -575,9 +575,9 @@ void ndDetectionThread::ProcessPacket(void)
 
         if ((frag_off & 0x1FFF) != 0) {
             // XXX: fragmented packets are not supported
-            stats->pkt_frags++;
-            stats->pkt_discard++;
-            stats->pkt_discard_bytes += pkt_header->len;
+            stats->pkt.frags++;
+            stats->pkt.discard++;
+            stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: fragmented 0x1FFF\n", tag.c_str());
 #endif
@@ -585,8 +585,8 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         if (l3_len > (pkt_header->len - l2_len)) {
-            stats->pkt_discard++;
-            stats->pkt_discard_bytes += pkt_header->len;
+            stats->pkt.discard++;
+            stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: l3_len[%hu] > (pkt_header->len[%hu] - l2_len[%hu])(%hu)\n",
                 tag.c_str(), l3_len, pkt_header->len, l2_len, pkt_header->len - l2_len);
@@ -595,8 +595,8 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         if ((pkt_header->len - l2_len) < ntohs(hdr_ip->ip_len)) {
-            stats->pkt_discard++;
-            stats->pkt_discard_bytes += pkt_header->len;
+            stats->pkt.discard++;
+            stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: (pkt_header->len[%hu] - l2_len[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
                 tag.c_str(), pkt_header->len, l2_len, pkt_header->len - l2_len, ntohs(hdr_ip->ip_len));
@@ -668,8 +668,8 @@ void ndDetectionThread::ProcessPacket(void)
     }
     else {
         // XXX: Warning: unsupported IP protocol version (IPv4/6 only)
-        stats->pkt_discard++;
-        stats->pkt_discard_bytes += pkt_header->len;
+        stats->pkt.discard++;
+        stats->pkt.discard_bytes += pkt_header->len;
 #ifdef _ND_LOG_PKT_DISCARD
         nd_debug_printf("%s: discard: invalid IP protocol version: %hhx\n",
             tag.c_str(), pkt_data[l2_len]);
@@ -683,7 +683,7 @@ void ndDetectionThread::ProcessPacket(void)
     case IPPROTO_TCP:
         if (l4_len >= 20) {
             hdr_tcp = reinterpret_cast<const struct tcphdr *>(l4);
-            stats->pkt_tcp++;
+            stats->pkt.tcp++;
 
             if (addr_cmp < 0) {
                 flow.lower_port = hdr_tcp->th_sport;
@@ -712,7 +712,7 @@ void ndDetectionThread::ProcessPacket(void)
     case IPPROTO_UDP:
         if (l4_len >= 8) {
             hdr_udp = reinterpret_cast<const struct udphdr *>(l4);
-            stats->pkt_udp++;
+            stats->pkt.udp++;
 
             if (addr_cmp < 0) {
                 flow.lower_port = hdr_udp->uh_sport;
@@ -740,11 +740,11 @@ void ndDetectionThread::ProcessPacket(void)
 
     case IPPROTO_ICMP:
     case IPPROTO_ICMPV6:
-        stats->pkt_icmp++;
+        stats->pkt.icmp++;
         break;
 
     case IPPROTO_IGMP:
-        stats->pkt_igmp++;
+        stats->pkt.igmp++;
         break;
 
     default:
@@ -823,18 +823,18 @@ void ndDetectionThread::ProcessPacket(void)
             id_src = new_flow->id_dst, id_dst = new_flow->id_src;
     }
 
-    stats->pkt_wire_bytes += pkt_header->len + 24;
+    stats->pkt.wire_bytes += pkt_header->len + 24;
 
-    stats->pkt_ip++;
-    stats->pkt_ip_bytes += pkt_header->len;
+    stats->pkt.ip++;
+    stats->pkt.ip_bytes += pkt_header->len;
 
     if (new_flow->ip_version == 4) {
-        stats->pkt_ip4++;
-        stats->pkt_ip4_bytes += pkt_header->len;
+        stats->pkt.ip4++;
+        stats->pkt.ip4_bytes += pkt_header->len;
     }
     else {
-        stats->pkt_ip6++;
-        stats->pkt_ip6_bytes += pkt_header->len;
+        stats->pkt.ip6++;
+        stats->pkt.ip6_bytes += pkt_header->len;
     }
 
     new_flow->total_packets++;

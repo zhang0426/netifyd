@@ -32,12 +32,14 @@ typedef bool atomic_bool;
 #include <stdlib.h>
 #include <signal.h>
 #include <pthread.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 
 #include <json.h>
+#include <pcap/pcap.h>
 
 using namespace std;
 
