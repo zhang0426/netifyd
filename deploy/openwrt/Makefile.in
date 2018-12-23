@@ -1,12 +1,11 @@
-# Netify Agent
+#
 # Copyright (C) 2016-2018 eGloo, Incorporated
 #
-# This is free software, licensed under the GNU General Public License v3.
+# This is free software, licensed under the GNU General Public License v2.
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=@PACKAGE_TARNAME@
-PKG_VERSION:=@PACKAGE_VERSION@
 PKG_RELEASE:=1
 PKG_MAINTAINER:=Darryl Sokoloski <darryl@egloo.ca>
 PKG_LICENSE:=GPL-3.0+
@@ -14,8 +13,6 @@ PKG_LICENSE:=GPL-3.0+
 PKG_BUILD_PARALLEL:=1
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
-
-PKG_CONFIG_DEPENDS:=CONFIG_LIBCURL_ZLIB
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=@GIT_SOURCE_URL@
@@ -34,9 +31,11 @@ define Package/@PACKAGE_TARNAME@
 endef
 
 define Package/@PACKAGE_TARNAME@/description
-The [Netify Agent](https://www.netify.ai/) is a deep-packet inspection server.  The Agent is built on top of [nDPI](http://www.ntop.org/products/deep-packet-inspection/ndpi/) (formerly OpenDPI) to detect network protocols and applications.  These detections can be saved locally, served over a UNIX or TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party server.  Flow metadata, network statistics, and detection classifications are stored using JSON encoding.
-
-Optionally, the Netify Agent can be coupled with a [Netify Cloud](https://www.netify.ai/) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
+The Netify Agent is a deep-packet inspection server which detects network
+protocols and applications.  These detections can be saved locally, served over
+a UNIX or TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party
+server.  Flow metadata, network statistics, and detection classifications are
+JSON encoded for easy consumption by third-party applications.
 endef
 
 define Package/@PACKAGE_TARNAME@/conffiles
@@ -47,21 +46,19 @@ TARGET_CFLAGS += -ffunction-sections -fdata-sections
 TARGET_CXXFLAGS += -ffunction-sections -fdata-sections
 TARGET_LDFLAGS += -Wl,--gc-sections
 
-CONFIGURE_VARS += \
-	LIBCURL_CFLAGS="-I $(STAGING_DIR)/usr/include" \
-	LIBCURL_LDFLAGS="-L $(STAGING_DIR)/usr/lib" \
-	LIBMNL_CFLAGS="-I $(STAGING_DIR)/usr/include" \
-	LIBMNL_LDFLAGS="-L $(STAGING_DIR)/usr/lib" \
-	LIBNETFILTER_CONNTRACK_CFLAGS="-I $(STAGING_DIR)/usr/include" \
-	LIBNETFILTER_CONNTRACK_LDFLAGS="-L $(STAGING_DIR)/usr/lib"
-
 CONFIGURE_ARGS += \
 	--sharedstatedir=/var/lib \
+	--enable-lean-and-mean \
 	--disable-inotify \
 	--disable-ncurses \
 	--disable-libtcmalloc \
 	--without-systemdsystemunitdir \
-	--enable-lean-and-mean
+	--without-tmpfilesdir
+
+ifneq ($(CONFIG_LIBCURL_ZLIB),y)
+CONFIGURE_ARGS += \
+	--without-libcurl-zlib
+endif
 
 define Build/Configure
 	(cd $(PKG_BUILD_DIR); ./autogen.sh)

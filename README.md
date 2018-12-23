@@ -9,6 +9,11 @@ The [Netify Agent](https://www.netify.ai/) is a deep-packet inspection server.  
 
 Optionally, the Netify Agent can be coupled with a [Netify Cloud](https://www.netify.ai/) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
 
+Runtime Requirements
+--------------------
+
+Ensure that the nfnetlink and nf_conntrack_netlink kernel modules are loaded.
+
 Build Requirements
 ------------------
 
@@ -22,11 +27,6 @@ Netify requires the following third-party packages:
 
 Optional:
 - libtcmalloc (gperftools)
-
-Runtime Requirements
---------------------
-
-Ensure that the nfnetlink and nf_conntrack_netlink kernel modules are loaded.
 
 Download Source
 ---------------

@@ -157,11 +157,13 @@ ndSinkThread::ndSinkThread()
     curl_easy_setopt(ch, CURLOPT_XFERINFOFUNCTION, ndSinkThread_progress);
     curl_easy_setopt(ch, CURLOPT_XFERINFODATA, static_cast<void *>(this));
 #endif
+#ifdef _ND_WITH_LIBCURL_ZLIB
 #if (LIBCURL_VERSION_NUM < 0x072106)
     curl_easy_setopt(ch, CURLOPT_ENCODING, "gzip");
 #else
     curl_easy_setopt(ch, CURLOPT_ACCEPT_ENCODING, "gzip");
 #endif
+#endif // _ND_WITH_LIBCURL_ZLIB
     if (ND_DEBUG_UPLOAD) {
         curl_easy_setopt(ch, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(ch, CURLOPT_DEBUGFUNCTION, nd_curl_debug);

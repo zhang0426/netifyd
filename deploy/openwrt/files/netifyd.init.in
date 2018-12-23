@@ -1,8 +1,8 @@
 #!/bin/sh /etc/rc.common
-# Netify Agent
+#
 # Copyright (C) 2016-2018 eGloo, Incorporated
 #
-# This is free software, licensed under the GNU General Public License v3.
+# This is free software, licensed under the GNU General Public License v2.
 
 START=50
 STOP=50
@@ -14,12 +14,11 @@ NETIFYD_AUTODETECT=yes
 start_service() {
     mkdir -p /var/lib/@PACKAGE_TARNAME@
     mkdir -p /var/run/@PACKAGE_TARNAME@
-    if [ -f /usr/libexec/@PACKAGE_TARNAME@/functions.sh ]; then
-        source /usr/libexec/@PACKAGE_TARNAME@/functions.sh
-        NETIFYD_OPTS=$(auto_detect_options)
 
-        load_modules
-    fi
+    source /usr/libexec/@PACKAGE_TARNAME@/functions.sh
+    NETIFYD_OPTS=$(auto_detect_options)
+
+    load_modules
 
     procd_open_instance
     procd_set_param command $PROG -R $NETIFYD_OPTS

@@ -82,6 +82,14 @@ AS_IF([test "x$with_tmpfilesdir" = "xyes" -o "x$with_tmpfilesdir" = "xauto"], [
 AS_IF([test "x$with_tmpfilesdir" != "xno"],
       [AC_SUBST([tmpfilesdir], [$with_tmpfilesdir])])
 
+AC_ARG_WITH([libcurl-zlib],
+     [AS_HELP_STRING([--with-libcurl-zlib], [Enable if libcurl is GZIP capable])],,
+     [with_libcurl_zlib=yes])
+
+AS_IF([test "x$with_libcurl_zlib" != "xno"], [
+    AC_DEFINE([_ND_WITH_LIBCURL_ZLIB], [1], [Define if libcurl is GZIP capable.])
+])
+
 # Parameters: --enable/disable
 AC_ARG_ENABLE([conntrack],
     [AS_HELP_STRING([--enable-conntrack], [Enable connection tracking support [default=yes]])],
