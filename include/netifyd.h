@@ -85,7 +85,7 @@
 #define ND_JSON_FILE_NAME       ND_VOLATILE_STATEDIR "/netifyd.json"
 #endif
 #define ND_JSON_FILE_USER       "root"
-#define ND_JSON_FILE_GROUP      "webconfig"
+#define ND_JSON_FILE_GROUP      "root"
 #define ND_JSON_FILE_MODE       0640
 #define ND_JSON_FILE_RESPONSE   ND_VOLATILE_STATEDIR "/netifyd-response.json"
 #define ND_JSON_FILE_BAD_SEND   ND_VOLATILE_STATEDIR "/netifyd-bad-send.json"
