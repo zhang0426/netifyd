@@ -593,8 +593,10 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
             }
 #endif
             if (memcmp(sa_orig_src, sa_repl_dst, sizeof(struct sockaddr_in)) ||
-                memcmp(sa_orig_dst, sa_repl_src, sizeof(struct sockaddr_in)))
+                memcmp(sa_orig_dst, sa_repl_src, sizeof(struct sockaddr_in))) {
                 flow->ip_nat = true;
+                ct_flow->updated_at = time(NULL);
+            }
 
             break;
 
@@ -615,8 +617,10 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
             }
 #endif
             if (memcmp(sa6_orig_src, sa6_repl_dst, sizeof(struct sockaddr_in6)) ||
-                memcmp(sa6_orig_dst, sa6_repl_src, sizeof(struct sockaddr_in6)))
+                memcmp(sa6_orig_dst, sa6_repl_src, sizeof(struct sockaddr_in6))) {
                 flow->ip_nat = true;
+                ct_flow->updated_at = time(NULL);
+            }
 
             break;
         }
@@ -656,10 +660,8 @@ void ndConntrackThread::DumpStats(void)
 #endif
 
 ndConntrackFlow::ndConntrackFlow(uint32_t id, struct nf_conntrack *ct)
-    : id(id), created_at(0), l3_proto(0), l4_proto(0)
+    : id(id), updated_at(0), l3_proto(0), l4_proto(0)
 {
-    created_at = time(NULL);
-
     orig_port[ndCT_DIR_SRC] = 0;
     orig_port[ndCT_DIR_DST] = 0;
     repl_port[ndCT_DIR_SRC] = 0;
@@ -670,6 +672,8 @@ ndConntrackFlow::ndConntrackFlow(uint32_t id, struct nf_conntrack *ct)
 
 void ndConntrackFlow::Update(struct nf_conntrack *ct)
 {
+    updated_at = time(NULL);
+
     orig_addr_valid[ndCT_DIR_SRC] = false;
     orig_addr_valid[ndCT_DIR_DST] = false;
     repl_addr_valid[ndCT_DIR_SRC] = false;

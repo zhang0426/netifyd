@@ -18,7 +18,7 @@
 #define _ND_CONNTRACK_H
 
 #ifndef _ND_CT_FLOW_TTL
-#define _ND_CT_FLOW_TTL     30
+#define _ND_CT_FLOW_TTL     900
 #endif
 
 class ndConntrackThreadException : public runtime_error
@@ -60,7 +60,7 @@ public:
 
     inline bool HasExpired(void)
     {
-        return (created_at + _ND_CT_FLOW_TTL <= time(NULL)) ? true : false;
+        return (updated_at + _ND_CT_FLOW_TTL <= time(NULL)) ? true : false;
     }
 
 protected:
@@ -70,7 +70,7 @@ protected:
     void Hash(void);
 
     uint32_t id;
-    time_t created_at;
+    time_t updated_at;
     string digest;
     sa_family_t l3_proto;
     uint8_t l4_proto;
