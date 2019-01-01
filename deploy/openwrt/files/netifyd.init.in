@@ -12,10 +12,10 @@ PROG=/usr/sbin/@PACKAGE_TARNAME@
 NETIFYD_AUTODETECT=yes
 
 start_service() {
-    mkdir -p /var/lib/@PACKAGE_TARNAME@
+    mkdir -p /etc/netify.d
     mkdir -p /var/run/@PACKAGE_TARNAME@
 
-    source /usr/libexec/@PACKAGE_TARNAME@/functions.sh
+    source /usr/share/@PACKAGE_TARNAME@/functions.sh
     NETIFYD_OPTS=$(auto_detect_options)
 
     load_modules
