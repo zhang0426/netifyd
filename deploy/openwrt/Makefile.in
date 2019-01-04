@@ -28,7 +28,11 @@ define Package/@PACKAGE_TARNAME@
   CATEGORY:=Network
   TITLE:=Netify Agent
   URL:=http://www.netify.ai/
-  DEPENDS:=+libcurl +libmnl +libnetfilter-conntrack +libjson-c +libpcap +zlib +libpthread +libstdcpp
+  DEPENDS:=+libcurl +libmnl +libnetfilter-conntrack +libjson-c +libpcap +zlib +libpthread
+  # Explicitly depend on libstdcpp rather than $(CXX_DEPENDS).  At the moment
+  # std::unordered_map is only available via libstdcpp which is required for
+  # performance reasons.
+  DEPENDS+=+libstdcpp
 endef
 
 define Package/@PACKAGE_TARNAME@/description
@@ -43,21 +47,25 @@ define Package/@PACKAGE_TARNAME@/conffiles
 /etc/@PACKAGE_TARNAME@.conf
 endef
 
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
-TARGET_CXXFLAGS += -ffunction-sections -fdata-sections
-TARGET_LDFLAGS += -Wl,--gc-sections
+TARGET_CFLAGS+=-ffunction-sections -fdata-sections
+TARGET_CXXFLAGS+=-ffunction-sections -fdata-sections
+TARGET_LDFLAGS+=-Wl,--gc-sections
 
-CONFIGURE_ARGS += \
+CONFIGURE_ARGS+= \
 	--sharedstatedir=/var/lib \
 	--enable-lean-and-mean \
-	--disable-inotify \
 	--disable-ncurses \
 	--disable-libtcmalloc \
 	--without-systemdsystemunitdir \
 	--without-tmpfilesdir
 
+# Disable configuration file-watch support (deprecated feature).
+# Not to be confused with kernel/system-level inotify support.
+CONFIGURE_ARGS+= \
+	--disable-inotify
+
 ifneq ($(CONFIG_LIBCURL_ZLIB),y)
-CONFIGURE_ARGS += \
+CONFIGURE_ARGS+= \
 	--without-libcurl-zlib
 endif
 
