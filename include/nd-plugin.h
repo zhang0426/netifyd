@@ -1,5 +1,5 @@
 // Netify Agent
-// Copyright (C) 2015-2018 eGloo Incorporated <http://www.egloo.ca>
+// Copyright (C) 2015-2019 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 #ifndef _ND_PLUGIN_H
 #define _ND_PLUGIN_H
 
-#define _ND_PLUGIN_VER  0x20180813
+#define _ND_PLUGIN_VER  0x20190813
 
 #define StartDetectionThreads() kill(getpid(), SIGUSR1)
 #define StopDetectionThreads()  kill(getpid(), SIGUSR2)
