@@ -17,10 +17,10 @@
 #ifndef _ND_PLUGIN_H
 #define _ND_PLUGIN_H
 
-#define _ND_PLUGIN_VER  0x20190813
+#define _ND_PLUGIN_VER  0x20180813
 
-#define StartDetectionThreads() kill(getpid(), SIGUSR1)
-#define StopDetectionThreads()  kill(getpid(), SIGUSR2)
+#define ndStartDetectionThreads() kill(getpid(), SIGUSR1)
+#define ndStopDetectionThreads()  kill(getpid(), SIGUSR2)
 
 #define ndPluginInit(class_name) \
     extern "C" { \
@@ -139,6 +139,7 @@ protected:
     void *so_handle;
     ndPlugin *plugin;
 };
+
 #endif // _ND_INTERNAL
 
 #endif // _ND_PLUGIN_H
