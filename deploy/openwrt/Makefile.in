@@ -52,7 +52,7 @@ TARGET_CXXFLAGS+=-ffunction-sections -fdata-sections
 TARGET_LDFLAGS+=-Wl,--gc-sections
 
 CONFIGURE_ARGS+= \
-	--sharedstatedir=/var/lib \
+	--sharedstatedir=/var/run \
 	--enable-lean-and-mean \
 	--disable-ncurses \
 	--disable-libtcmalloc \
