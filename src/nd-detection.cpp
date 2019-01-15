@@ -106,8 +106,16 @@ typedef bool atomic_bool;
 
 #include <json.h>
 #include <pcap/pcap.h>
+#ifdef HAVE_PCAP_SLL_H
 #include <pcap/sll.h>
+#else
+#include "pcap-compat/sll.h"
+#endif
+#ifdef HAVE_PCAP_VLAN_H
 #include <pcap/vlan.h>
+#else
+#include "pcap-compat/vlan.h"
+#endif
 
 #ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
@@ -946,8 +954,8 @@ void ndDetectionThread::ProcessPacket(void)
                 // First try the lower address, if not found in cache...
                 // ...try the upper address.
                 if (new_flow->ip_version == 4) {
-                    if (! dns_cache->lookup(new_flow->lower_addr, hostname))
-                        dns_cache->lookup(new_flow->upper_addr, hostname);
+                    if (! dns_cache->lookup(new_flow->lower_addr4, hostname))
+                        dns_cache->lookup(new_flow->upper_addr4, hostname);
                 }
                 else {
                     if (! dns_cache->lookup(new_flow->lower_addr6, hostname))

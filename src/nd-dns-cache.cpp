@@ -42,6 +42,9 @@ typedef bool atomic_bool;
 
 #include <arpa/inet.h>
 
+#define __FAVOR_BSD 1
+#include <netinet/in.h>
+
 #include <json.h>
 #include <pcap/pcap.h>
 
