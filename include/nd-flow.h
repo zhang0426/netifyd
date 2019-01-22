@@ -57,6 +57,7 @@ struct ndFlow
 
     uint16_t vlan_id;
     uint64_t ts_first_seen;
+    uint64_t ts_first_update;
     uint64_t ts_last_seen;
 #ifdef _ND_USE_NETLINK
     ndNetlinkAddressType lower_type;
@@ -175,6 +176,8 @@ struct ndFlow
     void push(const struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data);
 
     int dump(pcap_t *pcap, const uint8_t *digest);
+
+    void reset(void);
 
     void release(void);
 

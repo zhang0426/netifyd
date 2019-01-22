@@ -160,6 +160,13 @@ int ndFlow::dump(pcap_t *pcap, const uint8_t *digest)
     return 0;
 }
 
+void ndFlow::reset(void)
+{
+    ts_first_update = 0;
+    lower_bytes = upper_bytes = 0;
+    lower_packets = upper_packets = 0;
+}
+
 void ndFlow::release(void)
 {
     if (ndpi_flow != NULL) { ndpi_free_flow(ndpi_flow); ndpi_flow = NULL; }
@@ -743,6 +750,7 @@ json_object *ndFlow::json_encode(const string &device,
     }
 
     json.AddObject(json_flow, "first_seen_at", ts_first_seen);
+    json.AddObject(json_flow, "first_update_at", ts_first_update);
     json.AddObject(json_flow, "last_seen_at", ts_last_seen);
 
     return json_flow;

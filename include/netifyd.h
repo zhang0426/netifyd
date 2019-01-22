@@ -80,7 +80,7 @@
 #define ND_PID_FILE_NAME        ND_VOLATILE_STATEDIR "/netifyd.pid"
 #endif
 
-#define ND_JSON_VERSION         1.7     // JSON format version
+#define ND_JSON_VERSION         1.8     // JSON format version
 #ifndef ND_JSON_FILE_NAME
 #define ND_JSON_FILE_NAME       ND_VOLATILE_STATEDIR "/netifyd.json"
 #endif

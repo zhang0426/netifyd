@@ -1015,16 +1015,13 @@ static void nd_json_add_flows(
     for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
 
-        if (i->second->detection_complete == false)
-            continue;
-        if (i->second->lower_packets == 0 && i->second->upper_packets == 0)
+        if (i->second->detection_complete == false || ! i->second->ts_first_update)
             continue;
 
         json_object *json_flow = i->second->json_encode(device, json, ndpi);
         json.PushObject(NULL, json_flow);
 
-        i->second->lower_bytes = i->second->upper_bytes = 0;
-        i->second->lower_packets = i->second->upper_packets = 0;
+        i->second->reset();
     }
 }
 
