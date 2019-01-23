@@ -394,7 +394,7 @@ static int nd_config_load(void)
 static int nd_config_set_option(int option)
 {
     ostringstream os;
-    os << "sh -c \"source " << ND_DATADIR << "/functions.sh && config_";
+    os << "sh -c \". " << ND_DATADIR << "/functions.sh && config_";
 
     switch (option) {
     case _ND_LO_ENABLE_SINK:

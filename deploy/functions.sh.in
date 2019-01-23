@@ -5,12 +5,12 @@
 
 NETIFYD_CONF="@sysconfdir@/netifyd.conf"
 
-[ -f @sysconfdir@/conf.d/@PACKAGE_TARNAME@ ] && source @sysconfdir@/conf.d/@PACKAGE_TARNAME@
-[ -f @sysconfdir@/default/@PACKAGE_TARNAME@ ] && source @sysconfdir@/default/@PACKAGE_TARNAME@
-[ -f @sysconfdir@/sysconfig/@PACKAGE_TARNAME@ ] && source @sysconfdir@/sysconfig/@PACKAGE_TARNAME@
+[ -f @sysconfdir@/conf.d/@PACKAGE_TARNAME@ ] && . @sysconfdir@/conf.d/@PACKAGE_TARNAME@
+[ -f @sysconfdir@/default/@PACKAGE_TARNAME@ ] && . @sysconfdir@/default/@PACKAGE_TARNAME@
+[ -f @sysconfdir@/sysconfig/@PACKAGE_TARNAME@ ] && . @sysconfdir@/sysconfig/@PACKAGE_TARNAME@
 
 # Load defaults for RedHat/CentOS/Ubuntu/Debian
-function load_defaults
+load_defaults()
 {
     local options=""
 
@@ -51,11 +51,11 @@ function load_defaults
 }
 
 # ClearOS: Dynamically add all configured LAN/WAN interfaces.
-function load_clearos
+load_clearos()
 {
     local options=""
 
-    [ -f @sysconfdir@/clearos/network.conf ] && source @sysconfdir@/clearos/network.conf
+    [ -f @sysconfdir@/clearos/network.conf ] && . @sysconfdir@/clearos/network.conf
 
     for ifn in $LANIF; do
         [ -z "$ifn" ] && break
@@ -70,7 +70,7 @@ function load_clearos
     for ifn in $EXTIF; do
         [ -z "$ifn" ] && break
         [ -f "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}" ] &&
-            source "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}"
+            . "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}"
         if [ ! -z "$ETH" ]; then
             options="$options -E $ETH -N $ifn"
             unset ETH
@@ -86,7 +86,7 @@ function load_clearos
 }
 
 # NethServer: Dynamically add all configured LAN/WAN interfaces.
-function load_nethserver
+load_nethserver()
 {
     local options=""
     local ifcfg_sw="@sysconfdir@/shorewall/interfaces"
@@ -110,7 +110,7 @@ function load_nethserver
         for ifn in "$(grep '^net[[:space:]]' $ifcfg_sw | awk '{ print $2 }')"; do
             [ -z "$ifn" ] && break
             [ -f "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}" ] &&
-                source "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}"
+                . "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}"
             if [ ! -z "$ETH" ]; then
                 options="$options -E $ETH -N $ifn"
                 unset ETH
@@ -127,7 +127,7 @@ function load_nethserver
 }
 
 # OpenWrt: Dynamically add all configured LAN/WAN interfaces.
-function load_openwrt
+load_openwrt()
 {
     local options="-I br-lan"
 
@@ -140,13 +140,13 @@ function load_openwrt
     echo "$options"
 }
 
-function load_modules
+load_modules()
 {
     /sbin/modprobe -q nfnetlink
     /sbin/modprobe -q nf_conntrack_netlink
 }
 
-function detect_os
+detect_os()
 {
     if [ -f @sysconfdir@/clearos-release ]; then
         echo "clearos"
@@ -161,7 +161,7 @@ function detect_os
     fi
 }
 
-function auto_detect_options
+auto_detect_options()
 {
     local options=""
 
@@ -184,12 +184,12 @@ function auto_detect_options
     echo "$options"
 }
 
-function restart_netifyd
+restart_netifyd()
 {
     @sysconfdir@/init.d/@PACKAGE_TARNAME@ restart
 }
 
-function config_enable_sink
+config_enable_sink()
 {
     if egrep -i -q '^enable_sink = (no|0|false)' $NETIFYD_CONF; then
         sed -i -e 's/^enable_sink.*/enable_sink = yes/' $NETIFYD_CONF
@@ -197,7 +197,7 @@ function config_enable_sink
     fi
 }
 
-function config_disable_sink
+config_disable_sink()
 {
     if egrep -i -q '^enable_sink = (yes|1|true)' $NETIFYD_CONF; then
         sed -i -e 's/^enable_sink.*/enable_sink = no/' $NETIFYD_CONF
