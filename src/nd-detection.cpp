@@ -342,6 +342,29 @@ pcap_t *ndDetectionThread::OpenCapture(void)
         pcap_new = pcap_open_live(tag.c_str(),
             pcap_snaplen, 1, ND_PCAP_READ_TIMEOUT, pcap_errbuf
         );
+#if 0
+        if (pcap_new != NULL) {
+            bool adapter = false;
+            int *pcap_tstamp_types, count;
+            if ((count = pcap_list_tstamp_types(pcap_new, &pcap_tstamp_types)) > 0) {
+                for (int i = 0; i < count; i++) {
+                    nd_debug_printf("%s: tstamp_type: %s\n", tag.c_str(),
+                        pcap_tstamp_type_val_to_name(pcap_tstamp_types[i]));
+                    if (pcap_tstamp_types[i] == PCAP_TSTAMP_ADAPTER)
+                        adapter = true;
+                }
+
+                pcap_free_tstamp_types(pcap_tstamp_types);
+
+                //if (adapter) {
+                //    if (pcap_set_tstamp_type(pcap_new, PCAP_TSTAMP_ADAPTER) != 0) {
+                //        nd_printf("%s: Failed to set timestamp type: %s\n", tag.c_str(),
+                //            pcap_geterr(pcap_new));
+                //    }
+                //}
+            }
+        }
+#endif
     }
 
     if (pcap_new == NULL)
@@ -761,14 +784,32 @@ void ndDetectionThread::ProcessPacket(void)
         break;
     }
 
+    ndFlow *new_flow;
+    nd_flow_insert flow_iter;
+
     flow.hash(tag, digest);
+    flow_iter.first = flows->find(digest);
 
-    ndFlow *new_flow = new ndFlow(flow);
-    if (new_flow == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
+    if (flow_iter.first != flows->end()) {
+        // Flow exists in map.
+        new_flow = flow_iter.first->second;
 
-    nd_flow_insert flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
+        if (flow == *new_flow)
+            id_src = new_flow->id_src, id_dst = new_flow->id_dst;
+        else
+            id_src = new_flow->id_dst, id_dst = new_flow->id_src;
+    }
+    else {
+        new_flow = new ndFlow(flow);
+        if (new_flow == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
 
-    if (flow_iter.second) {
+        flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
+
+        if (! flow_iter.second) {
+            // Flow exists in map!  Impossible!
+            throw ndDetectionThreadException(strerror(EINVAL));
+        }
+
         // New flow inserted, initialize...
 
         new_flow->ts_first_seen = ts_pkt;
@@ -818,17 +859,6 @@ void ndDetectionThread::ProcessPacket(void)
                 }
             }
         }
-    }
-    else {
-        // Flow exists in map.
-
-        delete new_flow;
-        new_flow = flow_iter.first->second;
-
-        if (flow == *new_flow)
-            id_src = new_flow->id_src, id_dst = new_flow->id_dst;
-        else
-            id_src = new_flow->id_dst, id_dst = new_flow->id_src;
     }
 
     stats->pkt.wire_bytes += pkt_header->len + 24;
