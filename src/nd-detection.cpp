@@ -411,6 +411,9 @@ int ndDetectionThread::GetCaptureStats(struct pcap_stat &stats)
 
 void ndDetectionThread::ProcessPacket(void)
 {
+    ndFlow *new_flow;
+    nd_flow_insert flow_iter;
+
     const struct ether_header *hdr_eth = NULL;
     const struct sll_header *hdr_sll = NULL;
     const struct ip *hdr_ip = NULL;
@@ -783,9 +786,6 @@ void ndDetectionThread::ProcessPacket(void)
         //nd_debug_printf("%s: non TCP/UDP protocol: %d\n", tag.c_str(), flow.ip_protocol);
         break;
     }
-
-    ndFlow *new_flow;
-    nd_flow_insert flow_iter;
 
     flow.hash(tag, digest);
     flow_iter.first = flows->find(digest);
