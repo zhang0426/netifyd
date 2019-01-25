@@ -191,6 +191,7 @@ uint16_t ndFlow::master_protocol(void)
 
     switch (proto) {
     case NDPI_PROTOCOL_GMAIL:
+    case NDPI_PROTOCOL_HTTPS:
     case NDPI_PROTOCOL_MAIL_IMAP:
     case NDPI_PROTOCOL_MAIL_IMAPS:
     case NDPI_PROTOCOL_MAIL_POPS:
