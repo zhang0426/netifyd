@@ -684,7 +684,7 @@ void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
 {
     ndSocketBufferMap::iterator bi;
 
-    nd_printf("%s\n", __PRETTY_FUNCTION__);
+    nd_debug_printf("%s\n", __PRETTY_FUNCTION__);
 
     delete ci->second;
     bi = buffers.find(ci->first);
