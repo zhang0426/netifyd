@@ -20,3 +20,6 @@
 [submodule "libs/json"]
 	path = libs/json
 	url = https://github.com/nlohmann/json.git
+[submodule "src/nd-plugin-example"]
+	path = src/nd-plugin-example
+	url = git@gitlab.com:netify.ai/public/netify-agent-plugin-example.git
