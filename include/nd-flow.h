@@ -54,6 +54,7 @@ struct ndFlow
     uint8_t ip_version;
     uint8_t ip_protocol;
     bool ip_nat;
+    bool tcp_fin;
 
     uint16_t vlan_id;
     uint64_t ts_first_seen;

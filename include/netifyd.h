@@ -53,6 +53,7 @@
 #define ND_DETECTION_TICKS      1000    // Ticks-per-second (1000 = milliseconds)
 #define ND_IDLE_SCAN_TIME       10      // Idle flow scan in milliseconds
 #define ND_IDLE_FLOW_TIME       30000   // Purge idle flows older than this (30s)
+#define ND_IDLE_FLOW_TCP_FACTOR 10      // Multiplication factor for TCP flows
 #define ND_IDLE_DNS_CACHE_TTL  (60 * 30)// Purge TTL for idle DNS cache entries.
 #define ND_HASH_BUCKETS_FLOWS   1613    // Initial flows map bucket count.
 #define ND_HASH_BUCKETS_DNSARS  1613    // DNS cache address record hash buckets.

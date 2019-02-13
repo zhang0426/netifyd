@@ -890,6 +890,10 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->upper_bytes += pkt_header->len;
     }
 
+    if (new_flow->ip_protocol == IPPROTO_TCP &&
+        (hdr_tcp->th_flags & TH_FIN || hdr_tcp->th_flags & TH_RST))
+        new_flow->tcp_fin = true;
+
     if (new_flow->detection_complete) return;
 
     if (capture_unknown_flows) new_flow->push(pkt_header, pkt_data);
@@ -1300,7 +1304,10 @@ void ndDetectionThread::ProcessPacket(void)
         uint64_t purged = 0;
         nd_flow_map::iterator i = flows->begin();
         while (i != flows->end()) {
-            if (i->second->ts_last_seen + ND_IDLE_FLOW_TIME < ts_pkt_last) {
+            unsigned ttl = (i->second->ip_protocol == IPPROTO_TCP) ?
+                ND_IDLE_FLOW_TIME * ND_IDLE_FLOW_TCP_FACTOR : ND_IDLE_FLOW_TIME;
+            if (i->second->ts_last_seen + ttl < ts_pkt_last ||
+                (i->second->ip_protocol == IPPROTO_TCP && i->second->tcp_fin)) {
 
                 i->second->release();
                 delete i->second;
