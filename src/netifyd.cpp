@@ -289,9 +289,9 @@ static int nd_config_load(void)
     nd_config.max_udp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_udp_pkts", ND_MAX_UDP_PKTS);
 
-    nd_config.ttl_idle_flow = 10000 * (unsigned)reader.GetInteger(
+    nd_config.ttl_idle_flow = 1000 * (unsigned)reader.GetInteger(
         "netifyd", "ttl_idle_flow", ND_TTL_IDLE_FLOW);
-    nd_config.ttl_idle_tcp_flow = 10000 * (unsigned)reader.GetInteger(
+    nd_config.ttl_idle_tcp_flow = 1000 * (unsigned)reader.GetInteger(
         "netifyd", "ttl_idle_tcp_flow", ND_TTL_IDLE_TCP_FLOW);
 
     ND_GF_SET_FLAG(ndGF_CAPTURE_UNKNOWN_FLOWS,
