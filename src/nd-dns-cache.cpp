@@ -72,11 +72,11 @@ void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hos
 
     pthread_mutex_lock(&lock);
 
-    nd_dns_tuple ar(time_t(time(NULL) + nd_config.dns_cache_ttl), hostname);
+    nd_dns_tuple ar(time_t(time(NULL) + nd_config.ttl_dns_entry), hostname);
     nd_dns_cache_insert i = map_ar.insert(nd_dns_cache_insert_pair(digest, ar));
 
     if (! i.second)
-        i.first->second.first = time(NULL) + nd_config.dns_cache_ttl;
+        i.first->second.first = time(NULL) + nd_config.ttl_dns_entry;
 
     pthread_mutex_unlock(&lock);
 }
@@ -99,7 +99,7 @@ void nd_dns_cache::insert(const string &digest, const string &hostname)
 
     if (_digest.size() != SHA1_DIGEST_LENGTH) return;
 
-    nd_dns_tuple ar(time_t(time(NULL) + nd_config.dns_cache_ttl), hostname);
+    nd_dns_tuple ar(time_t(time(NULL) + nd_config.ttl_dns_entry), hostname);
     map_ar.insert(nd_dns_cache_insert_pair(_digest, ar));
 }
 
@@ -139,7 +139,7 @@ bool nd_dns_cache::lookup(const string &digest, string &hostname)
     if (i != map_ar.end()) {
         found = true;
         hostname = i->second.second;
-        i->second.first = time(NULL) + nd_config.dns_cache_ttl;
+        i->second.first = time(NULL) + nd_config.ttl_dns_entry;
     }
 
     pthread_mutex_unlock(&lock);

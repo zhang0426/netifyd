@@ -51,10 +51,10 @@
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
 #define ND_MAX_BACKLOG_KB       2048    // Maximum upload queue size in kB
 #define ND_DETECTION_TICKS      1000    // Ticks-per-second (1000 = milliseconds)
-#define ND_IDLE_SCAN_TIME       10      // Idle flow scan in milliseconds
-#define ND_IDLE_FLOW_TIME       30000   // Purge idle flows older than this (30s)
-#define ND_IDLE_FLOW_TCP_FACTOR 10      // Multiplication factor for TCP flows
-#define ND_IDLE_DNS_CACHE_TTL  (60 * 30)// Purge TTL for idle DNS cache entries.
+#define ND_TTL_IDLE_SCAN        10      // Idle flow scan in milliseconds
+#define ND_TTL_IDLE_FLOW        30      // Purge idle flows older than this (30s)
+#define ND_TTL_IDLE_TCP_FLOW    300     // Purge idle TCP flows older than this (5m)
+#define ND_TTL_IDLE_DNS_ENTRY  (60 * 30)// Purge TTL for idle DNS cache entries.
 #define ND_HASH_BUCKETS_FLOWS   1613    // Initial flows map bucket count.
 #define ND_HASH_BUCKETS_DNSARS  1613    // DNS cache address record hash buckets.
 
@@ -214,9 +214,11 @@ typedef struct nd_global_config_t {
     uint8_t digest_sink_config[SHA1_DIGEST_LENGTH];
     unsigned max_tcp_pkts;
     unsigned max_udp_pkts;
+    unsigned ttl_dns_entry;
+    unsigned ttl_idle_flow;
+    unsigned ttl_idle_tcp_flow;
     unsigned update_interval;
     unsigned upload_timeout;
-    unsigned dns_cache_ttl;
     FILE *h_flow;
 
     vector<pair<string, string> > socket_host;

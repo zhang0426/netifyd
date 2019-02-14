@@ -189,9 +189,12 @@ static void nd_config_init(void)
 
     nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
     nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
+    nd_config.ttl_dns_entry = ND_TTL_IDLE_DNS_ENTRY;
+    nd_config.ttl_idle_flow = ND_TTL_IDLE_FLOW * 1000;
+    nd_config.ttl_idle_tcp_flow = ND_TTL_IDLE_TCP_FLOW * 1000;
+    nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
     nd_config.update_interval = ND_STATS_INTERVAL;
     nd_config.upload_timeout = ND_UPLOAD_TIMEOUT;
-    nd_config.dns_cache_ttl = ND_IDLE_DNS_CACHE_TTL;
 
     memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
 }
@@ -286,6 +289,11 @@ static int nd_config_load(void)
     nd_config.max_udp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_udp_pkts", ND_MAX_UDP_PKTS);
 
+    nd_config.ttl_idle_flow = 10000 * (unsigned)reader.GetInteger(
+        "netifyd", "ttl_idle_flow", ND_TTL_IDLE_FLOW);
+    nd_config.ttl_idle_tcp_flow = 10000 * (unsigned)reader.GetInteger(
+        "netifyd", "ttl_idle_tcp_flow", ND_TTL_IDLE_TCP_FLOW);
+
     ND_GF_SET_FLAG(ndGF_CAPTURE_UNKNOWN_FLOWS,
         reader.GetBoolean("netifyd", "capture_unknown_flows", false));
 
@@ -296,8 +304,8 @@ static int nd_config_load(void)
     ND_GF_SET_FLAG(ndGF_DNS_CACHE_SAVE,
         reader.GetBoolean("dns_cache", "save", true));
 
-    nd_config.dns_cache_ttl = (unsigned)reader.GetInteger(
-        "dns_cache", "cache_ttl", ND_IDLE_DNS_CACHE_TTL);
+    nd_config.ttl_dns_entry = (unsigned)reader.GetInteger(
+        "dns_cache", "cache_ttl", ND_TTL_IDLE_DNS_ENTRY);
 
     // Socket section
     for (int i = 0; ; i++) {
