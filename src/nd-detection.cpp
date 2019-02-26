@@ -877,9 +877,6 @@ void ndDetectionThread::ProcessPacket(void)
 
     new_flow->total_packets++;
     new_flow->total_bytes += pkt_header->len;
-    new_flow->ts_last_seen = ts_pkt;
-    if (! new_flow->ts_first_update)
-        new_flow->ts_first_update = ts_pkt;
 
     if (addr_cmp < 0) {
         new_flow->lower_packets++;
@@ -889,6 +886,10 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->upper_packets++;
         new_flow->upper_bytes += pkt_header->len;
     }
+
+    new_flow->ts_last_seen = ts_pkt;
+    if (! new_flow->ts_first_update)
+        new_flow->ts_first_update = ts_pkt;
 
     if (new_flow->ip_protocol == IPPROTO_TCP &&
         (hdr_tcp->th_flags & TH_FIN || hdr_tcp->th_flags & TH_RST))
