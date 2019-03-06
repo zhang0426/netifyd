@@ -514,7 +514,9 @@ json_object *ndFlow::json_encode(const string &device,
     // Spend some time to figure out if there are any
     // possible over-matches for different methods of
     // deployment (gateway/port mirror modes).
-    else if (lower_type == ndNETLINK_ATYPE_PRIVATE &&
+#endif
+    else if (ip_version != 6 &&
+        lower_type == ndNETLINK_ATYPE_PRIVATE &&
         upper_type == ndNETLINK_ATYPE_PRIVATE) {
         other_type = "local";
         _lower_mac = "local_mac";
@@ -528,7 +530,6 @@ json_object *ndFlow::json_encode(const string &device,
         _upper_bytes = "other_bytes";
         _upper_packets = "other_packets";
     }
-#endif
     else if (lower_type == ndNETLINK_ATYPE_PRIVATE &&
         upper_type == ndNETLINK_ATYPE_LOCALIP) {
         other_type = "remote";
