@@ -6,6 +6,7 @@
 [Unit]
 Description=@PACKAGE_NAME@
 After=syslog.target network-online.target
+Documentation=man:netifyd(8) man:netifyd.conf(5)
 
 [Service]
 Type=forking
