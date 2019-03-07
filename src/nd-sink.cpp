@@ -142,7 +142,8 @@ ndSinkThread::ndSinkThread()
     curl_easy_setopt(ch, CURLOPT_POST, 1L);
     curl_easy_setopt(ch, CURLOPT_POSTREDIR, 3L);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)nd_config.upload_timeout);
+    curl_easy_setopt(ch, CURLOPT_CONNECTTIMEOUT, (long)nd_config.sink_connect_timeout);
+    curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)nd_config.sink_xfer_timeout);
     curl_easy_setopt(ch, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (ND_DEBUG_UPLOAD) ? ND_COOKIE_JAR : "");
 

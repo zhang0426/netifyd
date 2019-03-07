@@ -96,12 +96,14 @@
 #define ND_PCAP_SNAPLEN         1536    // Capture snap length
 #define ND_PCAP_READ_TIMEOUT    500     // Milliseconds
 
-#ifndef ND_URL_UPLOAD
-#define ND_URL_UPLOAD           "https://sink.netify.ai/v2/"
+#ifndef ND_URL_SINK
+#define ND_URL_SINK             "https://sink.netify.ai/v2/"
 #endif
 
 #define ND_COOKIE_JAR           ND_VOLATILE_STATEDIR "/netifyd.cookies"
-#define ND_UPLOAD_TIMEOUT       300     // Default 5-minute upload timeout
+
+#define ND_SINK_CONNECT_TIMEOUT 30      // Default 30-second connection timeout
+#define ND_SINK_XFER_TIMEOUT    300     // Default 5-minute upload timeout
 
 #define ND_AGENT_UUID_PATH      ND_PERSISTENT_STATEDIR "/agent.uuid"
 #define ND_AGENT_UUID_NULL      "00-00-00-00"
@@ -218,7 +220,8 @@ typedef struct nd_global_config_t {
     unsigned ttl_idle_flow;
     unsigned ttl_idle_tcp_flow;
     unsigned update_interval;
-    unsigned upload_timeout;
+    unsigned sink_connect_timeout;
+    unsigned sink_xfer_timeout;
     FILE *h_flow;
 
     vector<pair<string, string> > socket_host;

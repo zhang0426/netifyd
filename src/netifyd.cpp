@@ -194,7 +194,8 @@ static void nd_config_init(void)
     nd_config.ttl_idle_tcp_flow = ND_TTL_IDLE_TCP_FLOW * 1000;
     nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
     nd_config.update_interval = ND_STATS_INTERVAL;
-    nd_config.upload_timeout = ND_UPLOAD_TIMEOUT;
+    nd_config.sink_connect_timeout = ND_SINK_CONNECT_TIMEOUT;
+    nd_config.sink_xfer_timeout = ND_SINK_XFER_TIMEOUT;
 
     memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
 }
@@ -254,14 +255,16 @@ static int nd_config_load(void)
     }
 
     string url_upload = reader.Get(
-        "netifyd", "url_upload", ND_URL_UPLOAD);
+        "netifyd", "url_upload", ND_URL_SINK);
     nd_config.url_upload = strdup(url_upload.c_str());
 
     nd_config.update_interval = (unsigned)reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);
 
-    nd_config.upload_timeout = (unsigned)reader.GetInteger(
-        "netifyd", "upload_timeout", ND_UPLOAD_TIMEOUT);
+    nd_config.sink_connect_timeout = (unsigned)reader.GetInteger(
+        "netifyd", "upload_connect_timeout", ND_SINK_CONNECT_TIMEOUT);
+    nd_config.sink_xfer_timeout = (unsigned)reader.GetInteger(
+        "netifyd", "upload_timeout", ND_SINK_XFER_TIMEOUT);
 
     ND_GF_SET_FLAG(ndGF_JSON_SAVE,
         reader.GetBoolean("netifyd", "json_save", false));
