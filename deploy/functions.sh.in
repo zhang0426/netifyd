@@ -92,22 +92,22 @@ load_nethserver()
     local ifcfg_sw="@sysconfdir@/shorewall/interfaces"
 
     if [ -f "$ifcfg_sw" ]; then
-        for ifn in "$(grep '^loc[[:space:]]' $ifcfg_sw | awk '{ print $2 }')"; do
+        for ifn in $(grep '^loc[[:space:]]' $ifcfg_sw | awk '{ print $2 }'); do
             [ -z "$ifn" ] && break
             options="$options -I $ifn"
         done
 
-        for ifn in "$(grep "^blue[[:space:]]" $ifcfg_sw | awk '{ print $2 }')"; do
+        for ifn in $(grep "^blue[[:space:]]" $ifcfg_sw | awk '{ print $2 }'); do
             [ -z "$ifn" ] && break
             options="$options -I $ifn"
         done
 
-        for ifn in "$(grep "^orang[[:space:]]" $ifcfg_sw | awk '{ print $2 }')"; do
+        for ifn in $(grep "^orang[[:space:]]" $ifcfg_sw | awk '{ print $2 }'); do
             [ -z "$ifn" ] && break
             options="$options -I $ifn"
         done
 
-        for ifn in "$(grep '^net[[:space:]]' $ifcfg_sw | awk '{ print $2 }')"; do
+        for ifn in $(grep '^net[[:space:]]' $ifcfg_sw | awk '{ print $2 }'); do
             [ -z "$ifn" ] && break
             [ -f "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}" ] &&
                 . "@sysconfdir@/sysconfig/network-scripts/ifcfg-${ifn}"
