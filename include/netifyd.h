@@ -39,14 +39,7 @@
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif
 
-#include <limits.h>
-#ifndef HOST_NAME_MAX
-#ifdef _POSIX_HOST_NAME_MAX
-#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
-#else
-#error Unable to define HOST_NAME_MAX.
-#endif
-#endif
+#define ND_MAX_HOSTNAME		256
 
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
 #define ND_MAX_BACKLOG_KB       2048    // Maximum upload queue size in kB

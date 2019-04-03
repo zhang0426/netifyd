@@ -1027,11 +1027,11 @@ void ndDetectionThread::ProcessPacket(void)
 
         // Sanitize host server name; RFC 952 plus underscore for SSDP.
         snprintf(
-            new_flow->host_server_name, HOST_NAME_MAX,
+            new_flow->host_server_name, ND_MAX_HOSTNAME,
             "%s", new_flow->ndpi_flow->host_server_name
         );
 
-        for (int i = 0; i < HOST_NAME_MAX; i++) {
+        for (int i = 0; i < ND_MAX_HOSTNAME; i++) {
             if (! isalnum(new_flow->host_server_name[i]) &&
                 new_flow->host_server_name[i] != '-' &&
                 new_flow->host_server_name[i] != '_' &&
@@ -1121,7 +1121,7 @@ void ndDetectionThread::ProcessPacket(void)
             if (ndpi_proto == NDPI_PROTOCOL_DNS) {
                 new_flow->hash(tag, digest, false,
                     (const uint8_t *)new_flow->host_server_name,
-                    strnlen(new_flow->host_server_name, HOST_NAME_MAX));
+                    strnlen(new_flow->host_server_name, ND_MAX_HOSTNAME));
             }
             else {
                 new_flow->hash(tag, digest, false,

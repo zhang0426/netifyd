@@ -94,7 +94,7 @@ void ndFlow::hash(const string &device, string &digest,
 
         if (host_server_name[0] != '\0') {
             sha1_write(&ctx,
-                host_server_name, strnlen(host_server_name, HOST_NAME_MAX));
+                host_server_name, strnlen(host_server_name, ND_MAX_HOSTNAME));
         }
         if (has_ssl_client_certcn()) {
             sha1_write(&ctx,

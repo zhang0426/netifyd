@@ -25,7 +25,7 @@
 // manually.
 #define ND_FLOW_UA_LEN      512     // User agent length
 #define ND_FLOW_SSH_UALEN   48      // SSH user-agent (signature) length
-#define ND_FLOW_SSL_CNLEN   48      // SSL certificate common-name length
+#define ND_FLOW_SSL_CNLEN   64      // SSL certificate common-name length
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
 #define ND_FLOW_DHCPCI_LEN  96      // DHCP class identifier
 #define ND_FLOW_MDNS_ANSLEN 96      // MDNS answer length
@@ -105,7 +105,7 @@ struct ndFlow
     struct ndpi_id_struct *id_src;
     struct ndpi_id_struct *id_dst;
 
-    char host_server_name[HOST_NAME_MAX];
+    char host_server_name[ND_MAX_HOSTNAME];
 
     union {
         struct {
