@@ -25,6 +25,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+#include <list>
 #include <vector>
 #include <locale>
 #ifdef HAVE_ATOMIC
@@ -97,8 +98,8 @@ using namespace std;
 #include "nd-plugin.h"
 #endif
 #include "nd-util.h"
+#include "nd-signal.h"
 
-#define ND_SIG_UPDATE       SIGRTMIN
 #define ND_STR_ETHALEN     (ETH_ALEN * 2 + ETH_ALEN - 1)
 
 static nd_ifaces ifaces;
@@ -187,15 +188,15 @@ static void nd_config_init(void)
     nd_config.flags |= ndGF_USE_NETLINK;
 #endif
 
+    nd_config.max_flow_hash_cache = ND_MAX_FLOW_HASH_CACHE;
     nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
     nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
+    nd_config.sink_connect_timeout = ND_SINK_CONNECT_TIMEOUT;
+    nd_config.sink_xfer_timeout = ND_SINK_XFER_TIMEOUT;
     nd_config.ttl_dns_entry = ND_TTL_IDLE_DNS_ENTRY;
     nd_config.ttl_idle_flow = ND_TTL_IDLE_FLOW * 1000;
     nd_config.ttl_idle_tcp_flow = ND_TTL_IDLE_TCP_FLOW * 1000;
-    nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
     nd_config.update_interval = ND_STATS_INTERVAL;
-    nd_config.sink_connect_timeout = ND_SINK_CONNECT_TIMEOUT;
-    nd_config.sink_xfer_timeout = ND_SINK_XFER_TIMEOUT;
 
     memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
 }
@@ -285,6 +286,9 @@ static int nd_config_load(void)
 
     ND_GF_SET_FLAG(ndGF_SSL_USE_TLSv1,
         reader.GetBoolean("netifyd", "ssl_use_tlsv1", false));
+
+    nd_config.max_flow_hash_cache = (size_t)reader.GetInteger(
+        "netifyd", "max_flow_hash_cache", ND_MAX_FLOW_HASH_CACHE);
 
     nd_config.max_tcp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_tcp_pkts", ND_MAX_TCP_PKTS);
@@ -1029,7 +1033,9 @@ static void nd_json_add_flows(
         if (i->second->detection_complete == false || ! i->second->ts_first_update)
             continue;
 
-        json_object *json_flow = i->second->json_encode(device, json, ndpi);
+        json_object *json_flow = i->second->json_encode(
+            device, json, ndpi
+        );
         json.PushObject(NULL, json_flow);
 
         i->second->reset();
@@ -1962,12 +1968,12 @@ int main(int argc, char *argv[])
     sigprocmask(SIG_BLOCK, &sigset, NULL);
 
     sigemptyset(&sigset);
-    sigaddset(&sigset, SIGINT);
-    sigaddset(&sigset, SIGTERM);
+    sigaddset(&sigset, ND_SIG_SINK_REPLY);
     sigaddset(&sigset, ND_SIG_UPDATE);
-    sigaddset(&sigset, SIGIO);
     sigaddset(&sigset, SIGHUP);
-    sigaddset(&sigset, SIGALRM);
+    sigaddset(&sigset, SIGINT);
+    sigaddset(&sigset, SIGIO);
+    sigaddset(&sigset, SIGTERM);
     sigaddset(&sigset, SIGUSR1);
     sigaddset(&sigset, SIGUSR2);
 
@@ -2096,10 +2102,10 @@ int main(int argc, char *argv[])
         siginfo_t si;
 
         if ((sig = sigtimedwait(&sigset, &si, &tspec_sigwait)) < 0) {
-            if (errno == EAGAIN) continue;
-            if (errno != EINTR) nd_printf("sigwaitinfo: %s\n", strerror(errno));
+            if (errno == EAGAIN || errno == EINTR) continue;
             rc = -1;
             terminate = true;
+            nd_printf("sigwaitinfo: %s\n", strerror(errno));
             continue;
         }
 
@@ -2166,8 +2172,11 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        if (sig == SIGALRM) {
-            if (ND_USE_SINK && nd_sink_process_responses() < 0) break;
+        if (sig == ND_SIG_SINK_REPLY) {
+            if (ND_USE_SINK && nd_sink_process_responses() < 0) {
+                nd_debug_printf("nd_sink_process_responses failed!\n");
+                break;
+            }
 
             continue;
         }
