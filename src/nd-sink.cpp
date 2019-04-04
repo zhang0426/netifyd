@@ -60,6 +60,7 @@ using namespace std;
 #include "nd-thread.h"
 #include "nd-util.h"
 #include "nd-sink.h"
+#include "nd-signal.h"
 
 extern nd_global_config nd_config;
 
@@ -323,7 +324,7 @@ void ndSinkThread::PushResponse(ndJsonResponse *response)
 
     pthread_mutex_unlock(&response_mutex);
 
-    kill(getpid(), SIGALRM);
+    kill(getpid(), ND_SIG_SINK_REPLY);
 }
 
 ndJsonResponse *ndSinkThread::PopResponse(void)
