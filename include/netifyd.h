@@ -51,6 +51,8 @@
 #define ND_HASH_BUCKETS_FLOWS   1613    // Initial flows map bucket count.
 #define ND_HASH_BUCKETS_DNSARS  1613    // DNS cache address record hash buckets.
 
+#define ND_MAX_FLOW_HASH_CACHE  100000  // Maximum number of flow hash cache entries.
+
 #define ND_MAX_TCP_PKTS         10      // Maximum number of TCP packets to process.
 #define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
 
@@ -207,14 +209,15 @@ typedef struct nd_global_config_t {
     size_t max_backlog;
     uint32_t flags;
     uint8_t digest_sink_config[SHA1_DIGEST_LENGTH];
+    unsigned max_flow_hash_cache;
     unsigned max_tcp_pkts;
     unsigned max_udp_pkts;
+    unsigned sink_connect_timeout;
+    unsigned sink_xfer_timeout;
     unsigned ttl_dns_entry;
     unsigned ttl_idle_flow;
     unsigned ttl_idle_tcp_flow;
     unsigned update_interval;
-    unsigned sink_connect_timeout;
-    unsigned sink_xfer_timeout;
     FILE *h_flow;
 
     vector<pair<string, string> > socket_host;
