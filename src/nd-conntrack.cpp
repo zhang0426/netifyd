@@ -22,6 +22,7 @@
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
+#include <list>
 #include <vector>
 #include <sstream>
 #ifdef HAVE_ATOMIC
