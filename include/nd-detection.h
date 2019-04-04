@@ -52,7 +52,6 @@ public:
     virtual void *Entry(void);
 
     nd_flow_map *GetFlows(void) { return flows; }
-    ndFlowHashCache *GetFlowHashCache(void) { return flow_hash_cache; }
 
     // XXX: Not thread-safe!
     int GetCaptureStats(struct pcap_stat &stats);

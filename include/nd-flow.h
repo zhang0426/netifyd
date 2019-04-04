@@ -41,16 +41,13 @@
 #define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX.cap"
 #define ND_FLOW_CAPTURE_SUB_OFFSET  (sizeof(ND_FLOW_CAPTURE_TEMPLATE) - 8 - 4 - 1)
 
-// Hash cache default maximum size
-#define ND_FLOW_HASH_CACHE_SIZE     10000
-
 typedef list<pair<string, string>> nd_fhc_list;
 typedef unordered_map<string, nd_fhc_list::iterator> nd_fhc_map;
 
 class ndFlowHashCache
 {
 public:
-    ndFlowHashCache(size_t cache_size = ND_FLOW_HASH_CACHE_SIZE);
+    ndFlowHashCache(size_t cache_size = ND_MAX_FLOW_HASH_CACHE);
 
     void push(const string &lower_hash, const string &upper_hash);
     bool pop(const string &lower_hash, string &upper_hash);

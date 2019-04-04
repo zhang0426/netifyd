@@ -51,7 +51,7 @@
 #define ND_HASH_BUCKETS_FLOWS   1613    // Initial flows map bucket count.
 #define ND_HASH_BUCKETS_DNSARS  1613    // DNS cache address record hash buckets.
 
-#define ND_MAX_FLOW_HASH_CACHE  100000  // Maximum number of flow hash cache entries.
+#define ND_MAX_FLOW_HASH_CACHE  10000   // Maximum number of flow hash cache entries.
 
 #define ND_MAX_TCP_PKTS         10      // Maximum number of TCP packets to process.
 #define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
