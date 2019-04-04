@@ -24,6 +24,7 @@
 #include <iostream>
 #include <map>
 #include <queue>
+#include <list>
 #include <sstream>
 #include <stdexcept>
 #include <string>
