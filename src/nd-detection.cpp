@@ -20,7 +20,6 @@
 
 #include <cerrno>
 #include <cstring>
-#include <deque>
 #include <iostream>
 #include <map>
 #include <queue>
@@ -28,6 +27,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <list>
 #include <vector>
 #ifdef HAVE_ATOMIC
 #include <atomic>
@@ -192,7 +192,8 @@ ndDetectionThread::ndDetectionThread(
     pcap(NULL), pcap_fd(-1), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
     ts_last_idle_scan(0), ndpi(NULL), custom_proto_base(0), flows(flow_map),
-    stats(stats), device_addrs(device_addrs), dns_cache(dns_cache)
+    stats(stats), device_addrs(device_addrs), dns_cache(dns_cache),
+    flow_hash_cache(NULL)
 {
     memset(stats, 0, sizeof(nd_packet_stats));
 
@@ -205,6 +206,8 @@ ndDetectionThread::ndDetectionThread(
 
     ndpi = nd_ndpi_init(tag, custom_proto_base);
 
+    flow_hash_cache = new ndFlowHashCache(nd_config.max_flow_hash_cache);
+
     nd_debug_printf("%s: detection thread created, custom_proto_base: %u.\n",
         tag.c_str(), custom_proto_base);
 }
@@ -212,8 +215,10 @@ ndDetectionThread::ndDetectionThread(
 ndDetectionThread::~ndDetectionThread()
 {
     Join();
+
     if (pcap != NULL) pcap_close(pcap);
     if (ndpi != NULL) nd_ndpi_free(ndpi);
+    if (flow_hash_cache != NULL) delete flow_hash_cache;
 
     nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
 }
@@ -430,11 +435,8 @@ void ndDetectionThread::ProcessPacket(void)
     uint8_t vlan_packet = 0;
     int addr_cmp = 0;
 
-    struct ndFlow flow;
-    memset(&flow, 0, sizeof(struct ndFlow));
-    flow.internal = internal;
-
-    string digest;
+    struct ndFlow flow(internal);
+    string flow_digest, flow_digest_mdata;
 
     struct ndpi_id_struct *id_src, *id_dst;
     uint16_t ndpi_proto = NDPI_PROTOCOL_UNKNOWN;
@@ -787,8 +789,9 @@ void ndDetectionThread::ProcessPacket(void)
         break;
     }
 
-    flow.hash(tag, digest);
-    flow_iter.first = flows->find(digest);
+    flow.hash(tag);
+    flow_digest.assign((const char *)flow.digest_lower, SHA1_DIGEST_LENGTH);
+    flow_iter.first = flows->find(flow_digest);
 
     if (flow_iter.first != flows->end()) {
         // Flow exists in map.
@@ -803,7 +806,7 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow = new ndFlow(flow);
         if (new_flow == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
 
-        flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
+        flow_iter = flows->insert(nd_flow_pair(flow_digest, new_flow));
 
         if (! flow_iter.second) {
             // Flow exists in map!  Impossible!
@@ -1119,27 +1122,53 @@ void ndDetectionThread::ProcessPacket(void)
             // guarantees that we see all DNS queries/responses.
 
             if (ndpi_proto == NDPI_PROTOCOL_DNS) {
-                new_flow->hash(tag, digest, false,
+                new_flow->hash(tag, false,
                     (const uint8_t *)new_flow->host_server_name,
                     strnlen(new_flow->host_server_name, ND_MAX_HOSTNAME));
             }
             else {
-                new_flow->hash(tag, digest, false,
+                new_flow->hash(tag, false,
                     (const uint8_t *)new_flow->mdns.answer,
                     strnlen(new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN));
             }
 
             flows->erase(flow_iter.first);
-            flow_iter = flows->insert(nd_flow_pair(digest, new_flow));
+
+            memcpy(new_flow->digest_mdata, new_flow->digest_lower,
+                SHA1_DIGEST_LENGTH);
+            flow_digest.assign((const char *)new_flow->digest_lower,
+                SHA1_DIGEST_LENGTH);
+
+            flow_iter = flows->insert(nd_flow_pair(flow_digest, new_flow));
 
             if (! flow_iter.second) {
                 // Flow exists...  update stats and return.
                 *flow_iter.first->second += *new_flow;
 
-                new_flow->release();
                 delete new_flow;
 
                 return;
+            }
+        }
+        else if (new_flow->lower_port != 0 && new_flow->upper_port != 0) {
+            if (! flow_hash_cache->pop(flow_digest, flow_digest_mdata)) {
+                new_flow->hash(tag, true);
+                flow_digest_mdata.assign(
+                    (const char *)new_flow->digest_mdata, SHA1_DIGEST_LENGTH
+                );
+
+                if (memcmp(new_flow->digest_lower, new_flow->digest_mdata,
+                    SHA1_DIGEST_LENGTH))
+                    flow_hash_cache->push(flow_digest, flow_digest_mdata);
+            }
+            else {
+                if (memcmp(new_flow->digest_mdata, flow_digest_mdata.c_str(),
+                    SHA1_DIGEST_LENGTH)) {
+                    nd_debug_printf("%s: Resurrected flow metadata hash from cache.\n",
+                        tag.c_str());
+                    memcpy(new_flow->digest_mdata, flow_digest_mdata.c_str(),
+                        SHA1_DIGEST_LENGTH);
+                }
             }
         }
 
@@ -1220,7 +1249,7 @@ void ndDetectionThread::ProcessPacket(void)
 #endif
         if (capture_unknown_flows &&
             new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
-            new_flow->dump(pcap, (const uint8_t *)digest.c_str());
+            new_flow->dump(pcap, flow.digest_lower);
         }
 
         new_flow->release();
@@ -1285,7 +1314,8 @@ void ndDetectionThread::ProcessPacket(void)
             json.AddObject(NULL, "interface", tag);
             json.AddObject(NULL, "internal", internal);
             json_object *json_flow = new_flow->json_encode(
-                tag.c_str(), json, ndpi, false);
+                tag.c_str(), json, ndpi, false
+            );
             json.AddObject(NULL, "flow", json_flow);
 
             string json_string;
@@ -1310,7 +1340,6 @@ void ndDetectionThread::ProcessPacket(void)
             if (i->second->ts_last_seen + ttl < ts_pkt_last ||
                 (i->second->ip_protocol == IPPROTO_TCP && i->second->tcp_fin)) {
 
-                i->second->release();
                 delete i->second;
 
                 purged++;

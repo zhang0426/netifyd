@@ -52,6 +52,7 @@ public:
     virtual void *Entry(void);
 
     nd_flow_map *GetFlows(void) { return flows; }
+    ndFlowHashCache *GetFlowHashCache(void) { return flow_hash_cache; }
 
     // XXX: Not thread-safe!
     int GetCaptureStats(struct pcap_stat &stats);
@@ -85,6 +86,8 @@ protected:
     nd_device_addrs *device_addrs;
     nd_dns_cache *dns_cache;
     ns_msg ns_h;
+
+    ndFlowHashCache *flow_hash_cache;
 
     pcap_t *OpenCapture(void);
 

@@ -41,22 +41,40 @@
 #define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX.cap"
 #define ND_FLOW_CAPTURE_SUB_OFFSET  (sizeof(ND_FLOW_CAPTURE_TEMPLATE) - 8 - 4 - 1)
 
-typedef unordered_map<string, struct ndFlow *> nd_flow_map;
-typedef map<string, nd_flow_map *> nd_flows;
-typedef pair<string, struct ndFlow *> nd_flow_pair;
-typedef pair<nd_flow_map::iterator, bool> nd_flow_insert;
+// Hash cache default maximum size
+#define ND_FLOW_HASH_CACHE_SIZE     10000
+
+typedef list<pair<string, string>> nd_fhc_list;
+typedef unordered_map<string, nd_fhc_list::iterator> nd_fhc_map;
+
+class ndFlowHashCache
+{
+public:
+    ndFlowHashCache(size_t cache_size = ND_FLOW_HASH_CACHE_SIZE);
+
+    void push(const string &lower_hash, const string &upper_hash);
+    bool pop(const string &lower_hash, string &upper_hash);
+
+protected:
+    size_t cache_size;
+    nd_fhc_list index;
+    nd_fhc_map lookup;
+};
+
 typedef pair<const struct pcap_pkthdr *, const uint8_t *> nd_flow_push;
 typedef vector<nd_flow_push> nd_flow_capture;
 
-struct ndFlow
+class ndFlow
 {
+public:
     bool internal;
     uint8_t ip_version;
     uint8_t ip_protocol;
+    uint16_t vlan_id;
+
     bool ip_nat;
     bool tcp_fin;
 
-    uint16_t vlan_id;
     uint64_t ts_first_seen;
     uint64_t ts_first_update;
     uint64_t ts_last_seen;
@@ -104,6 +122,9 @@ struct ndFlow
 
     struct ndpi_id_struct *id_src;
     struct ndpi_id_struct *id_dst;
+
+    uint8_t digest_lower[SHA1_DIGEST_LENGTH];
+    uint8_t digest_mdata[SHA1_DIGEST_LENGTH];
 
     char host_server_name[ND_MAX_HOSTNAME];
 
@@ -171,8 +192,11 @@ struct ndFlow
     nd_flow_capture capture;
     char capture_filename[sizeof(ND_FLOW_CAPTURE_TEMPLATE)];
 
-    void hash(const string &device, string &digest,
-        bool full_hash = false, const uint8_t *key = NULL, size_t key_length = 0);
+    ndFlow(bool internal = true);
+    virtual ~ndFlow();
+
+    void hash(const string &device, bool hash_mdata = false,
+        const uint8_t *key = NULL, size_t key_length = 0);
 
     void push(const struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data);
 
@@ -227,6 +251,11 @@ struct ndFlow
         return *this;
     }
 };
+
+typedef unordered_map<string, ndFlow *> nd_flow_map;
+typedef map<string, nd_flow_map *> nd_flows;
+typedef pair<string, ndFlow *> nd_flow_pair;
+typedef pair<nd_flow_map::iterator, bool> nd_flow_insert;
 
 #endif // _ND_FLOW_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

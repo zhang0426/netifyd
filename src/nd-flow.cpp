@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <map>
+#include <list>
 #include <vector>
 #include <unordered_map>
 
@@ -49,16 +50,74 @@ using namespace std;
 #endif
 #include "nd-json.h"
 #include "nd-util.h"
+
+// Enable flow hash cache debug logging
+//#define _ND_DEBUG_FLOW_HASH_CACHE 1
+
 #include "nd-flow.h"
 
 extern nd_global_config nd_config;
 extern nd_device_ethers device_ethers;
 
-void ndFlow::hash(const string &device, string &digest,
-    bool full_hash, const uint8_t *key, size_t key_length)
+ndFlow::ndFlow(bool internal)
+    : internal(internal), ip_version(0), ip_protocol(0), vlan_id(0),
+    ip_nat(false), tcp_fin(false),
+    ts_first_seen(0), ts_first_update(0), ts_last_seen(0),
+    lower_port(0), upper_port(0),
+    lower_bytes(0), upper_bytes(0), total_bytes(0),
+    lower_packets(0), upper_packets(0), total_packets(0),
+    detection_complete(false), detection_guessed(0),
+    ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
+    privacy_mask(0), origin(0)
+{
+    memset(lower_mac, 0, ETH_ALEN);
+    memset(upper_mac, 0, ETH_ALEN);
+
+    memset(&lower_addr6, 0, sizeof(struct in6_addr));
+    memset(&upper_addr6, 0, sizeof(struct in6_addr));
+
+    memset(lower_ip, 0, INET6_ADDRSTRLEN);
+    memset(upper_ip, 0, INET6_ADDRSTRLEN);
+
+    memset(&detected_protocol, 0, sizeof(ndpi_protocol));
+
+    memset(digest_lower, 0, SHA1_DIGEST_LENGTH);
+    memset(digest_mdata, 0, SHA1_DIGEST_LENGTH);
+
+    memset(host_server_name, 0, ND_MAX_HOSTNAME);
+
+    memset(http.user_agent, 0, ND_FLOW_UA_LEN);
+
+    memset(dhcp.fingerprint, 0, ND_FLOW_DHCPFP_LEN);
+    memset(dhcp.class_ident, 0, ND_FLOW_DHCPCI_LEN);
+
+    memset(ssh.client_agent, 0, ND_FLOW_SSH_UALEN);
+    memset(ssh.server_agent, 0, ND_FLOW_SSH_UALEN);
+
+    ssl.version = 0;
+    ssl.cipher_suite = 0;
+    memset(ssl.client_certcn, 0, ND_FLOW_SSL_CNLEN);
+    memset(ssl.server_certcn, 0, ND_FLOW_SSL_CNLEN);
+
+    smtp.tls = false;
+
+    bt.info_hash_valid = 0;
+    memset(bt.info_hash, 0, ND_FLOW_BTIHASH_LEN);
+
+    memset(mdns.answer, 0, ND_FLOW_MDNS_ANSLEN);
+
+    memset(capture_filename, 0, sizeof(ND_FLOW_CAPTURE_TEMPLATE));
+}
+
+ndFlow::~ndFlow()
+{
+    release();
+}
+
+void ndFlow::hash(const string &device,
+    bool hash_mdata, const uint8_t *key, size_t key_length)
 {
     sha1 ctx;
-    uint8_t _digest[SHA1_DIGEST_LENGTH];
 
     sha1_init(&ctx);
     sha1_write(&ctx, (const char *)device.c_str(), device.size());
@@ -86,7 +145,7 @@ void ndFlow::hash(const string &device, string &digest,
     sha1_write(&ctx, (const char *)&lower_port, sizeof(lower_port));
     sha1_write(&ctx, (const char *)&upper_port, sizeof(upper_port));
 
-    if (full_hash) {
+    if (hash_mdata) {
         sha1_write(&ctx,
             (const char *)&detection_guessed, sizeof(detection_guessed));
         sha1_write(&ctx,
@@ -115,7 +174,10 @@ void ndFlow::hash(const string &device, string &digest,
     if (key != NULL && key_length > 0)
         sha1_write(&ctx, (const char *)key, key_length);
 
-    digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
+    if (! hash_mdata)
+        sha1_result(&ctx, digest_lower);
+    else
+        sha1_result(&ctx, digest_mdata);
 }
 
 void ndFlow::push(const struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data)
@@ -128,7 +190,7 @@ void ndFlow::push(const struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data)
         throw ndSystemException(__PRETTY_FUNCTION__, "new data", ENOMEM);
 
     memcpy(header, pkt_header, sizeof(struct pcap_pkthdr));
-    memcpy(data, pkt_data, pkt_header->len);
+    memcpy(data, pkt_data, pkt_header->caplen);
 
     capture.push_back(make_pair(header, data));
 }
@@ -368,8 +430,8 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     }
 }
 
-json_object *ndFlow::json_encode(const string &device,
-    ndJson &json, struct ndpi_detection_module_struct *ndpi, bool include_stats)
+json_object *ndFlow::json_encode(const string &device, ndJson &json,
+    struct ndpi_detection_module_struct *ndpi, bool include_stats)
 {
     char mac_addr[ND_STR_ETHALEN + 1];
     string other_type = "unknown";
@@ -381,9 +443,8 @@ json_object *ndFlow::json_encode(const string &device,
 
     json_object *json_flow = json.CreateObject();
 
-    string digest, digest_bin;
-    hash(device, digest_bin, true);
-    nd_sha1_to_string((const uint8_t *)digest_bin.c_str(), digest);
+    string digest;
+    nd_sha1_to_string(digest_mdata, digest);
     json.AddObject(json_flow, "digest", digest);
 
     json.AddObject(json_flow, "ip_nat", ip_nat);
@@ -756,6 +817,58 @@ json_object *ndFlow::json_encode(const string &device,
     json.AddObject(json_flow, "last_seen_at", ts_last_seen);
 
     return json_flow;
+}
+
+ndFlowHashCache::ndFlowHashCache(size_t cache_size)
+    : cache_size(cache_size) { }
+
+void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
+{
+    nd_fhc_map::const_iterator i = lookup.find(lower_hash);
+
+    if (i != lookup.end())
+        nd_debug_printf("WARNING: Found existing hash in flow hash cache on push.\n");
+    else {
+        if (lookup.size() == cache_size) {
+//#if _ND_DEBUG_FLOW_HASH_CACHE
+            nd_debug_printf("Purging old flow hash cache entries.\n");
+//#endif
+            for (size_t n = 0; n < cache_size / 4; n++) {
+                pair<string, string> j = index.back();
+
+                nd_fhc_map::iterator k = lookup.find(j.first);
+                if (k == lookup.end()) {
+                    nd_debug_printf("WARNING: flow hash cache index not found in map\n");
+                }
+                else
+                    lookup.erase(k);
+
+                index.pop_back();
+            }
+        }
+
+        index.push_front(make_pair(lower_hash, upper_hash));
+        lookup[lower_hash] = index.begin();
+#if _ND_DEBUG_FLOW_HASH_CACHE
+        nd_debug_printf("Flow hash cache entries: %lu\n", lookup.size());
+#endif
+    }
+}
+
+bool ndFlowHashCache::pop(const string &lower_hash, string &upper_hash)
+{
+    nd_fhc_map::iterator i = lookup.find(lower_hash);
+    if (i == lookup.end()) return false;
+
+    upper_hash = (*i->second).second;
+
+    index.erase(i->second);
+
+    index.push_front(make_pair(lower_hash, upper_hash));
+
+    i->second = index.begin();
+
+    return true;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
