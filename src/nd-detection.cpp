@@ -182,6 +182,7 @@ ndDetectionThread::ndDetectionThread(
     long cpu)
     : ndThread(dev, cpu),
     internal(internal),
+    capture_unknown_flows(ND_CAPTURE_UNKNOWN_FLOWS),
 #ifdef _ND_USE_NETLINK
     netlink_dev(netlink_dev), netlink(netlink),
 #endif
@@ -436,12 +437,9 @@ void ndDetectionThread::ProcessPacket(void)
     int addr_cmp = 0;
 
     struct ndFlow flow(internal);
-    string flow_digest, flow_digest_mdata;
 
     struct ndpi_id_struct *id_src, *id_dst;
     uint16_t ndpi_proto = NDPI_PROTOCOL_UNKNOWN;
-
-    bool capture_unknown_flows = ND_CAPTURE_UNKNOWN_FLOWS;
 
     uint64_t ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) *
             ND_DETECTION_TICKS +

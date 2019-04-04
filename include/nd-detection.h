@@ -58,6 +58,7 @@ public:
 
 protected:
     bool internal;
+    bool capture_unknown_flows;
 #ifdef _ND_USE_NETLINK
     string netlink_dev;
     ndNetlink *netlink;
@@ -87,6 +88,7 @@ protected:
     ns_msg ns_h;
 
     ndFlowHashCache *flow_hash_cache;
+    string flow_digest, flow_digest_mdata;
 
     pcap_t *OpenCapture(void);
 
