@@ -1427,6 +1427,8 @@ static void nd_dump_stats(void)
 
         stats[i->first]->reset();
 
+        i->second->SaveFlowHashCache();
+
         i->second->Unlock();
     }
 

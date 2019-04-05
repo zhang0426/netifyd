@@ -24,6 +24,7 @@
 #include <list>
 #include <vector>
 #include <unordered_map>
+#include <sstream>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -58,6 +59,111 @@ using namespace std;
 
 extern nd_global_config nd_config;
 extern nd_device_ethers device_ethers;
+
+ndFlowHashCache::ndFlowHashCache(size_t cache_size)
+    : cache_size(cache_size) { }
+
+void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
+{
+    nd_fhc_map::const_iterator i = lookup.find(lower_hash);
+
+    if (i != lookup.end())
+        nd_debug_printf("WARNING: Found existing hash in flow hash cache on push.\n");
+    else {
+        if (lookup.size() == cache_size) {
+//#if _ND_DEBUG_FLOW_HASH_CACHE
+            nd_debug_printf("Purging old flow hash cache entries.\n");
+//#endif
+            for (size_t n = 0; n < cache_size / 4; n++) {
+                pair<string, string> j = index.back();
+
+                nd_fhc_map::iterator k = lookup.find(j.first);
+                if (k == lookup.end()) {
+                    nd_debug_printf("WARNING: flow hash cache index not found in map\n");
+                }
+                else
+                    lookup.erase(k);
+
+                index.pop_back();
+            }
+        }
+
+        index.push_front(make_pair(lower_hash, upper_hash));
+        lookup[lower_hash] = index.begin();
+#if _ND_DEBUG_FLOW_HASH_CACHE
+        nd_debug_printf("Flow hash cache entries: %lu\n", lookup.size());
+#endif
+    }
+}
+
+bool ndFlowHashCache::pop(const string &lower_hash, string &upper_hash)
+{
+    nd_fhc_map::iterator i = lookup.find(lower_hash);
+    if (i == lookup.end()) return false;
+
+    upper_hash = (*i->second).second;
+
+    index.erase(i->second);
+
+    index.push_front(make_pair(lower_hash, upper_hash));
+
+    i->second = index.begin();
+
+    return true;
+}
+
+void ndFlowHashCache::save(const string &device)
+{
+    ostringstream os;
+    os << ND_VOLATILE_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+
+    FILE *hf = fopen(os.str().c_str(), "wb");
+    if (hf == NULL) {
+        nd_printf("%s: WARNING: Error saving flow hash cache: %s: %s\n",
+            device.c_str(), os.str().c_str(), strerror(errno));
+        return;
+    }
+
+    nd_fhc_list::iterator i;
+    for (i = index.begin(); i != index.end(); i++) {
+        fwrite((*i).first.c_str(), 1, SHA1_DIGEST_LENGTH, hf);
+        fwrite((*i).second.c_str(), 1, SHA1_DIGEST_LENGTH, hf);
+    }
+    fclose(hf);
+
+    nd_debug_printf("%s: Saved %lu flow hash cache entries.\n",
+        device.c_str(), index.size ());
+}
+
+void ndFlowHashCache::load(const string &device)
+{
+    ostringstream os;
+    os << ND_VOLATILE_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+
+    FILE *hf = fopen(os.str().c_str(), "rb");
+    if (hf != NULL) {
+        do {
+            string digest_lower, digest_mdata;
+            uint8_t digest[SHA1_DIGEST_LENGTH * 2];
+            uint8_t *p = digest;
+
+            if (fread(digest, SHA1_DIGEST_LENGTH * 2, 1, hf) != 1) break;
+
+            digest_lower.assign((const char *)p, SHA1_DIGEST_LENGTH);
+
+            p += SHA1_DIGEST_LENGTH;
+            digest_mdata.assign((const char *)p, SHA1_DIGEST_LENGTH);
+
+            push(digest_lower, digest_mdata);
+        }
+        while (! feof(hf));
+    
+        fclose(hf);
+    }
+
+    nd_debug_printf("%s: Loaded %lu flow hash cache entries.\n",
+        device.c_str(), index.size());
+}
 
 ndFlow::ndFlow(bool internal)
     : internal(internal), ip_version(0), ip_protocol(0), vlan_id(0),
@@ -817,58 +923,6 @@ json_object *ndFlow::json_encode(ndJson &json,
     json.AddObject(json_flow, "last_seen_at", ts_last_seen);
 
     return json_flow;
-}
-
-ndFlowHashCache::ndFlowHashCache(size_t cache_size)
-    : cache_size(cache_size) { }
-
-void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
-{
-    nd_fhc_map::const_iterator i = lookup.find(lower_hash);
-
-    if (i != lookup.end())
-        nd_debug_printf("WARNING: Found existing hash in flow hash cache on push.\n");
-    else {
-        if (lookup.size() == cache_size) {
-//#if _ND_DEBUG_FLOW_HASH_CACHE
-            nd_debug_printf("Purging old flow hash cache entries.\n");
-//#endif
-            for (size_t n = 0; n < cache_size / 4; n++) {
-                pair<string, string> j = index.back();
-
-                nd_fhc_map::iterator k = lookup.find(j.first);
-                if (k == lookup.end()) {
-                    nd_debug_printf("WARNING: flow hash cache index not found in map\n");
-                }
-                else
-                    lookup.erase(k);
-
-                index.pop_back();
-            }
-        }
-
-        index.push_front(make_pair(lower_hash, upper_hash));
-        lookup[lower_hash] = index.begin();
-#if _ND_DEBUG_FLOW_HASH_CACHE
-        nd_debug_printf("Flow hash cache entries: %lu\n", lookup.size());
-#endif
-    }
-}
-
-bool ndFlowHashCache::pop(const string &lower_hash, string &upper_hash)
-{
-    nd_fhc_map::iterator i = lookup.find(lower_hash);
-    if (i == lookup.end()) return false;
-
-    upper_hash = (*i->second).second;
-
-    index.erase(i->second);
-
-    index.push_front(make_pair(lower_hash, upper_hash));
-
-    i->second = index.begin();
-
-    return true;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

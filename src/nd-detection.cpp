@@ -208,6 +208,7 @@ ndDetectionThread::ndDetectionThread(
     ndpi = nd_ndpi_init(tag, custom_proto_base);
 
     flow_hash_cache = new ndFlowHashCache(nd_config.max_flow_hash_cache);
+    flow_hash_cache->load(tag);
 
     nd_debug_printf("%s: detection thread created, custom_proto_base: %u.\n",
         tag.c_str(), custom_proto_base);
@@ -219,7 +220,10 @@ ndDetectionThread::~ndDetectionThread()
 
     if (pcap != NULL) pcap_close(pcap);
     if (ndpi != NULL) nd_ndpi_free(ndpi);
-    if (flow_hash_cache != NULL) delete flow_hash_cache;
+    if (flow_hash_cache != NULL) {
+        flow_hash_cache->save(tag);
+        delete flow_hash_cache;
+    }
 
     nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
 }

@@ -52,6 +52,9 @@ public:
     void push(const string &lower_hash, const string &upper_hash);
     bool pop(const string &lower_hash, string &upper_hash);
 
+    void save(const string &device);
+    void load(const string &device);
+
 protected:
     size_t cache_size;
     nd_fhc_list index;

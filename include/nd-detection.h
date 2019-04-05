@@ -55,6 +55,7 @@ public:
 
     // XXX: Not thread-safe!
     int GetCaptureStats(struct pcap_stat &stats);
+    void SaveFlowHashCache(void) { flow_hash_cache->save(tag); }
 
 protected:
     bool internal;
