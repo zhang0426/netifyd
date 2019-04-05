@@ -2109,7 +2109,15 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        nd_debug_printf("Caught signal: [%d] %s\n", sig, strsignal(sig));
+        if (sig == ND_SIG_UPDATE) {
+            nd_debug_printf("Caught signal: [%d] %s: Update\n", sig, strsignal(sig));
+        }
+        else if (sig == ND_SIG_SINK_REPLY) {
+            nd_debug_printf("Caught signal: [%d] %s: Process sink reply\n", sig, strsignal(sig));
+        }
+        else {
+            nd_debug_printf("Caught signal: [%d] %s\n", sig, strsignal(sig));
+        }
 
         if (sig == SIGINT || sig == SIGTERM) {
             rc = 0;
