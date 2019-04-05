@@ -64,8 +64,8 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
-static int nd_curl_debug(
-    CURL *ch, curl_infotype type, char *data, size_t size, void *param)
+static int nd_curl_debug(CURL *ch __attribute__((unused)),
+    curl_infotype type, char *data, size_t size, void *param)
 {
     string buffer;
     if (! ND_DEBUG_UPLOAD) return 0;
@@ -117,10 +117,12 @@ static size_t ndSinkThread_read_data(
 
 #if (LIBCURL_VERSION_NUM < 0x073200)
 static int ndSinkThread_progress(void *user,
-    double dltotal, double dlnow, double ultotal, double ulnow)
+    double dltotal __attribute__((unused)), double dlnow __attribute__((unused)),
+    double ultotal __attribute__((unused)), double ulnow __attribute__((unused)))
 #else
 static int ndSinkThread_progress(void *user,
-    curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+    curl_off_t dltotal __attribute__((unused)), curl_off_t dlnow __attribute__((unused)),
+    curl_off_t ultotal __attribute__((unused)), curl_off_t ulnow __attribute__((unused)))
 #endif
 {
     ndSinkThread *thread_upload = reinterpret_cast<ndSinkThread *>(user);

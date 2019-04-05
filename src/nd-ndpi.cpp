@@ -121,7 +121,7 @@ struct ndpi_detection_module_struct *ndpi_get_parent(void)
 }
 
 struct ndpi_detection_module_struct *nd_ndpi_init(
-    const string &tag, uint32_t &custom_proto_base)
+    const string &tag __attribute__((unused)), uint32_t &custom_proto_base)
 {
     struct ndpi_detection_module_struct *ndpi = NULL;
 

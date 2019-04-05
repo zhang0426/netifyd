@@ -430,7 +430,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     }
 }
 
-json_object *ndFlow::json_encode(const string &device, ndJson &json,
+json_object *ndFlow::json_encode(ndJson &json,
     struct ndpi_detection_module_struct *ndpi, bool include_stats)
 {
     char mac_addr[ND_STR_ETHALEN + 1];

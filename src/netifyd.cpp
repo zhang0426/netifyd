@@ -1020,8 +1020,7 @@ static void nd_json_add_stats(json_object *parent,
     stats->pcap_last.ps_ifdrop = pcap->ps_ifdrop;
 }
 
-static void nd_json_add_flows(
-    const string &device, json_object *parent,
+static void nd_json_add_flows(json_object *parent,
     struct ndpi_detection_module_struct *ndpi,
     const nd_flow_map *flows)
 {
@@ -1033,9 +1032,7 @@ static void nd_json_add_flows(
         if (i->second->detection_complete == false || ! i->second->ts_first_update)
             continue;
 
-        json_object *json_flow = i->second->json_encode(
-            device, json, ndpi
-        );
+        json_object *json_flow = i->second->json_encode(json, ndpi);
         json.PushObject(NULL, json_flow);
 
         i->second->reset();
@@ -1424,7 +1421,7 @@ static void nd_dump_stats(void)
             json_object_object_add(json_stats, iface_name.c_str(), json_obj);
 
             json_obj = json.CreateArray(json_flows, iface_name);
-            nd_json_add_flows(iface_name, json_obj,
+            nd_json_add_flows(json_obj,
                 i->second->GetDetectionModule(), flows[i->first]);
         }
 
