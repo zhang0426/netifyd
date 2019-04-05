@@ -1148,7 +1148,8 @@ void ndDetectionThread::ProcessPacket(void)
                 return;
             }
         }
-        else if (new_flow->lower_port != 0 && new_flow->upper_port != 0) {
+
+        if (new_flow->lower_port != 0 && new_flow->upper_port != 0) {
             if (! flow_hash_cache->pop(flow_digest, flow_digest_mdata)) {
                 new_flow->hash(tag, true);
                 flow_digest_mdata.assign(
@@ -1168,6 +1169,10 @@ void ndDetectionThread::ProcessPacket(void)
                         SHA1_DIGEST_LENGTH);
                 }
             }
+        }
+        else {
+            memcpy(new_flow->digest_mdata, flow_digest_mdata.c_str(),
+                SHA1_DIGEST_LENGTH);
         }
 
         switch (new_flow->ip_version) {
