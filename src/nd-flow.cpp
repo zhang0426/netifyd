@@ -157,7 +157,7 @@ void ndFlowHashCache::load(const string &device)
             push(digest_lower, digest_mdata);
         }
         while (! feof(hf));
-    
+
         fclose(hf);
     }
 
