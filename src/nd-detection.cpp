@@ -1175,8 +1175,10 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
         else {
-            memcpy(new_flow->digest_mdata, flow_digest_mdata.c_str(),
-                SHA1_DIGEST_LENGTH);
+            new_flow->hash(tag, true);
+            flow_digest_mdata.assign(
+                (const char *)new_flow->digest_mdata, SHA1_DIGEST_LENGTH
+            );
         }
 
         switch (new_flow->ip_version) {
