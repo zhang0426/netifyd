@@ -199,6 +199,8 @@ static void nd_config_init(void)
     nd_config.update_interval = ND_STATS_INTERVAL;
 
     memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
+
+    nd_config.fhc_save = ndFHC_PERSISTENT;
 }
 
 static int nd_config_load(void)
@@ -303,6 +305,21 @@ static int nd_config_load(void)
 
     ND_GF_SET_FLAG(ndGF_CAPTURE_UNKNOWN_FLOWS,
         reader.GetBoolean("netifyd", "capture_unknown_flows", false));
+
+    string fhc_save_mode = reader.Get(
+        "netifyd", "fh_cache_save_mode", "persistent"
+    );
+
+    if (fhc_save_mode == "persistent")
+        nd_config.fhc_save = ndFHC_PERSISTENT;
+    else if (fhc_save_mode == "volatile")
+        nd_config.fhc_save = ndFHC_VOLATILE;
+    else
+        nd_config.fhc_save = ndFHC_DISABLED;
+
+    nd_config.ttl_dns_entry = (unsigned)reader.GetInteger(
+        "dns_cache", "cache_ttl", ND_TTL_IDLE_DNS_ENTRY);
+    nd_config.fhc_save = ndFHC_PERSISTENT;
 
     // DNS Cache section
     ND_GF_SET_FLAG(ndGF_USE_DNS_CACHE,

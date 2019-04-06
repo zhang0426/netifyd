@@ -115,7 +115,17 @@ bool ndFlowHashCache::pop(const string &lower_hash, string &upper_hash)
 void ndFlowHashCache::save(const string &device)
 {
     ostringstream os;
-    os << ND_VOLATILE_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+
+    switch (nd_config.fhc_save) {
+    case ndFHC_PERSISTENT:
+        os << ND_PERSISTENT_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+        break;
+    case ndFHC_VOLATILE:
+        os << ND_VOLATILE_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+        break;
+    default:
+        return;
+    }
 
     FILE *hf = fopen(os.str().c_str(), "wb");
     if (hf == NULL) {
@@ -138,7 +148,17 @@ void ndFlowHashCache::save(const string &device)
 void ndFlowHashCache::load(const string &device)
 {
     ostringstream os;
-    os << ND_VOLATILE_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+
+    switch (nd_config.fhc_save) {
+    case ndFHC_PERSISTENT:
+        os << ND_PERSISTENT_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+        break;
+    case ndFHC_VOLATILE:
+        os << ND_VOLATILE_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+        break;
+    default:
+        return;
+    }
 
     FILE *hf = fopen(os.str().c_str(), "rb");
     if (hf != NULL) {

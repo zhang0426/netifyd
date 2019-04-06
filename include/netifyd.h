@@ -156,7 +156,7 @@ enum nd_global_flags {
     ndGF_DEBUG_DNS_CACHE = 0x8,
     ndGF_OVERRIDE_SINK_CONFIG = 0x10,
     ndGF_CAPTURE_UNKNOWN_FLOWS = 0x20,
-    ndGF_BITHOLE_0x40 = 0x40,
+    ndGF_FREE_0x40 = 0x40,
     ndGF_SSL_USE_TLSv1 = 0x80,
     ndGF_SSL_VERIFY = 0x100,
     ndGF_USE_CONNTRACK = 0x200,
@@ -195,6 +195,12 @@ enum nd_global_flags {
     else nd_config.flags &= ~flag; \
 }
 
+enum nd_flow_hash_cache_save {
+    ndFHC_DISABLED = 0,
+    ndFHC_PERSISTENT = 1,
+    ndFHC_VOLATILE = 2
+};
+
 typedef struct nd_global_config_t {
     char *path_config;
     char *path_sink_config;
@@ -219,6 +225,7 @@ typedef struct nd_global_config_t {
     unsigned ttl_idle_tcp_flow;
     unsigned update_interval;
     FILE *h_flow;
+    enum nd_flow_hash_cache_save fhc_save;
 
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;
