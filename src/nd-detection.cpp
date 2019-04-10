@@ -143,7 +143,7 @@ using namespace std;
 #endif
 #include "nd-socket.h"
 #include "nd-util.h"
-#include "nd-dns-cache.h"
+#include "nd-dhc.h"
 #include "nd-detection.h"
 
 // Enable to log discarded packets
@@ -151,6 +151,9 @@ using namespace std;
 
 // Enable DNS response debug logging
 //#define _ND_LOG_DNS_RESPONSE    1
+
+// Enable DNS hint cache debug logging
+//define _ND_LOG_DHC              1
 
 extern nd_global_config nd_config;
 
@@ -178,7 +181,7 @@ ndDetectionThread::ndDetectionThread(
 #endif
     nd_flow_map *flow_map, nd_packet_stats *stats,
     nd_device_addrs *device_addrs,
-    nd_dns_cache *dns_cache,
+    nd_dns_hint_cache *dhc,
     long cpu)
     : ndThread(dev, cpu),
     internal(internal),
@@ -193,8 +196,7 @@ ndDetectionThread::ndDetectionThread(
     pcap(NULL), pcap_fd(-1), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
     ts_last_idle_scan(0), ndpi(NULL), custom_proto_base(0), flows(flow_map),
-    stats(stats), device_addrs(device_addrs), dns_cache(dns_cache),
-    flow_hash_cache(NULL)
+    stats(stats), device_addrs(device_addrs), dhc(dhc), fhc(NULL)
 {
     memset(stats, 0, sizeof(nd_packet_stats));
 
@@ -207,8 +209,10 @@ ndDetectionThread::ndDetectionThread(
 
     ndpi = nd_ndpi_init(tag, custom_proto_base);
 
-    flow_hash_cache = new ndFlowHashCache(nd_config.max_flow_hash_cache);
-    flow_hash_cache->load(tag);
+    if (ND_USE_FHC) {
+        fhc = new ndFlowHashCache(nd_config.max_fhc);
+        fhc->load(tag);
+    }
 
     nd_debug_printf("%s: detection thread created, custom_proto_base: %u.\n",
         tag.c_str(), custom_proto_base);
@@ -220,9 +224,9 @@ ndDetectionThread::~ndDetectionThread()
 
     if (pcap != NULL) pcap_close(pcap);
     if (ndpi != NULL) nd_ndpi_free(ndpi);
-    if (flow_hash_cache != NULL) {
-        flow_hash_cache->save(tag);
-        delete flow_hash_cache;
+    if (fhc != NULL) {
+        fhc->save(tag);
+        delete fhc;
     }
 
     nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
@@ -973,7 +977,7 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            if (dns_cache != NULL &&
+            if (dhc != NULL &&
                 (new_flow->ndpi_flow->host_server_name[0] == '\0' ||
                 nd_is_ipaddr((const char *)new_flow->ndpi_flow->host_server_name))) {
 
@@ -981,27 +985,27 @@ void ndDetectionThread::ProcessPacket(void)
 #ifdef _ND_USE_NETLINK
                 if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN) {
                     if (new_flow->ip_version == 4)
-                        dns_cache->lookup(new_flow->lower_addr4, hostname);
+                        dhc->lookup(new_flow->lower_addr4, hostname);
                     else
-                        dns_cache->lookup(new_flow->lower_addr6, hostname);
+                        dhc->lookup(new_flow->lower_addr6, hostname);
                 }
                 else if (new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
                     if (new_flow->ip_version == 4)
-                        dns_cache->lookup(new_flow->upper_addr4, hostname);
+                        dhc->lookup(new_flow->upper_addr4, hostname);
                     else
-                        dns_cache->lookup(new_flow->upper_addr6, hostname);
+                        dhc->lookup(new_flow->upper_addr6, hostname);
                 }
 #else
                 // TODO: Best effort for now:
                 // First try the lower address, if not found in cache...
                 // ...try the upper address.
                 if (new_flow->ip_version == 4) {
-                    if (! dns_cache->lookup(new_flow->lower_addr4, hostname))
-                        dns_cache->lookup(new_flow->upper_addr4, hostname);
+                    if (! dhc->lookup(new_flow->lower_addr4, hostname))
+                        dhc->lookup(new_flow->upper_addr4, hostname);
                 }
                 else {
-                    if (! dns_cache->lookup(new_flow->lower_addr6, hostname))
-                        dns_cache->lookup(new_flow->upper_addr6, hostname);
+                    if (! dhc->lookup(new_flow->lower_addr6, hostname))
+                        dhc->lookup(new_flow->upper_addr6, hostname);
                 }
 #endif
                 if (hostname.size()) {
@@ -1112,7 +1116,7 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         if ((ndpi_proto == NDPI_PROTOCOL_DNS &&
-            dns_cache != NULL && pkt != NULL && pkt_len > 12 &&
+            dhc != NULL && pkt != NULL && pkt_len > 12 &&
             ProcessDNSResponse(new_flow->host_server_name, pkt, pkt_len)) ||
             ndpi_proto == NDPI_PROTOCOL_MDNS) {
 
@@ -1153,8 +1157,8 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 
-        if (new_flow->lower_port != 0 && new_flow->upper_port != 0) {
-            if (! flow_hash_cache->pop(flow_digest, flow_digest_mdata)) {
+        if (ND_USE_FHC && new_flow->lower_port != 0 && new_flow->upper_port != 0) {
+            if (! fhc->pop(flow_digest, flow_digest_mdata)) {
                 new_flow->hash(tag, true);
                 flow_digest_mdata.assign(
                     (const char *)new_flow->digest_mdata, SHA1_DIGEST_LENGTH
@@ -1162,7 +1166,7 @@ void ndDetectionThread::ProcessPacket(void)
 
                 if (memcmp(new_flow->digest_lower, new_flow->digest_mdata,
                     SHA1_DIGEST_LENGTH))
-                    flow_hash_cache->push(flow_digest, flow_digest_mdata);
+                    fhc->push(flow_digest, flow_digest_mdata);
             }
             else {
                 if (memcmp(new_flow->digest_mdata, flow_digest_mdata.c_str(),
@@ -1373,15 +1377,19 @@ bool ndDetectionThread::ProcessDNSResponse(
     int rc = ns_initparse(pkt, length, &ns_h);
 
     if (rc < 0) {
-        if (ND_DEBUG_DNS_CACHE) nd_debug_printf(
+#ifdef _ND_LOG_DHC
+        nd_debug_printf(
             "%s: dns initparse error: %s\n", tag.c_str(), strerror(errno));
+#endif
         return false;
     }
 
     if (ns_msg_getflag(ns_h, ns_f_rcode) != ns_r_noerror) {
-        if (ND_DEBUG_DNS_CACHE) nd_debug_printf(
+#ifdef _ND_LOG_DHC
+        nd_debug_printf(
             "%s: dns response code: %hu\n", tag.c_str(),
             ns_msg_getflag(ns_h, ns_f_rcode));
+#endif
         return false;
     }
 #ifdef _ND_LOG_DNS_RESPONSE
@@ -1392,16 +1400,18 @@ bool ndDetectionThread::ProcessDNSResponse(
 #endif
     for (uint16_t i = 0; i < ns_msg_count(ns_h, ns_s_an); i++) {
         if (ns_parserr(&ns_h, ns_s_an, i, &rr)) {
-            if (ND_DEBUG_DNS_CACHE) nd_debug_printf(
+#ifdef _ND_LOG_DHC
+            nd_debug_printf(
                 "%s: dns error parsing RR %hu of %hu.\n", tag.c_str(),
                 i + 1, ns_msg_count(ns_h, ns_s_an));
+#endif
             continue;
         }
 
         if (ns_rr_type(rr) != ns_t_a && ns_rr_type(rr) != ns_t_aaaa)
             continue;
 
-        dns_cache->insert(
+        dhc->insert(
             (ns_rr_type(rr) == ns_t_a) ? AF_INET : AF_INET6,
             ns_rr_rdata(rr), host
         );
@@ -1419,11 +1429,14 @@ bool ndDetectionThread::ProcessDNSResponse(
             inet_ntop(AF_INET6, &addr6, addr, INET6_ADDRSTRLEN);
         }
 
-        if (ND_DEBUG_DNS_CACHE) nd_debug_printf(
+#ifdef _ND_LOG_DHC
+        nd_debug_printf(
             "%s: dns RR %s address: %s, ttl: %u, rlen: %hu: %s\n",
             tag.c_str(), host,
             (ns_rr_type(rr) == ns_t_a) ? "A" : "AAAA",
             ns_rr_ttl(rr), ns_rr_rdlen(rr), addr);
+#endif // _ND_LOG_DHC
+
 #endif
     }
 

@@ -47,11 +47,12 @@
 #define ND_TTL_IDLE_SCAN        10      // Idle flow scan in milliseconds
 #define ND_TTL_IDLE_FLOW        30      // Purge idle flows older than this (30s)
 #define ND_TTL_IDLE_TCP_FLOW    300     // Purge idle TCP flows older than this (5m)
-#define ND_TTL_IDLE_DNS_ENTRY  (60 * 30)// Purge TTL for idle DNS cache entries.
+#define ND_TTL_IDLE_DHC_ENTRY  (60 * 30)// Purge TTL for idle DNS cache entries.
 #define ND_HASH_BUCKETS_FLOWS   1613    // Initial flows map bucket count.
 #define ND_HASH_BUCKETS_DNSARS  1613    // DNS cache address record hash buckets.
 
-#define ND_MAX_FLOW_HASH_CACHE  10000   // Maximum number of flow hash cache entries.
+#define ND_MAX_FHC_ENTRIES      10000   // Maximum number of flow hash cache entries.
+#define ND_FHC_PURGE_DIVISOR    10      // Divisor of FHC_ENTRIES to delete on purge.
 
 #define ND_MAX_TCP_PKTS         10      // Maximum number of TCP packets to process.
 #define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
@@ -104,7 +105,9 @@
 #define ND_AGENT_UUID_NULL      "00-00-00-00"
 #define ND_AGENT_UUID_LEN       11
 
+#define ND_AGENT_SERIAL_PATH    ND_PERSISTENT_STATEDIR "/serial.uuid"
 #define ND_AGENT_SERIAL_NULL    "-"
+#define ND_AGENT_SERIAL_LEN     32
 
 #define ND_SITE_UUID_PATH       ND_PERSISTENT_STATEDIR "/site.uuid"
 #define ND_SITE_UUID_NULL       "-"
@@ -149,11 +152,23 @@ class ndPluginLoader;
 typedef map<string, ndPluginLoader *> nd_plugins;
 #endif
 
+enum nd_dhc_save {
+    ndDHC_DISABLED = 0,
+    ndDHC_PERSISTENT = 1,
+    ndDHC_VOLATILE = 2
+};
+
+enum nd_fhc_save {
+    ndFHC_DISABLED = 0,
+    ndFHC_PERSISTENT = 1,
+    ndFHC_VOLATILE = 2
+};
+
 enum nd_global_flags {
     ndGF_DEBUG = 0x1,
     ndGF_DEBUG_UPLOAD = 0x2,
     ndGF_DEBUG_WITH_ETHERS = 0x4,
-    ndGF_DEBUG_DNS_CACHE = 0x8,
+    ndGF_FREE_0x8 = 0x8,
     ndGF_OVERRIDE_SINK_CONFIG = 0x10,
     ndGF_CAPTURE_UNKNOWN_FLOWS = 0x20,
     ndGF_FREE_0x40 = 0x40,
@@ -163,8 +178,8 @@ enum nd_global_flags {
     ndGF_USE_NETLINK = 0x400,
     ndGF_FREE_0x800 = 0x800,
     ndGF_USE_SINK = 0x1000,
-    ndGF_USE_DNS_CACHE = 0x2000,
-    ndGF_DNS_CACHE_SAVE = 0x4000,
+    ndGF_USE_DHC = 0x2000,
+    ndGF_USE_FHC = 0x4000,
     ndGF_JSON_SAVE = 0x8000,
     ndGF_VERBOSE = 0x10000,
     ndGF_REPLAY_DELAY = 0x20000,
@@ -174,7 +189,6 @@ enum nd_global_flags {
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
 #define ND_DEBUG_UPLOAD (nd_config.flags & ndGF_DEBUG_UPLOAD)
 #define ND_DEBUG_WITH_ETHERS (nd_config.flags & ndGF_DEBUG_WITH_ETHERS)
-#define ND_DEBUG_DNS_CACHE (nd_config.flags & ndGF_DEBUG_DNS_CACHE)
 #define ND_OVERRIDE_SINK_CONFIG (nd_config.flags & ndGF_OVERRIDE_SINK_CONFIG)
 #define ND_CAPTURE_UNKNOWN_FLOWS (nd_config.flags & ndGF_CAPTURE_UNKNOWN_FLOWS)
 #define ND_SSL_USE_TLSv1 (nd_config.flags & ndGF_SSL_USE_TLSv1)
@@ -182,8 +196,8 @@ enum nd_global_flags {
 #define ND_USE_CONNTRACK (nd_config.flags & ndGF_USE_CONNTRACK)
 #define ND_USE_NETLINK (nd_config.flags & ndGF_USE_NETLINK)
 #define ND_USE_SINK (nd_config.flags & ndGF_USE_SINK)
-#define ND_USE_DNS_CACHE (nd_config.flags & ndGF_USE_DNS_CACHE)
-#define ND_DNS_CACHE_SAVE (nd_config.flags & ndGF_DNS_CACHE_SAVE)
+#define ND_USE_DHC (nd_config.flags & ndGF_USE_DHC)
+#define ND_USE_FHC (nd_config.flags & ndGF_USE_FHC)
 #define ND_JSON_SAVE (nd_config.flags & ndGF_JSON_SAVE)
 #define ND_VERBOSE (nd_config.flags & ndGF_VERBOSE)
 #define ND_REPLAY_DELAY (nd_config.flags & ndGF_REPLAY_DELAY)
@@ -194,12 +208,6 @@ enum nd_global_flags {
     if (value) nd_config.flags |= flag; \
     else nd_config.flags &= ~flag; \
 }
-
-enum nd_flow_hash_cache_save {
-    ndFHC_DISABLED = 0,
-    ndFHC_PERSISTENT = 1,
-    ndFHC_VOLATILE = 2
-};
 
 typedef struct nd_global_config_t {
     char *path_config;
@@ -215,7 +223,7 @@ typedef struct nd_global_config_t {
     size_t max_backlog;
     uint32_t flags;
     uint8_t digest_sink_config[SHA1_DIGEST_LENGTH];
-    unsigned max_flow_hash_cache;
+    unsigned max_fhc;
     unsigned max_tcp_pkts;
     unsigned max_udp_pkts;
     unsigned sink_connect_timeout;
@@ -225,7 +233,9 @@ typedef struct nd_global_config_t {
     unsigned ttl_idle_tcp_flow;
     unsigned update_interval;
     FILE *h_flow;
-    enum nd_flow_hash_cache_save fhc_save;
+    enum nd_dhc_save dhc_save;
+    enum nd_fhc_save fhc_save;
+    unsigned fhc_purge_divisor;
 
     vector<pair<string, string> > socket_host;
     vector<string> socket_path;

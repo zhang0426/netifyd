@@ -1,0 +1,59 @@
+# Netify Agent configuration
+# Copyright (C) 2016-2019 eGloo, Incorporated
+#
+# This is free software, licensed under the GNU General Public License v3.
+#
+# Read the netifyd.conf(5) man page for documentation.
+
+[netifyd]
+uuid = <agent uuid>
+uuid_serial = <agent serial uuid>
+uuid_site = <site uuid>
+path_uuid = <agent uuid path>
+path_uuid_serial = <serial uuid path>
+path_uuid_site = <site uuid path>
+enable_sink = <yes/no>
+sink_connect_timeout = <connect timeout in seconds>
+sink_xfer_timeout = <transfer timeout in seconds>
+url_upload = <upload sink URL>
+update_interval = <update interval in seconds>
+json_save = <yes/no>
+max_backlog_kb = <amount of payload data to buffer in kilobytes>
+ssl_verify = <yes/no>
+ssl_use_tlsv1 = <yes/no>
+max_tcp_pkts = <number of TCP packets to perform DPI on before giving up>
+max_udp_pkts = <number of UDP packets to perform DPI on before giving up>
+ttl_idle_flow = <idle flow TTL in seconds>
+ttl_idle_tcp_flow = <idle TCP flow TTL in seconds>
+capture_unknown_flows = <yes/no>
+
+[flow_hash_cache]
+enable = <yes/no>
+save = <persistent/volatile/disabled>
+cache_size = <number of flow hashes to cache per capture source>
+purge_divisor = <number of flow hashes to purge when full>
+
+[dns_cache]
+enable = <yes/no>
+save = <persistent/volatile/disabled>
+cache_ttl = 1800
+
+[socket]
+listen_path[0] = <path to socket file>
+listen_address[0] = <IPv4/6 address for connect>
+listen_port[0] = <corresponding port for connect>
+
+[privacy_filter]
+mac[0] = <MAC address to filter>
+host[0] = <IPv4/6 address to filter>
+
+[watches]
+<name> = <file path>
+
+[services]
+<name> = <plugin library>
+
+[tasks]
+<name> = <plugin library>
+
+# vi: syntax=ini

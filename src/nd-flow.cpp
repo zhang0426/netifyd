@@ -53,7 +53,7 @@ using namespace std;
 #include "nd-util.h"
 
 // Enable flow hash cache debug logging
-//#define _ND_DEBUG_FLOW_HASH_CACHE 1
+//#define _ND_DEBUG_FHC 1
 
 #include "nd-flow.h"
 
@@ -71,10 +71,10 @@ void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
         nd_debug_printf("WARNING: Found existing hash in flow hash cache on push.\n");
     else {
         if (lookup.size() == cache_size) {
-//#if _ND_DEBUG_FLOW_HASH_CACHE
+//#if _ND_DEBUG_FHC
             nd_debug_printf("Purging old flow hash cache entries.\n");
 //#endif
-            for (size_t n = 0; n < cache_size / 4; n++) {
+            for (size_t n = 0; n < cache_size / nd_config.fhc_purge_divisor; n++) {
                 pair<string, string> j = index.back();
 
                 nd_fhc_map::iterator k = lookup.find(j.first);
@@ -90,7 +90,7 @@ void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
 
         index.push_front(make_pair(lower_hash, upper_hash));
         lookup[lower_hash] = index.begin();
-#if _ND_DEBUG_FLOW_HASH_CACHE
+#if _ND_DEBUG_FHC
         nd_debug_printf("Flow hash cache entries: %lu\n", lookup.size());
 #endif
     }
@@ -118,10 +118,10 @@ void ndFlowHashCache::save(const string &device)
 
     switch (nd_config.fhc_save) {
     case ndFHC_PERSISTENT:
-        os << ND_PERSISTENT_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+        os << ND_PERSISTENT_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
         break;
     case ndFHC_VOLATILE:
-        os << ND_VOLATILE_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+        os << ND_VOLATILE_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
         break;
     default:
         return;
@@ -151,10 +151,10 @@ void ndFlowHashCache::load(const string &device)
 
     switch (nd_config.fhc_save) {
     case ndFHC_PERSISTENT:
-        os << ND_PERSISTENT_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+        os << ND_PERSISTENT_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
         break;
     case ndFHC_VOLATILE:
-        os << ND_VOLATILE_STATEDIR << "/flow-hash-cache-" << device << ".dat";
+        os << ND_VOLATILE_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
         break;
     default:
         return;

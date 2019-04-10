@@ -14,17 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _ND_DNS_CACHE_H
-#define _ND_DNS_CACHE_H
+#ifndef _ND_DHC_H
+#define _ND_DHC_H
 
-#define ND_DNS_CACHE_FILE_NAME  ND_VOLATILE_STATEDIR "/dns-cache.csv"
+#define ND_DHC_FILE_NAME        "/dns-cache.csv"
 
 typedef pair<time_t, string> nd_dns_tuple;
 typedef unordered_map<string, nd_dns_tuple> nd_dns_ar;
-typedef pair<nd_dns_ar::iterator, bool> nd_dns_cache_insert;
-typedef pair<string, nd_dns_tuple> nd_dns_cache_insert_pair;
+typedef pair<nd_dns_ar::iterator, bool> nd_dhc_insert;
+typedef pair<string, nd_dns_tuple> nd_dhc_insert_pair;
 
-typedef struct nd_dns_cache_t
+typedef struct nd_dns_hint_cache_t
 {
     pthread_mutex_t lock;
     nd_dns_ar map_ar;
@@ -40,7 +40,7 @@ typedef struct nd_dns_cache_t
 
     void load(void);
     void save(void);
-} nd_dns_cache;
+} nd_dns_hint_cache;
 
-#endif // _ND_DNS_CACHE_H
+#endif // _ND_DHC_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

@@ -4,6 +4,7 @@
 # This is free software, licensed under the GNU General Public License v3.
 #
 # Read the netifyd.conf(5) man page for documentation.
+
 [netifyd]
 enable_sink = no
 

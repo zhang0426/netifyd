@@ -427,7 +427,7 @@ string nd_get_version_and_features(void)
 
     if (ND_USE_CONNTRACK) ident << "; conntrack";
     if (ND_USE_NETLINK) ident << "; netlink";
-    if (ND_USE_DNS_CACHE) ident << "; dns-cache";
+    if (ND_USE_DHC) ident << "; dns-cache";
 #ifdef _ND_USE_PLUGINS
     ident << "; plugins";
 #endif

@@ -17,7 +17,7 @@ AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I $(top_srcdir)/include \
 	-D NDPI_LIB_COMPILATION=1
 
 lib_LTLIBRARIES = libnetifyd.la
-libnetifyd_la_SOURCES = nd-base64.cpp nd-detection.cpp nd-dns-cache.cpp \
+libnetifyd_la_SOURCES = nd-base64.cpp nd-detection.cpp nd-dhc.cpp \
 	nd-flow.cpp nd-json.cpp nd-ndpi.cpp nd-sha1.c nd-sink.cpp nd-socket.cpp \
 	nd-thread.cpp nd-util.cpp
 

@@ -42,7 +42,7 @@ public:
 #endif
         nd_flow_map *flow_map, nd_packet_stats *stats,
         nd_device_addrs *device_addrs = NULL,
-        nd_dns_cache *dns_cache = NULL,
+        nd_dns_hint_cache *dhc = NULL,
         long cpu = -1);
     virtual ~ndDetectionThread();
 
@@ -55,7 +55,7 @@ public:
 
     // XXX: Not thread-safe!
     int GetCaptureStats(struct pcap_stat &stats);
-    void SaveFlowHashCache(void) { flow_hash_cache->save(tag); }
+    void SaveFlowHashCache(void) { fhc->save(tag); }
 
 protected:
     bool internal;
@@ -85,10 +85,10 @@ protected:
     nd_flow_map *flows;
     nd_packet_stats *stats;
     nd_device_addrs *device_addrs;
-    nd_dns_cache *dns_cache;
+    nd_dns_hint_cache *dhc;
     ns_msg ns_h;
 
-    ndFlowHashCache *flow_hash_cache;
+    ndFlowHashCache *fhc;
     string flow_digest, flow_digest_mdata;
 
     pcap_t *OpenCapture(void);

@@ -53,13 +53,13 @@ using namespace std;
 #include "netifyd.h"
 
 #include "nd-json.h"
-#include "nd-dns-cache.h"
+#include "nd-dhc.h"
 #include "nd-sha1.h"
 #include "nd-util.h"
 
 extern nd_global_config nd_config;
 
-void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hostname)
+void nd_dns_hint_cache::insert(sa_family_t af, const uint8_t *addr, const string &hostname)
 {
     sha1 ctx;
     string digest;
@@ -73,7 +73,7 @@ void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hos
     pthread_mutex_lock(&lock);
 
     nd_dns_tuple ar(time_t(time(NULL) + nd_config.ttl_dns_entry), hostname);
-    nd_dns_cache_insert i = map_ar.insert(nd_dns_cache_insert_pair(digest, ar));
+    nd_dhc_insert i = map_ar.insert(nd_dhc_insert_pair(digest, ar));
 
     if (! i.second)
         i.first->second.first = time(NULL) + nd_config.ttl_dns_entry;
@@ -81,7 +81,7 @@ void nd_dns_cache::insert(sa_family_t af, const uint8_t *addr, const string &hos
     pthread_mutex_unlock(&lock);
 }
 
-void nd_dns_cache::insert(const string &digest, const string &hostname)
+void nd_dns_hint_cache::insert(const string &digest, const string &hostname)
 {
     int i = 0;
     uint8_t v;
@@ -100,10 +100,10 @@ void nd_dns_cache::insert(const string &digest, const string &hostname)
     if (_digest.size() != SHA1_DIGEST_LENGTH) return;
 
     nd_dns_tuple ar(time_t(time(NULL) + nd_config.ttl_dns_entry), hostname);
-    map_ar.insert(nd_dns_cache_insert_pair(_digest, ar));
+    map_ar.insert(nd_dhc_insert_pair(_digest, ar));
 }
 
-bool nd_dns_cache::lookup(const struct in_addr &addr, string &hostname)
+bool nd_dns_hint_cache::lookup(const struct in_addr &addr, string &hostname)
 {
     sha1 ctx;
     string digest;
@@ -116,7 +116,7 @@ bool nd_dns_cache::lookup(const struct in_addr &addr, string &hostname)
     return lookup(digest, hostname);
 }
 
-bool nd_dns_cache::lookup(const struct in6_addr &addr, string &hostname)
+bool nd_dns_hint_cache::lookup(const struct in6_addr &addr, string &hostname)
 {
     sha1 ctx;
     string digest;
@@ -129,7 +129,7 @@ bool nd_dns_cache::lookup(const struct in6_addr &addr, string &hostname)
     return lookup(digest, hostname);
 }
 
-bool nd_dns_cache::lookup(const string &digest, string &hostname)
+bool nd_dns_hint_cache::lookup(const string &digest, string &hostname)
 {
     bool found = false;
 
@@ -147,7 +147,7 @@ bool nd_dns_cache::lookup(const string &digest, string &hostname)
     return found;
 }
 
-size_t nd_dns_cache::purge(void)
+size_t nd_dns_hint_cache::purge(void)
 {
     size_t purged = 0, remaining = 0;
 
@@ -173,27 +173,39 @@ size_t nd_dns_cache::purge(void)
     return purged;
 }
 
-void nd_dns_cache::load(void)
+void nd_dns_hint_cache::load(void)
 {
     int rc;
     time_t ttl;
     char header[1024], *host, *digest;
     size_t loaded = 0, line = 1;
 
-    FILE *h_f = fopen(ND_DNS_CACHE_FILE_NAME, "r");
-    if (! h_f) return;
+    FILE *hf = NULL;
 
-    if (fgets(header, sizeof(header), h_f) == NULL) { fclose(h_f); return; }
+    switch (nd_config.dhc_save) {
+    case ndDHC_PERSISTENT:
+        hf = fopen(ND_PERSISTENT_STATEDIR ND_DHC_FILE_NAME, "r");
+        break;
+    case ndDHC_VOLATILE:
+        hf = fopen(ND_VOLATILE_STATEDIR ND_DHC_FILE_NAME, "r");
+        break;
+    default:
+        return;
+    }
+
+    if (! hf) return;
+
+    if (fgets(header, sizeof(header), hf) == NULL) { fclose(hf); return; }
 
     pthread_mutex_lock(&lock);
 
-    while (! feof(h_f)) {
+    while (! feof(hf)) {
         line++;
-        if ((rc = fscanf(h_f,
+        if ((rc = fscanf(hf,
             " \"%m[0-9A-z.-]\" , %m[0-9A-Fa-f] , %ld\n",
             &host, &digest, &ttl)) != 3) {
             nd_printf("%s: parse error at line #%u [%d]\n",
-                ND_DNS_CACHE_FILE_NAME, line, rc);
+                ND_DHC_FILE_NAME, line, rc);
             if (rc >= 1) free(host);
             if (rc >= 2) free(digest);
             break;
@@ -211,30 +223,42 @@ void nd_dns_cache::load(void)
 
     pthread_mutex_unlock(&lock);
 
-    fclose(h_f);
+    fclose(hf);
 }
 
-void nd_dns_cache::save(void)
+void nd_dns_hint_cache::save(void)
 {
     string digest;
 
-    FILE *h_f = fopen(ND_DNS_CACHE_FILE_NAME, "w");
-    if (! h_f) return;
+    FILE *hf = NULL;
+
+    switch (nd_config.dhc_save) {
+    case ndDHC_PERSISTENT:
+        hf = fopen(ND_PERSISTENT_STATEDIR ND_DHC_FILE_NAME, "r");
+        break;
+    case ndDHC_VOLATILE:
+        hf = fopen(ND_VOLATILE_STATEDIR ND_DHC_FILE_NAME, "r");
+        break;
+    default:
+        return;
+    }
+
+    if (! hf) return;
 
     pthread_mutex_lock(&lock);
 
-    fprintf(h_f, "\"host\",\"addr_digest\",\"ttl\"\n");
+    fprintf(hf, "\"host\",\"addr_digest\",\"ttl\"\n");
 
     for (nd_dns_ar::iterator i = map_ar.begin();
         i != map_ar.end(); i++) {
         nd_sha1_to_string((const uint8_t *)i->first.c_str(), digest);
-        fprintf(h_f, "\"%s\",%s,%u\n", i->second.second.c_str(),
+        fprintf(hf, "\"%s\",%s,%u\n", i->second.second.c_str(),
             digest.c_str(), (unsigned)(i->second.first - time(NULL)));
     }
 
     pthread_mutex_unlock(&lock);
 
-    fclose(h_f);
+    fclose(hf);
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

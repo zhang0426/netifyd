@@ -363,18 +363,26 @@ void ndSinkThread::CreateHeaders(void)
             uuid << "X-UUID: " << nd_config.uuid;
     }
 
-    ostringstream serial;
-    serial << "X-UUID-Serial: " << nd_config.uuid_serial;
+    ostringstream uuid_serial;
+    if (strncmp(nd_config.uuid_serial, ND_AGENT_SERIAL_NULL, ND_AGENT_SERIAL_LEN))
+        uuid_serial << "X-UUID-Serial: " << nd_config.uuid_serial;
+    else {
+        string _uuid;
+        if (nd_load_uuid(_uuid, nd_config.path_uuid_serial, ND_AGENT_SERIAL_LEN))
+            uuid_serial << "X-UUID-Serial: " << _uuid;
+        else
+            uuid_serial << "X-UUID-Serial: " << nd_config.uuid_serial;
+    }
 
-    ostringstream site_uuid;
+    ostringstream uuid_site;
     if (strncmp(nd_config.uuid_site, ND_SITE_UUID_NULL, ND_SITE_UUID_LEN))
-        site_uuid << "X-UUID-Site: " << nd_config.uuid_site;
+        uuid_site << "X-UUID-Site: " << nd_config.uuid_site;
     else {
         string _uuid;
         if (nd_load_uuid(_uuid, nd_config.path_uuid_site, ND_SITE_UUID_LEN))
-            site_uuid << "X-UUID-Site: " << _uuid;
+            uuid_site << "X-UUID-Site: " << _uuid;
         else
-            site_uuid << "X-UUID-Site: " << nd_config.uuid_site;
+            uuid_site << "X-UUID-Site: " << nd_config.uuid_site;
     }
 
     string digest;
@@ -386,16 +394,16 @@ void ndSinkThread::CreateHeaders(void)
     headers = curl_slist_append(headers, user_agent.str().c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, uuid.str().c_str());
-    headers = curl_slist_append(headers, serial.str().c_str());
-    headers = curl_slist_append(headers, site_uuid.str().c_str());
+    headers = curl_slist_append(headers, uuid_serial.str().c_str());
+    headers = curl_slist_append(headers, uuid_site.str().c_str());
     headers = curl_slist_append(headers, conf_digest.str().c_str());
 
     headers_gz = curl_slist_append(headers_gz, user_agent.str().c_str());
     headers_gz = curl_slist_append(headers_gz, "Content-Type: application/json");
     headers_gz = curl_slist_append(headers_gz, "Content-Encoding: gzip");
     headers_gz = curl_slist_append(headers_gz, uuid.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, serial.str().c_str());
-    headers_gz = curl_slist_append(headers_gz, site_uuid.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, uuid_serial.str().c_str());
+    headers_gz = curl_slist_append(headers_gz, uuid_site.str().c_str());
     headers_gz = curl_slist_append(headers_gz, conf_digest.str().c_str());
 }
 

@@ -89,7 +89,7 @@ using namespace std;
 #ifdef _ND_USE_CONNTRACK
 #include "nd-conntrack.h"
 #endif
-#include "nd-dns-cache.h"
+#include "nd-dhc.h"
 #include "nd-detection.h"
 #include "nd-socket.h"
 #include "nd-sink.h"
@@ -130,7 +130,7 @@ nd_device_netlink device_netlink;
 #endif
 static nd_device_filter device_filters;
 static bool nd_detection_stopped_by_signal = false;
-static nd_dns_cache dns_cache;
+static nd_dns_hint_cache dns_hint_cache;
 static time_t nd_ethers_mtime = 0;
 
 nd_device_ethers device_ethers;
@@ -188,12 +188,12 @@ static void nd_config_init(void)
     nd_config.flags |= ndGF_USE_NETLINK;
 #endif
 
-    nd_config.max_flow_hash_cache = ND_MAX_FLOW_HASH_CACHE;
+    nd_config.max_fhc = ND_MAX_FHC_ENTRIES;
     nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
     nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
     nd_config.sink_connect_timeout = ND_SINK_CONNECT_TIMEOUT;
     nd_config.sink_xfer_timeout = ND_SINK_XFER_TIMEOUT;
-    nd_config.ttl_dns_entry = ND_TTL_IDLE_DNS_ENTRY;
+    nd_config.ttl_dns_entry = ND_TTL_IDLE_DHC_ENTRY;
     nd_config.ttl_idle_flow = ND_TTL_IDLE_FLOW * 1000;
     nd_config.ttl_idle_tcp_flow = ND_TTL_IDLE_TCP_FLOW * 1000;
     nd_config.update_interval = ND_STATS_INTERVAL;
@@ -201,6 +201,7 @@ static void nd_config_init(void)
     memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
 
     nd_config.fhc_save = ndFHC_PERSISTENT;
+    nd_config.fhc_purge_divisor = ND_FHC_PURGE_DIVISOR;
 }
 
 static int nd_config_load(void)
@@ -227,28 +228,14 @@ static int nd_config_load(void)
         return -1;
     }
 
-    if (nd_config.uuid == NULL) {
-        string uuid = reader.Get("netifyd", "uuid", ND_AGENT_UUID_NULL);
-        if (uuid.size() > 0)
-            nd_config.uuid = strdup(uuid.c_str());
-    }
-
     // Netify section
     nd_config_section netifyd_section;
     reader.GetSection("netifyd", netifyd_section);
 
-    string path_uuid = reader.Get(
-        "netifyd", "path_uuid", ND_AGENT_UUID_PATH);
-    nd_config.path_uuid = strdup(path_uuid.c_str());
-
-    string path_uuid_site = reader.Get(
-        "netifyd", "path_uuid_site", ND_SITE_UUID_PATH);
-    nd_config.path_uuid_site = strdup(path_uuid_site.c_str());
-
-    if (nd_config.uuid_site == NULL) {
-        string uuid_site = reader.Get("netifyd", "uuid_site", ND_SITE_UUID_NULL);
-        if (uuid_site.size() > 0)
-            nd_config.uuid_site = strdup(uuid_site.c_str());
+    if (nd_config.uuid == NULL) {
+        string uuid = reader.Get("netifyd", "uuid", ND_AGENT_UUID_NULL);
+        if (uuid.size() > 0)
+            nd_config.uuid = strdup(uuid.c_str());
     }
 
     if (nd_config.uuid_serial == NULL) {
@@ -256,6 +243,24 @@ static int nd_config_load(void)
         if (serial.size() > 0)
             nd_config.uuid_serial = strdup(serial.c_str());
     }
+
+    if (nd_config.uuid_site == NULL) {
+        string uuid_site = reader.Get("netifyd", "uuid_site", ND_SITE_UUID_NULL);
+        if (uuid_site.size() > 0)
+            nd_config.uuid_site = strdup(uuid_site.c_str());
+    }
+
+    string path_uuid = reader.Get(
+        "netifyd", "path_uuid", ND_AGENT_UUID_PATH);
+    nd_config.path_uuid = strdup(path_uuid.c_str());
+
+    string path_uuid_serial = reader.Get(
+        "netifyd", "path_uuid_serial", ND_AGENT_SERIAL_PATH);
+    nd_config.path_uuid_serial = strdup(path_uuid_serial.c_str());
+
+    string path_uuid_site = reader.Get(
+        "netifyd", "path_uuid_site", ND_SITE_UUID_PATH);
+    nd_config.path_uuid_site = strdup(path_uuid_site.c_str());
 
     string url_upload = reader.Get(
         "netifyd", "url_upload", ND_URL_SINK);
@@ -289,9 +294,6 @@ static int nd_config_load(void)
     ND_GF_SET_FLAG(ndGF_SSL_USE_TLSv1,
         reader.GetBoolean("netifyd", "ssl_use_tlsv1", false));
 
-    nd_config.max_flow_hash_cache = (size_t)reader.GetInteger(
-        "netifyd", "max_flow_hash_cache", ND_MAX_FLOW_HASH_CACHE);
-
     nd_config.max_tcp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_tcp_pkts", ND_MAX_TCP_PKTS);
 
@@ -306,8 +308,12 @@ static int nd_config_load(void)
     ND_GF_SET_FLAG(ndGF_CAPTURE_UNKNOWN_FLOWS,
         reader.GetBoolean("netifyd", "capture_unknown_flows", false));
 
+    // Flow Hash Cache section
+    ND_GF_SET_FLAG(ndGF_USE_FHC,
+        reader.GetBoolean("flow_hash_cache", "enable", true));
+
     string fhc_save_mode = reader.Get(
-        "netifyd", "fh_cache_save_mode", "persistent"
+        "flow_hash_cache", "save", "persistent"
     );
 
     if (fhc_save_mode == "persistent")
@@ -317,19 +323,31 @@ static int nd_config_load(void)
     else
         nd_config.fhc_save = ndFHC_DISABLED;
 
-    nd_config.ttl_dns_entry = (unsigned)reader.GetInteger(
-        "dns_cache", "cache_ttl", ND_TTL_IDLE_DNS_ENTRY);
-    nd_config.fhc_save = ndFHC_PERSISTENT;
+    nd_config.max_fhc = (size_t)reader.GetInteger(
+        "flow_hash_cache", "cache_size", ND_MAX_FHC_ENTRIES);
+    nd_config.fhc_purge_divisor = (size_t)reader.GetInteger(
+        "flow_hash_cache", "purge_divisor", ND_FHC_PURGE_DIVISOR);
 
     // DNS Cache section
-    ND_GF_SET_FLAG(ndGF_USE_DNS_CACHE,
+    ND_GF_SET_FLAG(ndGF_USE_DHC,
         reader.GetBoolean("dns_cache", "enable", true));
 
-    ND_GF_SET_FLAG(ndGF_DNS_CACHE_SAVE,
-        reader.GetBoolean("dns_cache", "save", true));
+    string dhc_save_mode = reader.Get(
+        "dns_cache", "save", "persistent"
+    );
+
+    if (dhc_save_mode == "persistent" ||
+        dhc_save_mode == "1" ||
+        dhc_save_mode == "yes" ||
+        dhc_save_mode == "true")
+        nd_config.dhc_save = ndDHC_PERSISTENT;
+    else if (dhc_save_mode == "volatile")
+        nd_config.dhc_save = ndDHC_VOLATILE;
+    else
+        nd_config.dhc_save = ndDHC_DISABLED;
 
     nd_config.ttl_dns_entry = (unsigned)reader.GetInteger(
-        "dns_cache", "cache_ttl", ND_TTL_IDLE_DNS_ENTRY);
+        "dns_cache", "cache_ttl", ND_TTL_IDLE_DHC_ENTRY);
 
     // Socket section
     for (int i = 0; ; i++) {
@@ -525,7 +543,7 @@ static int nd_start_detection_threads(void)
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
-                (ND_USE_DNS_CACHE) ? &dns_cache : NULL,
+                (ND_USE_DHC) ? &dns_hint_cache : NULL,
                 (ifaces.size() > 1) ? cpu++ : -1
             );
 
@@ -1684,15 +1702,14 @@ int main(int argc, char *argv[])
     nd_printf_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_printf_mutex, NULL);
 
-    pthread_mutex_init(&dns_cache.lock, NULL);
+    pthread_mutex_init(&dns_hint_cache.lock, NULL);
 #ifdef HAVE_CXX11
-    dns_cache.map_ar.reserve(ND_HASH_BUCKETS_DNSARS);
+    dns_hint_cache.map_ar.reserve(ND_HASH_BUCKETS_DNSARS);
 #endif
     static struct option options[] =
     {
         { "config", 1, 0, 'c' },
         { "debug", 0, 0, 'd' },
-        { "debug-dns-cache", 0, 0, 's' },
         { "debug-ether-names", 0, 0, 'e' },
         { "debug-uploads", 0, 0, 'D' },
         { "device-address", 1, 0, 'A' },
@@ -1726,7 +1743,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?A:ac:DdE:eF:f:hI:i:j:lN:PpRrS:s:tT:Uu:V",
+            "?A:c:DdE:eF:f:hI:i:j:lN:PpRrS:s:tT:Uu:V",
             options, &o)) == -1) break;
         switch (rc) {
         case 0:
@@ -1743,9 +1760,6 @@ int main(int argc, char *argv[])
                 exit(1);
             }
             device_addresses.push_back(make_pair(last_device, optarg));
-            break;
-        case 'a':
-            nd_config.flags |= ndGF_DEBUG_DNS_CACHE;
             break;
         case 'c':
             if (nd_conf_filename != NULL) free(nd_conf_filename);
@@ -1902,8 +1916,8 @@ int main(int argc, char *argv[])
 
     if (nd_config.h_flow != stderr) {
         // Test mode enabled, disable/set certain config parameters
-        ND_GF_SET_FLAG(ndGF_USE_DNS_CACHE, true);
-        ND_GF_SET_FLAG(ndGF_DNS_CACHE_SAVE, false);
+        ND_GF_SET_FLAG(ndGF_USE_DHC, true);
+        ND_GF_SET_FLAG(ndGF_USE_FHC, true);
         ND_GF_SET_FLAG(ndGF_USE_SINK, false);
         ND_GF_SET_FLAG(ndGF_JSON_SAVE, false);
         ND_GF_SET_FLAG(ndGF_REMAIN_IN_FOREGROUND, true);
@@ -1913,6 +1927,8 @@ int main(int argc, char *argv[])
         nd_config.services.clear();
         nd_config.tasks.clear();
 #endif
+        nd_config.dhc_save = ndDHC_DISABLED;
+        nd_config.fhc_save = ndFHC_DISABLED;
     }
 
     if (ifaces.size() == 0) {
@@ -1971,7 +1987,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (ND_USE_DNS_CACHE && ND_DNS_CACHE_SAVE) dns_cache.load();
+    if (ND_USE_DHC) dns_hint_cache.load();
 
     nd_sha1_file(
         nd_config.path_sink_config, nd_config.digest_sink_config
@@ -2156,10 +2172,9 @@ int main(int argc, char *argv[])
                 thread_socket->QueueWrite(json);
             }
 
-            if (ND_USE_DNS_CACHE) {
-                dns_cache.purge();
-                if (ND_DNS_CACHE_SAVE)
-                    dns_cache.save();
+            if (ND_USE_DHC) {
+                dns_hint_cache.purge();
+                dns_hint_cache.save();
             }
 
             nd_reap_detection_threads();
@@ -2252,9 +2267,8 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    if (ND_USE_DNS_CACHE && ND_DNS_CACHE_SAVE)
-        dns_cache.save();
-    pthread_mutex_destroy(&dns_cache.lock);
+    if (ND_USE_DHC) dns_hint_cache.save();
+    pthread_mutex_destroy(&dns_hint_cache.lock);
 
     pthread_mutex_destroy(nd_printf_mutex);
     delete nd_printf_mutex;
