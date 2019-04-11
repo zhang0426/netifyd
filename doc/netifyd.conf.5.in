@@ -37,8 +37,8 @@ This option disables host (SNI) and peer certificate verification.  You can use 
 .PP
 Enable/disable the \fBjson_save\fR parameter to set whether the current state is output to a JSON file.  The default is false.
 .PP
-.SS DNS cache
-DNS hint cache options are set within the [\fBdns_cache\fR] section.
+.SS DNS Hint Cache
+DNS hint cache options are set within the [\fBdns_hint_cache\fR] section.
 
 The DNS hint cache stores DNS response records for a period of time.  These hints are used when application detection fails.  A cache look-up is performed and any matching hostname is used to 'hint' the application detection logic.  In most cases this significantly improves application detection.
 .PP
@@ -46,11 +46,11 @@ The DNS hint cache stores DNS response records for a period of time.  These hint
 .PP
 Enable or disable the DNS hint cache.  On non-embedded systems with more memory, it is highly recommended that this be enabled for more comprehensive application detection.  The default is true.
 .PP
-\fBsave\fR=\fIBOOLEAN\fR
+\fBsave\fR=\fIpersistent\fR | \fIvolatile\fR | \fIdisabled\fR
 .PP
-Enable or disable periodic saving of the DNS hint cache.  When reasonably fast storage (hard-drive, fast flash, or sufficiently large RAM disk) is available this option should be enabled.  In the event of a program crash/reload, or system reboot, the DNS hint cache will be primed on start-up.  This prevents failed application detection due to missed DNS responses.  The default is true.
+Enable or disable periodic saving of the DNS hint cache.  When reasonably fast storage (hard-drive, fast flash, or sufficiently large RAM disk) is available this option should be enabled.  In the event of a program crash/reload, or system reboot, the DNS hint cache will be primed on start-up when set to \fIpersistent\fR.  This prevents failed application detection due to missed DNS responses.  The default is: \fIpersistent\fR
 .PP
-\fBcache_ttl\fR=\fISECONDS\fR
+\fBttl\fR=\fISECONDS\fR
 .PP
 The number of seconds DNS hints should be cached.  New hints will have their initial TTL set to this value.  Existing hints will have their TTL reset to this value on a cache hit (look-up match).  This value should be adjusted according to available memory and network traffic.  Larger networks will generate significantly more DNS traffic.  The default value is 30 minutes (1800 seconds).
 .SS Sockets
@@ -71,7 +71,7 @@ Create and bind a TCP/IP socket on \fIADDRESS\fR for incoming network connection
 \fBsocket_port\fR[\fIn\fR]\fR=[\fISERVICE\fR|\fIPORT\fR]
 .PP
 For TCP/IP sockets, you can specify a corresponding \fISERVICE\fR or \fIPORT\fR.  If not specified, the default TCP port 7150 is used.
-.SS Privacy filtering
+.SS Privacy Filter
 The @PACKAGE_NAME@ can be configured to obfuscate flow addresses (MAC and IP) that match rules in the [\fBprivacy_filter\fR] section.  You can match by MAC or IP address.  When a match is found, the MAC and IP address will be replaced with the following bogus addresses:
 
  \fBMAC\fR: 01:02:03:04:05:06 (lower addresses) 0a:0b:0c:0d:0e:0f (upper addresses)
@@ -105,10 +105,10 @@ max_udp_pkts = 8
 ssl_use_tlsv1 = false
 ssl_verify = true
 
-[dns_cache]
-cache_ttl = 1800
+[dns_hint_cache]
 enable = true
-save = true
+save = persistent
+ttl = 1800
 
 [socket]
 listen_address[0] = 0.0.0.0
