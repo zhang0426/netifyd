@@ -330,10 +330,10 @@ static int nd_config_load(void)
 
     // DNS Cache section
     ND_GF_SET_FLAG(ndGF_USE_DHC,
-        reader.GetBoolean("dns_cache", "enable", true));
+        reader.GetBoolean("dns_hint_cache", "enable", true));
 
     string dhc_save_mode = reader.Get(
-        "dns_cache", "save", "persistent"
+        "dns_hint_cache", "save", "persistent"
     );
 
     if (dhc_save_mode == "persistent" ||
@@ -347,7 +347,7 @@ static int nd_config_load(void)
         nd_config.dhc_save = ndDHC_DISABLED;
 
     nd_config.ttl_dns_entry = (unsigned)reader.GetInteger(
-        "dns_cache", "cache_ttl", ND_TTL_IDLE_DHC_ENTRY);
+        "dns_hint_cache", "ttl", ND_TTL_IDLE_DHC_ENTRY);
 
     // Socket section
     for (int i = 0; ; i++) {
@@ -1727,7 +1727,6 @@ int main(int argc, char *argv[])
         { "provision", 0, 0, 'p' },
         { "remain-in-foreground", 0, 0, 'R' },
         { "replay-delay", 0, 0, 'r' },
-        { "serial", 1, 0, 's' },
         { "sink-config", 1, 0, 'f' },
         { "test-output", 1, 0, 'T' },
         { "uuid", 1, 0, 'u' },
@@ -1875,9 +1874,6 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Sorry, not available from this build profile.\n");
             exit(1);
 #endif
-        case 's':
-            nd_config.uuid_serial = strdup(optarg);
-            break;
         case 't':
             nd_config.flags &= ~ndGF_USE_CONNTRACK;
             break;

@@ -155,6 +155,9 @@ using namespace std;
 // Enable DNS hint cache debug logging
 //define _ND_LOG_DHC              1
 
+// Enable flow hash cache debug logging
+//define _ND_LOG_FHC              1
+
 extern nd_global_config nd_config;
 
 struct __attribute__((packed)) nd_mpls_header_t
@@ -1171,8 +1174,10 @@ void ndDetectionThread::ProcessPacket(void)
             else {
                 if (memcmp(new_flow->digest_mdata, flow_digest_mdata.c_str(),
                     SHA1_DIGEST_LENGTH)) {
+#ifdef _ND_LOG_FHC
                     nd_debug_printf("%s: Resurrected flow metadata hash from cache.\n",
                         tag.c_str());
+#endif
                     memcpy(new_flow->digest_mdata, flow_digest_mdata.c_str(),
                         SHA1_DIGEST_LENGTH);
                 }
