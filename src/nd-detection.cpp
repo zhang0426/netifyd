@@ -213,8 +213,8 @@ ndDetectionThread::ndDetectionThread(
     ndpi = nd_ndpi_init(tag, custom_proto_base);
 
     if (ND_USE_FHC) {
-        fhc = new ndFlowHashCache(nd_config.max_fhc);
-        fhc->load(tag);
+        fhc = new ndFlowHashCache(tag, nd_config.max_fhc);
+        fhc->load();
     }
 
     nd_debug_printf("%s: detection thread created, custom_proto_base: %u.\n",
@@ -228,7 +228,7 @@ ndDetectionThread::~ndDetectionThread()
     if (pcap != NULL) pcap_close(pcap);
     if (ndpi != NULL) nd_ndpi_free(ndpi);
     if (fhc != NULL) {
-        fhc->save(tag);
+        fhc->save();
         delete fhc;
     }
 

@@ -60,26 +60,29 @@ using namespace std;
 extern nd_global_config nd_config;
 extern nd_device_ethers device_ethers;
 
-ndFlowHashCache::ndFlowHashCache(size_t cache_size)
-    : cache_size(cache_size) { }
+ndFlowHashCache::ndFlowHashCache(const string &device, size_t cache_size)
+    : device(device), cache_size(cache_size) { }
 
 void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
 {
     nd_fhc_map::const_iterator i = lookup.find(lower_hash);
 
-    if (i != lookup.end())
-        nd_debug_printf("WARNING: Found existing hash in flow hash cache on push.\n");
+    if (i != lookup.end()) {
+        nd_debug_printf("%s: WARNING: Found existing hash in flow hash cache on push.\n",
+            device.c_str());
+    }
     else {
         if (lookup.size() == cache_size) {
 //#if _ND_DEBUG_FHC
-            nd_debug_printf("Purging old flow hash cache entries.\n");
+            nd_debug_printf("%s: Purging old flow hash cache entries.\n", device.c_str());
 //#endif
             for (size_t n = 0; n < cache_size / nd_config.fhc_purge_divisor; n++) {
                 pair<string, string> j = index.back();
 
                 nd_fhc_map::iterator k = lookup.find(j.first);
                 if (k == lookup.end()) {
-                    nd_debug_printf("WARNING: flow hash cache index not found in map\n");
+                    nd_debug_printf("%s: WARNING: flow hash cache index not found in map\n",
+                        device.c_str());
                 }
                 else
                     lookup.erase(k);
@@ -91,7 +94,7 @@ void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
         index.push_front(make_pair(lower_hash, upper_hash));
         lookup[lower_hash] = index.begin();
 #if _ND_DEBUG_FHC
-        nd_debug_printf("Flow hash cache entries: %lu\n", lookup.size());
+        nd_debug_printf("%s: Flow hash cache entries: %lu\n", device.c_str(), lookup.size());
 #endif
     }
 }
@@ -112,7 +115,7 @@ bool ndFlowHashCache::pop(const string &lower_hash, string &upper_hash)
     return true;
 }
 
-void ndFlowHashCache::save(const string &device)
+void ndFlowHashCache::save(void)
 {
     ostringstream os;
 
@@ -145,7 +148,7 @@ void ndFlowHashCache::save(const string &device)
         device.c_str(), index.size ());
 }
 
-void ndFlowHashCache::load(const string &device)
+void ndFlowHashCache::load(void)
 {
     ostringstream os;
 

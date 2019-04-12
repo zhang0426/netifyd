@@ -50,15 +50,16 @@ typedef unordered_map<string, nd_fhc_list::iterator> nd_fhc_map;
 class ndFlowHashCache
 {
 public:
-    ndFlowHashCache(size_t cache_size = ND_MAX_FHC_ENTRIES);
+    ndFlowHashCache(const string &device, size_t cache_size = ND_MAX_FHC_ENTRIES);
 
     void push(const string &lower_hash, const string &upper_hash);
     bool pop(const string &lower_hash, string &upper_hash);
 
-    void save(const string &device);
-    void load(const string &device);
+    void save(void);
+    void load(void);
 
 protected:
+    string device;
     size_t cache_size;
     nd_fhc_list index;
     nd_fhc_map lookup;
