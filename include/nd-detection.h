@@ -42,7 +42,7 @@ public:
 #endif
         nd_flow_map *flow_map, nd_packet_stats *stats,
         nd_device_addrs *device_addrs = NULL,
-        nd_dns_hint_cache *dhc = NULL,
+        ndDNSHintCache *dhc = NULL,
         long cpu = -1);
     virtual ~ndDetectionThread();
 
@@ -85,8 +85,9 @@ protected:
     nd_flow_map *flows;
     nd_packet_stats *stats;
     nd_device_addrs *device_addrs;
-    nd_dns_hint_cache *dhc;
     ns_msg ns_h;
+
+    ndDNSHintCache *dhc;
 
     ndFlowHashCache *fhc;
     string flow_digest, flow_digest_mdata;

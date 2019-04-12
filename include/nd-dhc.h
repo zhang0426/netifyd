@@ -24,10 +24,11 @@ typedef unordered_map<string, nd_dns_tuple> nd_dns_ar;
 typedef pair<nd_dns_ar::iterator, bool> nd_dhc_insert;
 typedef pair<string, nd_dns_tuple> nd_dhc_insert_pair;
 
-typedef struct nd_dns_hint_cache_t
+class ndDNSHintCache
 {
-    pthread_mutex_t lock;
-    nd_dns_ar map_ar;
+public:
+    ndDNSHintCache();
+    virtual ~ndDNSHintCache();
 
     void insert(sa_family_t af, const uint8_t *addr, const string &hostname);
     void insert(const string &digest, const string &hostname);
@@ -40,7 +41,11 @@ typedef struct nd_dns_hint_cache_t
 
     void load(void);
     void save(void);
-} nd_dns_hint_cache;
+
+protected:
+    pthread_mutex_t lock;
+    nd_dns_ar map_ar;
+};
 
 #endif // _ND_DHC_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

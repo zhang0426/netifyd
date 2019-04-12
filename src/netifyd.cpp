@@ -130,7 +130,7 @@ nd_device_netlink device_netlink;
 #endif
 static nd_device_filter device_filters;
 static bool nd_detection_stopped_by_signal = false;
-static nd_dns_hint_cache dns_hint_cache;
+static ndDNSHintCache *dns_hint_cache = NULL;
 static time_t nd_ethers_mtime = 0;
 
 nd_device_ethers device_ethers;
@@ -543,7 +543,7 @@ static int nd_start_detection_threads(void)
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
-                (ND_USE_DHC) ? &dns_hint_cache : NULL,
+                dns_hint_cache,
                 (ifaces.size() > 1) ? cpu++ : -1
             );
 
@@ -1702,10 +1702,6 @@ int main(int argc, char *argv[])
     nd_printf_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_printf_mutex, NULL);
 
-    pthread_mutex_init(&dns_hint_cache.lock, NULL);
-#ifdef HAVE_CXX11
-    dns_hint_cache.map_ar.reserve(ND_HASH_BUCKETS_DNSARS);
-#endif
     static struct option options[] =
     {
         { "config", 1, 0, 'c' },
@@ -1927,6 +1923,9 @@ int main(int argc, char *argv[])
         nd_config.fhc_save = ndFHC_DISABLED;
     }
 
+    if (ND_USE_DHC)
+        dns_hint_cache = new ndDNSHintCache();
+
     if (ifaces.size() == 0) {
         fprintf(stderr,
             "Required argument, (-I, --internal, or -E, --external) missing.\n");
@@ -1983,7 +1982,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (ND_USE_DHC) dns_hint_cache.load();
+    if (dns_hint_cache) dns_hint_cache->load();
 
     nd_sha1_file(
         nd_config.path_sink_config, nd_config.digest_sink_config
@@ -2168,9 +2167,9 @@ int main(int argc, char *argv[])
                 thread_socket->QueueWrite(json);
             }
 
-            if (ND_USE_DHC) {
-                dns_hint_cache.purge();
-                dns_hint_cache.save();
+            if (dns_hint_cache) {
+                dns_hint_cache->purge();
+                dns_hint_cache->save();
             }
 
             nd_reap_detection_threads();
@@ -2263,8 +2262,10 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    if (ND_USE_DHC) dns_hint_cache.save();
-    pthread_mutex_destroy(&dns_hint_cache.lock);
+    if (dns_hint_cache) {
+        dns_hint_cache->save();
+        delete dns_hint_cache;
+    }
 
     pthread_mutex_destroy(nd_printf_mutex);
     delete nd_printf_mutex;

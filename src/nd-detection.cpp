@@ -184,7 +184,7 @@ ndDetectionThread::ndDetectionThread(
 #endif
     nd_flow_map *flow_map, nd_packet_stats *stats,
     nd_device_addrs *device_addrs,
-    nd_dns_hint_cache *dhc,
+    ndDNSHintCache *dhc,
     long cpu)
     : ndThread(dev, cpu),
     internal(internal),
@@ -1162,7 +1162,9 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (ND_USE_FHC && new_flow->lower_port != 0 && new_flow->upper_port != 0) {
             if (! fhc->pop(flow_digest, flow_digest_mdata)) {
+
                 new_flow->hash(tag, true);
+
                 flow_digest_mdata.assign(
                     (const char *)new_flow->digest_mdata, SHA1_DIGEST_LENGTH
                 );

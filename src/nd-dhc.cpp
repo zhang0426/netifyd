@@ -59,7 +59,20 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
-void nd_dns_hint_cache::insert(sa_family_t af, const uint8_t *addr, const string &hostname)
+ndDNSHintCache::ndDNSHintCache()
+{
+    pthread_mutex_init(&lock, NULL);
+#ifdef HAVE_CXX11
+    map_ar.reserve(ND_HASH_BUCKETS_DNSARS);
+#endif
+}
+
+ndDNSHintCache::~ndDNSHintCache()
+{
+    pthread_mutex_destroy(&lock);
+}
+
+void ndDNSHintCache::insert(sa_family_t af, const uint8_t *addr, const string &hostname)
 {
     sha1 ctx;
     string digest;
@@ -81,7 +94,7 @@ void nd_dns_hint_cache::insert(sa_family_t af, const uint8_t *addr, const string
     pthread_mutex_unlock(&lock);
 }
 
-void nd_dns_hint_cache::insert(const string &digest, const string &hostname)
+void ndDNSHintCache::insert(const string &digest, const string &hostname)
 {
     int i = 0;
     uint8_t v;
@@ -103,7 +116,7 @@ void nd_dns_hint_cache::insert(const string &digest, const string &hostname)
     map_ar.insert(nd_dhc_insert_pair(_digest, ar));
 }
 
-bool nd_dns_hint_cache::lookup(const struct in_addr &addr, string &hostname)
+bool ndDNSHintCache::lookup(const struct in_addr &addr, string &hostname)
 {
     sha1 ctx;
     string digest;
@@ -116,7 +129,7 @@ bool nd_dns_hint_cache::lookup(const struct in_addr &addr, string &hostname)
     return lookup(digest, hostname);
 }
 
-bool nd_dns_hint_cache::lookup(const struct in6_addr &addr, string &hostname)
+bool ndDNSHintCache::lookup(const struct in6_addr &addr, string &hostname)
 {
     sha1 ctx;
     string digest;
@@ -129,7 +142,7 @@ bool nd_dns_hint_cache::lookup(const struct in6_addr &addr, string &hostname)
     return lookup(digest, hostname);
 }
 
-bool nd_dns_hint_cache::lookup(const string &digest, string &hostname)
+bool ndDNSHintCache::lookup(const string &digest, string &hostname)
 {
     bool found = false;
 
@@ -147,7 +160,7 @@ bool nd_dns_hint_cache::lookup(const string &digest, string &hostname)
     return found;
 }
 
-size_t nd_dns_hint_cache::purge(void)
+size_t ndDNSHintCache::purge(void)
 {
     size_t purged = 0, remaining = 0;
 
@@ -173,7 +186,7 @@ size_t nd_dns_hint_cache::purge(void)
     return purged;
 }
 
-void nd_dns_hint_cache::load(void)
+void ndDNSHintCache::load(void)
 {
     int rc;
     time_t ttl;
@@ -226,7 +239,7 @@ void nd_dns_hint_cache::load(void)
     fclose(hf);
 }
 
-void nd_dns_hint_cache::save(void)
+void ndDNSHintCache::save(void)
 {
     string digest;
 
