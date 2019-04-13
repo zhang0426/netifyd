@@ -104,7 +104,7 @@ bool ndFlowHashCache::pop(const string &lower_hash, string &upper_hash)
     nd_fhc_map::iterator i = lookup.find(lower_hash);
     if (i == lookup.end()) return false;
 
-    upper_hash = (*i->second).second;
+    upper_hash = i->second->second;
 
     index.erase(i->second);
 
@@ -168,14 +168,12 @@ void ndFlowHashCache::load(void)
         do {
             string digest_lower, digest_mdata;
             uint8_t digest[SHA1_DIGEST_LENGTH * 2];
-            uint8_t *p = digest;
 
             if (fread(digest, SHA1_DIGEST_LENGTH * 2, 1, hf) != 1) break;
 
-            digest_lower.assign((const char *)p, SHA1_DIGEST_LENGTH);
-
-            p += SHA1_DIGEST_LENGTH;
-            digest_mdata.assign((const char *)p, SHA1_DIGEST_LENGTH);
+            digest_lower.assign((const char *)digest, SHA1_DIGEST_LENGTH);
+            digest_mdata.assign((const char *)&digest[SHA1_DIGEST_LENGTH],
+                SHA1_DIGEST_LENGTH);
 
             push(digest_lower, digest_mdata);
         }
