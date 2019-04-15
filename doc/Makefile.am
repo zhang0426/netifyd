@@ -5,7 +5,7 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-EXTRA_DIST = BUGS.md BUILD-openwrt.md OVERVIEW.md
+EXTRA_DIST = BUGS.md BUILD-openwrt.md OVERVIEW.md netifyd.conf-sample
 
 sharedatadir = $(datadir)/netifyd
 sharedata_DATA = netifyd.conf-sample
