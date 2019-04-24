@@ -44,7 +44,9 @@ public:
         : runtime_error(what_arg) { }
 };
 
-typedef struct ndNetlinkNetworkAddr {
+class ndNetlinkNetworkAddr
+{
+public:
     ndNetlinkNetworkAddr() :
         length(0) { memset(&address, 0, sizeof(struct sockaddr_storage)); }
     ndNetlinkNetworkAddr(const struct sockaddr_storage *addr, uint8_t length = 0) :
@@ -58,7 +60,7 @@ typedef struct ndNetlinkNetworkAddr {
 
     inline bool operator==(const ndNetlinkNetworkAddr &n) const;
     inline bool operator!=(const ndNetlinkNetworkAddr &n) const;
-} ndNetlinkNetworkAddr;
+};
 
 typedef map<string, pthread_mutex_t *> ndNetlinkInterfaces;
 typedef map<string, vector<ndNetlinkNetworkAddr *> > ndNetlinkNetworks;
