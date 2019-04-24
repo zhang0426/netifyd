@@ -89,18 +89,17 @@ public:
     uint8_t lower_mac[ETH_ALEN];
     uint8_t upper_mac[ETH_ALEN];
 
-// TODO: Look into using sockaddr_storage for both IPv4/6
-//    struct sockaddr_storage lower_addr;
-//    struct sockaddr_storage upper_addr;
+    struct sockaddr_storage lower_addr;
+    struct sockaddr_storage upper_addr;
 
     union {
-        struct in_addr lower_addr4;
-        struct in6_addr lower_addr6;
+        struct in_addr *lower_addr4;
+        struct in6_addr *lower_addr6;
     };
 
     union {
-        struct in_addr upper_addr4;
-        struct in6_addr upper_addr6;
+        struct in_addr *upper_addr4;
+        struct in6_addr *upper_addr6;
     };
 
     char lower_ip[INET6_ADDRSTRLEN];
@@ -229,18 +228,9 @@ public:
 
     inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;
-        switch (ip_version) {
-        case 4:
-            if (memcmp(&lower_addr4, &f.lower_addr4, sizeof(struct in_addr)) == 0 &&
-                memcmp(&upper_addr4, &f.upper_addr4, sizeof(struct in_addr)) == 0)
-                return true;
-            break;
-        case 6:
-            if (memcmp(&lower_addr6, &f.lower_addr6, sizeof(struct in6_addr)) == 0 &&
-                memcmp(&upper_addr6, &f.upper_addr6, sizeof(struct in6_addr)) == 0)
-                return true;
-            break;
-        }
+        if (memcmp(&lower_addr, &f.lower_addr, sizeof(struct sockaddr_storage)) == 0 &&
+            memcmp(&upper_addr, &f.upper_addr, sizeof(struct sockaddr_storage)) == 0)
+            return true;
         return false;
     }
 
