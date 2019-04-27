@@ -1199,7 +1199,7 @@ void ndDetectionThread::ProcessPacket(void)
         if (device_addrs != NULL) {
             for (int t = ndFlow::TYPE_LOWER; t < ndFlow::TYPE_MAX; t++) {
                 string ip;
-                uint8_t *umac = NULL;
+                const uint8_t *umac = NULL;
 
                 if (t == ndFlow::TYPE_LOWER &&
                     (new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP ||
