@@ -986,11 +986,11 @@ void ndDetectionThread::ProcessPacket(void)
                 // ...try the upper address.
                 if (new_flow->ip_version == 4) {
                     if (! dhc->lookup(*new_flow->lower_addr4, hostname))
-                        dhc->lookup(new_flow->upper_addr4, hostname);
+                        dhc->lookup(*new_flow->upper_addr4, hostname);
                 }
                 else {
                     if (! dhc->lookup(*new_flow->lower_addr6, hostname))
-                        dhc->lookup(new_flow->upper_addr6, hostname);
+                        dhc->lookup(*new_flow->upper_addr6, hostname);
                 }
 #endif
                 if (hostname.size()) {
