@@ -958,6 +958,39 @@ void ndDetectionThread::ProcessPacket(void)
                     ntohs(new_flow->lower_port),
                     ntohs(new_flow->upper_port)
             );
+
+            // XXX: In the *very* unlikely case that we have SNI from a partial TLS
+            // dissection, try to detect the application.  This has only been seen
+            // in one case so far, between a Microsoft client/server.
+            switch (new_flow->detected_protocol.master_protocol) {
+                case NDPI_PROTOCOL_HTTPS:
+                case NDPI_PROTOCOL_SSL:
+                case NDPI_PROTOCOL_MAIL_IMAPS:
+                case NDPI_PROTOCOL_MAIL_SMTPS:
+                case NDPI_PROTOCOL_MAIL_POPS:
+                case NDPI_PROTOCOL_SSL_NO_CERT:
+                case NDPI_PROTOCOL_OSCAR:
+                    if (new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate[0] != '\0') {
+                        ndpi_protocol_match_result ret_match;
+                        new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+                            ndpi, new_flow->ndpi_flow,
+                            (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate,
+                            strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate),
+                            &ret_match
+                        );
+                    }
+                    if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
+                        new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
+                        ndpi_protocol_match_result ret_match;
+                        new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+                            ndpi, new_flow->ndpi_flow,
+                            (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate,
+                            strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate),
+                            &ret_match
+                        );
+                    }
+                    break;
+            }
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
