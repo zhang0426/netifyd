@@ -1587,7 +1587,7 @@ static void nd_add_device_addresses(nd_device_addr &device_addresses)
         if (_length == 0 || (
             (family == AF_INET && _length > 32) ||
             (family == AF_INET6 && _length > 128))) {
-            fprintf(stderr, "WARNING: Invalid network length: %hu\n", _length);
+            fprintf(stderr, "WARNING: Invalid network length: %hhu\n", _length);
             continue;
         }
 

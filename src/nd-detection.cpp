@@ -1365,18 +1365,18 @@ void ndDetectionThread::ProcessPacket(void)
     }
 
     if (ts_last_idle_scan + ND_TTL_IDLE_SCAN < ts_pkt_last) {
-        uint64_t purged = 0;
+        //uint64_t purged = 0;
         nd_flow_map::iterator i = flows->begin();
         while (i != flows->end()) {
-            unsigned ttl = (i->second->ip_protocol != IPPROTO_TCP) ?
-                nd_config.ttl_idle_flow : nd_config.ttl_idle_tcp_flow;
-            if (i->second->ts_last_seen + ttl < ts_pkt_last ||
-                (i->second->ip_protocol == IPPROTO_TCP && i->second->tcp_fin)) {
+            unsigned ttl = (
+                i->second->ip_protocol != IPPROTO_TCP || i->second->tcp_fin
+            ) ? nd_config.ttl_idle_flow : nd_config.ttl_idle_tcp_flow;
+
+            if (i->second->ts_last_seen + ttl < ts_pkt_last) {
 
                 delete i->second;
-
-                purged++;
                 i = flows->erase(i);
+                //purged++;
             }
             else
                 i++;
