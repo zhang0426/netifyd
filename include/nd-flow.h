@@ -92,15 +92,11 @@ public:
     struct sockaddr_storage lower_addr;
     struct sockaddr_storage upper_addr;
 
-    union {
-        struct in_addr *lower_addr4;
-        struct in6_addr *lower_addr6;
-    };
+    struct sockaddr_in *lower_addr4;
+    struct sockaddr_in6 *lower_addr6;
 
-    union {
-        struct in_addr *upper_addr4;
-        struct in6_addr *upper_addr6;
-    };
+    struct sockaddr_in *upper_addr4;
+    struct sockaddr_in6 *upper_addr6;
 
     char lower_ip[INET6_ADDRSTRLEN];
     char upper_ip[INET6_ADDRSTRLEN];

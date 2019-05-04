@@ -116,29 +116,29 @@ void ndDNSHintCache::insert(const string &digest, const string &hostname)
     map_ar.insert(nd_dhc_insert_pair(_digest, ar));
 }
 
-bool ndDNSHintCache::lookup(const struct in_addr &addr, string &hostname)
+bool ndDNSHintCache::lookup(const struct sockaddr_storage *addr, string &hostname)
 {
     sha1 ctx;
     string digest;
     uint8_t _digest[SHA1_DIGEST_LENGTH];
+    const struct sockaddr_in *addr4;
+    const struct sockaddr_in6 *addr6;
 
     sha1_init(&ctx);
-    sha1_write(&ctx, (const char *)&addr, sizeof(struct in_addr));
+    switch (addr->ss_family) {
+    case AF_INET:
+        addr4 = (const struct sockaddr_in *)addr;
+        sha1_write(&ctx, (const char *)&addr4->sin_addr, sizeof(struct in_addr));
+        break;
+    case AF_INET6:
+        addr6 = (const struct sockaddr_in6 *)addr;
+        sha1_write(&ctx, (const char *)&addr6->sin6_addr, sizeof(struct in6_addr));
+        break;
+    default:
+        return false;
+    }
+
     digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
-
-    return lookup(digest, hostname);
-}
-
-bool ndDNSHintCache::lookup(const struct in6_addr &addr, string &hostname)
-{
-    sha1 ctx;
-    string digest;
-    uint8_t _digest[SHA1_DIGEST_LENGTH];
-
-    sha1_init(&ctx);
-    sha1_write(&ctx, (const char *)&addr, sizeof(struct in6_addr));
-    digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
-
     return lookup(digest, hostname);
 }
 

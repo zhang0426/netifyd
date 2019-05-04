@@ -203,10 +203,10 @@ ndFlow::ndFlow(bool internal)
     memset(&lower_addr, 0, sizeof(struct sockaddr_storage));
     memset(&upper_addr, 0, sizeof(struct sockaddr_storage));
 
-    lower_addr4 = &((struct sockaddr_in *)&lower_addr)->sin_addr;
-    lower_addr6 = &((struct sockaddr_in6 *)&lower_addr)->sin6_addr;
-    upper_addr4 = &((struct sockaddr_in *)&upper_addr)->sin_addr;
-    upper_addr6 = &((struct sockaddr_in6 *)&upper_addr)->sin6_addr;
+    lower_addr4 = (struct sockaddr_in *)&lower_addr;
+    lower_addr6 = (struct sockaddr_in6 *)&lower_addr;
+    upper_addr4 = (struct sockaddr_in *)&upper_addr;
+    upper_addr6 = (struct sockaddr_in6 *)&upper_addr;
 
     memset(lower_ip, 0, INET6_ADDRSTRLEN);
     memset(upper_ip, 0, INET6_ADDRSTRLEN);

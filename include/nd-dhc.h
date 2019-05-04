@@ -33,8 +33,7 @@ public:
     void insert(sa_family_t af, const uint8_t *addr, const string &hostname);
     void insert(const string &digest, const string &hostname);
 
-    bool lookup(const struct in_addr &addr, string &hostname);
-    bool lookup(const struct in6_addr &addr, string &hostname);
+    bool lookup(const struct sockaddr_storage *addr, string &hostname);
     bool lookup(const string &digest, string &hostname);
 
     size_t purge(void);

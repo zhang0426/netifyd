@@ -654,16 +654,16 @@ void ndDetectionThread::ProcessPacket(void)
         addr_cmp = memcmp(&hdr_ip->ip_src, &hdr_ip->ip_dst, 4);
 
         if (addr_cmp < 0) {
-            flow.lower_addr4->s_addr = hdr_ip->ip_src.s_addr;
-            flow.upper_addr4->s_addr = hdr_ip->ip_dst.s_addr;
+            flow.lower_addr4->sin_addr.s_addr = hdr_ip->ip_src.s_addr;
+            flow.upper_addr4->sin_addr.s_addr = hdr_ip->ip_dst.s_addr;
             if (pcap_datalink_type == DLT_EN10MB) {
                 memcpy(flow.lower_mac, hdr_eth->ether_shost, ETH_ALEN);
                 memcpy(flow.upper_mac, hdr_eth->ether_dhost, ETH_ALEN);
             }
         }
         else {
-            flow.lower_addr4->s_addr = hdr_ip->ip_dst.s_addr;
-            flow.upper_addr4->s_addr = hdr_ip->ip_src.s_addr;
+            flow.lower_addr4->sin_addr.s_addr = hdr_ip->ip_dst.s_addr;
+            flow.upper_addr4->sin_addr.s_addr = hdr_ip->ip_src.s_addr;
             if (pcap_datalink_type == DLT_EN10MB) {
                 memcpy(flow.lower_mac, hdr_eth->ether_dhost, ETH_ALEN);
                 memcpy(flow.upper_mac, hdr_eth->ether_shost, ETH_ALEN);
@@ -699,16 +699,16 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         if (addr_cmp < 0) {
-            memcpy(flow.lower_addr6, &hdr_ip6->ip6_src, sizeof(struct in6_addr));
-            memcpy(flow.upper_addr6, &hdr_ip6->ip6_dst, sizeof(struct in6_addr));
+            memcpy(&flow.lower_addr6->sin6_addr, &hdr_ip6->ip6_src, sizeof(struct in6_addr));
+            memcpy(&flow.upper_addr6->sin6_addr, &hdr_ip6->ip6_dst, sizeof(struct in6_addr));
             if (pcap_datalink_type == DLT_EN10MB) {
                 memcpy(flow.lower_mac, hdr_eth->ether_shost, ETH_ALEN);
                 memcpy(flow.upper_mac, hdr_eth->ether_dhost, ETH_ALEN);
             }
         }
         else {
-            memcpy(flow.lower_addr6, &hdr_ip6->ip6_dst, sizeof(struct in6_addr));
-            memcpy(flow.upper_addr6, &hdr_ip6->ip6_src, sizeof(struct in6_addr));
+            memcpy(&flow.lower_addr6->sin6_addr, &hdr_ip6->ip6_dst, sizeof(struct in6_addr));
+            memcpy(&flow.upper_addr6->sin6_addr, &hdr_ip6->ip6_src, sizeof(struct in6_addr));
             if (pcap_datalink_type == DLT_EN10MB) {
                 memcpy(flow.lower_mac, hdr_eth->ether_dhost, ETH_ALEN);
                 memcpy(flow.upper_mac, hdr_eth->ether_shost, ETH_ALEN);
@@ -1001,30 +1001,17 @@ void ndDetectionThread::ProcessPacket(void)
 
                 string hostname;
 #ifdef _ND_USE_NETLINK
-                if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN) {
-                    if (new_flow->ip_version == 4)
-                        dhc->lookup(*new_flow->lower_addr4, hostname);
-                    else
-                        dhc->lookup(*new_flow->lower_addr6, hostname);
-                }
+                if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN)
+                    dhc->lookup(&new_flow->lower_addr, hostname);
                 else if (new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
-                    if (new_flow->ip_version == 4)
-                        dhc->lookup(*new_flow->upper_addr4, hostname);
-                    else
-                        dhc->lookup(*new_flow->upper_addr6, hostname);
+                    dhc->lookup(&new_flow->upper_addr, hostname);
                 }
 #else
                 // TODO: Best effort for now:
                 // First try the lower address, if not found in cache...
                 // ...try the upper address.
-                if (new_flow->ip_version == 4) {
-                    if (! dhc->lookup(*new_flow->lower_addr4, hostname))
-                        dhc->lookup(*new_flow->upper_addr4, hostname);
-                }
-                else {
-                    if (! dhc->lookup(*new_flow->lower_addr6, hostname))
-                        dhc->lookup(*new_flow->upper_addr6, hostname);
-                }
+                if (! dhc->lookup(&new_flow->lower_addr, hostname))
+                    dhc->lookup(&new_flow->upper_addr, hostname);
 #endif
                 if (hostname.size()) {
                     ndpi_protocol_match_result ret_match;
@@ -1209,16 +1196,16 @@ void ndDetectionThread::ProcessPacket(void)
 
         switch (new_flow->ip_version) {
         case 4:
-            inet_ntop(AF_INET, &new_flow->lower_addr4->s_addr,
+            inet_ntop(AF_INET, &new_flow->lower_addr4->sin_addr.s_addr,
                 new_flow->lower_ip, INET_ADDRSTRLEN);
-            inet_ntop(AF_INET, &new_flow->upper_addr4->s_addr,
+            inet_ntop(AF_INET, &new_flow->upper_addr4->sin_addr.s_addr,
                 new_flow->upper_ip, INET_ADDRSTRLEN);
             break;
 
         case 6:
-            inet_ntop(AF_INET6, &new_flow->lower_addr6->s6_addr,
+            inet_ntop(AF_INET6, &new_flow->lower_addr6->sin6_addr.s6_addr,
                 new_flow->lower_ip, INET6_ADDRSTRLEN);
-            inet_ntop(AF_INET6, &new_flow->upper_addr6->s6_addr,
+            inet_ntop(AF_INET6, &new_flow->upper_addr6->sin6_addr.s6_addr,
                 new_flow->upper_ip, INET6_ADDRSTRLEN);
             break;
 
