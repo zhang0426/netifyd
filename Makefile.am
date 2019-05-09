@@ -100,3 +100,9 @@ deploy-edgeos:
 deploy-debug: all
 	scp src/.libs/netifyd gw:/usr/sbin/
 	scp src/.libs/libnetifyd.so.0.0.0 gw:/usr/lib64/
+
+deploy-debug-archive: all
+	mkdir -p /tmp/netifyd-debug/usr/{sbin,lib64}
+	cp src/.libs/netifyd /tmp/netifyd-debug/usr/sbin/
+	cp src/.libs/libnetifyd.so.0.0.0 /tmp/netifyd-debug/usr/lib64/
+	cd /tmp/netifyd-debug && tar -cvzf ../netifyd-debug.tar.gz *
