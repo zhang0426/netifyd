@@ -26,6 +26,9 @@ public:
         : runtime_error(what_arg) { }
 };
 
+typedef pair<struct pcap_pkthdr *, const uint8_t *> nd_pkt_pair;
+typedef queue<nd_pkt_pair> nd_pkt_queue;
+
 class ndDetectionThread : public ndThread
 {
 public:
@@ -91,6 +94,8 @@ protected:
 
     ndFlowHashCache *fhc;
     string flow_digest, flow_digest_mdata;
+
+    nd_pkt_queue pkt_queue;
 
     pcap_t *OpenCapture(void);
 

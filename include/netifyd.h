@@ -48,6 +48,7 @@
 #define ND_TTL_IDLE_FLOW        30      // Purge idle flows older than this (30s)
 #define ND_TTL_IDLE_TCP_FLOW    300     // Purge idle TCP flows older than this (5m)
 #define ND_TTL_IDLE_DHC_ENTRY  (60 * 30)// Purge TTL for idle DNS cache entries.
+#define ND_TTL_PCAP_SELECT_USEC 500     // Minimum pcap select timeout in micros.
 #define ND_HASH_BUCKETS_FLOWS   1613    // Initial flows map bucket count.
 #define ND_HASH_BUCKETS_DNSARS  1613    // DNS cache address record hash buckets.
 

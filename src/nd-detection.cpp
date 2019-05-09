@@ -232,6 +232,12 @@ ndDetectionThread::~ndDetectionThread()
         delete fhc;
     }
 
+    while (! pkt_queue.empty()) {
+        delete pkt_queue.front().first;
+        delete [] pkt_queue.front().second;
+        pkt_queue.pop();
+    }
+
     nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
 }
 
@@ -288,12 +294,35 @@ void *ndDetectionThread::Entry(void)
             FD_SET(pcap_fd, &fds_read);
 
             memset(&tv, 0, sizeof(struct timeval));
-            tv.tv_sec = 1;
+
+            if (pkt_queue.empty()) tv.tv_sec = 1;
+            tv.tv_usec = ND_TTL_PCAP_SELECT_USEC;
 
             rc = select(pcap_fd + 1, &fds_read, NULL, NULL, &tv);
 
             if (rc == -1)
                 throw ndDetectionThreadException(strerror(errno));
+
+            if (! pkt_queue.empty()) {
+                try {
+                    if (pthread_mutex_trylock(&lock) == 0) {
+                        pkt_header = pkt_queue.front().first;
+                        pkt_data = pkt_queue.front().second;
+
+                        ProcessPacket();
+
+                        pthread_mutex_unlock(&lock);
+
+                        delete pkt_header;
+                        delete [] pkt_data;
+                        pkt_queue.pop();
+                    }
+                }
+                catch (exception &e) {
+                    pthread_mutex_unlock(&lock);
+                    throw;
+                }
+            }
 
             if (rc == 0) continue;
 
@@ -308,14 +337,26 @@ void *ndDetectionThread::Entry(void)
         case 0:
             break;
         case 1:
-            try {
-                pthread_mutex_lock(&lock);
-                ProcessPacket();
+            if (pkt_queue.empty() && pthread_mutex_trylock(&lock) == 0) {
+                try {
+                    ProcessPacket();
+                }
+                catch (exception &e) {
+                    pthread_mutex_unlock(&lock);
+                    throw;
+                }
                 pthread_mutex_unlock(&lock);
             }
-            catch (exception &e) {
-                pthread_mutex_unlock(&lock);
-                throw;
+            else {
+                struct pcap_pkthdr *ph = new struct pcap_pkthdr;
+                if (ph == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
+                memcpy(ph, pkt_header, sizeof(struct pcap_pkthdr));
+
+                uint8_t *pd = new uint8_t[pkt_header->len];
+                if (pd == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
+                memcpy(pd, pkt_data, pkt_header->len);
+
+                pkt_queue.push(make_pair(ph, pd));
             }
             break;
         case -1:
