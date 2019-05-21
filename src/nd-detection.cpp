@@ -423,22 +423,6 @@ void *ndDetectionThread::Entry(void)
                 if (from_queue)
                     pkt_queue.pop();
             }
-#if 0
-            if (! pkt_queue.empty() || pthread_mutex_trylock(&lock) != 0) {
-
-                pkt_queue.push(pkt_header, pkt_data);
-            }
-            else if (pkt_queue.empty()) {
-                try {
-                    ProcessPacket();
-                }
-                catch (exception &e) {
-                    pthread_mutex_unlock(&lock);
-                    throw;
-                }
-                pthread_mutex_unlock(&lock);
-            }
-#endif
             break;
         case -1:
             nd_printf("%s: %s.\n", tag.c_str(), pcap_geterr(pcap));
