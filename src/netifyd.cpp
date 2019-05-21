@@ -1467,8 +1467,6 @@ static void nd_dump_stats(void)
 
         stats[i->first]->reset();
 
-        i->second->SaveFlowHashCache();
-
         i->second->Unlock();
     }
 
@@ -2172,10 +2170,8 @@ int main(int argc, char *argv[])
                 thread_socket->QueueWrite(json);
             }
 
-            if (dns_hint_cache) {
+            if (dns_hint_cache)
                 dns_hint_cache->purge();
-                dns_hint_cache->save();
-            }
 
             nd_reap_detection_threads();
 

@@ -82,7 +82,6 @@ public:
 
     // XXX: Not thread-safe!
     int GetCaptureStats(struct pcap_stat &stats);
-    void SaveFlowHashCache(void) { fhc->save(); }
 
 protected:
     bool internal;
