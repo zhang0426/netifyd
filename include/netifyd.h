@@ -39,7 +39,7 @@
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif
 
-#define ND_MAX_HOSTNAME		256
+#define ND_MAX_HOSTNAME         256
 
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
 #define ND_MAX_BACKLOG_KB       2048    // Maximum upload queue size in kB
@@ -54,6 +54,9 @@
 
 #define ND_MAX_FHC_ENTRIES      10000   // Maximum number of flow hash cache entries.
 #define ND_FHC_PURGE_DIVISOR    10      // Divisor of FHC_ENTRIES to delete on purge.
+
+#define ND_MAX_PKT_QUEUE_KB     8192    // Maximum packet queue size in kB
+#define ND_PKTQ_FLUSH_DIVISOR   10      // Divisor of PKT_QUEUE_KB packets to flush.
 
 #define ND_MAX_TCP_PKTS         10      // Maximum number of TCP packets to process.
 #define ND_MAX_UDP_PKTS         8       // Maximum number of UDP packets to process.
@@ -222,6 +225,7 @@ typedef struct nd_global_config_t {
     char *uuid_serial;
     char *uuid_site;
     size_t max_backlog;
+    size_t max_packet_queue;
     uint32_t flags;
     uint8_t digest_sink_config[SHA1_DIGEST_LENGTH];
     unsigned max_fhc;
@@ -291,6 +295,7 @@ typedef struct nd_packet_stats_t
         uint64_t ip6_bytes;
         uint64_t wire_bytes;
         uint64_t discard_bytes;
+        uint64_t queue_dropped;
     } pkt;
 
     struct pcap_stat pcap_last;
@@ -317,6 +322,7 @@ typedef struct nd_packet_stats_t
         pkt.ip6_bytes += rhs.pkt.ip6_bytes;
         pkt.wire_bytes += rhs.pkt.wire_bytes;
         pkt.discard_bytes += rhs.pkt.discard_bytes;
+        pkt.queue_dropped += rhs.pkt.queue_dropped;
         pcap_last.ps_recv += rhs.pcap_last.ps_recv;
         pcap_last.ps_drop += rhs.pcap_last.ps_drop;
         pcap_last.ps_ifdrop += rhs.pcap_last.ps_ifdrop;

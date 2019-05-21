@@ -29,6 +29,30 @@ public:
 typedef pair<struct pcap_pkthdr *, const uint8_t *> nd_pkt_pair;
 typedef queue<nd_pkt_pair> nd_pkt_queue;
 
+class ndPacketQueue
+{
+public:
+    ndPacketQueue(const string &tag) : tag(tag), pkt_queue_size(0) { }
+    virtual ~ndPacketQueue() {
+        while (! pkt_queue.empty()) {
+            delete pkt_queue.front().first;
+            delete [] pkt_queue.front().second;
+            pkt_queue.pop();
+        }
+    }
+
+    bool empty(void) { return pkt_queue.empty(); }
+
+    size_t push(struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data);
+    bool front(struct pcap_pkthdr **pkt_header, const uint8_t **pkt_data);
+    void pop(const string &oper = "pop");
+
+protected:
+    string tag;
+    size_t pkt_queue_size;
+    nd_pkt_queue pkt_queue;
+};
+
 class ndDetectionThread : public ndThread
 {
 public:
@@ -95,7 +119,7 @@ protected:
     ndFlowHashCache *fhc;
     string flow_digest, flow_digest_mdata;
 
-    nd_pkt_queue pkt_queue;
+    ndPacketQueue pkt_queue;
 
     pcap_t *OpenCapture(void);
 

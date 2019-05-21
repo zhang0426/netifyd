@@ -153,10 +153,13 @@ using namespace std;
 //#define _ND_LOG_DNS_RESPONSE    1
 
 // Enable DNS hint cache debug logging
-//define _ND_LOG_DHC              1
+//#define _ND_LOG_DHC             1
 
 // Enable flow hash cache debug logging
-//define _ND_LOG_FHC              1
+//#define _ND_LOG_FHC             1
+
+// Enable packet queue debug logging
+//#define _ND_LOG_PACKET_QUEUE    1
 
 extern nd_global_config nd_config;
 
@@ -170,6 +173,74 @@ struct __attribute__((packed)) nd_mpls_header_t
 #error Endianess not defined (__BYTE_ORDER__).
 #endif
 };
+
+size_t ndPacketQueue::push(struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data)
+{
+    size_t dropped = 0;
+
+    struct pcap_pkthdr *ph = new struct pcap_pkthdr;
+    if (ph == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
+    memcpy(ph, pkt_header, sizeof(struct pcap_pkthdr));
+
+    uint8_t *pd = new uint8_t[pkt_header->len];
+    if (pd == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
+    memcpy(pd, pkt_data, pkt_header->len);
+
+    pkt_queue.push(make_pair(ph, pd));
+    pkt_queue_size += (sizeof(struct pcap_pkthdr) + pkt_header->len);
+
+#ifdef _ND_LOG_PACKET_QUEUE
+    nd_debug_printf("%s: packet queue push, new size: %lu\n",
+        tag.c_str(), pkt_queue_size);
+#endif
+    if (pkt_queue_size >= nd_config.max_packet_queue) {
+
+        nd_debug_printf("%s: packet queue full: %lu\n",
+            tag.c_str(), pkt_queue_size);
+
+        size_t target = nd_config.max_packet_queue / ND_PKTQ_FLUSH_DIVISOR;
+
+        do {
+            pop("flush");
+            dropped++;
+        } while (pkt_queue_size > target);
+    }
+
+    return dropped;
+}
+
+bool ndPacketQueue::front(
+    struct pcap_pkthdr **pkt_header, const uint8_t **pkt_data)
+{
+    if (pkt_queue.empty()) return false;
+
+    *pkt_header = pkt_queue.front().first;
+    *pkt_data = pkt_queue.front().second;
+#ifdef _ND_LOG_PACKET_QUEUE
+    nd_debug_printf("%s: packet queue front.\n", tag.c_str());
+#endif
+    return true;
+}
+
+void ndPacketQueue::pop(const string &oper)
+{
+    if (pkt_queue.empty()) return;
+
+    struct pcap_pkthdr *ph = pkt_queue.front().first;
+    const uint8_t *pd = pkt_queue.front().second;
+
+    pkt_queue_size -= (sizeof(struct pcap_pkthdr) + ph->len);
+
+    delete ph;
+    delete [] pd;
+
+    pkt_queue.pop();
+
+#ifdef _ND_LOG_PACKET_QUEUE
+    nd_debug_printf("%s: packet queue %s: %lu\n",
+        tag.c_str(), oper.c_str(), pkt_queue_size);
+#endif
+}
 
 ndDetectionThread::ndDetectionThread(
     const string &dev,
@@ -199,7 +270,8 @@ ndDetectionThread::ndDetectionThread(
     pcap(NULL), pcap_fd(-1), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL), ts_pkt_last(0),
     ts_last_idle_scan(0), ndpi(NULL), custom_proto_base(0), flows(flow_map),
-    stats(stats), device_addrs(device_addrs), dhc(dhc), fhc(NULL)
+    stats(stats), device_addrs(device_addrs), dhc(dhc), fhc(NULL),
+    pkt_queue(tag)
 {
     memset(stats, 0, sizeof(nd_packet_stats));
 
@@ -230,12 +302,6 @@ ndDetectionThread::~ndDetectionThread()
     if (fhc != NULL) {
         fhc->save();
         delete fhc;
-    }
-
-    while (! pkt_queue.empty()) {
-        delete pkt_queue.front().first;
-        delete [] pkt_queue.front().second;
-        pkt_queue.pop();
     }
 
     nd_debug_printf("%s: detection thread destroyed.\n", tag.c_str());
@@ -303,25 +369,21 @@ void *ndDetectionThread::Entry(void)
             if (rc == -1)
                 throw ndDetectionThreadException(strerror(errno));
 
-            if (! pkt_queue.empty()) {
+            if (! pkt_queue.empty() && pthread_mutex_trylock(&lock) == 0) {
+
+                pkt_queue.front(&pkt_header, &pkt_data);
+
                 try {
-                    if (pthread_mutex_trylock(&lock) == 0) {
-                        pkt_header = pkt_queue.front().first;
-                        pkt_data = pkt_queue.front().second;
-
-                        ProcessPacket();
-
-                        pthread_mutex_unlock(&lock);
-
-                        delete pkt_header;
-                        delete [] pkt_data;
-                        pkt_queue.pop();
-                    }
+                    ProcessPacket();
                 }
                 catch (exception &e) {
                     pthread_mutex_unlock(&lock);
                     throw;
                 }
+
+                pthread_mutex_unlock(&lock);
+
+                pkt_queue.pop();
             }
 
             if (rc == 0) continue;
@@ -337,7 +399,36 @@ void *ndDetectionThread::Entry(void)
         case 0:
             break;
         case 1:
-            if (pkt_queue.empty() && pthread_mutex_trylock(&lock) == 0) {
+            if (pthread_mutex_trylock(&lock) != 0) {
+
+                stats->pkt.queue_dropped += pkt_queue.push(pkt_header, pkt_data);
+            }
+            else {
+                bool from_queue = false;
+
+                if (! pkt_queue.empty()) {
+                    stats->pkt.queue_dropped += pkt_queue.push(pkt_header, pkt_data);
+                    from_queue = pkt_queue.front(&pkt_header, &pkt_data);
+                }
+
+                try {
+                    ProcessPacket();
+                }
+                catch (exception &e) {
+                    pthread_mutex_unlock(&lock);
+                    throw;
+                }
+                pthread_mutex_unlock(&lock);
+
+                if (from_queue)
+                    pkt_queue.pop();
+            }
+#if 0
+            if (! pkt_queue.empty() || pthread_mutex_trylock(&lock) != 0) {
+
+                pkt_queue.push(pkt_header, pkt_data);
+            }
+            else if (pkt_queue.empty()) {
                 try {
                     ProcessPacket();
                 }
@@ -347,17 +438,7 @@ void *ndDetectionThread::Entry(void)
                 }
                 pthread_mutex_unlock(&lock);
             }
-            else {
-                struct pcap_pkthdr *ph = new struct pcap_pkthdr;
-                if (ph == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
-                memcpy(ph, pkt_header, sizeof(struct pcap_pkthdr));
-
-                uint8_t *pd = new uint8_t[pkt_header->len];
-                if (pd == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
-                memcpy(pd, pkt_data, pkt_header->len);
-
-                pkt_queue.push(make_pair(ph, pd));
-            }
+#endif
             break;
         case -1:
             nd_printf("%s: %s.\n", tag.c_str(), pcap_geterr(pcap));

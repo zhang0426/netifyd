@@ -179,6 +179,7 @@ static void nd_config_init(void)
     nd_config.uuid_site = NULL;
 
     nd_config.max_backlog = ND_MAX_BACKLOG_KB * 1024;
+    nd_config.max_packet_queue = ND_MAX_PKT_QUEUE_KB * 1024;
 
     nd_config.flags |= ndGF_SSL_VERIFY;
 #ifdef _ND_USE_CONNTRACK
@@ -279,6 +280,9 @@ static int nd_config_load(void)
 
     nd_config.max_backlog = reader.GetInteger(
         "netifyd", "max_backlog_kb", ND_MAX_BACKLOG_KB) * 1024;
+
+    nd_config.max_packet_queue = reader.GetInteger(
+        "netifyd", "max_packet_queue_kb", ND_MAX_PKT_QUEUE_KB) * 1024;
 
     ND_GF_SET_FLAG(ndGF_USE_SINK,
         reader.GetBoolean("netifyd", "enable_sink", false));
@@ -1037,6 +1041,7 @@ static void nd_json_add_stats(json_object *parent,
     json.AddObject(NULL, "fragmented", stats->pkt.frags);
     json.AddObject(NULL, "discarded", stats->pkt.discard);
     json.AddObject(NULL, "discarded_bytes", stats->pkt.discard_bytes);
+    json.AddObject(NULL, "queue_dropped", stats->pkt.queue_dropped);
     json.AddObject(NULL, "largest_bytes", stats->pkt.maxlen);
     json.AddObject(NULL, "ip", stats->pkt.ip);
     json.AddObject(NULL, "tcp", stats->pkt.tcp);
