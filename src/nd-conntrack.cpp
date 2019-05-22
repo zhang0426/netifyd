@@ -30,6 +30,7 @@
 #else
 typedef bool atomic_bool;
 #endif
+#include <regex>
 
 #include <sys/stat.h>
 #include <sys/select.h>

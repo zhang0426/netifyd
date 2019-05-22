@@ -27,6 +27,7 @@
 #else
 typedef bool atomic_bool;
 #endif
+#include <regex>
 
 #include <unistd.h>
 #include <stdlib.h>

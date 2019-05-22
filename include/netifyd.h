@@ -39,6 +39,17 @@
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif
 
+#if __cplusplus >= 201103L &&                             \
+    (!defined(__GLIBCXX__) || (__cplusplus >= 201402L) || \
+        (defined(_GLIBCXX_REGEX_DFS_QUANTIFIERS_LIMIT) || \
+         defined(_GLIBCXX_REGEX_STATE_LIMIT)           || \
+             (defined(_GLIBCXX_RELEASE)                && \
+             _GLIBCXX_RELEASE > 4)))
+#define HAVE_WORKING_REGEX 1
+#else
+#undef HAVE_WORKING_REGEX
+#endif
+
 #define ND_MAX_HOSTNAME         256
 
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
@@ -246,6 +257,7 @@ typedef struct nd_global_config_t {
     vector<string> socket_path;
     vector<struct sockaddr *> privacy_filter_host;
     vector<uint8_t *> privacy_filter_mac;
+    vector<pair<regex *, string> > privacy_regex;
     nd_device_filter device_filters;
 #ifdef _ND_USE_PLUGINS
     map<string, string> services;

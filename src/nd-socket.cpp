@@ -35,6 +35,7 @@
 #else
 typedef bool atomic_bool;
 #endif
+#include <regex>
 
 #include <arpa/inet.h>
 #include <errno.h>

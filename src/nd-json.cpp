@@ -23,6 +23,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <regex>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -279,6 +280,15 @@ void ndJson::ToString(string &output, bool pretty)
         root,
         (ND_DEBUG && pretty) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
     );
+#ifdef HAVE_WORKING_REGEX
+    vector<pair<regex *, string> >::const_iterator i;
+    for (i = nd_config.privacy_regex.begin();
+        i != nd_config.privacy_regex.end(); i++) {
+
+        string result = regex_replace(output, *((*i).first), (*i).second);
+        if (result.size()) output = result;
+    }
+#endif
 }
 
 void ndJson::SaveToFile(const string &filename)

@@ -25,6 +25,7 @@
 #include <vector>
 #include <unordered_map>
 #include <sstream>
+#include <regex>
 
 #include <sys/types.h>
 #include <sys/stat.h>

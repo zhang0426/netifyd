@@ -30,6 +30,7 @@
 #include <map>
 #include <deque>
 #include <unordered_map>
+#include <regex>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -436,6 +437,9 @@ string nd_get_version_and_features(void)
 #endif
     if (ND_SSL_USE_TLSv1) ident << "; ssl-tlsv1";
     if (! ND_SSL_VERIFY) ident << "; ssl-no-verify";
+#ifdef _HAVE_WORKING_REGEX
+    ident << "; regex";
+#endif
     ident << ")" <<
         " nDPI/" << ndpi_revision() <<
         " JSON/" << fixed << showpoint << setprecision(2) << ND_JSON_VERSION;

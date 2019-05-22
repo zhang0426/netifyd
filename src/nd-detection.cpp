@@ -34,6 +34,7 @@
 #else
 typedef bool atomic_bool;
 #endif
+#include <regex>
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

@@ -46,6 +46,8 @@ listen_port[0] = <corresponding port for connect>
 [privacy_filter]
 mac[0] = <MAC address to filter>
 host[0] = <IPv4/6 address to filter>
+regex_search[0] = <regular expression>
+regex_replace[0] = <replacement text>
 
 [watches]
 <name> = <file path>

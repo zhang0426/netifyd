@@ -33,6 +33,7 @@
 #else
 typedef bool atomic_bool;
 #endif
+#include <regex>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -430,6 +431,34 @@ static int nd_config_load(void)
 
         freeaddrinfo(result);
     }
+#ifdef HAVE_WORKING_REGEX
+    for (int i = 0; ; i++) {
+        ostringstream os;
+        os << "regex_search[" << i << "]";
+        string search = reader.Get("privacy_filter", os.str(), "");
+
+        os.str("");
+        os << "regex_replace[" << i << "]";
+        string replace = reader.Get("privacy_filter", os.str(), "");
+
+        if (search.size() == 0 || replace.size() == 0) break;
+
+        try {
+            regex *rx_search = new regex(
+                search,
+                regex_constants::icase |
+                regex_constants::optimize |
+                regex_constants::extended
+            );
+            nd_config.privacy_regex.push_back(make_pair(rx_search, replace));
+        } catch (regex_error &e) {
+            fprintf(stderr, "WARNING: %s: Error compiling privacy regex: %s: %d\n",
+                nd_conf_filename, search.c_str(), e.code());
+        } catch (bad_alloc &e) {
+            throw ndSystemException(__PRETTY_FUNCTION__, "new", ENOMEM);
+        }
+    }
+#endif
 #ifdef _ND_USE_INOTIFY
     // Watches section
     reader.GetSection("watches", inotify_watches);

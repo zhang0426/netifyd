@@ -22,6 +22,7 @@
 #include <map>
 #include <unordered_map>
 #include <stdexcept>
+#include <regex>
 
 #include <unistd.h>
 #include <string.h>
