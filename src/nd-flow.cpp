@@ -231,6 +231,9 @@ ndFlow::ndFlow(bool internal)
     ssl.cipher_suite = 0;
     memset(ssl.client_certcn, 0, ND_FLOW_SSL_CNLEN);
     memset(ssl.server_certcn, 0, ND_FLOW_SSL_CNLEN);
+    memset(ssl.server_organization, 0, ND_FLOW_SSL_ORGLEN);
+    memset(ssl.ja3_client, 0, ND_FLOW_SSL_JA3LEN);
+    memset(ssl.ja3_server, 0, ND_FLOW_SSL_JA3LEN);
 
     smtp.tls = false;
 
@@ -472,6 +475,30 @@ bool ndFlow::has_ssl_server_certcn(void)
     return (
         master_protocol() == NDPI_PROTOCOL_SSL &&
         ssl.server_certcn[0] != '\0'
+    );
+}
+
+bool ndFlow::has_ssl_server_organization(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_SSL &&
+        ssl.server_organization[0] != '\0'
+    );
+}
+
+bool ndFlow::has_ssl_client_ja3(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_SSL &&
+        ssl.ja3_client[0] != '\0'
+    );
+}
+
+bool ndFlow::has_ssl_server_ja3(void)
+{
+    return (
+        master_protocol() == NDPI_PROTOCOL_SSL &&
+        ssl.ja3_server[0] != '\0'
     );
 }
 
@@ -816,8 +843,9 @@ json_object *ndFlow::json_encode(ndJson &json,
         break;
     }
 
+    // 00-52-14 to 00-52-FF: Unassigned (small allocations)
     if (privacy_mask & PRIVATE_LOWER)
-        snprintf(mac_addr, sizeof(mac_addr), "01:02:03:04:05:06");
+        snprintf(mac_addr, sizeof(mac_addr), "00:52:14:00:00:00");
     else {
         snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
             lower_mac[0], lower_mac[1], lower_mac[2],
@@ -827,7 +855,7 @@ json_object *ndFlow::json_encode(ndJson &json,
     json.AddObject(json_flow, _lower_mac, mac_addr);
 
     if (privacy_mask & PRIVATE_UPPER)
-        snprintf(mac_addr, sizeof(mac_addr), "0a:0b:0c:0d:0e:0f");
+        snprintf(mac_addr, sizeof(mac_addr), "00:52:FF:00:00:00");
     else {
         snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
             upper_mac[0], upper_mac[1], upper_mac[2],
@@ -838,18 +866,18 @@ json_object *ndFlow::json_encode(ndJson &json,
 
     if (privacy_mask & PRIVATE_LOWER) {
         if (ip_version == 4)
-            json.AddObject(json_flow, _lower_ip, "1.2.3.1");
+            json.AddObject(json_flow, _lower_ip, ND_PRIVATE_IPV4 "253");
         else
-            json.AddObject(json_flow, _lower_ip, "1230::1");
+            json.AddObject(json_flow, _lower_ip, ND_PRIVATE_IPV6 "fd");
     }
     else
         json.AddObject(json_flow, _lower_ip, lower_ip);
 
     if (privacy_mask & PRIVATE_UPPER) {
         if (ip_version == 4)
-            json.AddObject(json_flow, _upper_ip, "1.2.3.2");
+            json.AddObject(json_flow, _upper_ip, ND_PRIVATE_IPV4 "254");
         else
-            json.AddObject(json_flow, _upper_ip, "1230::2");
+            json.AddObject(json_flow, _upper_ip, ND_PRIVATE_IPV6 "fe");
     }
     else
         json.AddObject(json_flow, _upper_ip, upper_ip);
@@ -928,6 +956,15 @@ json_object *ndFlow::json_encode(ndJson &json,
 
         if (has_ssl_server_certcn())
             json.AddObject(_ssl, "server", ssl.server_certcn);
+
+        if (has_ssl_server_organization())
+            json.AddObject(_ssl, "organization", ssl.server_organization);
+
+        if (has_ssl_client_ja3())
+            json.AddObject(_ssl, "client_ja3", ssl.ja3_client);
+
+        if (has_ssl_server_ja3())
+            json.AddObject(_ssl, "server_ja3", ssl.ja3_server);
     }
 
     if (has_bt_info_hash()) {

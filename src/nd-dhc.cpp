@@ -35,6 +35,7 @@ typedef bool atomic_bool;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -45,6 +46,8 @@ typedef bool atomic_bool;
 
 #define __FAVOR_BSD 1
 #include <netinet/in.h>
+
+#include <net/if.h>
 
 #include <json.h>
 #include <pcap/pcap.h>

@@ -70,6 +70,7 @@ public:
         nd_flow_map *flow_map, nd_packet_stats *stats,
         nd_device_addrs *device_addrs = NULL,
         ndDNSHintCache *dhc = NULL,
+        uint8_t private_addr = 0,
         long cpu = -1);
     virtual ~ndDetectionThread();
 
@@ -107,6 +108,8 @@ protected:
     uint64_t ts_last_idle_scan;
     struct ndpi_detection_module_struct *ndpi;
     uint32_t custom_proto_base;
+    nd_private_addr private_addrs;
+    uint8_t dev_mac[ETH_ALEN];
 
     nd_flow_map *flows;
     nd_packet_stats *stats;

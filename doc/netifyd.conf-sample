@@ -48,6 +48,7 @@ mac[0] = <MAC address to filter>
 host[0] = <IPv4/6 address to filter>
 regex_search[0] = <regular expression>
 regex_replace[0] = <replacement text>
+private_external_addresses = <yes/no>
 
 [watches]
 <name> = <file path>

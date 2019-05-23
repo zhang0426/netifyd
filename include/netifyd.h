@@ -152,6 +152,9 @@
 
 #define ND_STR_ETHALEN          (ETH_ALEN * 2 + ETH_ALEN - 1)
 
+#define ND_PRIVATE_IPV4         "127.255.0."
+#define ND_PRIVATE_IPV6         "fe:80::ffff:7fff:"
+
 #include "nd-sha1.h"
 
 typedef unordered_map<string, vector<string> > nd_device_addrs;
@@ -166,6 +169,7 @@ typedef map<string, string> nd_inotify_watch;
 class ndPluginLoader;
 typedef map<string, ndPluginLoader *> nd_plugins;
 #endif
+typedef pair<struct sockaddr_storage, struct sockaddr_storage> nd_private_addr;
 
 enum nd_dhc_save {
     ndDHC_DISABLED = 0,
@@ -186,7 +190,7 @@ enum nd_global_flags {
     ndGF_FREE_0x8 = 0x8,
     ndGF_OVERRIDE_SINK_CONFIG = 0x10,
     ndGF_CAPTURE_UNKNOWN_FLOWS = 0x20,
-    ndGF_FREE_0x40 = 0x40,
+    ndGF_PRIVATE_EXTADDR = 0x40,
     ndGF_SSL_USE_TLSv1 = 0x80,
     ndGF_SSL_VERIFY = 0x100,
     ndGF_USE_CONNTRACK = 0x200,
@@ -206,6 +210,7 @@ enum nd_global_flags {
 #define ND_DEBUG_WITH_ETHERS (nd_config.flags & ndGF_DEBUG_WITH_ETHERS)
 #define ND_OVERRIDE_SINK_CONFIG (nd_config.flags & ndGF_OVERRIDE_SINK_CONFIG)
 #define ND_CAPTURE_UNKNOWN_FLOWS (nd_config.flags & ndGF_CAPTURE_UNKNOWN_FLOWS)
+#define ND_PRIVATE_EXTADDR (nd_config.flags & ndGF_PRIVATE_EXTADDR)
 #define ND_SSL_USE_TLSv1 (nd_config.flags & ndGF_SSL_USE_TLSv1)
 #define ND_SSL_VERIFY (nd_config.flags & ndGF_SSL_VERIFY)
 #define ND_USE_CONNTRACK (nd_config.flags & ndGF_USE_CONNTRACK)

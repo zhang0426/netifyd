@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 
 #include <unistd.h>
 #include <string.h>
@@ -50,6 +51,8 @@
 
 #include <arpa/inet.h>
 #include <netdb.h>
+
+#include <net/if.h>
 
 #include <json.h>
 #include <pcap/pcap.h>
@@ -335,6 +338,32 @@ bool nd_is_ipaddr(const char *ip)
     return (inet_pton(AF_INET6, ip, &addr6) == 1) ? true : false;
 }
 
+void nd_private_ipaddr(uint8_t index, struct sockaddr_storage &addr)
+{
+    int rc = -1;
+    ostringstream os;
+
+    if (addr.ss_family == AF_INET) {
+        os << ND_PRIVATE_IPV4 << (int)index;
+        struct sockaddr_in *sa = reinterpret_cast<struct sockaddr_in *>(&addr);
+        rc = inet_pton(AF_INET, os.str().c_str(), &sa->sin_addr);
+    }
+    else if (addr.ss_family == AF_INET6) {
+        os << ND_PRIVATE_IPV6 << hex << (int)index;
+        struct sockaddr_in6 *sa = reinterpret_cast<struct sockaddr_in6 *>(&addr);
+        rc = inet_pton(AF_INET6, os.str().c_str(), &sa->sin6_addr);
+    }
+
+    switch (rc) {
+    case -1:
+        nd_debug_printf("Invalid private address family.\n");
+        break;
+    case 0:
+        nd_debug_printf("Invalid private address: %s\n", os.str().c_str());
+        break;
+    }
+}
+
 bool nd_load_uuid(string &uuid, const char *path, size_t length)
 {
     char _uuid[length + 1];
@@ -530,6 +559,29 @@ int nd_save_response_data(const char *filename, const ndJsonDataChunks &data)
     }
 
     return 0;
+}
+
+int nd_ifreq(const string &name, int operation, struct ifreq *ifr)
+{
+    int fd, rc = -1;
+
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        nd_printf("%s: error creating ifreq socket: %s\n",
+            name.c_str(), strerror(errno));
+            return rc;
+    }
+
+    memset(ifr, '\0', sizeof(struct ifreq));
+    strncpy(ifr->ifr_name, name.c_str(), IFNAMSIZ - 1);
+
+    if (ioctl(fd, operation, (char *)ifr) == -1) {
+        nd_printf("%s: error sending interface request: %s\n",
+            name.c_str(), strerror(errno));
+    }
+    else rc = 0;
+
+    close(fd);
+    return rc;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

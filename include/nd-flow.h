@@ -25,7 +25,9 @@
 // manually.
 #define ND_FLOW_UA_LEN      512     // User agent length
 #define ND_FLOW_SSH_UALEN   48      // SSH user-agent (signature) length
-#define ND_FLOW_SSL_CNLEN   64      // SSL certificate common-name length
+#define ND_FLOW_SSL_CNLEN   64      // SSL certificate SNI/common-name length
+#define ND_FLOW_SSL_ORGLEN  64      // SSL certificate organization name length
+#define ND_FLOW_SSL_JA3LEN  33      // SSL JA3 hash length (MD5)
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
 #define ND_FLOW_DHCPCI_LEN  96      // DHCP class identifier
 #define ND_FLOW_MDNS_ANSLEN 96      // MDNS answer length
@@ -147,6 +149,9 @@ public:
             uint16_t cipher_suite;
             char client_certcn[ND_FLOW_SSL_CNLEN];
             char server_certcn[ND_FLOW_SSL_CNLEN];
+            char server_organization[ND_FLOW_SSL_ORGLEN];
+            char ja3_client[ND_FLOW_SSL_JA3LEN];
+            char ja3_server[ND_FLOW_SSL_JA3LEN];
         } ssl;
 
         struct {
@@ -214,6 +219,9 @@ public:
     bool has_ssh_server_agent(void);
     bool has_ssl_client_certcn(void);
     bool has_ssl_server_certcn(void);
+    bool has_ssl_server_organization(void);
+    bool has_ssl_client_ja3(void);
+    bool has_ssl_server_ja3(void);
     bool has_bt_info_hash(void);
     bool has_mdns_answer(void);
 

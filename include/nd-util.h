@@ -46,6 +46,8 @@ void nd_iface_name(const string &iface, string &result);
 
 bool nd_is_ipaddr(const char *ip);
 
+void nd_private_ipaddr(uint8_t index, struct sockaddr_storage &addr);
+
 bool nd_load_uuid(string &uuid, const char *path, size_t length);
 bool nd_save_uuid(const string &uuid, const char *path, size_t length);
 
@@ -62,6 +64,8 @@ void nd_file_save(const string &filename, const string &data,
     const char *user = NULL, const char *group = NULL);
 
 int nd_save_response_data(const char *filename, const ndJsonDataChunks &data);
+
+int nd_ifreq(const string &name, int operation, struct ifreq *ifr);
 
 #endif // _ND_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

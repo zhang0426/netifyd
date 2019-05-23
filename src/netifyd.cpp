@@ -459,6 +459,9 @@ static int nd_config_load(void)
         }
     }
 #endif
+    ND_GF_SET_FLAG(ndGF_PRIVATE_EXTADDR,
+        reader.GetBoolean("privacy_filter", "private_external_addresses", false));
+
 #ifdef _ND_USE_INOTIFY
     // Watches section
     reader.GetSection("watches", inotify_watches);
@@ -550,6 +553,7 @@ static int nd_start_detection_threads(void)
         long cpu = 0;
         long cpus = sysconf(_SC_NPROCESSORS_ONLN);
         string netlink_dev;
+        uint8_t private_addr = 0;
 
         for (nd_ifaces::iterator i = ifaces.begin();
             i != ifaces.end(); i++) {
@@ -577,6 +581,7 @@ static int nd_start_detection_threads(void)
                 stats[(*i).second],
                 devices[(*i).second],
                 dns_hint_cache,
+                (i->first) ? 0 : ++private_addr,
                 (ifaces.size() > 1) ? cpu++ : -1
             );
 
@@ -1783,7 +1788,7 @@ int main(int argc, char *argv[])
             return 1;
         case 'A':
             if (last_device.size() == 0) {
-                fprintf(stderr, "You must specify an interface first.\n");
+                fprintf(stderr, "You must specify an interface first (-I/E).\n");
                 exit(1);
             }
             device_addresses.push_back(make_pair(last_device, optarg));
@@ -1814,7 +1819,7 @@ int main(int argc, char *argv[])
             break;
         case 'F':
             if (last_device.size() == 0) {
-                fprintf(stderr, "You must specify an interface first.\n");
+                fprintf(stderr, "You must specify an interface first (-I/E).\n");
                 exit(1);
             }
             if (nd_config.device_filters
@@ -1854,12 +1859,12 @@ int main(int argc, char *argv[])
         case 'N':
 #if _ND_USE_NETLINK
             if (last_device.size() == 0) {
-                fprintf(stderr, "You must specify an interface first.\n");
+                fprintf(stderr, "You must specify an interface first (-I/E).\n");
                 exit(1);
             }
             device_netlink[last_device] = optarg;
 #else
-            fprintf(stderr, "Sorry, netlink was not enabled for this build.\n");
+            fprintf(stderr, "Sorry, this feature was not enabled for this build.\n");
             return 1;
 #endif
             break;
@@ -1868,7 +1873,7 @@ int main(int argc, char *argv[])
             nd_dump_protocols();
             exit(0);
 #else
-            fprintf(stderr, "Sorry, not available from this build profile.\n");
+            fprintf(stderr, "Sorry, this feature was not enabled for this build.\n");
             exit(1);
 #endif
         case 'p':
@@ -1899,7 +1904,7 @@ int main(int argc, char *argv[])
                 }
             }
 #else
-            fprintf(stderr, "Sorry, not available from this build profile.\n");
+            fprintf(stderr, "Sorry, this feature was not enabled for this build.\n");
             exit(1);
 #endif
         case 't':

@@ -37,14 +37,15 @@ typedef bool atomic_bool;
 #include <regex>
 
 #include <sys/types.h>
-#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 
 #include <net/if.h>
+#include <net/if_arp.h>
 #include <net/ethernet.h>
 #if HAVE_NET_PPP_DEFS_H
 #include <net/ppp_defs.h>
@@ -257,6 +258,7 @@ ndDetectionThread::ndDetectionThread(
     nd_flow_map *flow_map, nd_packet_stats *stats,
     nd_device_addrs *device_addrs,
     ndDNSHintCache *dhc,
+    uint8_t private_addr,
     long cpu)
     : ndThread(dev, cpu),
     internal(internal),
@@ -290,6 +292,29 @@ ndDetectionThread::ndDetectionThread(
         fhc->load();
     }
 
+    private_addrs.first.ss_family = AF_INET;
+    nd_private_ipaddr(private_addr, private_addrs.first);
+
+    private_addrs.second.ss_family = AF_INET6;
+    nd_private_ipaddr(private_addr, private_addrs.second);
+
+    struct ifreq ifr;
+    if (nd_ifreq(dev, SIOCGIFHWADDR, &ifr) == 0) {
+        if (ifr.ifr_hwaddr.sa_family == ARPHRD_ETHER) {
+            memcpy(dev_mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+            nd_debug_printf(
+                "%s: hwaddr: %02hhx:%02hhx:%02hhx:%02hhx:%02hx:%02hhx\n",
+                dev.c_str(),
+                dev_mac[0], dev_mac[1], dev_mac[2],
+                dev_mac[3], dev_mac[4], dev_mac[5]
+            );
+        }
+        else {
+            nd_debug_printf("%s: Unsupported device address family: %hu\n",
+                dev.c_str(), ifr.ifr_hwaddr.sa_family);
+        }
+    }
+
     nd_debug_printf("%s: detection thread created, custom_proto_base: %u.\n",
         tag.c_str(), custom_proto_base);
 }
@@ -310,26 +335,11 @@ ndDetectionThread::~ndDetectionThread()
 
 void *ndDetectionThread::Entry(void)
 {
-    int ifr_fd = -1;
     struct ifreq ifr;
 
     do {
-        if (ifr_fd < 0 && (ifr_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-            nd_printf("%s: error creating ifr socket: %s\n",
-                tag.c_str(), strerror(errno));
-            sleep(1);
-            continue;
-        }
-
         if (pcap == NULL) {
-            memset(&ifr, '\0', sizeof(struct ifreq));
-            strncpy(ifr.ifr_name, tag.c_str(), IFNAMSIZ - 1);
-
-            if (ioctl(ifr_fd, SIOCGIFFLAGS, (char *)&ifr) == -1) {
-                nd_printf("%s: error getting interface flags: %s\n",
-                    tag.c_str(), strerror(errno));
-                close(ifr_fd);
-                ifr_fd = -1;
+            if (nd_ifreq(tag, SIOCGIFFLAGS, &ifr) == -1) {
                 sleep(1);
                 continue;
             }
@@ -440,8 +450,6 @@ void *ndDetectionThread::Entry(void)
         }
     }
     while (terminate == false);
-
-    close(ifr_fd);
 
     nd_debug_printf("%s: capture ended on CPU: %lu\n",
         tag.c_str(), cpu >= 0 ? cpu : 0);
@@ -1178,12 +1186,18 @@ void ndDetectionThread::ProcessPacket(void)
             new_flow->ssl.version =
                 new_flow->ndpi_flow->protos.stun_ssl.ssl.version;
             new_flow->ssl.cipher_suite =
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.cipher_suite;
+                new_flow->ndpi_flow->protos.stun_ssl.ssl.server_cipher;
 
             snprintf(new_flow->ssl.client_certcn, ND_FLOW_SSL_CNLEN,
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate);
             snprintf(new_flow->ssl.server_certcn, ND_FLOW_SSL_CNLEN,
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
+            snprintf(new_flow->ssl.server_organization, ND_FLOW_SSL_ORGLEN,
+                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_organization);
+            snprintf(new_flow->ssl.ja3_client, ND_FLOW_SSL_JA3LEN,
+                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.ja3_client);
+            snprintf(new_flow->ssl.ja3_server, ND_FLOW_SSL_JA3LEN,
+                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.ja3_server);
             break;
         case NDPI_PROTOCOL_HTTP:
             for (size_t i = 0;
@@ -1299,6 +1313,39 @@ void ndDetectionThread::ProcessPacket(void)
             flow_digest_mdata.assign(
                 (const char *)new_flow->digest_mdata, SHA1_DIGEST_LENGTH
             );
+        }
+/*
+        nd_debug_printf("%s: private: %d, internal == false: %d, DLT_EN10MB: %s\n",
+            tag.c_str(),
+            ND_PRIVATE_EXTADDR, (internal == false),
+            (pcap_datalink_type == DLT_EN10MB) ? "true" : "false");
+*/
+        if (ND_PRIVATE_EXTADDR &&
+            internal == false && pcap_datalink_type == DLT_EN10MB) {
+            if (! memcmp(dev_mac, new_flow->lower_mac, ETH_ALEN)) {
+                if (new_flow->ip_version == 4) {
+                    memcpy(new_flow->lower_addr4,
+                        (struct sockaddr_in *)&private_addrs.first,
+                        sizeof(struct sockaddr_in));
+                }
+                else {
+                    memcpy(new_flow->lower_addr6,
+                        (struct sockaddr_in6 *)&private_addrs.second,
+                        sizeof(struct sockaddr_in6));
+                }
+            }
+            else if (! memcmp(dev_mac, new_flow->upper_mac, ETH_ALEN)) {
+                if (new_flow->ip_version == 4) {
+                    memcpy(new_flow->upper_addr4,
+                        (struct sockaddr_in *)&private_addrs.first,
+                        sizeof(struct sockaddr_in));
+                }
+                else {
+                    memcpy(new_flow->upper_addr6,
+                        (struct sockaddr_in6 *)&private_addrs.second,
+                        sizeof(struct sockaddr_in6));
+                }
+            }
         }
 
         switch (new_flow->ip_version) {
