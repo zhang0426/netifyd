@@ -232,8 +232,8 @@ ndFlow::ndFlow(bool internal)
     memset(ssl.client_certcn, 0, ND_FLOW_SSL_CNLEN);
     memset(ssl.server_certcn, 0, ND_FLOW_SSL_CNLEN);
     memset(ssl.server_organization, 0, ND_FLOW_SSL_ORGLEN);
-    memset(ssl.ja3_client, 0, ND_FLOW_SSL_JA3LEN);
-    memset(ssl.ja3_server, 0, ND_FLOW_SSL_JA3LEN);
+    memset(ssl.client_ja3, 0, ND_FLOW_SSL_JA3LEN);
+    memset(ssl.server_ja3, 0, ND_FLOW_SSL_JA3LEN);
 
     smtp.tls = false;
 
@@ -490,7 +490,7 @@ bool ndFlow::has_ssl_client_ja3(void)
 {
     return (
         master_protocol() == NDPI_PROTOCOL_SSL &&
-        ssl.ja3_client[0] != '\0'
+        ssl.client_ja3[0] != '\0'
     );
 }
 
@@ -498,7 +498,7 @@ bool ndFlow::has_ssl_server_ja3(void)
 {
     return (
         master_protocol() == NDPI_PROTOCOL_SSL &&
-        ssl.ja3_server[0] != '\0'
+        ssl.server_ja3[0] != '\0'
     );
 }
 
@@ -961,10 +961,10 @@ json_object *ndFlow::json_encode(ndJson &json,
             json.AddObject(_ssl, "organization", ssl.server_organization);
 
         if (has_ssl_client_ja3())
-            json.AddObject(_ssl, "client_ja3", ssl.ja3_client);
+            json.AddObject(_ssl, "client_ja3", ssl.client_ja3);
 
         if (has_ssl_server_ja3())
-            json.AddObject(_ssl, "server_ja3", ssl.ja3_server);
+            json.AddObject(_ssl, "server_ja3", ssl.server_ja3);
     }
 
     if (has_bt_info_hash()) {

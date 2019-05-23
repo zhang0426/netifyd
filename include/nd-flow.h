@@ -150,8 +150,8 @@ public:
             char client_certcn[ND_FLOW_SSL_CNLEN];
             char server_certcn[ND_FLOW_SSL_CNLEN];
             char server_organization[ND_FLOW_SSL_ORGLEN];
-            char ja3_client[ND_FLOW_SSL_JA3LEN];
-            char ja3_server[ND_FLOW_SSL_JA3LEN];
+            char client_ja3[ND_FLOW_SSL_JA3LEN];
+            char server_ja3[ND_FLOW_SSL_JA3LEN];
         } ssl;
 
         struct {

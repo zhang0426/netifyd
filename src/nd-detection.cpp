@@ -1194,9 +1194,9 @@ void ndDetectionThread::ProcessPacket(void)
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
             snprintf(new_flow->ssl.server_organization, ND_FLOW_SSL_ORGLEN,
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_organization);
-            snprintf(new_flow->ssl.ja3_client, ND_FLOW_SSL_JA3LEN,
+            snprintf(new_flow->ssl.client_ja3, ND_FLOW_SSL_JA3LEN,
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.ja3_client);
-            snprintf(new_flow->ssl.ja3_server, ND_FLOW_SSL_JA3LEN,
+            snprintf(new_flow->ssl.server_ja3, ND_FLOW_SSL_JA3LEN,
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.ja3_server);
             break;
         case NDPI_PROTOCOL_HTTP:
