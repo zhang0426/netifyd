@@ -108,8 +108,9 @@
 #define ND_PCAP_READ_TIMEOUT    500     // Milliseconds
 
 #ifndef ND_URL_SINK
-#define ND_URL_SINK             "https://sink.netify.ai/v2/"
+#define ND_URL_SINK             "https://sink.netify.ai/provision/"
 #endif
+#define ND_URL_SINK_PATH        ND_PERSISTENT_STATEDIR "/sink.url"
 
 #define ND_COOKIE_JAR           ND_VOLATILE_STATEDIR "/netifyd.cookies"
 
