@@ -1075,7 +1075,6 @@ static void nd_json_add_stats(json_object *parent,
     json.AddObject(NULL, "fragmented", stats->pkt.frags);
     json.AddObject(NULL, "discarded", stats->pkt.discard);
     json.AddObject(NULL, "discarded_bytes", stats->pkt.discard_bytes);
-    json.AddObject(NULL, "queue_dropped", stats->pkt.queue_dropped);
     json.AddObject(NULL, "largest_bytes", stats->pkt.maxlen);
     json.AddObject(NULL, "ip", stats->pkt.ip);
     json.AddObject(NULL, "tcp", stats->pkt.tcp);
@@ -1088,6 +1087,8 @@ static void nd_json_add_stats(json_object *parent,
     json.AddObject(NULL, "pcap_recv", pcap->ps_recv - stats->pcap_last.ps_recv);
     json.AddObject(NULL, "pcap_drop", pcap->ps_drop - stats->pcap_last.ps_drop);
     json.AddObject(NULL, "pcap_ifdrop", pcap->ps_ifdrop - stats->pcap_last.ps_ifdrop);
+
+    json.AddObject(NULL, "queue_dropped", stats->pkt.queue_dropped);
 
     stats->pcap_last.ps_recv = pcap->ps_recv;
     stats->pcap_last.ps_drop = pcap->ps_drop;
