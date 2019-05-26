@@ -48,8 +48,6 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
-//#define _ND_DEBUG_JSON_RESPONSE 1
-
 ndJson::ndJson()
     : root(NULL)
 {
@@ -310,13 +308,13 @@ void ndJsonResponse::Parse(const string &json)
 #endif
     json_tokener_reset(jtok);
 
-#ifdef _ND_DEBUG_JSON_RESPONSE
-    FILE *hf = fopen(ND_JSON_FILE_RESPONSE, "w");
-    if (hf != NULL) {
-        fprintf(hf, "%s\n", json.c_str());
-        fclose(hf);
+    if (ND_JSON_SAVE) {
+        FILE *hf = fopen(ND_JSON_FILE_RESPONSE, "w");
+        if (hf != NULL) {
+            fprintf(hf, "%s\n", json.c_str());
+            fclose(hf);
+        }
     }
-#endif
 
     json_object *jobj = json_tokener_parse_ex(
         jtok, json.c_str(), json.length()

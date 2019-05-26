@@ -94,14 +94,14 @@
 
 #define ND_JSON_VERSION         1.8     // JSON format version
 #ifndef ND_JSON_FILE_NAME
-#define ND_JSON_FILE_NAME       ND_VOLATILE_STATEDIR "/netifyd.json"
+#define ND_JSON_FILE_NAME       ND_VOLATILE_STATEDIR "/sink-request.json"
 #endif
 #define ND_JSON_FILE_USER       "root"
 #define ND_JSON_FILE_GROUP      "root"
 #define ND_JSON_FILE_MODE       0640
-#define ND_JSON_FILE_RESPONSE   ND_VOLATILE_STATEDIR "/netifyd-response.json"
-#define ND_JSON_FILE_BAD_SEND   ND_VOLATILE_STATEDIR "/netifyd-bad-send.json"
-#define ND_JSON_FILE_BAD_RECV   ND_VOLATILE_STATEDIR "/netifyd-bad-recv.json"
+#define ND_JSON_FILE_RESPONSE   ND_VOLATILE_STATEDIR "/sink-response.json"
+#define ND_JSON_FILE_BAD_SEND   ND_VOLATILE_STATEDIR "/sink-bad-request.json"
+#define ND_JSON_FILE_BAD_RECV   ND_VOLATILE_STATEDIR "/sink-bad-response.json"
 #define ND_JSON_DATA_CHUNKSIZ   4096
 
 #define ND_PCAP_SNAPLEN         1536    // Capture snap length
