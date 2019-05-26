@@ -44,6 +44,7 @@ typedef bool atomic_bool;
 #include <signal.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include <curl/curl.h>
 
@@ -142,7 +143,7 @@ ndSinkThread::ndSinkThread()
     if ((ch = curl_easy_init()) == NULL)
         throw ndSinkThreadException("curl_easy_init");
 
-    curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_upload);
+    curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_sink);
     curl_easy_setopt(ch, CURLOPT_POST, 1L);
     curl_easy_setopt(ch, CURLOPT_POSTREDIR, 3L);
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1L);
@@ -554,6 +555,18 @@ void ndSinkThread::ProcessResponse(void)
                     response->uuid_site.c_str());
 
                 create_headers = true;
+            }
+
+            if (response->url_sink.size() &&
+                response->url_sink != nd_config.url_sink) {
+                if (nd_save_sink_url(response->url_sink)) {
+                    free(nd_config.url_sink);
+                    nd_config.url_sink = strdup(response->url_sink.c_str());
+                    nd_printf("%s: saved new sink URL: %s\n", tag.c_str(),
+                        response->url_sink.c_str());
+
+                    curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_sink);
+                }
             }
 
             for (ndJsonData::const_iterator i = response->data.begin();

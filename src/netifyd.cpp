@@ -174,7 +174,7 @@ static void nd_config_init(void)
     nd_config.path_uuid = NULL;
     nd_config.path_uuid_serial = NULL;
     nd_config.path_uuid_site = NULL;
-    nd_config.url_upload = NULL;
+    nd_config.url_sink = NULL;
     nd_config.uuid = NULL;
     nd_config.uuid_serial = NULL;
     nd_config.uuid_site = NULL;
@@ -264,9 +264,14 @@ static int nd_config_load(void)
         "netifyd", "path_uuid_site", ND_SITE_UUID_PATH);
     nd_config.path_uuid_site = strdup(path_uuid_site.c_str());
 
-    string url_upload = reader.Get(
-        "netifyd", "url_upload", ND_URL_SINK);
-    nd_config.url_upload = strdup(url_upload.c_str());
+    string url_sink = reader.Get(
+        "netifyd", "url_sink", ND_URL_SINK);
+    nd_config.url_sink = strdup(url_sink.c_str());
+
+    if (nd_load_sink_url(url_sink)) {
+        free(nd_config.url_sink);
+        nd_config.url_sink = strdup(url_sink.c_str());
+    }
 
     nd_config.update_interval = (unsigned)reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);

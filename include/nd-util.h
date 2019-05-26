@@ -51,6 +51,9 @@ void nd_private_ipaddr(uint8_t index, struct sockaddr_storage &addr);
 bool nd_load_uuid(string &uuid, const char *path, size_t length);
 bool nd_save_uuid(const string &uuid, const char *path, size_t length);
 
+bool nd_load_sink_url(string &url);
+bool nd_save_sink_url(const string &url);
+
 void nd_generate_uuid(string &uuid);
 
 string nd_get_version_and_features(void);

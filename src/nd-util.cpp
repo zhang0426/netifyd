@@ -407,6 +407,48 @@ bool nd_save_uuid(const string &uuid, const char *path, size_t length)
     return true;
 }
 
+bool nd_load_sink_url(string &url)
+{
+    char _url[ND_URL_SINK_LEN];
+    FILE *fh = fopen(ND_URL_SINK_PATH, "r");
+
+    if (fh == NULL) {
+        if (ND_DEBUG || errno != ENOENT)
+            nd_printf("Error loading URL: %s: %s\n", ND_URL_SINK_PATH, strerror(errno));
+        return false;
+    }
+
+    if (fgets(_url, ND_URL_SINK_LEN, fh) == NULL) {
+        fclose(fh);
+        nd_printf("Error reading URL: %s: %s\n", ND_URL_SINK_PATH, strerror(errno));
+        return false;
+    }
+
+    fclose(fh);
+    url.assign(_url);
+
+    return true;
+}
+
+bool nd_save_sink_url(const string &url)
+{
+    FILE *fh = fopen(ND_URL_SINK_PATH, "w");
+
+    if (fh == NULL) {
+        nd_printf("Error saving URL: %s: %s\n", ND_URL_SINK_PATH, strerror(errno));
+        return false;
+    }
+
+    if (fputs(url.c_str(), fh) < 0) {
+        fclose(fh);
+        nd_printf("Error writing URL: %s: %s\n", ND_URL_SINK_PATH, strerror(errno));
+        return false;
+    }
+
+    fclose(fh);
+    return true;
+}
+
 void nd_generate_uuid(string &uuid)
 {
     int digit = 0;

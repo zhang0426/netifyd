@@ -111,6 +111,7 @@
 #define ND_URL_SINK             "https://sink.netify.ai/provision/"
 #endif
 #define ND_URL_SINK_PATH        ND_PERSISTENT_STATEDIR "/sink.url"
+#define ND_URL_SINK_LEN         256
 
 #define ND_COOKIE_JAR           ND_VOLATILE_STATEDIR "/netifyd.cookies"
 
@@ -237,7 +238,7 @@ typedef struct nd_global_config_t {
     char *path_uuid;
     char *path_uuid_serial;
     char *path_uuid_site;
-    char *url_upload;
+    char *url_sink;
     char *uuid;
     char *uuid_serial;
     char *uuid_site;

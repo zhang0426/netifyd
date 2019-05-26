@@ -303,7 +303,7 @@ void ndJson::SaveToFile(const string &filename)
 void ndJsonResponse::Parse(const string &json)
 {
     json_object *jver, *jresp_code, *jresp_message;
-    json_object *juuid_site, *jdata;
+    json_object *juuid_site, *jurl_sink, *jdata;
 #ifdef _ND_USE_PLUGINS
     json_object *jplugin_params;
     json_object *jplugin_request_service_param, *jplugin_request_task_exec;
@@ -373,13 +373,20 @@ void ndJsonResponse::Parse(const string &json)
         if (json_object_object_get_ex(jobj, "uuid_site", &juuid_site) &&
             ! json_object_is_type(juuid_site, json_type_null)) {
 
-            nd_debug_printf("Site UUID type: %d (null: %d, string: %d)\n",
-                json_object_get_type(juuid_site), json_type_null, json_type_string);
-
             if (! json_object_is_type(juuid_site, json_type_string))
                 throw ndJsonParseException("Unexpected Site UUID type");
 
             uuid_site = json_object_get_string(juuid_site);
+        }
+
+        // Extract and validate optional sink URL
+        if (json_object_object_get_ex(jobj, "url_sink", &jurl_sink) &&
+            ! json_object_is_type(jurl_sink, json_type_null)) {
+
+            if (! json_object_is_type(jurl_sink, json_type_string))
+                throw ndJsonParseException("Unexpected Sink URL type");
+
+            url_sink = json_object_get_string(jurl_sink);
         }
 
         // Extract and validate optional data payloads

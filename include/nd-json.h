@@ -108,6 +108,7 @@ public:
     string resp_message;
 
     string uuid_site;
+    string url_sink;
 
     ndJsonData data;
 
