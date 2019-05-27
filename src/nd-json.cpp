@@ -306,15 +306,12 @@ void ndJsonResponse::Parse(const string &json)
     json_object *jplugin_params;
     json_object *jplugin_request_service_param, *jplugin_request_task_exec;
 #endif
-    json_tokener_reset(jtok);
-
     if (ND_JSON_SAVE) {
-        FILE *hf = fopen(ND_JSON_FILE_RESPONSE, "w");
-        if (hf != NULL) {
-            fprintf(hf, "%s\n", json.c_str());
-            fclose(hf);
-        }
+        nd_file_save(ND_JSON_FILE_RESPONSE, json,
+            false, ND_JSON_FILE_MODE, ND_JSON_FILE_USER, ND_JSON_FILE_GROUP);
     }
+
+    json_tokener_reset(jtok);
 
     json_object *jobj = json_tokener_parse_ex(
         jtok, json.c_str(), json.length()
