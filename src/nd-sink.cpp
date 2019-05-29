@@ -425,6 +425,7 @@ void ndSinkThread::FreeHeaders(void)
 void ndSinkThread::Upload(void)
 {
     CURLcode curl_rc;
+    bool flush_queue = true;
     size_t xfer = 0, total = pending.size();
 
     do {
@@ -486,8 +487,23 @@ void ndSinkThread::Upload(void)
 
         pending_size -= pending.front().second.size();
         pending.pop_front();
+
+        if (pending.size() == 0 || terminate)
+            flush_queue = false;
+        else {
+            int rc;
+
+            if ((rc = pthread_mutex_lock(&lock)) != 0)
+                throw ndSinkThreadException(strerror(rc));
+
+            // Collect upload queue as soon as possible...
+            if (uploads.size() != 0) flush_queue = false;
+
+            if ((rc = pthread_mutex_unlock(&lock)) != 0)
+                throw ndSinkThreadException(strerror(rc));
+        }
     }
-    while (pending.size() > 0 && ! terminate);
+    while (flush_queue);
 }
 
 string ndSinkThread::Deflate(const string &data)

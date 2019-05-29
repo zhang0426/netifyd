@@ -2149,7 +2149,7 @@ int main(int argc, char *argv[])
     sigev.sigev_signo = ND_SIG_UPDATE;
 
     // XXX: Always send an update on start-up...
-    if (thread_socket) nd_dump_stats();
+    nd_dump_stats();
 
     if (timer_create(CLOCK_REALTIME, &sigev, &timer_id) < 0) {
         nd_printf("timer_create: %s\n", strerror(errno));
