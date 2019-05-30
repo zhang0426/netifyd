@@ -27,8 +27,6 @@
 #include <sstream>
 #ifdef HAVE_ATOMIC
 #include <atomic>
-#else
-typedef bool atomic_bool;
 #endif
 #include <regex>
 

@@ -54,8 +54,13 @@ protected:
     pthread_t id;
     pthread_attr_t attr;
     long cpu;
-    atomic_bool terminate;
-    atomic_bool terminated;
+#ifdef HAVE_ATOMIC
+    atomic<bool> terminate;
+    atomic<bool> terminated;
+#else
+    bool terminate;
+    bool terminated;
+#endif
     pthread_mutex_t lock;
 
     int Join(void);
