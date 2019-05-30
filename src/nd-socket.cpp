@@ -512,7 +512,7 @@ void ndSocket::Create(void)
                         "setsockopt: SO_REUSEADDR", errno);
                 }
 
-                if (bind(sd, rp->ai_addr, rp->ai_addrlen) == 0) break;
+                if (::bind(sd, rp->ai_addr, rp->ai_addrlen) == 0) break;
                 else {
                     nd_printf("%s: bind: %s\n",
                         __PRETTY_FUNCTION__, strerror(errno));
@@ -553,7 +553,7 @@ void ndSocket::Create(void)
             nd_printf("%s: connected\n", __PRETTY_FUNCTION__);
         }
         else if (type == ndSOCKET_TYPE_SERVER) {
-            if (bind(sd, sa, sa_size) != 0)
+            if (::bind(sd, sa, sa_size) != 0)
                 throw ndSocketSystemException(__PRETTY_FUNCTION__, "bind", errno);
 
             if (listen(sd, SOMAXCONN) != 0)
