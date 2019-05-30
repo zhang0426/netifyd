@@ -68,7 +68,7 @@ void nd_file_save(const string &filename, const string &data,
 
 int nd_save_response_data(const char *filename, const ndJsonDataChunks &data);
 
-int nd_ifreq(const string &name, int operation, struct ifreq *ifr);
+int nd_ifreq(const string &name, unsigned long request, struct ifreq *ifr);
 
 #endif // _ND_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

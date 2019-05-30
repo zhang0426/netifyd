@@ -603,7 +603,7 @@ int nd_save_response_data(const char *filename, const ndJsonDataChunks &data)
     return 0;
 }
 
-int nd_ifreq(const string &name, int operation, struct ifreq *ifr)
+int nd_ifreq(const string &name, unsigned long request, struct ifreq *ifr)
 {
     int fd, rc = -1;
 
@@ -616,7 +616,7 @@ int nd_ifreq(const string &name, int operation, struct ifreq *ifr)
     memset(ifr, '\0', sizeof(struct ifreq));
     strncpy(ifr->ifr_name, name.c_str(), IFNAMSIZ - 1);
 
-    if (ioctl(fd, operation, (char *)ifr) == -1) {
+    if (ioctl(fd, request, (char *)ifr) == -1) {
         nd_printf("%s: error sending interface request: %s\n",
             name.c_str(), strerror(errno));
     }
