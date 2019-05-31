@@ -1,0 +1,3 @@
+@sysconfdir@/default/netifyd
+@sysconfdir@/netifyd.conf
+@sysconfdir@/netify.d/netify-sink.conf

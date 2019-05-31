@@ -45,6 +45,7 @@ deploy-osc-update: dist-git
 
 	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) update)
 	cp deploy/debian/debian.changelog $(HOME)/netify-osc/home\:egloo/netifyd
+	cp deploy/debian/debian.conffiles $(HOME)/netify-osc/home\:egloo/netifyd
 	cp deploy/debian/debian.control $(HOME)/netify-osc/home\:egloo/netifyd
 	cp deploy/debian/debian.postinst $(HOME)/netify-osc/home\:egloo/netifyd
 	chmod a+x $(HOME)/netify-osc/home\:egloo/netifyd/debian.postinst

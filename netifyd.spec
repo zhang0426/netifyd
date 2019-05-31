@@ -187,7 +187,7 @@ exit 0
 %dir %attr(750,root,root) %{statedir_vdata}
 %attr(755,root,root) %{_datadir}/%{name}/
 %attr(755,root,root) %{_sysconfdir}/init.d/%{name}
-%attr(644,root,root) %{_sysconfdir}/sysconfig/%{name}
+%config(noreplace) %attr(644,root,root) %{_sysconfdir}/sysconfig/%{name}
 %config(noreplace) %attr(640,root,root) %{statedir_pdata}/netify-sink.conf
 %config(noreplace) %attr(660,root,root) %{_sysconfdir}/%{name}.conf
 %{_sbindir}/%{name}
