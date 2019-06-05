@@ -547,15 +547,15 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
     switch (family) {
     case AF_INET:
         sha1_write(&ctx,
-            (const char *)&flow->lower_addr4, sizeof(struct in_addr));
+            (const char *)&flow->lower_addr4->sin_addr, sizeof(struct in_addr));
         sha1_write(&ctx,
-            (const char *)&flow->upper_addr4, sizeof(struct in_addr));
+            (const char *)&flow->upper_addr4->sin_addr, sizeof(struct in_addr));
         break;
     case AF_INET6:
         sha1_write(&ctx,
-            (const char *)&flow->lower_addr6, sizeof(struct in6_addr));
+            (const char *)&flow->lower_addr6->sin6_addr, sizeof(struct in6_addr));
         sha1_write(&ctx,
-            (const char *)&flow->upper_addr6, sizeof(struct in6_addr));
+            (const char *)&flow->upper_addr6->sin6_addr, sizeof(struct in6_addr));
         break;
     }
 

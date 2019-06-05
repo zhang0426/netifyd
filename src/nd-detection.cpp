@@ -1071,7 +1071,7 @@ void ndDetectionThread::ProcessPacket(void)
                     ntohs(new_flow->lower_port),
                     ntohs(new_flow->upper_port)
             );
-
+#if 0
             // XXX: In the *very* unlikely case that we have SNI from a partial TLS
             // dissection, try to detect the application.  This has only been seen
             // in one case so far, between a Microsoft client/server.
@@ -1084,6 +1084,7 @@ void ndDetectionThread::ProcessPacket(void)
                 case NDPI_PROTOCOL_SSL_NO_CERT:
                 case NDPI_PROTOCOL_OSCAR:
                     if (new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate[0] != '\0') {
+                        nd_debug_printf("%s: WARNING: Extracted SSL CN from partial detection.\n", tag.c_str());
                         ndpi_protocol_match_result ret_match;
                         new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
                             ndpi, new_flow->ndpi_flow,
@@ -1094,6 +1095,7 @@ void ndDetectionThread::ProcessPacket(void)
                     }
                     if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
                         new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
+                        nd_debug_printf("%s: WARNING: Extracted SSL SNI from partial detection.\n", tag.c_str());
                         ndpi_protocol_match_result ret_match;
                         new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
                             ndpi, new_flow->ndpi_flow,
@@ -1104,6 +1106,7 @@ void ndDetectionThread::ProcessPacket(void)
                     }
                     break;
             }
+#endif
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
@@ -1312,52 +1315,41 @@ void ndDetectionThread::ProcessPacket(void)
                 (const char *)new_flow->digest_mdata, SHA1_DIGEST_LENGTH
             );
         }
-/*
-        nd_debug_printf("%s: private: %d, internal == false: %d, DLT_EN10MB: %s\n",
-            tag.c_str(),
-            ND_PRIVATE_EXTADDR, (internal == false),
-            (pcap_datalink_type == DLT_EN10MB) ? "true" : "false");
-*/
+
+        struct sockaddr_in *laddr4 = new_flow->lower_addr4;
+        struct sockaddr_in6 *laddr6 = new_flow->lower_addr6;
+        struct sockaddr_in *uaddr4 = new_flow->upper_addr4;
+        struct sockaddr_in6 *uaddr6 = new_flow->upper_addr6;
+
         if (ND_PRIVATE_EXTADDR &&
             internal == false && pcap_datalink_type == DLT_EN10MB) {
+
             if (! memcmp(dev_mac, new_flow->lower_mac, ETH_ALEN)) {
-                if (new_flow->ip_version == 4) {
-                    memcpy(new_flow->lower_addr4,
-                        (struct sockaddr_in *)&private_addrs.first,
-                        sizeof(struct sockaddr_in));
-                }
-                else {
-                    memcpy(new_flow->lower_addr6,
-                        (struct sockaddr_in6 *)&private_addrs.second,
-                        sizeof(struct sockaddr_in6));
-                }
+                if (new_flow->ip_version == 4)
+                    laddr4 = (struct sockaddr_in *)&private_addrs.first;
+                else
+                    laddr6 = (struct sockaddr_in6 *)&private_addrs.second;
             }
             else if (! memcmp(dev_mac, new_flow->upper_mac, ETH_ALEN)) {
-                if (new_flow->ip_version == 4) {
-                    memcpy(new_flow->upper_addr4,
-                        (struct sockaddr_in *)&private_addrs.first,
-                        sizeof(struct sockaddr_in));
-                }
-                else {
-                    memcpy(new_flow->upper_addr6,
-                        (struct sockaddr_in6 *)&private_addrs.second,
-                        sizeof(struct sockaddr_in6));
-                }
+                if (new_flow->ip_version == 4)
+                    uaddr4 = (struct sockaddr_in *)&private_addrs.first;
+                else
+                    uaddr6 = (struct sockaddr_in6 *)&private_addrs.second;
             }
         }
 
         switch (new_flow->ip_version) {
         case 4:
-            inet_ntop(AF_INET, &new_flow->lower_addr4->sin_addr.s_addr,
+            inet_ntop(AF_INET, &laddr4->sin_addr.s_addr,
                 new_flow->lower_ip, INET_ADDRSTRLEN);
-            inet_ntop(AF_INET, &new_flow->upper_addr4->sin_addr.s_addr,
+            inet_ntop(AF_INET, &uaddr4->sin_addr.s_addr,
                 new_flow->upper_ip, INET_ADDRSTRLEN);
             break;
 
         case 6:
-            inet_ntop(AF_INET6, &new_flow->lower_addr6->sin6_addr.s6_addr,
+            inet_ntop(AF_INET6, &laddr6->sin6_addr.s6_addr,
                 new_flow->lower_ip, INET6_ADDRSTRLEN);
-            inet_ntop(AF_INET6, &new_flow->upper_addr6->sin6_addr.s6_addr,
+            inet_ntop(AF_INET6, &uaddr6->sin6_addr.s6_addr,
                 new_flow->upper_ip, INET6_ADDRSTRLEN);
             break;
 
