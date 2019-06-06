@@ -147,8 +147,8 @@ public:
         struct {
             uint16_t version;
             uint16_t cipher_suite;
-            char client_certcn[ND_FLOW_SSL_CNLEN];
-            char server_certcn[ND_FLOW_SSL_CNLEN];
+            char client_sni[ND_FLOW_SSL_CNLEN];
+            char server_cn[ND_FLOW_SSL_CNLEN];
             char server_organization[ND_FLOW_SSL_ORGLEN];
             char client_ja3[ND_FLOW_SSL_JA3LEN];
             char server_ja3[ND_FLOW_SSL_JA3LEN];
@@ -217,8 +217,8 @@ public:
     bool has_http_user_agent(void);
     bool has_ssh_client_agent(void);
     bool has_ssh_server_agent(void);
-    bool has_ssl_client_certcn(void);
-    bool has_ssl_server_certcn(void);
+    bool has_ssl_client_sni(void);
+    bool has_ssl_server_cn(void);
     bool has_ssl_server_organization(void);
     bool has_ssl_client_ja3(void);
     bool has_ssl_server_ja3(void);

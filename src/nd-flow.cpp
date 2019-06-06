@@ -229,8 +229,8 @@ ndFlow::ndFlow(bool internal)
 
     ssl.version = 0;
     ssl.cipher_suite = 0;
-    memset(ssl.client_certcn, 0, ND_FLOW_SSL_CNLEN);
-    memset(ssl.server_certcn, 0, ND_FLOW_SSL_CNLEN);
+    memset(ssl.client_sni, 0, ND_FLOW_SSL_CNLEN);
+    memset(ssl.server_cn, 0, ND_FLOW_SSL_CNLEN);
     memset(ssl.server_organization, 0, ND_FLOW_SSL_ORGLEN);
     memset(ssl.client_ja3, 0, ND_FLOW_SSL_JA3LEN);
     memset(ssl.server_ja3, 0, ND_FLOW_SSL_JA3LEN);
@@ -291,13 +291,13 @@ void ndFlow::hash(const string &device,
             sha1_write(&ctx,
                 host_server_name, strnlen(host_server_name, ND_MAX_HOSTNAME));
         }
-        if (has_ssl_client_certcn()) {
+        if (has_ssl_client_sni()) {
             sha1_write(&ctx,
-                ssl.client_certcn, strnlen(ssl.client_certcn, ND_FLOW_SSL_CNLEN));
+                ssl.client_sni, strnlen(ssl.client_sni, ND_FLOW_SSL_CNLEN));
         }
-        if (has_ssl_server_certcn()) {
+        if (has_ssl_server_cn()) {
             sha1_write(&ctx,
-                ssl.server_certcn, strnlen(ssl.server_certcn, ND_FLOW_SSL_CNLEN));
+                ssl.server_cn, strnlen(ssl.server_cn, ND_FLOW_SSL_CNLEN));
         }
         if (has_bt_info_hash()) {
             sha1_write(&ctx, bt.info_hash, ND_FLOW_BTIHASH_LEN);
@@ -462,19 +462,19 @@ bool ndFlow::has_ssh_server_agent(void)
     );
 }
 
-bool ndFlow::has_ssl_client_certcn(void)
+bool ndFlow::has_ssl_client_sni(void)
 {
     return (
         master_protocol() == NDPI_PROTOCOL_SSL &&
-        ssl.client_certcn[0] != '\0'
+        ssl.client_sni[0] != '\0'
     );
 }
 
-bool ndFlow::has_ssl_server_certcn(void)
+bool ndFlow::has_ssl_server_cn(void)
 {
     return (
         master_protocol() == NDPI_PROTOCOL_SSL &&
-        ssl.server_certcn[0] != '\0'
+        ssl.server_cn[0] != '\0'
     );
 }
 
@@ -574,11 +574,11 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         (host_server_name[0] != '\0' || has_mdns_answer()) ? " H: " : "",
         (host_server_name[0] != '\0' || has_mdns_answer()) ?
             has_mdns_answer() ? mdns.answer : host_server_name : "",
-        (has_ssl_client_certcn() || has_ssl_server_certcn()) ? " SSL" : "",
-        (has_ssl_client_certcn()) ? " C: " : "",
-        (has_ssl_client_certcn()) ? ssl.client_certcn : "",
-        (has_ssl_server_certcn()) ? " S: " : "",
-        (has_ssl_server_certcn()) ? ssl.server_certcn : "",
+        (has_ssl_client_sni() || has_ssl_server_cn()) ? " SSL" : "",
+        (has_ssl_client_sni()) ? " C: " : "",
+        (has_ssl_client_sni()) ? ssl.client_sni : "",
+        (has_ssl_server_cn()) ? " S: " : "",
+        (has_ssl_server_cn()) ? ssl.server_cn : "",
         (has_bt_info_hash()) ? " BT-IH: " : "",
         (has_bt_info_hash()) ? digest.c_str() : ""
     );
@@ -940,7 +940,7 @@ json_object *ndFlow::json_encode(ndJson &json,
             json.AddObject(_ssh, "server", ssh.server_agent);
     }
 
-    if (has_ssl_client_certcn() || has_ssl_server_certcn()) {
+    if (has_ssl_client_sni() || has_ssl_server_cn()) {
 
         char tohex[7];
         json_object *_ssl = json.CreateObject(json_flow, "ssl");
@@ -951,11 +951,11 @@ json_object *ndFlow::json_encode(ndJson &json,
         sprintf(tohex, "0x%04hx", ssl.cipher_suite);
         json.AddObject(_ssl, "cipher_suite", tohex);
 
-        if (has_ssl_client_certcn())
-            json.AddObject(_ssl, "client", ssl.client_certcn);
+        if (has_ssl_client_sni())
+            json.AddObject(_ssl, "client_sni", ssl.client_sni);
 
-        if (has_ssl_server_certcn())
-            json.AddObject(_ssl, "server", ssl.server_certcn);
+        if (has_ssl_server_cn())
+            json.AddObject(_ssl, "server_cn", ssl.server_cn);
 
         if (has_ssl_server_organization())
             json.AddObject(_ssl, "organization", ssl.server_organization);

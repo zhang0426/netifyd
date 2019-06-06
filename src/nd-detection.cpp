@@ -1189,9 +1189,9 @@ void ndDetectionThread::ProcessPacket(void)
             new_flow->ssl.cipher_suite =
                 new_flow->ndpi_flow->protos.stun_ssl.ssl.server_cipher;
 
-            snprintf(new_flow->ssl.client_certcn, ND_FLOW_SSL_CNLEN,
+            snprintf(new_flow->ssl.client_sni, ND_FLOW_SSL_CNLEN,
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate);
-            snprintf(new_flow->ssl.server_certcn, ND_FLOW_SSL_CNLEN,
+            snprintf(new_flow->ssl.server_cn, ND_FLOW_SSL_CNLEN,
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
             snprintf(new_flow->ssl.server_organization, ND_FLOW_SSL_ORGLEN,
                 "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_organization);
