@@ -518,7 +518,8 @@ string ndSinkThread::Deflate(const string &data)
     if (deflateInit2(
         &zs,
         Z_DEFAULT_COMPRESSION,
-        Z_DEFLATED, 15 /* window bits */ | 16 /* enable GZIP format */,
+        Z_DEFLATED,
+        15 /* window bits */ | 16 /* enable GZIP format */,
         8,
         Z_DEFAULT_STRATEGY
     ) != Z_OK) throw ndSinkThreadException("deflateInit2");
