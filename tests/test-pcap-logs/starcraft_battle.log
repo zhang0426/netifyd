@@ -1,12 +1,11 @@
-lo: [i4----] DNS.netify.reverse-dns 192.168.1.100:58818 --> 192.168.1.254:53 H: 100.1.168.192.in-addr.arpa
-lo: [i4----] DNS.netify.reverse-dns 192.168.1.100:58818 <-- 192.168.1.254:53 H: 91.252.30.192.in-addr.arpa
-lo: [i4----] DNS.netify.reverse-dns 192.168.1.100:58831 --> 192.168.1.254:53 H: 254.1.168.192.in-addr.arpa
-lo: [i4----] QUIC.netify.google 173.194.40.22:443 --> 192.168.1.100:53568
-lo: [i4----] DNS.netify.reverse-dns 192.168.1.100:58844 --> 192.168.1.254:53 H: 40.186.239.80.in-addr.arpa
-lo: [i4----] DNS.netify.reverse-dns 192.168.1.100:58851 --> 192.168.1.254:53 H: 110.212.58.216.in-addr.arpa
-lo: [i4----] DNS.netify.reverse-dns 192.168.1.100:58851 <-- 192.168.1.254:53 H: 22.40.194.173.in-addr.arpa
+lo: [i4----] DNS.10006.netify.reverse-dns 192.168.1.100:58818 --> 192.168.1.254:53 H: 100.1.168.192.in-addr.arpa
+lo: [i4----] DNS.10006.netify.reverse-dns 192.168.1.100:58818 <-- 192.168.1.254:53 H: 91.252.30.192.in-addr.arpa
+lo: [i4----] QUIC.126.netify.google 173.194.40.22:443 --> 192.168.1.100:53568
+lo: [i4----] DNS.10006.netify.reverse-dns 192.168.1.100:58844 --> 192.168.1.254:53 H: 40.186.239.80.in-addr.arpa
+lo: [i4----] DNS.10006.netify.reverse-dns 192.168.1.100:58851 --> 192.168.1.254:53 H: 110.212.58.216.in-addr.arpa
+lo: [i4----] DNS.10006.netify.reverse-dns 192.168.1.100:58851 <-- 192.168.1.254:53 H: 22.40.194.173.in-addr.arpa
 lo: [i4----] SSDP 192.168.1.254:38605 --> 239.255.255.250:1900
-lo: [i4----] HTTP.netify.analytics 173.194.113.224:80 <-- 192.168.1.100:3506 H: www.google-analytics.com
+lo: [i4----] HTTP.10001.netify.analytics 173.194.113.224:80 <-- 192.168.1.100:3506 H: www.google-analytics.com
 lo: [i4----] DNS 192.168.1.100:60026 --> 192.168.1.254:53 H: llnw.blizzard.com
 lo: [i4----] HTTP 87.248.221.254:80 <-- 192.168.1.100:3508 H: llnw.blizzard.com
 lo: [i4----] HTTP 12.129.222.54:80 <-- 192.168.1.100:3512 H: us.scan.worldofwarcraft.com
@@ -24,11 +23,11 @@ lo: [i4----] HTTP 80.239.186.26:80 <-- 192.168.1.100:3523 H: nydus.battle.net
 lo: [i4----] HTTP 80.239.186.26:80 <-- 192.168.1.100:3524 H: nydus.battle.net
 lo: [i4----] HTTP 80.239.186.40:80 <-- 192.168.1.100:3525 H: eu.battle.net
 lo: [i4----] HTTP 80.239.186.40:80 <-- 192.168.1.100:3526 H: eu.battle.net
-lo: [i4----] DNS.netify.akamai 192.168.1.100:55468 --> 192.168.1.254:53 H: bnetcmsus-a.akamaihd.net
-lo: [i4----] HTTP.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3527 H: bnetcmsus-a.akamaihd.net
-lo: [i4----] HTTP.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3529 H: bnetcmsus-a.akamaihd.net
-lo: [i4----] HTTP.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3530 H: bnetcmsus-a.akamaihd.net
-lo: [i4----] HTTP.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3528 H: bnetcmsus-a.akamaihd.net
-lo: [i4----] HTTP.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3531 H: bnetcmsus-a.akamaihd.net
-lo: [i4----] HTTP.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3532 H: bnetcmsus-a.akamaihd.net
-lo: [i4----] HTTP.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3533 H: bnetcmsus-a.akamaihd.net
+lo: [i4----] DNS.10011.netify.akamai 192.168.1.100:55468 --> 192.168.1.254:53 H: bnetcmsus-a.akamaihd.net
+lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3527 H: bnetcmsus-a.akamaihd.net
+lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3529 H: bnetcmsus-a.akamaihd.net
+lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3530 H: bnetcmsus-a.akamaihd.net
+lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3528 H: bnetcmsus-a.akamaihd.net
+lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3531 H: bnetcmsus-a.akamaihd.net
+lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3532 H: bnetcmsus-a.akamaihd.net
+lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3533 H: bnetcmsus-a.akamaihd.net

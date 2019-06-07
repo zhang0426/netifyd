@@ -1,2 +1,2 @@
-lo: [i4----] SSL.netify.facebook 66.220.156.68:443 <-- 192.168.43.18:52066 SSL C: facebook.com S: *.facebook.com
-lo: [i4----] SSL.netify.facebook 31.13.86.36:443 <-- 192.168.43.18:44614 SSL C: www.facebook.com
+lo: [i4----] HTTPS.119.netify.facebook 66.220.156.68:443 <-- 192.168.43.18:52066 SSL C: facebook.com S: *.facebook.com
+lo: [i4----] HTTPS.119.netify.facebook 31.13.86.36:443 <-- 192.168.43.18:44614 SSL C: www.facebook.com
