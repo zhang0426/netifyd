@@ -16,9 +16,9 @@
 ### END INIT INFO
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=@sbindir@/@PACKAGE_TARNAME@
+DAEMON="@sbindir@/@PACKAGE_TARNAME@"
 NAME="@PACKAGE_TARNAME@"
-PIDFILE=@runstatedir@/netifyd.pid
+PIDFILE="@volatilestatedir@/netifyd.pid"
 DESC="@PACKAGE_NAME@"
 
 unset TMPDIR
