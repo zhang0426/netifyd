@@ -267,12 +267,16 @@ void ndFlow::hash(const string &device,
 
     switch (ip_version) {
     case 4:
-        sha1_write(&ctx, (const char *)lower_addr4, sizeof(struct in_addr));
-        sha1_write(&ctx, (const char *)upper_addr4, sizeof(struct in_addr));
+        sha1_write(&ctx,
+            (const char *)&lower_addr4->sin_addr, sizeof(struct in_addr));
+        sha1_write(&ctx,
+            (const char *)&upper_addr4->sin_addr, sizeof(struct in_addr));
         break;
     case 6:
-        sha1_write(&ctx, (const char *)lower_addr6, sizeof(struct in6_addr));
-        sha1_write(&ctx, (const char *)upper_addr6, sizeof(struct in6_addr));
+        sha1_write(&ctx,
+            (const char *)&lower_addr6->sin6_addr, sizeof(struct in6_addr));
+        sha1_write(&ctx,
+            (const char *)&upper_addr6->sin6_addr, sizeof(struct in6_addr));
         break;
     default:
         break;
