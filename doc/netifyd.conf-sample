@@ -36,7 +36,7 @@ purge_divisor = <number of flow hashes to purge when full>
 [dns_hint_cache]
 enable = <yes/no>
 save = <persistent/volatile/disabled>
-ttl = 1800
+ttl = <cache entry TTL>
 
 [socket]
 listen_path[0] = <path to socket file>
