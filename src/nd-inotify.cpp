@@ -84,7 +84,7 @@ void ndInotify::AddWatch(const string &tag, const string &filename)
         watch->wd = -1;
         watch->filename = filename.c_str();
 
-        inotify_watch[filename] = watch;
+        inotify_watch[tag] = watch;
     }
 }
 
