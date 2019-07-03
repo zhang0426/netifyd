@@ -113,6 +113,8 @@
 #define ND_URL_SINK_PATH        ND_PERSISTENT_STATEDIR "/sink.url"
 #define ND_URL_SINK_LEN         256
 
+#define ND_SINK_MAX_POST_ERRORS 3       // Maximum number of sink POST errors.
+
 #define ND_COOKIE_JAR           ND_VOLATILE_STATEDIR "/netifyd.cookies"
 
 #define ND_SINK_CONNECT_TIMEOUT 30      // Default 30-second connection timeout
@@ -249,6 +251,7 @@ typedef struct nd_global_config_t {
     unsigned max_fhc;
     unsigned max_tcp_pkts;
     unsigned max_udp_pkts;
+    unsigned sink_max_post_errors;
     unsigned sink_connect_timeout;
     unsigned sink_xfer_timeout;
     unsigned ttl_dns_entry;

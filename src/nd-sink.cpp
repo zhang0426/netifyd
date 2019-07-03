@@ -134,7 +134,7 @@ static int ndSinkThread_progress(void *user,
 
 ndSinkThread::ndSinkThread()
     : ndThread("nd-sink", -1),
-    headers(NULL), headers_gz(NULL), pending_size(0)
+    headers(NULL), headers_gz(NULL), pending_size(0), post_errors(0)
 {
     int rc;
 
@@ -426,6 +426,17 @@ void ndSinkThread::Upload(void)
     bool flush_queue = true;
     size_t xfer = 0, total = pending.size();
 
+    if (post_errors == nd_config.sink_max_post_errors) {
+        free(nd_config.url_sink);
+        nd_config.url_sink = strdup(ND_URL_SINK);
+        nd_printf("%s: reverted to default sink URL: %s\n", tag.c_str(),
+            nd_config.url_sink);
+
+        curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_sink);
+
+        post_errors = 0;
+    }
+
     do {
         nd_debug_printf("%s: payload %lu/%lu (%d of %d bytes)...\n",
             tag.c_str(), ++xfer, total, pending.front().second.size(), pending_size);
@@ -440,13 +451,17 @@ void ndSinkThread::Upload(void)
 
         body_data.clear();
 
-        if ((curl_rc = curl_easy_perform(ch)) != CURLE_OK)
+        if ((curl_rc = curl_easy_perform(ch)) != CURLE_OK) {
+            post_errors++;
             break;
+        }
 
         long http_rc = 0;
         if ((curl_rc = curl_easy_getinfo(ch,
-            CURLINFO_RESPONSE_CODE, &http_rc)) != CURLE_OK)
+            CURLINFO_RESPONSE_CODE, &http_rc)) != CURLE_OK) {
+            post_errors++;
             break;
+        }
 
         char *content_type = NULL;
         curl_easy_getinfo(ch, CURLINFO_CONTENT_TYPE, &content_type);
@@ -477,6 +492,8 @@ void ndSinkThread::Upload(void)
                 }
             }
 #endif
+        case 404:
+            post_errors++;
             break;
 
         default:

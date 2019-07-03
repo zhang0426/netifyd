@@ -191,6 +191,7 @@ static void nd_config_init(void)
     nd_config.max_fhc = ND_MAX_FHC_ENTRIES;
     nd_config.max_tcp_pkts = ND_MAX_TCP_PKTS;
     nd_config.max_udp_pkts = ND_MAX_UDP_PKTS;
+    nd_config.sink_max_post_errors = ND_SINK_MAX_POST_ERRORS;
     nd_config.sink_connect_timeout = ND_SINK_CONNECT_TIMEOUT;
     nd_config.sink_xfer_timeout = ND_SINK_XFER_TIMEOUT;
     nd_config.ttl_dns_entry = ND_TTL_IDLE_DHC_ENTRY;
@@ -307,6 +308,9 @@ static int nd_config_load(void)
 
     nd_config.max_udp_pkts = (unsigned)reader.GetInteger(
         "netifyd", "max_udp_pkts", ND_MAX_UDP_PKTS);
+
+    nd_config.sink_max_post_errors = (unsigned)reader.GetInteger(
+        "netifyd", "sink_max_post_errors", ND_SINK_MAX_POST_ERRORS);
 
     nd_config.ttl_idle_flow = 1000 * (unsigned)reader.GetInteger(
         "netifyd", "ttl_idle_flow", ND_TTL_IDLE_FLOW);

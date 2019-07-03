@@ -67,6 +67,8 @@ protected:
     ndResponseQueue responses;
     pthread_mutex_t response_mutex;
 
+    unsigned post_errors;
+
     void CreateHeaders(void);
     void FreeHeaders(void);
 

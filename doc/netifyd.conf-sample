@@ -16,6 +16,7 @@ enable_sink = <yes/no>
 sink_connect_timeout = <connect timeout in seconds>
 sink_xfer_timeout = <transfer timeout in seconds>
 url_sink = <sink upload URL>
+sink_max_post_errors = <number of POST errors before reverting to default sink URL>
 update_interval = <update interval in seconds>
 json_save = <yes/no>
 max_backlog_kb = <amount of payload data to buffer in kilobytes>
