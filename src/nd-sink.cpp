@@ -476,9 +476,11 @@ void ndSinkThread::Upload(void)
 
         switch (http_rc) {
         case 200:
+            post_errors = 0;
             break;
 
         case 400:
+            post_errors = 0;
 #ifndef _ND_LEAN_AND_MEAN
             if (ND_DEBUG || ND_DEBUG_UPLOAD) {
                 FILE *hf = fopen(ND_JSON_FILE_BAD_SEND, "w");
@@ -494,9 +496,10 @@ void ndSinkThread::Upload(void)
 #endif
         case 404:
             post_errors++;
-            break;
+            return;
 
         default:
+            post_errors = 0;
             return;
         }
 
