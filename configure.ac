@@ -1,6 +1,10 @@
 # Netify Agent
 # GNU Autoconf configuration
 
+m4_include([m4/ax_pkg_installdir.m4])
+m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
+m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
+
 AC_PREREQ([2.63])
 AC_INIT([Netify Agent], [2.90],
     [https://gitlab.com/netify.ai/public/netify-agent/issues],
@@ -20,7 +24,6 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG([0.23])
-m4_include([m4/ax_pkg_installdir.m4])
 AX_PKG_INSTALLDIR
 AC_PATH_PROG([bash], [bash], [false])
 AC_PATH_PROG([osc], [osc])
@@ -228,8 +231,6 @@ AC_CHECK_HEADERS([atomic linux/ppp_defs.h net/ppp_defs.h stdalign.h])
 AC_CHECK_HEADERS([pcap/sll.h pcap/vlan.h])
 
 # Check compiler flags (gnu++11)
-m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
-m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
 AX_CXX_COMPILE_STDCXX_11([ext], [optional])
 AS_IF([test "$HAVE_CXX11" = "0"], [AX_CXX_COMPILE_STDCXX_0X])
 
