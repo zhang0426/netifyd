@@ -65,7 +65,7 @@ endif
 deploy-edgeos:
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	./autogen.sh && \
-		PKG_CONFIG=${BUILDROOT}/target-usg-3p/output/host/bin/pkg-config \
+		PKG_CONFIG=$(abs_top_builddir)/target-usg-3p/output/host/bin/pkg-config \
 		./configure \
 		--build=x86_64-pc-linux-gnu --host=mips-linux \
 		--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sharedstatedir=/var/lib \
@@ -97,6 +97,32 @@ deploy-edgeos:
 	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu).tar.gz \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
+
+deploy-freebsd:
+	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)
+	./autogen.sh \
+		&& PKG_CONFIG_PATH=$(abs_top_builddir)/libs/json-c \
+		CC=clang CXX=clang++ \
+		./configure --disable-conntrack --disable-netlink \
+		--disable-inotify --disable-libtcmalloc && gmake clean
+	$(MAKE) clean
+	$(MAKE) -j 5
+
+	$(MAKE) DESTDIR=$(abs_top_builddir)/$(PACKAGE)-$(VERSION)-freebsd-$(host_cpu) install
+
+	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(libdir)/libndpi*
+	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(libdir)/*.a
+	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(libdir)/*.la
+	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(includedir)
+	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(pkgconfigdir)
+
+	$(STRIP) $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(sbindir)/netifyd
+	$(STRIP) $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(libdir)/libnetifyd.so.0.0.0
+
+	rm -f $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu).tar.gz
+	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu).tar.gz \
+		$(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)
+	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)
 
 deploy-debug: all
 	scp src/.libs/netifyd gw:/usr/sbin/

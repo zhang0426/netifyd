@@ -43,12 +43,18 @@ case "${host_os}" in
     linux*)
         AC_CHECK_LIB([resolv],
             [ns_initparse], [], [AC_MSG_ERROR([libresolv/ns_initparse() not found.])])
+        PKG_CHECK_MODULES([JSONC], [json-c])
+        ;;
+    freebsd*)
+        PKG_CHECK_MODULES([JSONC], [json-c-uninstalled])
+        ;;
+    *)
+        PKG_CHECK_MODULES([JSONC], [json-c])
         ;;
 esac
 
 #AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
 
-PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 
@@ -143,8 +149,12 @@ AS_IF([test "x$enable_plugins" = "xyes"], [
     AC_DEFINE([_ND_USE_PLUGINS], [1],
         [Define to enable Netify Plugin support.])
     AC_CHECK_HEADERS([dlfcn.h], [], AC_MSG_ERROR([dlfcn.h header(s) not found.]))
-    AC_CHECK_LIB([dl],
-        [dlopen], [], [AC_MSG_ERROR([libdl/dlopen() not found.])])
+    case "${host_os}" in
+        linux*)
+            AC_CHECK_LIB([dl],
+                [dlopen], [], [AC_MSG_ERROR([libdl/dlopen() not found.])])
+            ;;
+    esac
     AM_CONDITIONAL(USE_PLUGINS, true)
 ], [
     AM_CONDITIONAL(USE_PLUGINS, false)
