@@ -295,7 +295,7 @@ ndDetectionThread::ndDetectionThread(
 
     private_addrs.second.ss_family = AF_INET6;
     nd_private_ipaddr(private_addr, private_addrs.second);
-
+#ifdef SIOCGIFHWADDR
     struct ifreq ifr;
     if (nd_ifreq(dev, SIOCGIFHWADDR, &ifr) == 0) {
         if (ifr.ifr_hwaddr.sa_family == ARPHRD_ETHER) {
@@ -312,7 +312,7 @@ ndDetectionThread::ndDetectionThread(
                 dev.c_str(), ifr.ifr_hwaddr.sa_family);
         }
     }
-
+#endif
     nd_debug_printf("%s: detection thread created, custom_proto_base: %u.\n",
         tag.c_str(), custom_proto_base);
 }
