@@ -17,6 +17,8 @@
 #ifndef _ND_H
 #define _ND_H
 
+#include "nd-json-response-code.h"
+
 #ifndef ETH_ALEN
 #include <net/ethernet.h>
 #if !defined(ETH_ALEN) && defined(ETHER_ADDR_LEN)
@@ -292,6 +294,9 @@ typedef struct nd_agent_stats_t
     size_t tcm_alloc_kb;
     size_t tcm_alloc_kb_prev;
 #endif
+    bool sink_status;
+    size_t sink_queue_size;
+    ndJsonResponseCode sink_resp_code;
 } nd_agent_stats;
 
 typedef struct nd_packet_stats_t

@@ -267,11 +267,6 @@ static int nd_config_load(void)
         "netifyd", "url_sink", ND_URL_SINK);
     nd_config.url_sink = strdup(url_sink.c_str());
 
-    if (nd_load_sink_url(url_sink)) {
-        free(nd_config.url_sink);
-        nd_config.url_sink = strdup(url_sink.c_str());
-    }
-
     nd_config.update_interval = (unsigned)reader.GetInteger(
         "netifyd", "update_interval", ND_STATS_INTERVAL);
 
@@ -850,61 +845,66 @@ static int nd_sink_process_responses(void)
 
         count++;
 
-        for (ndJsonData::const_iterator i = response->data.begin();
-            i != response->data.end(); i++) {
+        if (response->resp_code == ndJSON_RESP_OK) {
 
-            if (! reloaded && i->first == ND_CONF_SINK_BASE) {
+            for (ndJsonData::const_iterator i = response->data.begin();
+                i != response->data.end(); i++) {
 
-                if (! nd_detection_stopped_by_signal) {
-                    nd_stop_detection_threads();
-                    if (nd_start_detection_threads() < 0) return -1;
+                if (! reloaded && i->first == ND_CONF_SINK_BASE) {
+
+                    if (! nd_detection_stopped_by_signal) {
+                        nd_stop_detection_threads();
+                        if (nd_start_detection_threads() < 0) return -1;
+                    }
+
+                    if (thread_socket) {
+                        string json;
+                        nd_json_protocols(json);
+                        thread_socket->QueueWrite(json);
+                    }
+
+                    reloaded = true;
                 }
-
-                if (thread_socket) {
-                    string json;
-                    nd_json_protocols(json);
-                    thread_socket->QueueWrite(json);
-                }
-
-                reloaded = true;
             }
-        }
 
 #ifdef _ND_USE_PLUGINS
-        for (ndJsonPluginRequest::const_iterator
-            i = response->plugin_request_service_param.begin();
-            i != response->plugin_request_service_param.end(); i++) {
+            for (ndJsonPluginRequest::const_iterator
+                i = response->plugin_request_service_param.begin();
+                i != response->plugin_request_service_param.end(); i++) {
 
-            ndJsonPluginDispatch::const_iterator iter_params;
-            iter_params = response->plugin_params.find(i->first);
+                ndJsonPluginDispatch::const_iterator iter_params;
+                iter_params = response->plugin_params.find(i->first);
 
-            if (iter_params != response->plugin_params.end()) {
-                const ndJsonPluginParams &params(iter_params->second);
-                nd_dispatch_service_param(i->second, i->first, params);
+                if (iter_params != response->plugin_params.end()) {
+                    const ndJsonPluginParams &params(iter_params->second);
+                    nd_dispatch_service_param(i->second, i->first, params);
+                }
+                else {
+                    const ndJsonPluginParams params;
+                    nd_dispatch_service_param(i->second, i->first, params);
+                }
             }
-            else {
-                const ndJsonPluginParams params;
-                nd_dispatch_service_param(i->second, i->first, params);
-            }
-        }
 
-        for (ndJsonPluginRequest::const_iterator
-            i = response->plugin_request_task_exec.begin();
-            i != response->plugin_request_task_exec.end(); i++) {
+            for (ndJsonPluginRequest::const_iterator
+                i = response->plugin_request_task_exec.begin();
+                i != response->plugin_request_task_exec.end(); i++) {
 
-            ndJsonPluginDispatch::const_iterator iter_params;
-            iter_params = response->plugin_params.find(i->first);
+                ndJsonPluginDispatch::const_iterator iter_params;
+                iter_params = response->plugin_params.find(i->first);
 
-            if (iter_params != response->plugin_params.end()) {
-                const ndJsonPluginParams &params(iter_params->second);
-                nd_start_task(i->second, i->first, params);
+                if (iter_params != response->plugin_params.end()) {
+                    const ndJsonPluginParams &params(iter_params->second);
+                    nd_start_task(i->second, i->first, params);
+                }
+                else {
+                    const ndJsonPluginParams params;
+                    nd_start_task(i->second, i->first, params);
+                }
             }
-            else {
-                const ndJsonPluginParams params;
-                nd_start_task(i->second, i->first, params);
-            }
-        }
 #endif
+        }
+
+        nda_stats.sink_resp_code = response->resp_code;
 
         delete response;
     }
@@ -946,6 +946,12 @@ void nd_json_agent_status(string &json_string)
     json.AddObject(NULL, "tcm_kb_prev", (uint64_t)nda_stats.tcm_alloc_kb_prev);
 #endif
 #endif // _ND_USE_LIBTCMALLOC
+    json.AddObject(NULL, "sink_status", nda_stats.sink_status);
+    if (nda_stats.sink_status) {
+        json.AddObject(NULL, "sink_queue_size_kb", nda_stats.sink_queue_size / 1024);
+        json.AddObject(NULL, "sink_queue_max_size_kb", nd_config.max_backlog / 1024);
+        json.AddObject(NULL, "sink_resp_code", nda_stats.sink_resp_code);
+    }
 
     json.ToString(json_string, false);
     json_string.append("\n");
@@ -1443,6 +1449,13 @@ static void nd_dump_stats(void)
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &nda_stats.ts_now) != 0)
         memcpy(&nda_stats.ts_now, &nda_stats.ts_epoch, sizeof(struct timespec));
 
+    if (thread_sink == NULL)
+        nda_stats.sink_status = false;
+    else {
+        nda_stats.sink_status = true;
+        nda_stats.sink_queue_size = thread_sink->QueuePendingSize();
+    }
+
     ndJson json;
     json_object *json_obj = NULL;
     json_object *json_ifaces = NULL;
@@ -1575,6 +1588,95 @@ static void nd_dump_protocols(void)
     ndpi_global_destroy();
 }
 #endif
+
+static void nd_status(void)
+{
+    fprintf(stderr, "%s\n", nd_get_version_and_features().c_str());
+
+    pid_t nd_pid = -1;
+    FILE *hpid = fopen(ND_PID_FILE_NAME, "r");
+    if (hpid != NULL) {
+        char pid[32];
+        if (fgets(pid, sizeof(pid), hpid)) {
+            nd_pid = nd_is_running(
+                (pid_t)strtol(pid, NULL, 0),
+                "netifyd"
+            );
+        }
+        fclose(hpid);
+    }
+    else if (errno == ENOENT)
+        nd_pid = 0;
+
+    if (nd_conf_filename == NULL)
+        nd_conf_filename = strdup(ND_CONF_FILE_NAME);
+
+    if (nd_config_load() < 0)
+        return;
+
+    if (nd_file_exists(ND_URL_SINK_PATH) > 0) {
+        string url_sink;
+        if (nd_load_sink_url(url_sink)) {
+            free(nd_config.url_sink);
+            nd_config.url_sink = strdup(url_sink.c_str());
+        }
+    }
+
+    fprintf(stderr, "%s-%s agent %s.\n",
+        (nd_pid < 0) ? ND_C_YELLOW :
+            (nd_pid == 0) ? ND_C_RED : ND_C_GREEN,
+        ND_C_RESET,
+        (nd_pid < 0) ? "status could not be determined" :
+            (nd_pid == 0) ? "is not running" : "is running");
+    fprintf(stderr, "- sink URL: %s\n", nd_config.url_sink);
+    fprintf(stderr, "%s-%s sink uploads are %s.\n",
+        (ND_USE_SINK) ? ND_C_GREEN : ND_C_RED, ND_C_RESET,
+        (ND_USE_SINK) ? "enabled" : "disabled"
+    );
+
+    if (! ND_USE_SINK) {
+        fprintf(stderr, "  To enable uploads, run the following command:\n");
+        fprintf(stderr, "  # netifyd --enable-sink\n");
+    }
+    string uuid;
+
+    uuid = (nd_config.uuid != NULL) ? nd_config.uuid : "00-00-00-00";
+    if (nd_file_exists(nd_config.path_uuid) > 0)
+        nd_load_uuid(uuid, nd_config.path_uuid, ND_AGENT_UUID_LEN);
+
+    if (uuid.size() != ND_AGENT_UUID_LEN || uuid == "00-00-00-00") {
+        fprintf(stderr, "%s-%s sink agent UUID is not set.\n",
+            ND_C_RED, ND_C_RESET);
+        fprintf(stderr, "  To generate a new one, run the following command:\n");
+        fprintf(stderr, "  # netifyd --provision\n");
+    }
+    else {
+        fprintf(stderr, "%s-%s sink agent UUID: %s\n",
+            ND_C_GREEN, ND_C_RESET, uuid.c_str());
+    }
+
+    uuid = (nd_config.uuid_serial != NULL) ? nd_config.uuid_serial : "-";
+    if (nd_file_exists(nd_config.path_uuid_serial) > 0)
+        nd_load_uuid(uuid, nd_config.path_uuid_serial, ND_AGENT_SERIAL_LEN);
+
+    if (uuid.size() && uuid != "-")
+        fprintf(stderr, "- sink serial UUID: %s\n", uuid.c_str());
+
+    uuid = (nd_config.uuid_site != NULL) ? nd_config.uuid_site : "-";
+    if (nd_file_exists(nd_config.path_uuid_site) > 0)
+        nd_load_uuid(uuid, nd_config.path_uuid_site, ND_SITE_UUID_LEN);
+
+    if (! uuid.size() || uuid == "-") {
+        fprintf(stderr, "%s-%s sink site UUID is not set.\n",
+            ND_C_YELLOW, ND_C_RESET);
+        fprintf(stderr, "  A new site UUID will be automatically set "
+            "after this agent has been provisioned by the sink server.\n");
+    }
+    else {
+        fprintf(stderr, "%s-%s sink site UUID: %s\n",
+            ND_C_GREEN, ND_C_RESET, uuid.c_str());
+    }
+}
 
 #ifdef _ND_USE_NETLINK
 static void nd_add_device_addresses(nd_device_addr &device_addresses)
@@ -1769,6 +1871,7 @@ int main(int argc, char *argv[])
         { "remain-in-foreground", 0, 0, 'R' },
         { "replay-delay", 0, 0, 'r' },
         { "sink-config", 1, 0, 'f' },
+        { "status", 0, 0, 's' },
         { "test-output", 1, 0, 'T' },
         { "uuid", 1, 0, 'u' },
         { "uuidgen", 0, 0, 'U' },
@@ -1783,7 +1886,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?A:c:DdE:eF:f:hI:i:j:lN:PpRrS:s:tT:Uu:V",
+            "?A:c:DdE:eF:f:hI:i:j:lN:PpRrS:stT:Uu:V",
             options, &o)) == -1) break;
         switch (rc) {
         case 0:
@@ -1915,6 +2018,9 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Sorry, this feature was not enabled for this build.\n");
             exit(1);
 #endif
+        case 's':
+            nd_status();
+            exit(0);
         case 't':
             nd_config.flags &= ~ndGF_USE_CONNTRACK;
             break;
@@ -1950,6 +2056,14 @@ int main(int argc, char *argv[])
 
     if (nd_config_load() < 0)
         return 1;
+
+    {
+        string url_sink;
+        if (nd_load_sink_url(url_sink)) {
+            free(nd_config.url_sink);
+            nd_config.url_sink = strdup(url_sink.c_str());
+        }
+    }
 
     if (nd_config.h_flow != stderr) {
         // Test mode enabled, disable/set certain config parameters

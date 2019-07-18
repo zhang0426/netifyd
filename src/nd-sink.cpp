@@ -230,12 +230,10 @@ void *ndSinkThread::Entry(void)
     nd_debug_printf("%s: thread started.\n", tag.c_str());
 
     while (terminate == false) {
-        if ((rc = pthread_mutex_lock(&lock)) != 0)
-            throw ndSinkThreadException(strerror(rc));
+        Lock();
 
         if (uploads.size() == 0) {
-            if ((rc = pthread_mutex_unlock(&lock)) != 0)
-                throw ndSinkThreadException(strerror(rc));
+            Unlock();
 
             if ((rc = pthread_mutex_lock(&uploads_cond_mutex)) != 0)
                 throw ndSinkThreadException(strerror(rc));
@@ -263,8 +261,7 @@ void *ndSinkThread::Entry(void)
         }
         while (uploads.size() > 0);
 
-        if ((rc = pthread_mutex_unlock(&lock)) != 0)
-            throw ndSinkThreadException(strerror(rc));
+        Unlock();
 
         if (terminate == false && pending.size() > 0) Upload();
     }
@@ -276,44 +273,39 @@ void ndSinkThread::Terminate(void)
 {
     int rc;
 
-    if ((rc = pthread_mutex_lock(&lock)) != 0)
-        throw ndSinkThreadException(strerror(rc));
+    Lock();
+
     if ((rc = pthread_cond_broadcast(&uploads_cond)) != 0)
         throw ndSinkThreadException(strerror(rc));
 
     terminate = true;
 
-    if ((rc = pthread_mutex_unlock(&lock)) != 0)
-        throw ndSinkThreadException(strerror(rc));
+    Unlock();
 }
 
 void ndSinkThread::QueuePush(const string &json)
 {
     int rc;
 
-    if ((rc = pthread_mutex_lock(&lock)) != 0)
-        throw ndSinkThreadException(strerror(rc));
+    Lock();
 
     uploads.push(json);
 
     if ((rc = pthread_cond_broadcast(&uploads_cond)) != 0)
         throw ndSinkThreadException(strerror(rc));
-    if ((rc = pthread_mutex_unlock(&lock)) != 0)
-        throw ndSinkThreadException(strerror(rc));
+
+    Unlock();
 }
 
 size_t ndSinkThread::QueuePendingSize(void)
 {
-    int rc;
     size_t bytes;
 
-    if ((rc = pthread_mutex_lock(&lock)) != 0)
-        throw ndSinkThreadException(strerror(rc));
+    Lock();
 
     bytes = pending_size;
 
-    if ((rc = pthread_mutex_unlock(&lock)) != 0)
-        throw ndSinkThreadException(strerror(rc));
+    Unlock();
 
     return bytes;
 }
@@ -452,14 +444,36 @@ void ndSinkThread::Upload(void)
         body_data.clear();
 
         if ((curl_rc = curl_easy_perform(ch)) != CURLE_OK) {
+
             post_errors++;
+
+            ndJsonResponse *response = new ndJsonResponse(
+                ndJSON_RESP_POST_ERROR,
+                "Some POST error"
+            );
+
+            if (response == NULL)
+                throw runtime_error(strerror(ENOMEM));
+            else
+                PushResponse(response);
             break;
         }
 
         long http_rc = 0;
         if ((curl_rc = curl_easy_getinfo(ch,
             CURLINFO_RESPONSE_CODE, &http_rc)) != CURLE_OK) {
+
             post_errors++;
+
+            ndJsonResponse *response = new ndJsonResponse(
+                ndJSON_RESP_POST_ERROR,
+                "Some POST error"
+            );
+
+            if (response == NULL)
+                throw runtime_error(strerror(ENOMEM));
+            else
+                PushResponse(response);
             break;
         }
 
@@ -472,6 +486,28 @@ void ndSinkThread::Upload(void)
         if (content_type != NULL && content_length != 0.0f) {
             if (strcasecmp("application/json", content_type) == 0)
                 ProcessResponse();
+            else {
+                ndJsonResponse *response = new ndJsonResponse(
+                    ndJSON_RESP_INVALID_CONTENT_TYPE,
+                    "Invalid content type, expected: application/json"
+                );
+
+                if (response == NULL)
+                    throw runtime_error(strerror(ENOMEM));
+                else
+                    PushResponse(response);
+            }
+        }
+        else {
+            ndJsonResponse *response = new ndJsonResponse(
+                ndJSON_RESP_INVALID_RESPONSE,
+                "Unknown content type or invalid content length"
+            );
+
+            if (response == NULL)
+                throw runtime_error(strerror(ENOMEM));
+            else
+                PushResponse(response);
         }
 
         switch (http_rc) {
@@ -509,16 +545,12 @@ void ndSinkThread::Upload(void)
         if (pending.size() == 0 || terminate)
             flush_queue = false;
         else {
-            int rc;
-
-            if ((rc = pthread_mutex_lock(&lock)) != 0)
-                throw ndSinkThreadException(strerror(rc));
+            Lock();
 
             // Collect upload queue as soon as possible...
             if (uploads.size() != 0) flush_queue = false;
 
-            if ((rc = pthread_mutex_unlock(&lock)) != 0)
-                throw ndSinkThreadException(strerror(rc));
+            Unlock();
         }
     }
     while (flush_queue);
@@ -579,8 +611,8 @@ void ndSinkThread::ProcessResponse(void)
 
         response->Parse(body_data);
 
-        switch (response->resp_code) {
-        case ndJSON_RESP_OK:
+        if (response->resp_code == ndJSON_RESP_OK) {
+
             if (response->uuid_site.size() == ND_SITE_UUID_LEN
                 && nd_save_uuid(
                     response->uuid_site,
@@ -614,33 +646,25 @@ void ndSinkThread::ProcessResponse(void)
                             nd_config.path_sink_config, nd_config.digest_sink_config
                         ) == 0)
                         create_headers = true;
-
-                    break;
                 }
             }
 
             if (create_headers) CreateHeaders();
-
-            PushResponse(response);
-
-            nd_debug_printf("%s: [%d] %s\n", tag.c_str(),
-                response->resp_code,
-                (response->resp_message.size() > 0) ?
-                    response->resp_message.c_str() : "(no message)");
-            break;
-
-        default:
-            nd_printf("%s: [%d] %s\n", tag.c_str(),
-                response->resp_code,
-                (response->resp_message.size() > 0) ?
-                    response->resp_message.c_str() : "(no message)");
-            if (response != NULL) delete response;
         }
     } catch (ndJsonParseException &e) {
-        if (response != NULL) delete response;
-        nd_printf("JSON response parse error: %s\n", e.what());
+        response->resp_code = ndJSON_RESP_PARSE_ERROR;
+        response->resp_message = e.what();
     } catch (runtime_error &e) {
         nd_printf("JSON response parse error: %s\n", e.what());
+    }
+
+    if (response != NULL) {
+        nd_debug_printf("%s: [%d] %s\n", tag.c_str(),
+            response->resp_code,
+            (response->resp_message.size() > 0) ?
+                response->resp_message.c_str() : "(no message)");
+
+        PushResponse(response);
     }
 }
 

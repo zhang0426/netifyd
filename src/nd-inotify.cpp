@@ -18,23 +18,32 @@
 #include "config.h"
 #endif
 
+#include <map>
+#include <unordered_map>
+#include <vector>
 #include <string>
 #include <sstream>
 #include <stdexcept>
 #include <deque>
 #include <vector>
 #include <map>
+#include <regex>
 
-#include <unistd.h>
 #include <sys/inotify.h>
 #include <sys/stat.h>
+
+#include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <string.h>
 #include <errno.h>
 
 #include <json.h>
+#include <pcap/pcap.h>
 
 using namespace std;
+
+#include "netifyd.h"
 
 #include "nd-ndpi.h"
 #include "nd-sha1.h"

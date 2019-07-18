@@ -72,8 +72,6 @@ protected:
     json_object *root;
 };
 
-#include "nd-json-response-code.h"
-
 typedef vector<string> ndJsonDataChunks;
 typedef map<string, ndJsonDataChunks> ndJsonData;
 
@@ -94,6 +92,9 @@ public:
         if (jtok == NULL)
             throw ndJsonInitException(strerror(ENOMEM));
     }
+
+    ndJsonResponse(ndJsonResponseCode code, const string &message)
+        : version(0), resp_code(code), resp_message(message), jtok(NULL) { }
 
     virtual ~ndJsonResponse()
     {

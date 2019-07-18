@@ -2,3 +2,7 @@ ok
 auth_fail
 malformed_data
 server_error
+post_error
+parse_error
+invalid_response
+invalid_content_type
