@@ -17,7 +17,12 @@
 #ifndef _ND_UTIL_H
 #define _ND_UTIL_H
 
-#define ND_SHA1_BUFFER    4096
+#define ND_SHA1_BUFFER      4096
+
+#define ND_C_RESET          "\u001b[0m"
+#define ND_C_RED            "\u001b[31m"
+#define ND_C_GREEN          "\u001b[32m"
+#define ND_C_YELLOW         "\u001b[33m"
 
 void *nd_mem_alloc(size_t size);
 
@@ -69,6 +74,10 @@ void nd_file_save(const string &filename, const string &data,
 int nd_save_response_data(const char *filename, const ndJsonDataChunks &data);
 
 int nd_ifreq(const string &name, unsigned long request, struct ifreq *ifr);
+
+pid_t nd_is_running(pid_t pid, const char *exe_base);
+
+int nd_file_exists(const char *path);
 
 #endif // _ND_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

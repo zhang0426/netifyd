@@ -48,6 +48,7 @@
 #endif
 #include <pwd.h>
 #include <grp.h>
+#include <libgen.h>
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -627,6 +628,56 @@ int nd_ifreq(const string &name, unsigned long request, struct ifreq *ifr)
 
     close(fd);
     return rc;
+}
+
+pid_t nd_is_running(pid_t pid, const char *exe_base)
+{
+    pid_t rc = -1;
+    struct stat sb;
+    char link_path[1024];
+    ssize_t r;
+    ostringstream proc_exe_link;
+
+    proc_exe_link << "/proc/" << pid << "/exe";
+
+    if (lstat(proc_exe_link.str().c_str(), &sb) == -1) {
+        if (errno != ENOENT) {
+            nd_printf("%s: lstat: %s: %s\n",
+                __PRETTY_FUNCTION__, proc_exe_link.str().c_str(), strerror(errno));
+            return rc;
+        }
+
+        return 0;
+    }
+
+    r = readlink(proc_exe_link.str().c_str(), link_path, sizeof(link_path));
+
+    if (r != -1) {
+        link_path[r] = '\0';
+
+        if (strncmp(basename(link_path), exe_base, strlen(exe_base)))
+            rc = 0;
+        else
+            rc = pid;
+    }
+    else {
+        nd_printf("%s: readlink: %s: %s\n",
+            __PRETTY_FUNCTION__, proc_exe_link.str().c_str(), strerror(errno));
+    }
+
+    return rc;
+}
+
+int nd_file_exists(const char *path)
+{
+    struct stat sb;
+
+    if (stat(path, &sb) == -1) {
+        if (errno == ENOENT) return 0;
+        return -1;
+    }
+
+    return 1;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
