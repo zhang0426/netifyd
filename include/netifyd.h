@@ -294,6 +294,8 @@ typedef struct nd_agent_stats_t
     size_t tcm_alloc_kb;
     size_t tcm_alloc_kb_prev;
 #endif
+    bool dhc_status;
+    size_t dhc_size;
     bool sink_status;
     size_t sink_queue_size;
     ndJsonResponseCode sink_resp_code;

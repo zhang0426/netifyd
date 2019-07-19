@@ -353,6 +353,7 @@ static int nd_config_load(void)
     else
         nd_config.dhc_save = ndDHC_DISABLED;
 
+    fprintf(stderr, "DHC save: %d\n", nd_config.dhc_save);
     nd_config.ttl_dns_entry = (unsigned)reader.GetInteger(
         "dns_hint_cache", "ttl", ND_TTL_IDLE_DHC_ENTRY);
 
@@ -946,6 +947,10 @@ void nd_json_agent_status(string &json_string)
     json.AddObject(NULL, "tcm_kb_prev", (uint64_t)nda_stats.tcm_alloc_kb_prev);
 #endif
 #endif // _ND_USE_LIBTCMALLOC
+    json.AddObject(NULL, "dhc_status", nda_stats.dhc_status);
+    if (nda_stats.dhc_status)
+        json.AddObject(NULL, "dhc_size", nda_stats.dhc_size);
+
     json.AddObject(NULL, "sink_status", nda_stats.sink_status);
     if (nda_stats.sink_status) {
         json.AddObject(NULL, "sink_queue_size_kb", nda_stats.sink_queue_size / 1024);
@@ -1448,6 +1453,13 @@ static void nd_dump_stats(void)
 
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &nda_stats.ts_now) != 0)
         memcpy(&nda_stats.ts_now, &nda_stats.ts_epoch, sizeof(struct timespec));
+
+    if (ND_USE_DHC) {
+        nda_stats.dhc_status = true;
+        nda_stats.dhc_size = dns_hint_cache->size();
+    }
+    else
+        nda_stats.dhc_status = false;
 
     if (thread_sink == NULL)
         nda_stats.sink_status = false;
@@ -2427,6 +2439,7 @@ int main(int argc, char *argv[])
         delete dns_hint_cache;
     }
 
+    nd_debug_printf("Normal exit.\n");
     pthread_mutex_destroy(nd_printf_mutex);
     delete nd_printf_mutex;
 

@@ -41,6 +41,15 @@ public:
     void load(void);
     void save(void);
 
+    size_t size(void) {
+        size_t count = 0;
+        if (pthread_mutex_lock(&lock) == 0) {
+            count = map_ar.size();
+            pthread_mutex_unlock(&lock);
+        }
+        return count;
+    };
+
 protected:
     pthread_mutex_t lock;
     nd_dns_ar map_ar;
