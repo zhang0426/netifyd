@@ -58,12 +58,14 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <sys/param.h>
+
 #ifdef _ND_USE_NETLINK
 #include <linux/netlink.h>
 #endif
 
 #ifndef UNIX_PATH_MAX
-#define UNIX_PATH_MAX 108
+#define UNIX_PATH_MAX 104
 #endif
 
 #include <pcap/pcap.h>
@@ -126,6 +128,14 @@ ndSocketLocal::~ndSocketLocal()
         unlink(base->node.c_str());
 }
 
+#ifdef BSD4_4
+int ndSocketLocal::IsValid(void)
+{
+    // TODO: Need a "BSD-way" to achieve the same...
+    unlink(base->node.c_str());
+    return 0;
+}
+#else
 int ndSocketLocal::IsValid(void)
 {
     //nd_debug_printf("%s\n", __PRETTY_FUNCTION__);
@@ -175,6 +185,7 @@ int ndSocketLocal::IsValid(void)
 
     return 0;
 }
+#endif
 
 ndSocketRemote::ndSocketRemote(
     ndSocket *base, const string &node, const string &service)

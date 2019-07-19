@@ -37,6 +37,11 @@
 #include <sys/file.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/param.h>
+#if defined(BSD4_4)
+#include <sys/user.h>
+#include <sys/sysctl.h>
+#endif
 
 #include <unistd.h>
 #include <string.h>
@@ -629,7 +634,7 @@ int nd_ifreq(const string &name, unsigned long request, struct ifreq *ifr)
     close(fd);
     return rc;
 }
-
+#if defined(__linux__)
 pid_t nd_is_running(pid_t pid, const char *exe_base)
 {
     pid_t rc = -1;
@@ -667,6 +672,43 @@ pid_t nd_is_running(pid_t pid, const char *exe_base)
 
     return rc;
 }
+#elif defined(BSD4_4)
+pid_t nd_is_running(pid_t pid, const char *exe_base)
+{
+    int mib[4];
+    pid_t rc = -1;
+    size_t length = 4;
+    char pathname[PATH_MAX];
+
+    if (sysctlnametomib("kern.proc.pathname", mib, &length) < 0) {
+        nd_printf("%s: sysctlnametomib: %s: %s\n",
+            __PRETTY_FUNCTION__, "kern.proc.pathname", strerror(errno));
+        return rc;
+    }
+
+    mib[3] = pid;
+    length = sizeof(pathname);
+
+    if (sysctl(mib, 4, pathname, &length, NULL, 0) == -1) {
+        nd_printf("%s: sysctl: %s(%ld): %s\n",
+            __PRETTY_FUNCTION__, "kern.proc.pathname", pid, strerror(errno));
+    }
+    else if (length > 0) {
+        char *pathname_base = basename(pathname);
+        length = strlen(pathname_base);
+        if (strlen(exe_base) < length) length = strlen(exe_base);
+
+        if (strncmp(pathname_base, exe_base, length) == 0)
+            rc = pid;
+        else
+            rc = 0;
+    }
+
+    return rc;
+}
+#elif
+#error "Unsupported platform, not Linux or BSD >= 4.4."
+#endif
 
 int nd_file_exists(const char *path)
 {
