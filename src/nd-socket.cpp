@@ -573,44 +573,85 @@ void ndSocket::Create(void)
     nd_debug_printf("%s: created\n", __PRETTY_FUNCTION__);
 }
 
-const uint8_t *ndSocketBuffer::GetBuffer(size_t &bytes)
+ndSocketBuffer::ndSocketBuffer()
+    : buffer(NULL), fd_fifo{-1, -1}
 {
-    if (GetLength() == 0) {
-        bytes = 0;
-        return NULL;
-    }
+    buffer = new uint8_t[_ND_SOCKET_BUFSIZE];
 
-    bytes = buffer.front().size() - offset;
-    return (const uint8_t *)(buffer.front().c_str() + offset);
+    if (buffer == NULL)
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "new", errno);
+    if (socketpair(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0, fd_fifo) < 0)
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "socketpair", errno);
+}
+
+ndSocketBuffer::~ndSocketBuffer()
+{
+    if (buffer != NULL) delete [] buffer;
+    if (fd_fifo[0] != -1) close(fd_fifo[0]);
+    if (fd_fifo[1] != -1) close(fd_fifo[1]);
+}
+
+const uint8_t *ndSocketBuffer::GetBuffer(ssize_t &bytes)
+{
+    bytes = recv(fd_fifo[0], buffer, _ND_SOCKET_BUFSIZE, MSG_PEEK);
+    if (bytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            bytes = 0;
+            return NULL;
+        }
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "recv", errno);
+    }
+    else if (bytes == 0)
+        throw ndSocketHangupException("recv");
+
+    return (const uint8_t *)buffer;
 }
 
 void ndSocketBuffer::Push(const string &data)
 {
+    ssize_t bytes;
+
     ostringstream header;
     header << "{\"length\": " << data.size() << "}\n";
 
-    buffer.push_back(header.str());
-    buffer.push_back(data);
+    bytes = send(fd_fifo[1], header.str().c_str(), header.str().size(), 0);
+    if (bytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            nd_debug_printf("WARNING: Unable to push header to client socket: %s\n",
+                strerror(errno));
+            return;
+        }
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "send", errno);
+    }
+    else if (bytes != header.str().size())
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "send(short)", EINVAL);
 
-    length += header.str().size() + data.size();
+    bytes = send(fd_fifo[1], data.c_str(), data.size(), 0);
+    if (bytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            nd_debug_printf("WARNING: Unable to push data to client socket: %s\n",
+                strerror(errno));
+            return;
+        }
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "send", errno);
+    }
+    else if (bytes != data.size())
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "send(short)", EINVAL);
 }
 
 void ndSocketBuffer::Pop(size_t bytes)
 {
-    if (bytes == 0 || buffer.size() == 0) return;
+    if (bytes == 0 || bytes > _ND_SOCKET_BUFSIZE)
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "invalid size", EINVAL);
 
-    size_t remaining = buffer.front().size() - offset;
+    ssize_t bytes_recv = recv(fd_fifo[0], buffer, bytes, 0);
 
-    if (bytes > remaining) bytes = remaining;
-
-    if (bytes == remaining) {
-        offset = 0;
-        buffer.pop_front();
-    }
-    else
-        offset += bytes;
-
-    length -= bytes;
+    if (bytes_recv < 0)
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "recv", errno);
+    else if (bytes_recv == 0)
+        throw ndSocketHangupException("recv");
+    else if (bytes_recv != bytes)
+        throw ndSocketSystemException(__PRETTY_FUNCTION__, "recv(short)", EINVAL);
 }
 
 ndSocketThread::ndSocketThread()
@@ -638,7 +679,7 @@ ndSocketThread::~ndSocketThread()
 {
     Join();
 
-    for (ndSocketMap::const_iterator i = clients.begin();
+    for (ndSocketClientMap::const_iterator i = clients.begin();
         i != clients.end(); i++) {
         delete i->second;
     }
@@ -654,8 +695,13 @@ ndSocketThread::~ndSocketThread()
 
 void ndSocketThread::QueueWrite(const string &data)
 {
+    ndSocketBufferMap::iterator bi;
+
     Lock();
-    queue_write.push_back(data);
+
+    for (bi = buffers.begin(); bi != buffers.end(); bi++)
+        bi->second->Push(data);
+
     Unlock();
 }
 
@@ -679,6 +725,8 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
         throw ndSocketThreadException(__PRETTY_FUNCTION__, "new", ENOMEM);
     }
 
+    Lock();
+
     buffers[client->GetDescriptor()] = buffer;
     clients[client->GetDescriptor()] = client;
 
@@ -689,9 +737,11 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     buffer->Push(json);
     nd_json_protocols(json);
     buffer->Push(json);
+
+    Unlock();
 }
 
-void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
+void ndSocketThread::ClientHangup(ndSocketClientMap::iterator &ci)
 {
     ndSocketBufferMap::iterator bi;
 
@@ -706,43 +756,40 @@ void ndSocketThread::ClientHangup(ndSocketMap::iterator &ci)
             __PRETTY_FUNCTION__, "buffers.find", ENOENT);
     }
     else {
+        Lock();
+
         delete bi->second;
         buffers.erase(bi);
+
+        Unlock();
     }
 }
 
 void *ndSocketThread::Entry(void)
 {
-    int rc, max_fd;
+    int rc_read, rc_write;
+    int max_read_fd, max_write_fd;
     fd_set fds_read, fds_write;
     struct timeval tv;
-    ndSocketMap::iterator ci;
+    ndSocketClientMap::iterator ci;
     ndSocketServerMap::iterator si;
     ndSocketBufferMap::iterator bi;
 
     nd_debug_printf("%s: started\n", __PRETTY_FUNCTION__);
 
     while (! terminate) {
-        max_fd = -1;
+        max_read_fd = -1;
+        max_write_fd = -1;
 
         FD_ZERO(&fds_read);
         FD_ZERO(&fds_write);
 
-        Lock();
-        if (queue_write.size()) {
-            for (vector<string>::iterator i = queue_write.begin();
-                i != queue_write.end(); i++) {
-                for (bi = buffers.begin(); bi != buffers.end(); bi++)
-                    bi->second->Push((*i));
-            }
-            queue_write.clear();
-        }
-        Unlock();
-
         for (ci = clients.begin(); ci != clients.end(); ci++) {
 
             FD_SET(ci->first, &fds_read);
-            if (ci->first > max_fd) max_fd = ci->first;
+            FD_SET(ci->first, &fds_write);
+            if (ci->first > max_read_fd) max_read_fd = ci->first;
+            if (ci->first > max_write_fd) max_write_fd = ci->first;
 
             bi = buffers.find(ci->first);
             if (bi == buffers.end()) {
@@ -750,74 +797,95 @@ void *ndSocketThread::Entry(void)
                     __PRETTY_FUNCTION__, "buffers.find", ENOENT);
             }
 
-            if (bi->second->GetLength() > 0)
-                FD_SET(ci->first, &fds_write);
+            int fd = bi->second->GetDescriptor();
+            FD_SET(fd, &fds_read);
+            if (fd > max_read_fd) max_read_fd = fd;
         }
 
         for (si = servers.begin(); si != servers.end(); si++) {
             FD_SET(si->first, &fds_read);
-            if (si->first > max_fd) max_fd = si->first;
+            if (si->first > max_read_fd) max_read_fd = si->first;
         }
 
         memset(&tv, 0, sizeof(struct timeval));
         tv.tv_sec = 1;
 
-        rc = select(max_fd + 1, &fds_read, &fds_write, NULL, &tv);
+        rc_read = select(max_read_fd + 1, &fds_read, NULL, NULL, &tv);
 
-        if (rc == -1 && errno != EINTR) {
+        if (rc_read == -1 && errno != EINTR) {
             throw ndSocketThreadException(
-                __PRETTY_FUNCTION__, "select", errno);
+                __PRETTY_FUNCTION__, "select for read", errno);
         }
 
-        if (rc == 0) continue;
+        if (rc_read == 0) continue;
+
+        if (clients.size()) {
+            memset(&tv, 0, sizeof(struct timeval));
+
+            rc_write = select(max_write_fd + 1, NULL, &fds_write, NULL, &tv);
+
+            if (rc_write == -1 && errno != EINTR) {
+                throw ndSocketThreadException(
+                    __PRETTY_FUNCTION__, "select for write", errno);
+            }
+        }
 
         ci = clients.begin();
 
-        while (ci != clients.end()) {
+        while (rc_write > 0 && ci != clients.end()) {
+
+            bool hangup = false;
 
             if (FD_ISSET(ci->first, &fds_read)) {
                 ClientHangup(ci);
-                if (--rc == 0) break;
+                if (--rc_read == 0) break;
                 continue;
             }
 
-            if (FD_ISSET(ci->first, &fds_write)) {
+            bi = buffers.find(ci->first);
+            if (bi == buffers.end()) {
+                throw ndSocketThreadException(__PRETTY_FUNCTION__,
+                    "buffers.find", ENOENT);
+            }
 
-                bi = buffers.find(ci->first);
-                if (bi == buffers.end()) {
-                    throw ndSocketThreadException(__PRETTY_FUNCTION__,
-                        "buffers.find", ENOENT);
-                }
+            if (FD_ISSET(bi->second->GetDescriptor(), &fds_read) &&
+                FD_ISSET(ci->first, &fds_write)) {
+
+                rc_write--;
 
                 ssize_t length = 0;
-                const uint8_t *p = bi->second->GetBuffer((size_t &)length);
+                const uint8_t *p = NULL;
+
+                p = bi->second->GetBuffer(length);
 
                 while (p != NULL && length > 0) {
                     try {
                         ssize_t bytes = ci->second->Write(p, length);
+
                         bi->second->Pop(bytes);
 
                         if (bytes != length) break;
 
                     } catch (ndSocketHangupException &e) {
+                        hangup = true;
                         ClientHangup(ci);
                         break;
                     } catch (ndSocketSystemException &e) {
+                        hangup = true;
                         ClientHangup(ci);
                         break;
                     }
 
-                    p = bi->second->GetBuffer((size_t &)length);
+                    p = bi->second->GetBuffer(length);
                 }
 
-                if (--rc == 0) break;
-                continue;
+                if (--rc_read == 0) break;
             }
 
-            ci++;
+            if (! hangup) ci++;
         }
 
-        if (rc == 0) continue;
+        if (rc_read == 0) continue;
 
         for (si = servers.begin(); si != servers.end(); si++) {
             if (FD_ISSET(si->first, &fds_read)) {
@@ -828,7 +896,7 @@ void *ndSocketThread::Entry(void)
                         tag.c_str(), e.what());
                 }
 
-                if (--rc == 0) break;
+                if (--rc_read == 0) break;
             }
         }
     }

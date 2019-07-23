@@ -195,26 +195,28 @@ public:
 protected:
 };
 
+#define _ND_SOCKET_BUFSIZE  8192
+
 class ndSocketBuffer
 {
 public:
-    ndSocketBuffer() : offset(0), length(0) { }
+    ndSocketBuffer();
+    virtual ~ndSocketBuffer();
 
-    inline size_t GetLength(void) { return length - offset; }
-    const uint8_t *GetBuffer(size_t &bytes);
+    inline int GetDescriptor(void) { return fd_fifo[0]; }
+    const uint8_t *GetBuffer(ssize_t &bytes);
 
     void Push(const string &data);
     void Pop(size_t bytes);
 
 protected:
-    size_t offset;
-    size_t length;
-    deque<string> buffer;
+    uint8_t *buffer;
+    int fd_fifo[2];
 };
 
-typedef map<int, ndSocket *> ndSocketMap;
-typedef map<int, ndSocketServer *> ndSocketServerMap;
-typedef map<int, ndSocketBuffer *> ndSocketBufferMap;
+typedef unordered_map<int, ndSocket *> ndSocketClientMap;
+typedef unordered_map<int, ndSocketServer *> ndSocketServerMap;
+typedef unordered_map<int, ndSocketBuffer *> ndSocketBufferMap;
 
 class ndSocketThread : public ndThread
 {
@@ -230,10 +232,9 @@ public:
 
 protected:
     void ClientAccept(ndSocketServerMap::iterator &si);
-    void ClientHangup(ndSocketMap::iterator &ci);
+    void ClientHangup(ndSocketClientMap::iterator &ci);
 
-    vector<string> queue_write;
-    ndSocketMap clients;
+    ndSocketClientMap clients;
     ndSocketServerMap servers;
     ndSocketBufferMap buffers;
 };
