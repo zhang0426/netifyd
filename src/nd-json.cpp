@@ -298,6 +298,225 @@ void ndJson::SaveToFile(const string &filename)
         false, ND_JSON_FILE_MODE, ND_JSON_FILE_USER, ND_JSON_FILE_GROUP);
 }
 
+void ndJsonStatus::Parse(const string &json)
+{
+    json_object *jtype, *jtimestamp, *juptime, *jflows, *jflows_prev;
+    json_object *jmaxrss_kb, *jmaxrss_kb_prev, *jtcm_kb, *jtcm_kb_prev;
+    json_object *jdhc_status, *jdhc_size, *jsink_status, *jsink_queue_size_kb;
+    json_object *jsink_queue_max_size_kb, *jsink_resp_code;
+
+    json_tokener_reset(jtok);
+
+    json_object *jobj = json_tokener_parse_ex(
+        jtok, json.c_str(), json.length()
+    );
+
+    try {
+        enum json_tokener_error jterr;
+
+        if ((jterr = json_tokener_get_error(jtok)) != json_tokener_success)
+            throw ndJsonParseException(json_tokener_error_desc(jterr));
+
+        if (! json_object_is_type(jobj, json_type_object))
+            throw ndJsonParseException("Unexpected JSON type; not and object");
+
+        // Extract and validate JSON type
+        if (! json_object_object_get_ex(jobj, "type", &jtype))
+            throw ndJsonParseException("Missing JSON type");
+
+        if (! json_object_is_type(jtype, json_type_string))
+            throw ndJsonParseException("Unexpected JSON type, string required");
+
+        string type = json_object_get_string(jtype);
+        if (type != "agent_status")
+            throw ndJsonParseException("Unexpected JSON type, must be: agent_status");
+
+        // Extract and validate timestamp
+        if (! json_object_object_get_ex(jobj, "timestamp", &jtimestamp))
+            throw ndJsonParseException("Missing JSON timestamp");
+
+        if (! json_object_is_type(jtimestamp, json_type_int))
+            throw ndJsonParseException("Unexpected JSON timestamp type");
+
+        timestamp = (time_t)json_object_get_int64(jtimestamp);
+
+        // Extract and validate uptime
+        if (! json_object_object_get_ex(jobj, "uptime", &juptime))
+            throw ndJsonParseException("Missing JSON uptime");
+
+        if (! json_object_is_type(juptime, json_type_int))
+            throw ndJsonParseException("Unexpected JSON uptime type");
+
+        uptime = (time_t)json_object_get_int64(juptime);
+
+        // Extract and validate flows
+        if (! json_object_object_get_ex(jobj, "flows", &jflows))
+            throw ndJsonParseException("Missing JSON flows");
+
+        if (! json_object_is_type(jflows, json_type_int))
+            throw ndJsonParseException("Unexpected JSON flows type");
+
+        stats.flows = json_object_get_int(jflows);
+
+        // Extract and validate flows_prev
+        if (! json_object_object_get_ex(jobj, "flows_prev", &jflows_prev))
+            throw ndJsonParseException("Missing JSON flows_prev");
+
+        if (! json_object_is_type(jflows_prev, json_type_int))
+            throw ndJsonParseException("Unexpected JSON flows_prev type");
+
+        stats.flows_prev = json_object_get_int(jflows_prev);
+#if (SIZEOF_LONG == 4)
+        // Extract and validate maxrss_kb
+        if (! json_object_object_get_ex(jobj, "maxrss_kb", &jmaxrss_kb))
+            throw ndJsonParseException("Missing JSON maxrss_kb");
+
+        if (! json_object_is_type(jmaxrss_kb, json_type_int))
+            throw ndJsonParseException("Unexpected JSON maxrss_kb type");
+
+        stats.maxrss_kb = json_object_get_int(jmaxrss_kb);
+
+        // Extract and validate maxrss_kb_prev
+        if (! json_object_object_get_ex(jobj, "maxrss_kb_prev", &jmaxrss_kb_prev))
+            throw ndJsonParseException("Missing JSON maxrss_kb_prev");
+
+        if (! json_object_is_type(jmaxrss_kb_prev, json_type_int))
+            throw ndJsonParseException("Unexpected JSON maxrss_kb_prev type");
+
+        stats.maxrss_kb_prev = json_object_get_int(jmaxrss_kb_prev);
+#elif (SIZEOF_LONG == 8)
+        // Extract and validate maxrss_kb
+        if (! json_object_object_get_ex(jobj, "maxrss_kb", &jmaxrss_kb))
+            throw ndJsonParseException("Missing JSON maxrss_kb");
+
+        if (! json_object_is_type(jmaxrss_kb, json_type_int))
+            throw ndJsonParseException("Unexpected JSON maxrss_kb type");
+
+        stats.maxrss_kb = json_object_get_int64(jmaxrss_kb);
+
+        // Extract and validate maxrss_kb_prev
+        if (! json_object_object_get_ex(jobj, "maxrss_kb_prev", &jmaxrss_kb_prev))
+            throw ndJsonParseException("Missing JSON maxrss_kb_prev");
+
+        if (! json_object_is_type(jmaxrss_kb_prev, json_type_int))
+            throw ndJsonParseException("Unexpected JSON maxrss_kb_prev type");
+
+        stats.maxrss_kb_prev = json_object_get_int64(jmaxrss_kb_prev);
+#endif
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+#if (SIZEOF_LONG == 4)
+        // Extract and validate tcm_kb
+        if (! json_object_object_get_ex(jobj, "tcm_kb", &jtcm_kb))
+            throw ndJsonParseException("Missing JSON tcm_kb");
+
+        if (! json_object_is_type(jtcm_kb, json_type_int))
+            throw ndJsonParseException("Unexpected JSON tcm_kb type");
+
+        stats.tcm_alloc_kb = json_object_get_int(jtcm_kb);
+
+        // Extract and validate tcm_kb_prev
+        if (! json_object_object_get_ex(jobj, "tcm_kb_prev", &jtcm_kb_prev))
+            throw ndJsonParseException("Missing JSON tcm_kb_prev");
+
+        if (! json_object_is_type(jtcm_kb_prev, json_type_int))
+            throw ndJsonParseException("Unexpected JSON tcm_kb_prev type");
+
+        stats.tcm_alloc_kb_prev = json_object_get_int(jtcm_kb_prev);
+#elif (SIZEOF_LONG == 8)
+        // Extract and validate tcm_kb
+        if (! json_object_object_get_ex(jobj, "tcm_kb", &jtcm_kb))
+            throw ndJsonParseException("Missing JSON tcm_kb");
+
+        if (! json_object_is_type(jtcm_kb, json_type_int))
+            throw ndJsonParseException("Unexpected JSON tcm_kb type");
+
+        stats.tcm_alloc_kb = json_object_get_int64(jtcm_kb);
+
+        // Extract and validate tcm_kb_prev
+        if (! json_object_object_get_ex(jobj, "tcm_kb_prev", &jtcm_kb_prev))
+            throw ndJsonParseException("Missing JSON tcm_kb_prev");
+
+        if (! json_object_is_type(jtcm_kb_prev, json_type_int))
+            throw ndJsonParseException("Unexpected JSON tcm_kb_prev type");
+
+        stats.tcm_alloc_kb_prev = json_object_get_int64(jtcm_kb_prev);
+#endif
+#endif
+        // Extract and validate dhc_status
+        if (! json_object_object_get_ex(jobj, "dhc_status", &jdhc_status))
+            throw ndJsonParseException("Missing JSON dhc_status");
+
+        if (! json_object_is_type(jdhc_status, json_type_boolean))
+            throw ndJsonParseException("Unexpected JSON dhc_status type");
+
+        stats.dhc_status = json_object_get_boolean(jdhc_status);
+
+        if (stats.dhc_status) {
+            // Extract and validate dhc_size
+            if (! json_object_object_get_ex(jobj,
+                "dhc_size", &jdhc_size))
+                throw ndJsonParseException("Missing JSON dhc_size");
+
+            if (! json_object_is_type(jdhc_size, json_type_int))
+                throw ndJsonParseException("Unexpected JSON dhc_size type");
+
+            stats.dhc_size = json_object_get_int(jdhc_size);
+        }
+
+        // Extract and validate sink_status
+        if (! json_object_object_get_ex(jobj, "sink_status", &jsink_status))
+            throw ndJsonParseException("Missing JSON sink_status");
+
+        if (! json_object_is_type(jsink_status, json_type_boolean))
+            throw ndJsonParseException("Unexpected JSON sink_status type");
+
+        stats.sink_status = json_object_get_boolean(jsink_status);
+
+        if (stats.sink_status) {
+            // Extract and validate sink_queue_size_kb
+            if (! json_object_object_get_ex(jobj,
+                "sink_queue_size_kb", &jsink_queue_size_kb))
+                throw ndJsonParseException("Missing JSON sink_queue_size_kb");
+
+            if (! json_object_is_type(jsink_queue_size_kb, json_type_int))
+                throw ndJsonParseException("Unexpected JSON sink_queue_size_kb type");
+
+            stats.sink_queue_size = json_object_get_int(jsink_queue_size_kb) * 1024;
+
+            // Extract and validate sink_queue_max_size_kb
+            if (! json_object_object_get_ex(jobj,
+                "sink_queue_max_size_kb", &jsink_queue_max_size_kb))
+                throw ndJsonParseException("Missing JSON sink_queue_max_size_kb");
+
+            if (! json_object_is_type(jsink_queue_max_size_kb, json_type_int))
+                throw ndJsonParseException("Unexpected JSON sink_queue_max_size_kb type");
+
+            sink_queue_max_size_kb = json_object_get_int(jsink_queue_max_size_kb);
+
+            // Extract and validate sink_resp_code
+            if (! json_object_object_get_ex(jobj,
+                "sink_resp_code", &jsink_resp_code))
+                throw ndJsonParseException("Missing JSON sink_resp_code");
+
+            if (! json_object_is_type(jsink_resp_code, json_type_int))
+                throw ndJsonParseException("Unexpected JSON sink_resp_code type");
+
+            int resp_code = json_object_get_int(jsink_resp_code);
+
+            if (resp_code > 0 && resp_code < ndJSON_RESP_MAX) {
+                stats.sink_resp_code = (ndJsonResponseCode)
+                    json_object_get_int(jsink_resp_code);
+            }
+        }
+    }
+    catch (ndJsonParseException &e) {
+        if (jobj != NULL) json_object_put(jobj);
+        throw;
+    }
+
+    json_object_put(jobj);
+}
+
 void ndJsonResponse::Parse(const string &json)
 {
     json_object *jver, *jresp_code, *jresp_message;

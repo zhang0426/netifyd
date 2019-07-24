@@ -549,6 +549,46 @@ int nd_touch(const string &filename)
 }
 #endif
 
+int nd_file_load(const string &filename, string &data)
+{
+    struct stat sb;
+    int fd = open(filename.c_str(), O_RDONLY);
+
+    if (fd < 0) {
+        if (errno != ENOENT)
+            throw runtime_error(strerror(errno));
+        else {
+            nd_debug_printf("Unable to load file: %s: %s\n",
+                filename.c_str(), strerror(errno));
+            return -1;
+        }
+    }
+
+    if (flock(fd, LOCK_SH) < 0) {
+        close(fd);
+        throw runtime_error(strerror(errno));
+    }
+
+    if (fstat(fd, &sb) < 0) {
+        close(fd);
+        throw runtime_error(strerror(errno));
+    }
+
+    if (sb.st_size == 0)
+        data.clear();
+    else {
+        auto buffer = make_shared<vector<uint8_t>>(sb.st_size);
+        if (read(fd, (void *)buffer->data(), sb.st_size) < 0)
+            throw runtime_error(strerror(errno));
+        data.assign((const char *)buffer->data(), sb.st_size);
+    }
+
+    flock(fd, LOCK_UN);
+    close(fd);
+
+    return 0;
+}
+
 void nd_file_save(const string &filename,
     const string &data, bool append, mode_t mode, const char *user, const char *group)
 {

@@ -353,7 +353,6 @@ static int nd_config_load(void)
     else
         nd_config.dhc_save = ndDHC_DISABLED;
 
-    fprintf(stderr, "DHC save: %d\n", nd_config.dhc_save);
     nd_config.ttl_dns_entry = (unsigned)reader.GetInteger(
         "dns_hint_cache", "ttl", ND_TTL_IDLE_DHC_ENTRY);
 
@@ -961,6 +960,7 @@ void nd_json_agent_status(string &json_string)
     json.ToString(json_string, false);
     json_string.append("\n");
 
+    json.SaveToFile(ND_JSON_FILE_STATUS);
     json.Destroy();
 }
 
@@ -1640,11 +1640,149 @@ static void nd_status(void)
         ND_C_RESET,
         (nd_pid < 0) ? "status could not be determined" :
             (nd_pid == 0) ? "is not running" : "is running");
-    fprintf(stderr, "- sink URL: %s\n", nd_config.url_sink);
+    fprintf(stderr, "%s-%s sink URL: %s\n",
+        ND_C_GREEN, ND_C_RESET, nd_config.url_sink);
     fprintf(stderr, "%s-%s sink uploads are %s.\n",
         (ND_USE_SINK) ? ND_C_GREEN : ND_C_RED, ND_C_RESET,
         (ND_USE_SINK) ? "enabled" : "disabled"
     );
+
+    if (nd_pid > 0) {
+        try {
+            string status;
+            if (nd_file_load(ND_JSON_FILE_STATUS, status) < 0) {
+                fprintf(stderr,
+                    "%s-%s active agent status could not be determined.\n",
+                    ND_C_YELLOW, ND_C_RESET
+                );
+            }
+            else {
+                ndJsonStatus json_status;
+                json_status.Parse(status);
+
+                if (json_status.stats.sink_status) {
+                    string status, help;
+                    const char *color = ND_C_GREEN;
+
+                    switch (json_status.stats.sink_resp_code) {
+                    case ndJSON_RESP_OK:
+                        status = "ok";
+                        break;
+                    case ndJSON_RESP_AUTH_FAIL:
+                        status = "authorization failed";
+                        color = ND_C_YELLOW;
+                        help = "If no site UUID is set, please provision this agent.";
+                        break;
+                    case ndJSON_RESP_MALFORMED_DATA:
+                        status = "malformed data";
+                        color = ND_C_RED;
+                        help = "This should never happen, please contact support.";
+                        break;
+                    case ndJSON_RESP_SERVER_ERROR:
+                        status = "server error";
+                        color = ND_C_RED;
+                        help = "Contact support if this error persists.";
+                        break;
+                    case ndJSON_RESP_POST_ERROR:
+                        status = "upload error";
+                        color = ND_C_YELLOW;
+                        help = "This error should resolve automatically.";
+                        break;
+                    case ndJSON_RESP_PARSE_ERROR:
+                        status = "parse error";
+                        color = ND_C_RED;
+                        help = "This should never happen, please contact support.";
+                        break;
+                    case ndJSON_RESP_INVALID_RESPONSE:
+                        status = "invalid response";
+                        color = ND_C_RED;
+                        help = "This should never happen, please contact support.";
+                        break;
+                    case ndJSON_RESP_INVALID_CONTENT_TYPE:
+                        status = "invalid response content type";
+                        color = ND_C_RED;
+                        help = "This should never happen, please contact support.";
+                        break;
+                    default:
+                        status = "unknown error";
+                        color = ND_C_RED;
+                        help = "This should never happen, please contact support.";
+                        break;
+                    }
+
+                    fprintf(stderr, "%s-%s sink server status: %s%s%s\n",
+                        color, ND_C_RESET,
+                        color, status.c_str(), ND_C_RESET
+                    );
+
+                    if (help.size() > 0)
+                        fprintf(stderr, "  %s\n", help.c_str());
+
+                    float sink_util =
+                        (json_status.stats.sink_queue_size / 1024) * 100 /
+                        json_status.sink_queue_max_size_kb;
+                    if (sink_util < 33.34f)
+                        color = ND_C_GREEN;
+                    else if (sink_util < 66.67f)
+                        color = ND_C_YELLOW;
+                    else
+                        color = ND_C_RED;
+                    fprintf(stderr, "%s-%s sink queue utilization: %s%.02f%%%s\n",
+                        color, ND_C_RESET, color, sink_util, ND_C_RESET);
+                }
+
+                char timestamp[64];
+                struct tm *tm_local = localtime(&json_status.timestamp);
+
+                if (strftime(timestamp, sizeof(timestamp), "%c", tm_local) > 0) {
+                    fprintf(stderr, "%s-%s agent timestamp: %s\n",
+                        ND_C_GREEN, ND_C_RESET, timestamp);
+                }
+                fprintf(stderr, "%s-%s agent uptime: +%lus\n",
+                    ND_C_GREEN, ND_C_RESET, json_status.uptime);
+                fprintf(stderr, "%s-%s active flows: %u\n",
+                    ND_C_GREEN, ND_C_RESET, json_status.stats. flows);
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+#if (SIZEOF_LONG == 4)
+                fprintf(stderr, "%s-%s memory currently allocated: %u kB\n",
+                    ND_C_GREEN, ND_C_RESET, json_status.stats.tcm_alloc_kb);
+#elif (SIZEOF_LONG == 8)
+                fprintf(stderr, "%s-%s memory currently allocated: %lu kB\n",
+                    ND_C_GREEN, ND_C_RESET, json_status.stats.tcm_alloc_kb);
+#endif
+#endif // _ND_USE_LIBTCMALLOC
+#if (SIZEOF_LONG == 4)
+                fprintf(stderr, "%s-%s maximum memory allocated: %u kB\n",
+                    ND_C_GREEN, ND_C_RESET, json_status.stats.maxrss_kb);
+#elif (SIZEOF_LONG == 8)
+                fprintf(stderr, "%s-%s maximum memory allocated: %lu kB\n",
+                    ND_C_GREEN, ND_C_RESET, json_status.stats.maxrss_kb);
+#endif
+                fprintf(stderr, "%s-%s DNS hint cache: %s%s%s\n",
+                    (json_status.stats.dhc_status) ? ND_C_GREEN : ND_C_YELLOW,
+                    ND_C_RESET,
+                    (json_status.stats.dhc_status) ? ND_C_GREEN : ND_C_YELLOW,
+                    (json_status.stats.dhc_status) ? "enabled" : "disabled",
+                    ND_C_RESET
+                );
+
+                if (json_status.stats.dhc_status) {
+#if (SIZEOF_LONG == 4)
+                    fprintf(stderr, "%s-%s DNS hint cache entries: %u\n",
+                        ND_C_GREEN, ND_C_RESET, json_status.stats.dhc_size);
+#elif (SIZEOF_LONG == 8)
+                    fprintf(stderr, "%s-%s DNS hint cache entries: %lu\n",
+                        ND_C_GREEN, ND_C_RESET, json_status.stats.dhc_size);
+#endif
+                }
+            }
+        }
+        catch (runtime_error &e) {
+            fprintf(stderr, "%s-%s active status could not be determined.\n",
+                ND_C_YELLOW, ND_C_RESET);
+            fprintf(stderr, "  Error: %s%s%s\n", ND_C_RED, e.what(), ND_C_RESET);
+        }
+    }
 
     if (! ND_USE_SINK) {
         fprintf(stderr, "  To enable uploads, run the following command:\n");
@@ -1671,8 +1809,10 @@ static void nd_status(void)
     if (nd_file_exists(nd_config.path_uuid_serial) > 0)
         nd_load_uuid(uuid, nd_config.path_uuid_serial, ND_AGENT_SERIAL_LEN);
 
-    if (uuid.size() && uuid != "-")
-        fprintf(stderr, "- sink serial UUID: %s\n", uuid.c_str());
+    if (uuid.size() && uuid != "-") {
+        fprintf(stderr, "%s-%s sink serial UUID: %s\n",
+            ND_C_GREEN, ND_C_RESET, uuid.c_str());
+    }
 
     uuid = (nd_config.uuid_site != NULL) ? nd_config.uuid_site : "-";
     if (nd_file_exists(nd_config.path_uuid_site) > 0)
@@ -2061,7 +2201,7 @@ int main(int argc, char *argv[])
     }
 
     if (nd_config.path_json == NULL)
-        nd_config.path_json = strdup(ND_JSON_FILE_NAME);
+        nd_config.path_json = strdup(ND_JSON_FILE_REQUEST);
 
     if (nd_conf_filename == NULL)
         nd_conf_filename = strdup(ND_CONF_FILE_NAME);

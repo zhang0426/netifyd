@@ -67,6 +67,8 @@ string nd_get_version_and_features(void);
 int nd_touch(const string &filename);
 #endif
 
+int nd_file_load(const string &filename, string &data);
+
 void nd_file_save(const string &filename, const string &data,
     bool append = false, mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP,
     const char *user = NULL, const char *group = NULL);

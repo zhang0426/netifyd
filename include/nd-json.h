@@ -83,25 +83,57 @@ typedef map<string, string> ndJsonPluginRequest;
 typedef map<string, ndJsonPluginParams> ndJsonPluginDispatch;
 #endif
 
-class ndJsonResponse
+class ndJsonObject
 {
 public:
-    ndJsonResponse()
+    ndJsonObject()
     {
         jtok = json_tokener_new_ex(ND_JSON_TOKENER_DEPTH);
         if (jtok == NULL)
             throw ndJsonInitException(strerror(ENOMEM));
     }
 
-    ndJsonResponse(ndJsonResponseCode code, const string &message)
-        : version(0), resp_code(code), resp_message(message), jtok(NULL) { }
+    ndJsonObject(json_tokener *jtok)
+        : jtok(jtok) { }
 
-    virtual ~ndJsonResponse()
+    virtual ~ndJsonObject()
     {
         if (jtok != NULL) json_tokener_free(jtok);
     }
 
-    void Parse(const string &json);
+    virtual void Parse(const string &json) = 0;
+
+protected:
+    json_tokener *jtok;
+};
+
+class ndJsonStatus : public ndJsonObject
+{
+public:
+    ndJsonStatus()
+        : ndJsonObject(), timestamp(0), uptime(0), sink_queue_max_size_kb(0)
+    {
+        memset(&stats, 0, sizeof(nd_agent_stats));
+    }
+
+    virtual void Parse(const string &json);
+
+    time_t timestamp, uptime;
+    uint32_t sink_queue_max_size_kb;
+
+    nd_agent_stats stats;
+};
+
+class ndJsonResponse : public ndJsonObject
+{
+public:
+    ndJsonResponse()
+        : ndJsonObject(), version(0), resp_code(ndJSON_RESP_NULL) { }
+
+    ndJsonResponse(ndJsonResponseCode code, const string &message)
+        : ndJsonObject(NULL), version(0), resp_code(code), resp_message(message) { }
+
+    virtual void Parse(const string &json);
 
     double version;
 
@@ -126,8 +158,6 @@ protected:
     void UnserializePluginRequest(json_object *jrequest, ndJsonPluginRequest &plugin_request);
     void UnserializePluginDispatch(json_object *jdispatch);
 #endif
-
-    json_tokener *jtok;
 };
 
 #endif // _ND_JSON_H
