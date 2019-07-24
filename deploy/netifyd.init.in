@@ -68,6 +68,7 @@ case "$1" in
         stop
     ;;
     status)
+        $prog --status
         status $prog
     ;;
     restart)
