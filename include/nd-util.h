@@ -81,5 +81,7 @@ pid_t nd_is_running(pid_t pid, const char *exe_base);
 
 int nd_file_exists(const char *path);
 
+void nd_uptime(time_t ut, string &uptime);
+
 #endif // _ND_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

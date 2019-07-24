@@ -762,4 +762,42 @@ int nd_file_exists(const char *path)
     return 1;
 }
 
+#define _ND_UT_MIN  (60)
+#define _ND_UT_HOUR (_ND_UT_MIN * 60)
+#define _ND_UT_DAY  (_ND_UT_HOUR * 24)
+
+void nd_uptime(time_t ut, string &uptime)
+{
+    time_t seconds = ut;
+    time_t days = 0, hours = 0, minutes = 0;
+
+    if (seconds > 0) {
+        days = seconds / _ND_UT_DAY;
+        seconds -= days * _ND_UT_DAY;
+    }
+
+    if (seconds > 0) {
+        hours = seconds / _ND_UT_HOUR;
+        seconds -= hours * _ND_UT_HOUR;
+    }
+
+    if (seconds > 0) {
+        minutes = seconds / _ND_UT_MIN;
+        seconds -= minutes * _ND_UT_MIN;
+    }
+
+    ostringstream os;
+    ios os_state(nullptr);
+    os_state.copyfmt(os);
+
+    os << days << "d";
+    os << " " << setfill('0') << setw(2) << hours;
+    os.copyfmt(os_state);
+    os << ":" << setfill('0') << setw(2) << minutes;
+    os.copyfmt(os_state);
+    os << ":" << setfill('0') << setw(2) << seconds;
+
+    uptime.assign(os.str());
+}
+
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
