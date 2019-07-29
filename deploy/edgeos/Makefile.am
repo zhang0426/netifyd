@@ -1,22 +1,14 @@
-# Netify Agent Deploy Automake File
+# Netify Agent Deploy Automake File for EdgeOS
 # Copyright (C) 2016-2019 eGloo, Incorporated
 #
 # This is free software, licensed under the GNU General Public License v3.
 
-SUBDIRS = debian edgeos systemd
-
-TEMPLATEFILES = functions.sh netifyd.conf netifyd.init watchdog.cron watchdog.sh
-TEMPLATEFILES_IN = functions.sh.in netifyd.conf.in netifyd.init.in watchdog.cron.in watchdog.sh.in
-
-sharedatadir = $(datadir)/netifyd
-sharedata_DATA = functions.sh watchdog.sh
-sysconf_DATA = netifyd.conf
-
-persistentstate_DATA = netify-sink.conf
+TEMPLATEFILES = netifyd.conf watchdog.cron watchdog-conf.sh
+TEMPLATEFILES_IN = netifyd.conf.in watchdog.cron.in watchdog-conf.sh.in
 
 BUILT_SOURCES = $(TEMPLATEFILES)
 CLEANFILES = $(TEMPLATEFILES)
-EXTRA_DIST = $(TEMPLATEFILES_IN) netifyd.default netify-sink.conf
+EXTRA_DIST = $(TEMPLATEFILES_IN)
 
 %: %.in
 	$(SED) \

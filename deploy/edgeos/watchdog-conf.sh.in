@@ -1,0 +1,16 @@
+#!/bin/sh
+
+CONFIG="/config/config.boot"
+CONFIG_STAMP="@volatilestatedir@/config-stamp"
+
+if [ ! -f "$CONFIG" ] && exit 0
+
+if [ ! -f "$CONFIG_STAMP" -o "$CONFIG" -nt "$CONFIG_STAMP" ]; then
+    @sysconfdir@/init.d/@PACKAGE_TARNAME@ restart
+    #service @PACKAGE_TARNAME@ restart
+    #systemctl @PACKAGE_TARNAME@ netifyd
+
+    touch "$CONFIG_STAMP" || exit 1
+fi
+
+exit 0
