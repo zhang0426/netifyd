@@ -65,7 +65,7 @@ endif
 deploy-edgeos:
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	./autogen.sh && \
-		PKG_CONFIG=$(abs_top_builddir)/target-usg-3p/output/host/bin/pkg-config \
+		PKG_CONFIG=$(abs_top_builddir)/../../build/buildroot/target-usg-3p/output/host/bin/pkg-config \
 		./configure \
 		--build=x86_64-pc-linux-gnu --host=mips-linux \
 		--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sharedstatedir=/var/lib \
