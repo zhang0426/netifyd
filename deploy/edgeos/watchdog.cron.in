@@ -1,0 +1,2 @@
+*	*	*	*	*	root	@datadir@/netify_edgeos/watchdog.py
+*/2	*	*	*	*	root	@datadir@/watchdog-conf.sh

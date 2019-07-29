@@ -79,15 +79,26 @@ deploy-edgeos:
 	$(STRIP) $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/sbin/netifyd
 
 	$(INSTALL) -d -m 0755 \
-		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/var/run/netifyd
-	$(INSTALL) -D -m 0640 deploy/watchdog.cron \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/share/netifyd/netify_edgeos
+
+	$(INSTALL) -D -m 0755 deploy/edgeos/netify_edgeos/install.py \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/share/netifyd/netify_edgeos/install.py
+	$(INSTALL) -D -m 0644 deploy/edgeos/netify_edgeos/netify_edgeos.py \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/share/netifyd/netify_edgeos/netify_edgeos.py
+	$(INSTALL) -D -m 0644 deploy/edgeos/netify_edgeos/watchdog.py \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/share/netifyd/netify_edgeos/watchdog.py
+
+	$(INSTALL) -D -m 0755 deploy/edgeos/install.sh \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/install.sh
+
+	$(INSTALL) -D -m 0640 deploy/edgeos/netifyd.conf \
+		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/netifyd.conf
+	$(INSTALL) -D -m 0640 deploy/edgeos/watchdog.cron \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/cron.d/netifyd
 	$(INSTALL) -D -m 0755 deploy/debian/debian.init \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/init.d/netifyd
 	$(INSTALL) -D -m 0640 deploy/netifyd.default \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/etc/default/netifyd
-	$(INSTALL) -D -m 0755 deploy/install-edgeos.sh \
-		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/install.sh
 
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/lib
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/include
