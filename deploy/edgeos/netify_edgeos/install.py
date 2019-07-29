@@ -37,7 +37,7 @@ def nd_copy_files(src, dst='/'):
                 dir_name = os.path.dirname(dst_path)
                 nd_mkdir(dir_name)
 
-                if dst_path in conf_files:
+                if os.path.exists(dst_path) and dst_path in conf_files:
                         print('Skipping %s...' %(file))
                 else:
                         print('%s %s to %s...' %(
@@ -83,7 +83,6 @@ if __name__ == '__main__':
 
         nd_copy_files('./etc/*')
         nd_copy_files('./usr/*')
-        nd_copy_files('./netify_edgeos/*', '/usr/share/netifyd/')
 
         nd_mkdir('/var/run/netifyd')
 
