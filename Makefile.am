@@ -87,6 +87,8 @@ deploy-edgeos:
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/share/netifyd/netify_edgeos/netify_edgeos.py
 	$(INSTALL) -D -m 0644 deploy/edgeos/netify_edgeos/watchdog.py \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/usr/share/netifyd/netify_edgeos/watchdog.py
+	ln -s ./usr/share/netifyd/netify_edgeos \
+		(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/netify_edgeos
 
 	$(INSTALL) -D -m 0755 deploy/edgeos/install.sh \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)/install.sh

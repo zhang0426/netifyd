@@ -41,7 +41,7 @@ def nd_copy_files(src, dst='/'):
                         print('Skipping %s...' %(file))
                 else:
                         print('%s %s to %s...' %(
-                                'Updating' if os.path.exists(file) else 'Installing',
+                                'Updating' if os.path.exists(dst_path) else 'Installing',
                                 file,
                                 dst_path
                         ))
@@ -115,4 +115,4 @@ if __name__ == '__main__':
         else:
                 print('Something went wrong :(')
                 print('Try starting the Netify Agent in debug mode:')
-                print('# sudo /usr/sbin/netifyd -d %s\n' $(netifyd_options))
+                print('# sudo /usr/sbin/netifyd -d %s\n' %(netifyd_options))

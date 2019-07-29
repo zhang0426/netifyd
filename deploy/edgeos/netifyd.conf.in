@@ -7,7 +7,8 @@
 # See @datadir@/@PACKAGE_TARNAME@.conf-sample for all possible options.
 
 [netifyd]
-enable_sink = no
+enable_sink = yes
+ssl_verify = no
 
 [socket]
 listen_path[0] = @volatilestatedir@/@PACKAGE_TARNAME@.sock

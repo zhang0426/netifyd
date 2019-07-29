@@ -140,6 +140,12 @@ load_openwrt()
     echo "$options"
 }
 
+# EdgeOS: Dynamically add all configured LAN/WAN interfaces.
+load_edgeos()
+{
+	echo "$(/usr/share/netifyd/netify_edgeos/options.py)"
+}
+
 load_modules()
 {
     /sbin/modprobe -q nfnetlink
@@ -148,6 +154,13 @@ load_modules()
 
 detect_os()
 {
+    if [ -f @sysconfdir@/version ]; then
+        if egrep -q '^UniFiSecurityGateway' @sysconfdir@/version; then
+            echo "edgeos"
+            return
+        fi
+    fi
+
     if [ -f @sysconfdir@/clearos-release ]; then
         echo "clearos"
     elif [ -f @sysconfdir@/nethserver-release ]; then
@@ -177,6 +190,9 @@ auto_detect_options()
             ;;
             openwrt)
                 options=$(load_openwrt)
+            ;;
+            edgeos)
+                options=$(load_edgeos)
             ;;
         esac
     fi
