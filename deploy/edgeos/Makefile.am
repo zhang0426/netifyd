@@ -8,7 +8,7 @@ TEMPLATEFILES_IN = netifyd.conf.in watchdog.cron.in watchdog-conf.sh.in
 
 BUILT_SOURCES = $(TEMPLATEFILES)
 CLEANFILES = $(TEMPLATEFILES)
-EXTRA_DIST = $(TEMPLATEFILES_IN)
+EXTRA_DIST = $(TEMPLATEFILES_IN) netify_edgeos
 
 %: %.in
 	$(SED) \
