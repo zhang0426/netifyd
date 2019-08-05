@@ -473,6 +473,7 @@ static int nd_config_load(void)
     reader.GetSection("services", nd_config.services);
     reader.GetSection("tasks", nd_config.tasks);
 #endif
+    reader.GetSection("sink_headers", nd_config.custom_headers);
     return 0;
 }
 

@@ -274,6 +274,7 @@ typedef struct nd_global_config_t {
     map<string, string> services;
     map<string, string> tasks;
 #endif
+    map<string, string> custom_headers;
 } nd_global_config;
 
 typedef struct nd_agent_stats_t

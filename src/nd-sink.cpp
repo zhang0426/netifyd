@@ -397,6 +397,14 @@ void ndSinkThread::CreateHeaders(void)
     headers_gz = curl_slist_append(headers_gz, uuid_serial.str().c_str());
     headers_gz = curl_slist_append(headers_gz, uuid_site.str().c_str());
     headers_gz = curl_slist_append(headers_gz, conf_digest.str().c_str());
+
+    for (map<string, string>::const_iterator i = nd_config.custom_headers.begin();
+        i != nd_config.custom_headers.end(); i++) {
+        ostringstream os;
+        os << (*i).first << ": " << (*i).second;
+        headers = curl_slist_append(headers, os.str().c_str());
+        headers_gz = curl_slist_append(headers_gz, os.str().c_str());
+    }
 }
 
 void ndSinkThread::FreeHeaders(void)

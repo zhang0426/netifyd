@@ -60,4 +60,6 @@ private_external_addresses = <yes/no>
 [tasks]
 <name> = <plugin library>
 
+[sink_headers]
+<header> = <value>
 # vi: syntax=ini
