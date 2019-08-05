@@ -60,10 +60,6 @@
 #include <sys/un.h>
 #include <sys/param.h>
 
-#ifdef _ND_USE_NETLINK
-#include <linux/netlink.h>
-#endif
-
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX 104
 #endif
@@ -132,7 +128,12 @@ ndSocketLocal::~ndSocketLocal()
 int ndSocketLocal::IsValid(void)
 {
     // TODO: Need a "BSD-way" to achieve the same...
-    unlink(base->node.c_str());
+    int rc = unlink(base->node.c_str());
+    if (rc != 0 && errno != ENOENT) {
+        nd_printf("Error while removing stale socket file: %s: %s\n",
+            base->node.c_str(), strerror(errno));
+        return rc;
+    }
     return 0;
 }
 #else
