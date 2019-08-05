@@ -116,7 +116,7 @@
 
 #define ND_SINK_MAX_POST_ERRORS 3       // Maximum number of sink POST errors.
 
-#define ND_COOKIE_JAR           ND_VOLATILE_STATEDIR "/netifyd.cookies"
+#define ND_COOKIE_JAR           ND_VOLATILE_STATEDIR "/cookie.jar"
 
 #define ND_SINK_CONNECT_TIMEOUT 30      // Default 30-second connection timeout
 #define ND_SINK_XFER_TIMEOUT    300     // Default 5-minute upload timeout
