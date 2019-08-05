@@ -479,6 +479,7 @@ static int nd_config_load(void)
 
 #define _ND_LO_ENABLE_SINK      1
 #define _ND_LO_DISABLE_SINK     2
+#define _ND_LO_FORCE_RESET      3
 
 static int nd_config_set_option(int option)
 {
@@ -527,6 +528,66 @@ static int nd_config_set_option(int option)
 
     printf("Configuration modified: %s\n", nd_conf_filename);
     return 0;
+}
+
+static void nd_force_reset(void)
+{
+    if (nd_conf_filename == NULL)
+        nd_conf_filename = strdup(ND_CONF_FILE_NAME);
+
+    if (nd_config_load() < 0)
+        return;
+
+    vector<string> files = {
+        nd_config.path_uuid, nd_config.path_uuid_site, ND_URL_SINK_PATH
+    };
+
+    int seconds = 3;
+    fprintf(stdout,
+        "%sWARNING%s: Resetting Agent state files in %s%d%s seconds...\n",
+        ND_C_RED, ND_C_RESET, ND_C_RED, seconds, ND_C_RESET);
+    for ( ; seconds >= 0; seconds--) {
+        fprintf(stdout, "%sWARNING%s: Press CTRL-C to abort: %s%d%s\r",
+            ND_C_RED, ND_C_RESET, ND_C_RED, seconds, ND_C_RESET);
+        fflush(stdout);
+        sleep(1);
+    }
+    fputc('\n', stdout);
+    sleep(2);
+
+    for (vector<string>::const_iterator i = files.begin();
+        i != files.end(); i++) {
+        fprintf(stdout, "Deleting file: %s\n", (*i).c_str());
+        if (unlink((*i).c_str()) != 0 && errno != ENOENT) {
+            fprintf(stderr, "Error while removing file: %s: %s\n",
+                (*i).c_str(), strerror(errno));
+        }
+    }
+
+    ostringstream os;
+    os << "sh -c \". " << ND_DATADIR << "/functions.sh && restart_netifyd" << "\" 2>&1";
+
+    int rc = -1;
+    FILE *ph = popen(os.str().c_str(), "r");
+    if (ph != NULL) {
+    size_t bytes = 0;
+        do {
+            char buffer[64];
+            memset(buffer, 0, sizeof(buffer));
+            if ((bytes = fread(buffer, 1, sizeof(buffer) - 1, ph)) > 0)
+                fprintf(stdout, "%s", buffer);
+        }
+        while (bytes != 0);
+
+        rc = pclose(ph);
+    }
+
+    if (rc != 0) {
+        fprintf(stderr, "Error while restarting service.\n"
+            "Manual restart is required for the reset to be completed.\n");
+    }
+    else
+        fprintf(stdout, "Reset successful.\n");
 }
 
 static int nd_start_detection_threads(void)
@@ -2050,6 +2111,8 @@ int main(int argc, char *argv[])
         { "enable-sink", 0, NULL, _ND_LO_ENABLE_SINK },
         { "disable-sink", 0, NULL, _ND_LO_DISABLE_SINK },
 
+        { "force-reset", 0, NULL, _ND_LO_FORCE_RESET },
+
         { NULL, 0, 0, 0 }
     };
 
@@ -2064,6 +2127,9 @@ int main(int argc, char *argv[])
         case _ND_LO_ENABLE_SINK:
         case _ND_LO_DISABLE_SINK:
             exit(nd_config_set_option(rc));
+        case _ND_LO_FORCE_RESET:
+            nd_force_reset();
+            exit(0);
         case '?':
             fprintf(stderr, "Try `--help' for more information.\n");
             return 1;
