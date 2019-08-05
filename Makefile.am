@@ -118,7 +118,7 @@ deploy-freebsd:
 	./autogen.sh \
 		&& PKG_CONFIG_PATH=$(abs_top_builddir)/libs/json-c \
 		CC=clang CXX=clang++ \
-		./configure --disable-conntrack --disable-netlink \
+		./configure --disable-conntrack \
 		--disable-inotify --disable-libtcmalloc && gmake clean
 	$(MAKE) clean
 	$(MAKE) -j 5
