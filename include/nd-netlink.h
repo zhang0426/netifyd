@@ -85,10 +85,15 @@ public:
     ndNetlink(const nd_ifaces &iface);
     virtual ~ndNetlink();
 
+#ifdef HAVE_LINUX_NETLINK_H
     int GetDescriptor(void) { return nd; }
     void Refresh(void);
     bool ProcessEvent(void);
-
+#else
+    void Refresh(void) { }
+    int GetDescriptor(void) { return -1; }
+    bool ProcessEvent(void) { return false; }
+#endif
     ndNetlinkAddressType ClassifyAddress(
         const struct sockaddr_storage *addr);
     ndNetlinkAddressType ClassifyAddress(
@@ -114,7 +119,7 @@ protected:
 
     bool CopyNetlinkAddress(
         sa_family_t family, struct sockaddr_storage &dst, void *src);
-
+#ifdef HAVE_LINUX_NETLINK_H
     bool ParseMessage(struct rtmsg *rtm, size_t offset,
         string &iface, ndNetlinkNetworkAddr &addr);
     bool ParseMessage(struct ifaddrmsg *addrm, size_t offset,
@@ -124,16 +129,17 @@ protected:
     bool RemoveNetwork(struct nlmsghdr *nlh);
 
     bool AddAddress(struct nlmsghdr *nlh);
-    bool AddAddress(const string &type, const struct sockaddr_storage &addr);
     bool RemoveAddress(struct nlmsghdr *nlh);
+#endif
+    bool AddAddress(const string &type, const struct sockaddr_storage &addr);
 
     void PrintAddress(const struct sockaddr_storage *addr);
-
+#ifdef HAVE_LINUX_NETLINK_H
     int nd;
     unsigned seq;
     struct sockaddr_nl sa;
     uint8_t buffer[ND_NETLINK_BUFSIZ];
-
+#endif
     ndNetlinkInterfaces ifaces;
     ndNetlinkNetworks networks;
     ndNetlinkAddresses addresses;

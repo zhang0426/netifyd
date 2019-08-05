@@ -117,10 +117,6 @@
 #include "pcap-compat/vlan.h"
 #endif
 
-#ifdef _ND_USE_NETLINK
-#include <linux/netlink.h>
-#endif
-
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #endif

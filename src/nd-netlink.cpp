@@ -35,9 +35,11 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 
+#ifdef HAVE_LINUX_NETLINK_H
 #include <net/if.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#endif
 
 #include <json.h>
 #include <pcap/pcap.h>
@@ -116,10 +118,12 @@ inline bool ndNetlinkNetworkAddr::operator!=(const ndNetlinkNetworkAddr &n) cons
 
     return (rc != 0);
 }
-
 ndNetlink::ndNetlink(const nd_ifaces &ifaces)
+#ifdef HAVE_LINUX_NETLINK_H
     : nd(-1), seq(0)
+#endif
 {
+#ifdef HAVE_LINUX_NETLINK_H
     int rc;
 
     memset(buffer, 0, ND_NETLINK_BUFSIZ);
@@ -163,7 +167,7 @@ ndNetlink::ndNetlink(const nd_ifaces &ifaces)
         nd_printf("Error setting netlink socket flags: %s\n", strerror(rc));
         throw ndNetlinkException(strerror(rc));
     }
-
+#endif
     for (nd_ifaces::const_iterator i = ifaces.begin(); i != ifaces.end(); i++)
         AddInterface((*i).second);
 
@@ -187,7 +191,9 @@ ndNetlink::ndNetlink(const nd_ifaces &ifaces)
 
 ndNetlink::~ndNetlink()
 {
+#ifdef HAVE_LINUX_NETLINK_H
     if (nd >= 0) close(nd);
+#endif
     for (ndNetlinkInterfaces::const_iterator i = ifaces.begin();
         i != ifaces.end(); i++) {
         if (i->second != NULL) {
@@ -196,7 +202,7 @@ ndNetlink::~ndNetlink()
         }
     }
 }
-
+#ifdef HAVE_LINUX_NETLINK_H
 void ndNetlink::Refresh(void)
 {
     int rc;
@@ -306,6 +312,7 @@ bool ndNetlink::ProcessEvent(void)
 #endif
     return (added_net || removed_net || added_addr || removed_addr) ? true : false;
 }
+#endif // HAVE_LINUX_NETLINK_H
 
 ndNetlinkAddressType ndNetlink::ClassifyAddress(
     const struct sockaddr_storage *addr)
@@ -576,6 +583,7 @@ bool ndNetlink::AddInterface(const string &iface)
     return true;
 }
 
+#ifdef HAVE_LINUX_NETLINK_H
 bool ndNetlink::ParseMessage(struct rtmsg *rtm, size_t offset,
     string &iface, ndNetlinkNetworkAddr &addr)
 {
@@ -822,6 +830,7 @@ bool ndNetlink::AddNetwork(struct nlmsghdr *nlh)
 
     return true;
 }
+#endif // HAVE_LINUX_NETLINK_H
 
 bool ndNetlink::AddNetwork(sa_family_t family,
     const string &type, const string &saddr, uint8_t length)
@@ -856,6 +865,7 @@ bool ndNetlink::AddNetwork(sa_family_t family,
     return true;
 }
 
+#ifdef HAVE_LINUX_NETLINK_H
 bool ndNetlink::RemoveNetwork(struct nlmsghdr *nlh)
 {
     string iface;
@@ -932,6 +942,7 @@ bool ndNetlink::AddAddress(struct nlmsghdr *nlh)
 
     return true;
 }
+#endif // HAVE_LINUX_NETLINK_H
 
 bool ndNetlink::AddAddress(
     sa_family_t family, const string &type, const string &saddr)
@@ -980,6 +991,7 @@ bool ndNetlink::AddAddress(const string &type, const struct sockaddr_storage &ad
     return true;
 }
 
+#ifdef HAVE_LINUX_NETLINK_H
 bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
 {
     string iface;
@@ -1015,6 +1027,7 @@ bool ndNetlink::RemoveAddress(struct nlmsghdr *nlh)
 
     return removed;
 }
+#endif // HAVE_LINUX_NETLINK_H
 
 #ifndef _ND_LEAN_AND_MEAN
 void ndNetlink::Dump(void)

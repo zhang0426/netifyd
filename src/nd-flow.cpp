@@ -35,10 +35,6 @@
 
 #include <arpa/inet.h>
 
-#ifdef _ND_USE_NETLINK
-#include <linux/netlink.h>
-#endif
-
 #include <json.h>
 #include <pcap/pcap.h>
 

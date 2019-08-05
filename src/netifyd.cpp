@@ -2521,7 +2521,7 @@ int main(int argc, char *argv[])
                 inotify->ProcessEvent();
 #endif
 
-#ifdef _ND_USE_NETLINK
+#if defined(_ND_USE_NETLINK) && defined(HAVE_LINUX_NETLINK_H)
             if (ND_USE_NETLINK &&
                 netlink->GetDescriptor() == si.si_fd) {
 #ifndef _ND_LEAN_AND_MEAN

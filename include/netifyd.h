@@ -29,7 +29,7 @@
 #error Unable to define ETH_ALEN.
 #endif
 
-#ifdef _ND_USE_NETLINK
+#if defined(_ND_USE_NETLINK) && defined(HAVE_LINUX_NETLINK_H)
 #include <linux/netlink.h>
 #endif
 
