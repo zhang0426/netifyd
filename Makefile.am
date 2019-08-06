@@ -8,7 +8,7 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
 SUBDIRS = libs/inih libs/ndpi include src deploy doc tests
 
-EXTRA_DIST = autogen.sh debian/compat \
+EXTRA_DIST = LICENSE autogen.sh debian/compat \
 	util/generate-json-include.sh util/generate-protocol-csv.sh \
 	libs/gperftools libs/libmnl libs/libnetfilter-conntrack libs/libnfnetlink
 
