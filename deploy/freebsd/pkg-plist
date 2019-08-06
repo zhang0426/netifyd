@@ -1,0 +1,11 @@
+etc/netify.d/netify-sink.conf
+etc/netifyd.conf
+lib/libnetifyd.so
+lib/libnetifyd.so.0
+lib/libnetifyd.so.0.0.0
+man/man5/netifyd.conf.5.gz
+man/man8/netifyd.8.gz
+sbin/netifyd
+share/netifyd/functions.sh
+share/netifyd/netifyd.conf-sample
+share/netifyd/watchdog.sh

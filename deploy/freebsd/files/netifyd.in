@@ -1,0 +1,37 @@
+#!/bin/sh
+
+# $FreeBSD$
+#
+# PROVIDE: netifyd
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add these lines to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
+#
+# netifyd_enable (bool):	Set to NO by default.
+#							Set it to YES to enable netifyd.
+
+. /etc/rc.subr
+
+name="%%PACKAGE_TARNAME%%"
+rcvar="${name}_enable"
+
+command="%%PREFIX%%/sbin/${name}"
+
+start_precmd="${name}_prestart"
+
+netifyd_prestart()
+{
+    . %%DATADIR%%/functions.sh
+    netifyd_opts=$(auto_detect_options)
+    rc_flags="${netifyd_opts} ${rc_flags}"
+
+    return 0
+}
+
+load_rc_config $name
+
+: ${netifyd_enable:=no}
+
+run_rc_command "$1"

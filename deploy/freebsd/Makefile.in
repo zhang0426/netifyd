@@ -1,0 +1,28 @@
+# $FreeBSD$
+
+PORTNAME=@PACKAGE_TARNAME@
+DISTVERSION=@PACKAGE_VERSION@
+CATEGORIES=net
+MASTER_SITES=http://download.netify.ai/netify/freebsd/
+LICENSE=GPLv3+
+LICENSE_NAME=GNU General Public License version 3 \(or later\)
+LICENSE_FILE=${WRKSRC}/LICENSE
+LICENSE_PERMS=dist-mirror no-dist-sell pkg-mirror no-pkg-sell auto-accept
+LICENSE_GROUPS=FSF GPL OSI
+MAINTAINER=darryl@sokoloski.ca
+COMMENT=Netify Agent - Deep-packet Inspection Server
+
+USES=gmake libtool
+USE_RC_SUBR=netifyd
+
+SUB_LIST=PACKAGE_TARNAME=@PACKAGE_TARNAME@
+
+GNU_CONFIGURE=1
+
+CONFIGURE_ARGS=\
+	CC=clang CXX=clang++ \
+	--disable-conntrack --disable-inotify
+
+INSTALL_TARGET=install-strip
+
+.include <bsd.port.mk>
