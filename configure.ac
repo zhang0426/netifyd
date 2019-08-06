@@ -42,22 +42,15 @@ AC_CHECK_LIB([pthread],
     [pthread_create], [], [AC_MSG_ERROR([libpthread/pthread_create() not found.])])
 AC_CHECK_LIB([rt],
     [timer_create], [], [AC_MSG_ERROR([librt/timer_create() not found.])])
+
 case "${host_os}" in
     linux*)
         AC_CHECK_LIB([resolv],
             [ns_initparse], [], [AC_MSG_ERROR([libresolv/ns_initparse() not found.])])
-        PKG_CHECK_MODULES([JSONC], [json-c])
-        ;;
-    freebsd*)
-        PKG_CHECK_MODULES([JSONC], [json-c-uninstalled])
-        ;;
-    *)
-        PKG_CHECK_MODULES([JSONC], [json-c])
         ;;
 esac
 
-#AC_CHECK_LIB([libmbedtls.so.9], [ssl_init])
-
+PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 
@@ -303,7 +296,8 @@ AC_SUBST([GIT_SOURCE_URL], [https://gitlab.com/netify.ai/public/netify-agent.git
 AC_CONFIG_FILES([deploy/openwrt/Makefile deploy/openwrt/files/netifyd.init])
 AC_CONFIG_FILES([libnetifyd.pc])
 AC_CONFIG_FILES([Makefile src/Makefile include/Makefile doc/Makefile tests/Makefile \
-    deploy/Makefile deploy/debian/Makefile deploy/edgeos/Makefile deploy/systemd/Makefile])
+    deploy/Makefile deploy/debian/Makefile deploy/edgeos/Makefile deploy/freebsd/Makefile \
+    deploy/systemd/Makefile])
 AC_CONFIG_FILES([doc/netifyd.8 doc/netifyd.conf.5])
 AC_CONFIG_FILES([netifyd.spec])
 AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
