@@ -33,6 +33,8 @@
 #include <linux/netlink.h>
 #endif
 
+#include <sys/param.h>
+
 #ifndef CLOCK_MONOTONIC_RAW
 #define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
 #endif
@@ -96,7 +98,11 @@
 
 #define ND_JSON_VERSION         1.9     // JSON format version
 #define ND_JSON_FILE_USER       "root"
+#ifndef BSD4_4
 #define ND_JSON_FILE_GROUP      "root"
+#else
+#define ND_JSON_FILE_GROUP      "wheel"
+#endif
 #define ND_JSON_FILE_MODE       0600
 #define ND_JSON_FILE_REQUEST    ND_VOLATILE_STATEDIR "/sink-request.json"
 #define ND_JSON_FILE_RESPONSE   ND_VOLATILE_STATEDIR "/sink-response.json"
