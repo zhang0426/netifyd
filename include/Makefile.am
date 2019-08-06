@@ -6,7 +6,7 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST = nd-json-response-code.txt.in
+EXTRA_DIST = nd-json-response-code.txt.in pcap-compat
 
 netifyincludedir = $(includedir)/netifyd
 netifyinclude_HEADERS = nd-base64.h nd-conntrack.h nd-detection.h \
