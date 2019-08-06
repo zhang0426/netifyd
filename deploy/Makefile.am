@@ -16,7 +16,7 @@ persistentstate_DATA = netify-sink.conf
 
 BUILT_SOURCES = $(TEMPLATEFILES)
 CLEANFILES = $(TEMPLATEFILES)
-EXTRA_DIST = $(TEMPLATEFILES_IN) netifyd.default netify-sink.conf
+EXTRA_DIST = $(TEMPLATEFILES_IN) freebsd netifyd.default netify-sink.conf
 
 %: %.in
 	$(SED) \
