@@ -1022,7 +1022,14 @@ void nd_json_agent_status(string &json_string)
     json.ToString(json_string, false);
     json_string.append("\n");
 
-    json.SaveToFile(ND_JSON_FILE_STATUS);
+    try {
+        json.SaveToFile(ND_JSON_FILE_STATUS);
+    }
+    catch (runtime_error &e) {
+        nd_printf("Error saving Agent status to file: %s\n",
+            e.what());
+    }
+
     json.Destroy();
 }
 
