@@ -483,16 +483,15 @@ static int nd_config_load(void)
 
 static int nd_config_set_option(int option)
 {
-    ostringstream os;
-    os << "sh -c \". " << ND_DATADIR << "/functions.sh && config_";
+    string func, output;
 
     switch (option) {
     case _ND_LO_ENABLE_SINK:
-        os << "enable_sink";
+        func = "enable_sink";
         printf("Enabling Netify Cloud Sink.\n");
         break;
     case _ND_LO_DISABLE_SINK:
-        os << "disable_sink";
+        func = "disable_sink";
         printf("Disabling Netify Cloud Sink.\n");
         break;
     default:
@@ -500,33 +499,15 @@ static int nd_config_set_option(int option)
         return 1;
     }
 
-    os << "\" 2>&1";
-
-    FILE *ph = popen(os.str().c_str(), "r");
-    if (ph == NULL) {
-        fprintf(stderr, "Error while enabling/disabling option.\n"
-            "Manually edit configuration file: %s\n", nd_conf_filename);
-        return 1;
-    }
-
-    size_t bytes = 0;
-    do {
-        char buffer[64];
-        memset(buffer, 0, sizeof(buffer));
-        if ((bytes = fread(buffer, 1, sizeof(buffer) - 1, ph)) > 0)
-            nd_debug_printf(buffer);
-    }
-    while (bytes != 0);
-
-    int rc = 0;
-    if ((rc = pclose(ph)) != 0) {
+    int rc = nd_functions_exec(func, output);
+    if (rc != 0) {
         fprintf(stderr, "Error while modifying configuration file.\n"
             "Manually edit configuration file: %s\n", nd_conf_filename);
-        nd_debug_printf("%s: %d\n", os.str().c_str(), rc);
         return rc;
     }
+    else
+        printf("Configuration modified: %s\n", nd_conf_filename);
 
-    printf("Configuration modified: %s\n", nd_conf_filename);
     return 0;
 }
 
@@ -564,29 +545,18 @@ static void nd_force_reset(void)
         }
     }
 
-    ostringstream os;
-    os << "sh -c \". " << ND_DATADIR << "/functions.sh && restart_netifyd" << "\" 2>&1";
-
-    int rc = -1;
-    FILE *ph = popen(os.str().c_str(), "r");
-    if (ph != NULL) {
-    size_t bytes = 0;
-        do {
-            char buffer[64];
-            memset(buffer, 0, sizeof(buffer));
-            if ((bytes = fread(buffer, 1, sizeof(buffer) - 1, ph)) > 0)
-                fprintf(stdout, "%s", buffer);
-        }
-        while (bytes != 0);
-
-        rc = pclose(ph);
-    }
+    string output;
+    int rc = nd_functions_exec("restart_netifyd", output);
 
     if (rc != 0) {
         fprintf(stderr, "Error while restarting service.\n"
             "Manual restart is required for the reset to be completed.\n");
     }
-    else
+
+    if (output.size())
+        fprintf(stdout, "%s", output.c_str());
+
+    if (rc == 0)
         fprintf(stdout, "Reset successful.\n");
 }
 

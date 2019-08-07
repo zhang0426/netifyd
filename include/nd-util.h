@@ -83,5 +83,9 @@ int nd_file_exists(const char *path);
 
 void nd_uptime(time_t ut, string &uptime);
 
+int nd_functions_exec(const string &func, string &output);
+
+void nd_os_detect(string &os);
+
 #endif // _ND_UTIL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

@@ -499,9 +499,12 @@ void nd_generate_uuid(string &uuid)
 
 string nd_get_version_and_features(void)
 {
+    string os;
+    nd_os_detect(os);
+
     ostringstream ident;
     ident <<
-        PACKAGE_NAME << "/" << GIT_RELEASE << " (" << _ND_HOST_CPU;
+        PACKAGE_NAME << "/" << GIT_RELEASE << " (" << os << "; " << _ND_HOST_CPU;
 
     if (ND_USE_CONNTRACK) ident << "; conntrack";
     if (ND_USE_NETLINK) ident << "; netlink";
@@ -798,6 +801,43 @@ void nd_uptime(time_t ut, string &uptime)
     os << ":" << setfill('0') << setw(2) << seconds;
 
     uptime.assign(os.str());
+}
+
+int nd_functions_exec(const string &func, string &output)
+{
+    ostringstream os;
+    os << "sh -c \". " << ND_DATADIR << "/functions.sh && " << func << "\" 2>&1";
+
+    int rc = -1;
+    FILE *ph = popen(os.str().c_str(), "r");
+    if (ph != NULL) {
+    size_t bytes = 0;
+        do {
+            char buffer[64];
+            memset(buffer, 0, sizeof(buffer));
+            if ((bytes = fread(buffer, 1, sizeof(buffer) - 1, ph)) > 0)
+                output.append(buffer);
+        }
+        while (bytes != 0);
+
+        rc = pclose(ph);
+    }
+
+    return rc;
+}
+
+void nd_os_detect(string &os)
+{
+    string output;
+    int rc = nd_functions_exec("detect_os", output);
+
+    if (rc == 0 && output.size()) {
+        const char *ws = "\n";
+        output.erase(output.find_last_not_of(ws) + 1);
+        os.assign(output);
+    }
+    else
+        os = "unknown";
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

@@ -169,6 +169,8 @@ detect_os()
         echo "gentoo"
     elif [ -f @sysconfdir@/openwrt_release ]; then
         echo "openwrt"
+    elif [ -f @bindir@/freebsd-version]; then
+        echo "freebsd"
     else
         echo "unknown"
     fi
