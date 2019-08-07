@@ -1713,6 +1713,9 @@ static void nd_status(void)
         (nd_pid < 0) ? "status could not be determined" :
             (nd_pid == 0) ? "is not running" : "is running");
 
+    fprintf(stderr, "- persistent state path: %s\n", ND_PERSISTENT_STATEDIR);
+    fprintf(stderr, "- volatile state path: %s\n", ND_VOLATILE_STATEDIR);
+
     ndJsonStatus json_status;
     bool json_status_valid = false;
 
