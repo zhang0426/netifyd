@@ -1,11 +1,13 @@
-etc/netify.d/netify-sink.conf
-etc/netifyd.conf
+@sample etc/netify.d/netify-sink.conf.sample
+@sample %%ETCDIR%%.conf.sample
 lib/libnetifyd.so
 lib/libnetifyd.so.0
 lib/libnetifyd.so.0.0.0
+lib/pkgconfig/libnetifyd.pc
 man/man5/netifyd.conf.5.gz
 man/man8/netifyd.8.gz
 sbin/netifyd
-share/netifyd/functions.sh
-share/netifyd/netifyd.conf-sample
-share/netifyd/watchdog.sh
+%%DATADIR%%/functions.sh
+%%DATADIR%%/netifyd.conf-sample
+%%DATADIR%%/watchdog.sh
+@dir /var/run/netifyd

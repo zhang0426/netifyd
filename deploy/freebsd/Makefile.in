@@ -14,6 +14,7 @@ COMMENT=Netify Agent - Deep-packet Inspection Server
 
 USES=gmake libtool
 USE_RC_SUBR=netifyd
+USE_LDCONFIG=yes
 
 SUB_LIST=PACKAGE_TARNAME=@PACKAGE_TARNAME@
 
@@ -24,5 +25,10 @@ CONFIGURE_ARGS=\
 	--disable-conntrack --disable-inotify
 
 INSTALL_TARGET=install-strip
+
+post-install:
+	${MKDIR} ${STAGEDIR}/var/run/netifyd
+	${MV} ${STAGEDIR}/usr/local/etc/netifyd.conf ${STAGEDIR}/usr/local/etc/netifyd.conf.sample
+	${MV} ${STAGEDIR}/usr/local/etc/netify.d/netify-sink.conf ${STAGEDIR}/usr/local/etc/netify.d/netify-sink.conf.sample
 
 .include <bsd.port.mk>
