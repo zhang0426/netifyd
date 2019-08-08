@@ -31,6 +31,7 @@
 #include <deque>
 #include <unordered_map>
 #include <regex>
+#include <memory>
 
 #include <sys/types.h>
 #include <sys/stat.h>
