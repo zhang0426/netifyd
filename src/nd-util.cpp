@@ -18,10 +18,11 @@
 #include "config.h"
 #endif
 
-#include <stdexcept>
+#include <cstddef>
 #include <cstdlib>
 #include <cstdarg>
 #include <string>
+#include <stdexcept>
 #include <iostream>
 #include <locale>
 #include <iomanip>
