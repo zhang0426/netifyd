@@ -749,7 +749,7 @@ pid_t nd_is_running(pid_t pid, const char *exe_base)
 
     return rc;
 }
-#elif
+#else
 #error "Unsupported platform, not Linux or BSD >= 4.4."
 #endif
 

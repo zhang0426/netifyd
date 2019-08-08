@@ -624,7 +624,7 @@ void ndSocketBuffer::Push(const string &data)
         }
         throw ndSocketSystemException(__PRETTY_FUNCTION__, "send", errno);
     }
-    else if (bytes != header.str().size())
+    else if ((size_t)bytes != header.str().size())
         throw ndSocketSystemException(__PRETTY_FUNCTION__, "send(short)", EINVAL);
 
     bytes = send(fd_fifo[1], data.c_str(), data.size(), 0);
@@ -636,7 +636,7 @@ void ndSocketBuffer::Push(const string &data)
         }
         throw ndSocketSystemException(__PRETTY_FUNCTION__, "send", errno);
     }
-    else if (bytes != data.size())
+    else if ((size_t)bytes != data.size())
         throw ndSocketSystemException(__PRETTY_FUNCTION__, "send(short)", EINVAL);
 }
 
@@ -651,7 +651,7 @@ void ndSocketBuffer::Pop(size_t bytes)
         throw ndSocketSystemException(__PRETTY_FUNCTION__, "recv", errno);
     else if (bytes_recv == 0)
         throw ndSocketHangupException("recv");
-    else if (bytes_recv != bytes)
+    else if ((size_t)bytes_recv != bytes)
         throw ndSocketSystemException(__PRETTY_FUNCTION__, "recv(short)", EINVAL);
 }
 
@@ -768,10 +768,8 @@ void ndSocketThread::ClientHangup(ndSocketClientMap::iterator &ci)
 
 void *ndSocketThread::Entry(void)
 {
-    int rc_read, rc_write;
-    int max_read_fd, max_write_fd;
-    fd_set fds_read, fds_write;
     struct timeval tv;
+    fd_set fds_read, fds_write;
     ndSocketClientMap::iterator ci;
     ndSocketServerMap::iterator si;
     ndSocketBufferMap::iterator bi;
@@ -779,8 +777,8 @@ void *ndSocketThread::Entry(void)
     nd_debug_printf("%s: started\n", __PRETTY_FUNCTION__);
 
     while (! terminate) {
-        max_read_fd = -1;
-        max_write_fd = -1;
+        int rc_read = -1, rc_write = -1;
+        int max_read_fd = -1, max_write_fd = -1;
 
         FD_ZERO(&fds_read);
         FD_ZERO(&fds_write);
