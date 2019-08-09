@@ -792,7 +792,7 @@ void nd_uptime(time_t ut, string &uptime)
     }
 
     ostringstream os;
-    ios os_state(nullptr);
+    ios os_state(NULL);
     os_state.copyfmt(os);
 
     os << days << "d";
