@@ -19,10 +19,10 @@
 
 #define ND_SHA1_BUFFER      4096
 
-#define ND_C_RESET          "\u001b[0m"
-#define ND_C_RED            "\u001b[31m"
-#define ND_C_GREEN          "\u001b[32m"
-#define ND_C_YELLOW         "\u001b[33m"
+#define ND_C_RESET          "\033[0m"
+#define ND_C_RED            "\033[0;31m"
+#define ND_C_GREEN          "\033[0;32m"
+#define ND_C_YELLOW         "\033[0;33m"
 
 void *nd_mem_alloc(size_t size);
 
