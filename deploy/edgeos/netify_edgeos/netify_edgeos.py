@@ -61,8 +61,15 @@ def netifyd_autodetect(mca_conf):
     nd_opts = []
     wan_count = 0
     for ifn in sorted(mca_conf['interfaces']['ethernet']):
+        fw = False
+        if 'firewall' in mca_conf['interfaces']['ethernet'][ifn]:
+            fw = mca_conf['interfaces']['ethernet'][ifn]['firewall']
+        else:
+            continue
+
         is_pppoe = True if 'pppoe' in mca_conf['interfaces']['ethernet'][ifn] else False
-        role = mca_conf['interfaces']['ethernet'][ifn]['firewall']['local']['name'][0:3]
+
+        role = fw['local']['name'][0:3]
         if role == 'LAN':
             nd_opts.append('-I %s' %(ifn))
         elif role == 'WAN':
