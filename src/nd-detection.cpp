@@ -1240,6 +1240,13 @@ void ndDetectionThread::ProcessPacket(void)
             break;
         }
 
+        if (new_flow->ndpi_flow->http.url != NULL) {
+            snprintf(
+                new_flow->http.url, ND_FLOW_URL_LEN,
+                "%s", new_flow->ndpi_flow->http.url
+            );
+        }
+
         if ((ndpi_proto == NDPI_PROTOCOL_DNS &&
             dhc != NULL && pkt != NULL && pkt_len > 12 &&
             ProcessDNSResponse(new_flow->host_server_name, pkt, pkt_len)) ||

@@ -216,6 +216,7 @@ ndFlow::ndFlow(bool internal)
     memset(host_server_name, 0, ND_MAX_HOSTNAME);
 
     memset(http.user_agent, 0, ND_FLOW_UA_LEN);
+    memset(http.url, 0, ND_FLOW_URL_LEN);
 
     memset(dhcp.fingerprint, 0, ND_FLOW_DHCPFP_LEN);
     memset(dhcp.class_ident, 0, ND_FLOW_DHCPCI_LEN);
@@ -441,6 +442,13 @@ bool ndFlow::has_http_user_agent(void)
     return (
         master_protocol() == NDPI_PROTOCOL_HTTP &&
         http.user_agent[0] != '\0'
+    );
+}
+
+bool ndFlow::has_http_url(void)
+{
+    return (
+        http.url[0] != '\0'
     );
 }
 
@@ -911,11 +919,14 @@ json_object *ndFlow::json_encode(ndJson &json,
             "host_server_name", host_server_name);
     }
 
-    if (has_http_user_agent()) {
+    if (has_http_user_agent() || has_http_url()) {
 
         json_object *_http = json.CreateObject(json_flow, "http");
 
-        json.AddObject(_http, "user_agent", http.user_agent);
+        if (has_http_user_agent())
+            json.AddObject(_http, "user_agent", http.user_agent);
+        if (has_http_url())
+            json.AddObject(_http, "url", http.url);
     }
 
     if (has_dhcp_fingerprint() || has_dhcp_class_ident()) {

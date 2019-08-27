@@ -24,6 +24,7 @@
 // them here.  If they change in nDPI, they'll need to be updated
 // manually.
 #define ND_FLOW_UA_LEN      512     // User agent length
+#define ND_FLOW_URL_LEN     512     // HTTP URL length
 #define ND_FLOW_SSH_UALEN   48      // SSH user-agent (signature) length
 #define ND_FLOW_SSL_CNLEN   64      // SSL certificate SNI/common-name length
 #define ND_FLOW_SSL_ORGLEN  64      // SSL certificate organization name length
@@ -132,6 +133,7 @@ public:
     union {
         struct {
             char user_agent[ND_FLOW_UA_LEN];
+            char url[ND_FLOW_URL_LEN];
         } http;
 
         struct {
@@ -215,6 +217,7 @@ public:
     bool has_dhcp_fingerprint(void);
     bool has_dhcp_class_ident(void);
     bool has_http_user_agent(void);
+    bool has_http_url(void);
     bool has_ssh_client_agent(void);
     bool has_ssh_server_agent(void);
     bool has_ssl_client_sni(void);
