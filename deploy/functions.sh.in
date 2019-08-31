@@ -143,7 +143,7 @@ load_openwrt()
 # EdgeOS: Dynamically add all configured LAN/WAN interfaces.
 load_edgeos()
 {
-	echo "$(/usr/share/netifyd/netify_edgeos/options.py)"
+    echo "$(/usr/share/netifyd/netify_edgeos/options.py)"
 }
 
 load_modules()
@@ -161,6 +161,13 @@ detect_os()
         fi
     fi
 
+    if [ -f @sysconfdir@/issue ]; then
+        if egrep -q '^Ubuntu' @sysconfdir@/issue; then
+            echo "ubuntu"
+            return
+        fi
+    fi
+
     if [ -f @sysconfdir@/clearos-release ]; then
         echo "clearos"
     elif [ -f @sysconfdir@/nethserver-release ]; then
@@ -169,8 +176,10 @@ detect_os()
         echo "gentoo"
     elif [ -f @sysconfdir@/openwrt_release ]; then
         echo "openwrt"
-    elif [ -f @bindir@/freebsd-version]; then
+    elif [ -f @bindir@/freebsd-version ]; then
         echo "freebsd"
+    elif [ -f @sysconfdir@/debian_version ]; then
+        echo "debian"
     else
         echo "unknown"
     fi
