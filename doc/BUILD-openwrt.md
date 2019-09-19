@@ -4,6 +4,26 @@ The easiest way to build the latest official release of the Netify Agent is to d
 
 1. Clone the OpenWrt source:
 
+  `# git clone https://github.com/openwrt/openwrt.git openwrt`
+
+2. Enable the packages repository in: feeds.conf
+
+3. Update packages feed:
+
+  `# ./scripts/feeds update packages`
+
+4. Install the Netify Agent package source:
+
+  `# ./scripts/feeds install netifyd`
+
+5. Configure OpenWrt, enable netifyd under Network:
+
+  `# make menuconfig`
+  
+6. Build image and packages:
+
+  `# make`
+
 # OpenWrt Manual Build Notes
 
 Working guide for building the Netify Agent into an OpenWrt image.
