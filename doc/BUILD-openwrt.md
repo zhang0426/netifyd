@@ -1,4 +1,10 @@
-# OpenWrt Build Notes
+# OpenWrt Official Packages Feed Build Notes
+
+The easiest way to build the latest official release of the Netify Agent is to do so from the official OpenWrt packages feed.
+
+1. Clone the OpenWrt source:
+
+# OpenWrt Manual Build Notes
 
 Working guide for building the Netify Agent into an OpenWrt image.
 
