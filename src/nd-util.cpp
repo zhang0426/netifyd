@@ -812,15 +812,16 @@ int nd_functions_exec(const string &func, string &output)
 
     int rc = -1;
     FILE *ph = popen(os.str().c_str(), "r");
+
     if (ph != NULL) {
-    size_t bytes = 0;
+        char buffer[64];
+        size_t bytes = 0;
+
         do {
-            char buffer[64];
-            memset(buffer, 0, sizeof(buffer));
-            if ((bytes = fread(buffer, 1, sizeof(buffer) - 1, ph)) > 0)
-                output.append(buffer);
+            if ((bytes = fread(buffer, 1, sizeof(buffer), ph)) > 0)
+                output.append(buffer, bytes);
         }
-        while (bytes != 0);
+        while (bytes > 0);
 
         rc = pclose(ph);
     }

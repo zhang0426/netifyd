@@ -487,11 +487,11 @@ static int nd_config_set_option(int option)
 
     switch (option) {
     case _ND_LO_ENABLE_SINK:
-        func = "enable_sink";
+        func = "config_enable_sink";
         printf("Enabling Netify Cloud Sink.\n");
         break;
     case _ND_LO_DISABLE_SINK:
-        func = "disable_sink";
+        func = "config_disable_sink";
         printf("Disabling Netify Cloud Sink.\n");
         break;
     default:
@@ -503,6 +503,9 @@ static int nd_config_set_option(int option)
     if (rc != 0) {
         fprintf(stderr, "Error while modifying configuration file.\n"
             "Manually edit configuration file: %s\n", nd_conf_filename);
+
+        if (ND_DEBUG) fprintf(stderr, "%s", output.c_str());
+
         return rc;
     }
     else
