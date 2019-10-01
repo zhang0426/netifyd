@@ -180,6 +180,10 @@ detect_os()
         echo "freebsd"
     elif [ -f @sysconfdir@/debian_version ]; then
         echo "debian"
+    elif [ -f @sysconfdir@/centos-release ]; then
+        echo "centos"
+    elif [ -f @sysconfdir@/redhat-release ]; then
+        echo "redhat"
     else
         echo "unknown"
     fi
