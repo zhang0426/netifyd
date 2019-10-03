@@ -139,6 +139,19 @@ deploy-freebsd:
 		$(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)
 	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)
 
+deploy-freebsd-txz:
+	./autogen.sh \
+		CC=clang CXX=clang++ \
+		./configure \
+			--disable-conntrack \
+			--disable-inotify
+	$(MAKE) dist-gzip
+	sudo cp -v $(PACKAGE)-$(VERSION).tar.gz /usr/ports/distfiles/
+	$(MAKE) -C deploy/freebsd clean
+	$(MAKE) -C deploy/freebsd makesum
+	$(MAKE) -C deploy/freebsd package
+	stat deploy/freebsd/work/pkg/$(PACKAGE)-$(VERSION).txz
+
 deploy-debug: all
 	scp src/.libs/netifyd gw:/usr/sbin/
 	scp src/.libs/libnetifyd.so.0.0.0 gw:/usr/lib64/
