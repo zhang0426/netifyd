@@ -378,7 +378,8 @@ bool nd_load_uuid(string &uuid, const char *path, size_t length)
     FILE *fh = fopen(path, "r");
 
     if (fh == NULL) {
-        nd_printf("Error loading uuid: %s: %s\n", path, strerror(errno));
+        if (ND_DEBUG || errno != ENOENT)
+            nd_printf("Error loading uuid: %s: %s\n", path, strerror(errno));
         return false;
     }
 
