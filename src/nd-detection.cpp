@@ -1484,6 +1484,7 @@ void ndDetectionThread::ProcessPacket(void)
             json.AddObject(NULL, "type", "flow");
             json.AddObject(NULL, "interface", tag);
             json.AddObject(NULL, "internal", internal);
+            json.AddObject(NULL, "established", false);
             json_object *json_flow = new_flow->json_encode(json, ndpi, false);
             json.AddObject(NULL, "flow", json_flow);
 
