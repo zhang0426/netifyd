@@ -40,6 +40,8 @@ save = <persistent/volatile/disabled>
 ttl = <cache entry TTL>
 
 [socket]
+dump_established_flows = <enable to write all established flows to connecting client>
+dump_unknown_flows = <enable to write unknown flows to connecting client>
 listen_path[0] = <path to socket file>
 listen_address[0] = <IPv4/6 address for connect>
 listen_port[0] = <corresponding port for connect>

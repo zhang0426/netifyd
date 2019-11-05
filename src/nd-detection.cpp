@@ -33,6 +33,7 @@
 #include <atomic>
 #endif
 #include <regex>
+#include <algorithm>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -140,6 +141,7 @@ using namespace std;
 #include "nd-socket.h"
 #include "nd-util.h"
 #include "nd-dhc.h"
+#include "nd-signal.h"
 #include "nd-detection.h"
 
 // Enable to log discarded packets
@@ -254,7 +256,7 @@ ndDetectionThread::ndDetectionThread(
     ndDNSHintCache *dhc,
     uint8_t private_addr,
     long cpu)
-    : ndThread(dev, cpu),
+    : ndThread(dev, cpu, true),
     internal(internal),
     capture_unknown_flows(ND_CAPTURE_UNKNOWN_FLOWS),
 #ifdef _ND_USE_NETLINK
@@ -329,6 +331,8 @@ ndDetectionThread::~ndDetectionThread()
 
 void *ndDetectionThread::Entry(void)
 {
+    bool dump_flows = false;
+
     struct ifreq ifr;
 
     do {
@@ -357,11 +361,12 @@ void *ndDetectionThread::Entry(void)
         }
 
         if (pcap_fd != -1) {
-            int rc;
+            int rc, max_fd = 0;
             struct timeval tv;
             fd_set fds_read;
 
             FD_ZERO(&fds_read);
+            FD_SET(fd_ipc[0], &fds_read);
             FD_SET(pcap_fd, &fds_read);
 
             memset(&tv, 0, sizeof(struct timeval));
@@ -369,7 +374,8 @@ void *ndDetectionThread::Entry(void)
             if (pkt_queue.empty()) tv.tv_sec = 1;
             tv.tv_usec = ND_TTL_PCAP_SELECT_USEC;
 
-            rc = select(pcap_fd + 1, &fds_read, NULL, NULL, &tv);
+            max_fd = max(fd_ipc[0], pcap_fd);
+            rc = select(max_fd + 1, &fds_read, NULL, NULL, &tv);
 
             if (rc == -1)
                 throw ndDetectionThreadException(strerror(errno));
@@ -391,13 +397,29 @@ void *ndDetectionThread::Entry(void)
                 pkt_queue.pop();
             }
 
+            if (dump_flows && pthread_mutex_trylock(&lock) == 0) {
+
+                if (ND_FLOW_DUMP_ESTABLISHED)
+                    DumpFlows();
+
+                dump_flows = false;
+                pthread_mutex_unlock(&lock);
+            }
+
             if (rc == 0) continue;
 
-            if (! FD_ISSET(pcap_fd, &fds_read)) {
-                nd_debug_printf("%s: Read event but pcap descriptor not set!",
-                    tag.c_str());
-                continue;
+            if (FD_ISSET(fd_ipc[0], &fds_read)) {
+                uint32_t id = RecvIPC();
+
+                if (id == ND_SIG_CONNECT)
+                    dump_flows = true;
+                else {
+                    nd_debug_printf("%s: Unknown IPC ID: %u (ND_SIG_CONNECT: %u).\n",
+                        tag.c_str(), id, ND_SIG_CONNECT);
+                }
             }
+
+            if (! FD_ISSET(pcap_fd, &fds_read)) continue;
         }
 
         switch (pcap_next_ex(pcap, &pkt_header, &pkt_data)) {
@@ -522,6 +544,43 @@ pcap_t *ndDetectionThread::OpenCapture(void)
     }
 
     return pcap_new;
+}
+
+// XXX: Not thread-safe!
+// XXX: Ensure the object is locked before calling.
+void ndDetectionThread::DumpFlows(void)
+{
+    unsigned flow_count = 0;
+
+    if (! thread_socket) return;
+
+    for (nd_flow_map::const_iterator i = flows->begin(); i != flows->end(); i++) {
+
+        if (i->second->detection_complete == false) continue;
+        if (! ND_FLOW_DUMP_UNKNOWN &&
+            i->second->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) continue;
+
+        ndJson json;
+
+        json.AddObject(NULL, "type", "flow");
+        json.AddObject(NULL, "interface", tag);
+        json.AddObject(NULL, "internal", internal);
+        json.AddObject(NULL, "established", true);
+        json_object *json_flow = i->second->json_encode(json, ndpi, false);
+        json.AddObject(NULL, "flow", json_flow);
+
+        string json_string;
+        json.ToString(json_string, false);
+        json_string.append("\n");
+
+        thread_socket->QueueWrite(json_string);
+
+        json.Destroy();
+
+        flow_count++;
+    }
+
+    nd_debug_printf("%s: dumped %lu flow(s).\n", tag.c_str(), flow_count);
 }
 
 // XXX: Not thread-safe!
@@ -1478,7 +1537,8 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 
-        if (thread_socket) {
+        if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
+            new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
             ndJson json;
 
             json.AddObject(NULL, "type", "flow");

@@ -17,8 +17,9 @@
 #ifndef _ND_SIGNAL_H
 #define _ND_SIGNAL_H
 
-#define ND_SIG_UPDATE      (SIGRTMIN + 0)
-#define ND_SIG_SINK_REPLY  (SIGRTMIN + 1)
+#define ND_SIG_CONNECT      (SIGRTMIN + 0)
+#define ND_SIG_UPDATE       (SIGRTMIN + 1)
+#define ND_SIG_SINK_REPLY   (SIGRTMIN + 2)
 
 #endif // _ND_SIGNAL_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

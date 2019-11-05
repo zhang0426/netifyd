@@ -214,6 +214,8 @@ enum nd_global_flags {
     ndGF_VERBOSE = 0x10000,
     ndGF_REPLAY_DELAY = 0x20000,
     ndGF_REMAIN_IN_FOREGROUND = 0x40000,
+    ndGF_FLOW_DUMP_ESTABLISHED = 0x80000,
+    ndGF_FLOW_DUMP_UNKNOWN = 0x100000
 };
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
@@ -233,6 +235,8 @@ enum nd_global_flags {
 #define ND_VERBOSE (nd_config.flags & ndGF_VERBOSE)
 #define ND_REPLAY_DELAY (nd_config.flags & ndGF_REPLAY_DELAY)
 #define ND_REMAIN_IN_FOREGROUND (nd_config.flags & ndGF_REMAIN_IN_FOREGROUND)
+#define ND_FLOW_DUMP_ESTABLISHED (nd_config.flags & ndGF_FLOW_DUMP_ESTABLISHED)
+#define ND_FLOW_DUMP_UNKNOWN (nd_config.flags & ndGF_FLOW_DUMP_UNKNOWN)
 
 #define ND_GF_SET_FLAG(flag, value) \
 { \

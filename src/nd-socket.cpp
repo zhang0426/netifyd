@@ -86,6 +86,7 @@ using namespace std;
 #include "nd-conntrack.h"
 #endif
 #include "nd-util.h"
+#include "nd-signal.h"
 #include "nd-socket.h"
 
 #define _ND_SOCKET_PROC_NET_UNIX    "/proc/net/unix"
@@ -575,7 +576,8 @@ void ndSocket::Create(void)
 }
 
 ndSocketBuffer::ndSocketBuffer()
-    : buffer(NULL), fd_fifo{-1, -1}
+    : buffer(NULL), fd_fifo{-1, -1},
+    buffer_queue_offset(0), buffer_queue_length(0)
 {
     buffer = new uint8_t[_ND_SOCKET_BUFSIZE];
 
@@ -590,6 +592,40 @@ ndSocketBuffer::~ndSocketBuffer()
     if (buffer != NULL) delete [] buffer;
     if (fd_fifo[0] != -1) close(fd_fifo[0]);
     if (fd_fifo[1] != -1) close(fd_fifo[1]);
+}
+
+size_t ndSocketBuffer::BufferQueueFlush(void)
+{
+    ssize_t bytes_wrote = 0;
+    size_t bytes = 0, bytes_flushed = 0;
+
+    while (buffer_queue.size()) {
+
+        bytes = buffer_queue.front().size() - buffer_queue_offset;
+        bytes_wrote = send(fd_fifo[1], buffer_queue.front().c_str() + buffer_queue_offset, bytes, 0);
+
+        if (bytes_wrote < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                //nd_debug_printf("Unable to flush buffer queue to client socket: %s\n",
+                //    strerror(errno));
+                break;
+            }
+            throw ndSocketSystemException(__PRETTY_FUNCTION__, "send", errno);
+        }
+
+        bytes_flushed += bytes_wrote;
+
+        if ((size_t)bytes_wrote != bytes)
+            buffer_queue_offset += bytes_wrote;
+        else {
+            buffer_queue_offset = 0;
+            buffer_queue.pop_front();
+        }
+    }
+
+    buffer_queue_length -= bytes_flushed;
+
+    return bytes_flushed;
 }
 
 const uint8_t *ndSocketBuffer::GetBuffer(ssize_t &bytes)
@@ -612,32 +648,14 @@ void ndSocketBuffer::Push(const string &data)
 {
     ssize_t bytes;
 
-    ostringstream header;
-    header << "{\"length\": " << data.size() << "}\n";
+    ostringstream payload;
+    payload << "{\"length\": " << data.size() << "}\n";
+    payload << data;
 
-    bytes = send(fd_fifo[1], header.str().c_str(), header.str().size(), 0);
-    if (bytes < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            nd_debug_printf("WARNING: Unable to push header to client socket: %s\n",
-                strerror(errno));
-            return;
-        }
-        throw ndSocketSystemException(__PRETTY_FUNCTION__, "send", errno);
-    }
-    else if ((size_t)bytes != header.str().size())
-        throw ndSocketSystemException(__PRETTY_FUNCTION__, "send(short)", EINVAL);
+    buffer_queue.push_back(payload.str());
+    buffer_queue_length += payload.str().size();
 
-    bytes = send(fd_fifo[1], data.c_str(), data.size(), 0);
-    if (bytes < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            nd_debug_printf("WARNING: Unable to push data to client socket: %s\n",
-                strerror(errno));
-            return;
-        }
-        throw ndSocketSystemException(__PRETTY_FUNCTION__, "send", errno);
-    }
-    else if ((size_t)bytes != data.size())
-        throw ndSocketSystemException(__PRETTY_FUNCTION__, "send(short)", EINVAL);
+    BufferQueueFlush();
 }
 
 void ndSocketBuffer::Pop(size_t bytes)
@@ -740,6 +758,8 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     buffer->Push(json);
 
     Unlock();
+
+    kill(getpid(), ND_SIG_CONNECT);
 }
 
 void ndSocketThread::ClientHangup(ndSocketClientMap::iterator &ci)
@@ -855,6 +875,10 @@ void *ndSocketThread::Entry(void)
                 ssize_t length = 0;
                 const uint8_t *p = NULL;
 
+                Lock();
+                bi->second->BufferQueueFlush();
+                Unlock();
+
                 p = bi->second->GetBuffer(length);
 
                 while (p != NULL && length > 0) {
@@ -874,6 +898,10 @@ void *ndSocketThread::Entry(void)
                         ClientHangup(ci);
                         break;
                     }
+
+                    Lock();
+                    bi->second->BufferQueueFlush();
+                    Unlock();
 
                     p = bi->second->GetBuffer(length);
                 }

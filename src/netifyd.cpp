@@ -357,6 +357,11 @@ static int nd_config_load(void)
         "dns_hint_cache", "ttl", ND_TTL_IDLE_DHC_ENTRY);
 
     // Socket section
+    ND_GF_SET_FLAG(ndGF_FLOW_DUMP_ESTABLISHED,
+        reader.GetBoolean("socket", "dump_established_flows", false));
+    ND_GF_SET_FLAG(ndGF_FLOW_DUMP_UNKNOWN,
+        reader.GetBoolean("socket", "dump_unknown_flows", false));
+
     for (int i = 0; ; i++) {
         ostringstream os;
         os << "listen_address[" << i << "]";
@@ -2375,6 +2380,7 @@ int main(int argc, char *argv[])
     sigemptyset(&sigset);
     sigaddset(&sigset, ND_SIG_SINK_REPLY);
     sigaddset(&sigset, ND_SIG_UPDATE);
+    sigaddset(&sigset, ND_SIG_CONNECT);
     sigaddset(&sigset, SIGHUP);
     sigaddset(&sigset, SIGINT);
     sigaddset(&sigset, SIGIO);
@@ -2523,6 +2529,9 @@ int main(int argc, char *argv[])
         else if (sig == ND_SIG_SINK_REPLY) {
             nd_debug_printf("Caught signal: [%d] %s: Process sink reply\n", sig, strsignal(sig));
         }
+        else if (sig == ND_SIG_CONNECT) {
+            nd_debug_printf("Caught signal: [%d] %s: Client connected\n", sig, strsignal(sig));
+        }
         else {
             nd_debug_printf("Caught signal: [%d] %s\n", sig, strsignal(sig));
         }
@@ -2591,6 +2600,12 @@ int main(int argc, char *argv[])
                 break;
             }
 
+            continue;
+        }
+
+        if (sig == ND_SIG_CONNECT) {
+            for (nd_threads::const_iterator t = threads.begin();
+                t != threads.end(); t++) (*t).second->SendIPC(ND_SIG_CONNECT);
             continue;
         }
 

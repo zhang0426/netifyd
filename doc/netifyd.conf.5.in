@@ -57,8 +57,16 @@ The number of seconds DNS hints should be cached.  New hints will have their ini
 All socket related configuration options are specified under the [\fBsocket\fR] section.
 
 The @PACKAGE_NAME@ can be configured to listen on one or more sockets (TCP/IP socket, or UNIX-domain socket).  Upon a client connection, \fB@PACKAGE_TARNAME@(8)\fR will pass real-time JSON-encoded flow detections.  This is designed for interfacing with third-party applications.  Take care to protect these sockets as there is no authentication or encryption performed.
-
-Declare these paramters as arrays with a starting index[\fIn\fR] of zero.
+.PP
+\fBdump_established_flows\fR=\fIBOOLEAN\fR
+.PP
+When this option is enabled, all established flows that have completed detection will be passed to the connecting client.  This enables the client to take some action on established connections that it may have missed while reloading or being offline.  On embedded systems where memory is scarce, it is highly recommended that this option be carefully enabled because memory usage can be exhausted if the connecting client can not read from the stream fast enough and the socket buffer grows too large.  At the moment there is no hard limit on the socket buffer size.  The default is false.
+.PP
+\fBdump_unknown_flows\fR=\fIBOOLEAN\fR
+.PP
+By default, flows that have failed to have their "master" or Layer 7 protocol detected will not be passed to connected clients.  The rationale is that this is likely wasteful.  The default is false.
+.PP
+Sockets; declare any of the following paramters as arrays with a starting index[\fIn\fR] of zero.
 .PP
 \fBsocket_path\fR[\fIn\fR]=\fIPATH\fR
 .PP

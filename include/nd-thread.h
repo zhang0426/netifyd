@@ -26,10 +26,18 @@ public:
         : runtime_error(what_arg) { }
 };
 
+class ndThreadSystemException : public ndSystemException
+{
+public:
+    explicit ndThreadSystemException(
+        const string &where_arg, const string &what_arg, int why_arg) throw()
+        : ndSystemException(where_arg, what_arg, why_arg) { }
+};
+
 class ndThread
 {
 public:
-    ndThread(const string &tag, long cpu = -1);
+    ndThread(const string &tag, long cpu = -1, bool ipc = false);
     virtual ~ndThread();
 
     string GetTag(void) { return tag; }
@@ -49,6 +57,9 @@ public:
     void Lock(void);
     void Unlock(void);
 
+    void SendIPC(uint32_t id);
+    uint32_t RecvIPC(void);
+
 protected:
     string tag;
     pthread_t id;
@@ -62,6 +73,8 @@ protected:
     bool terminated;
 #endif
     pthread_mutex_t lock;
+
+    int fd_ipc[2];
 
     int Join(void);
 };

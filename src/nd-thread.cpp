@@ -77,8 +77,9 @@ static void *nd_thread_entry(void *param)
     return rv;
 }
 
-ndThread::ndThread(const string &tag, long cpu)
-    : tag(tag), id(0), cpu(cpu), terminate(false), terminated(false)
+ndThread::ndThread(const string &tag, long cpu, bool ipc)
+    : tag(tag), id(0), cpu(cpu), terminate(false), terminated(false),
+    fd_ipc{-1, -1}
 {
     int rc;
 
@@ -110,12 +111,17 @@ ndThread::ndThread(const string &tag, long cpu)
 
     CPU_FREE(cpuset);
 #endif
+    if (ipc && socketpair(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0, fd_ipc) < 0)
+        throw ndThreadSystemException(__PRETTY_FUNCTION__, "socketpair", errno);
 }
 
 ndThread::~ndThread(void)
 {
     pthread_attr_destroy(&attr);
     pthread_mutex_destroy(&lock);
+
+    if (fd_ipc[0] != -1) close(fd_ipc[0]);
+    if (fd_ipc[1] != -1) close(fd_ipc[1]);
 }
 
 void ndThread::SetProcName(void)
@@ -171,6 +177,33 @@ void ndThread::Unlock(void)
 
     if (rc != 0)
         throw ndThreadException(strerror(rc));
+}
+
+void ndThread::SendIPC(uint32_t id)
+{
+    ssize_t bytes_wrote = 0;
+
+    bytes_wrote = send(fd_ipc[1], &id, sizeof(uint32_t), 0);
+
+    if (bytes_wrote != sizeof(uint32_t)) {
+        nd_debug_printf("%s: Failed to send IPC message: %s\n",
+            tag.c_str(), strerror(errno));
+    }
+}
+
+uint32_t ndThread::RecvIPC(void)
+{
+    uint32_t id = 0;
+    ssize_t bytes_read = 0;
+
+    bytes_read = recv(fd_ipc[0], &id, sizeof(uint32_t), 0);
+
+    if (bytes_read != sizeof(uint32_t)) {
+        nd_debug_printf("%s: Failed to receive IPC message: %s\n",
+            tag.c_str(), strerror(errno));
+    }
+
+    return id;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

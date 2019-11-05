@@ -125,6 +125,8 @@ protected:
 
     pcap_t *OpenCapture(void);
 
+    void DumpFlows(void);
+
     void ProcessPacket(void);
 
     bool ProcessDNSResponse(

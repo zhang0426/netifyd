@@ -206,12 +206,18 @@ public:
     inline int GetDescriptor(void) { return fd_fifo[0]; }
     const uint8_t *GetBuffer(ssize_t &bytes);
 
+    size_t BufferQueueFlush(void);
+
     void Push(const string &data);
     void Pop(size_t bytes);
 
 protected:
     uint8_t *buffer;
     int fd_fifo[2];
+
+    size_t buffer_queue_offset;
+    size_t buffer_queue_length;
+    deque<string> buffer_queue;
 };
 
 typedef unordered_map<int, ndSocket *> ndSocketClientMap;
