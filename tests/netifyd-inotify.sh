@@ -76,6 +76,6 @@ done
 
 inotifywait -q -m -e create,moved_to --format %f "${PCAP_DIRECTORY}" |\
     egrep --line-buffered '\.[pc]+ap$' |\
-    netifyd_process_stdin
+    netifyd_process_inotify
 
 exit 0
