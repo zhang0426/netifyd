@@ -168,21 +168,21 @@ detect_os()
         fi
     fi
 
-    if [ -f @sysconfdir@/clearos-release ]; then
+    if [ -f /etc/clearos-release ]; then
         echo "clearos"
-    elif [ -f @sysconfdir@/nethserver-release ]; then
+    elif [ -f /etc/nethserver-release ]; then
         echo "nethserver"
-    elif [ -f @sysconfdir@/gentoo-release ]; then
+    elif [ -f /etc/gentoo-release ]; then
         echo "gentoo"
-    elif [ -f @sysconfdir@/openwrt_release ]; then
+    elif [ -f /etc/openwrt_release ]; then
         echo "openwrt"
-    elif [ -f @bindir@/freebsd-version ]; then
+    elif [ -f /bin/freebsd-version ]; then
         echo "freebsd"
-    elif [ -f @sysconfdir@/debian_version ]; then
+    elif [ -f /etc/debian_version ]; then
         echo "debian"
-    elif [ -f @sysconfdir@/centos-release ]; then
+    elif [ -f /etc/centos-release ]; then
         echo "centos"
-    elif [ -f @sysconfdir@/redhat-release ]; then
+    elif [ -f /etc/redhat-release ]; then
         echo "redhat"
     else
         echo "unknown"
