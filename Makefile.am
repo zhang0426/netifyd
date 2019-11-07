@@ -148,9 +148,9 @@ deploy-freebsd-txz:
 	$(MAKE) -C deploy
 	$(MAKE) dist-gzip
 	sudo cp -v $(PACKAGE)-$(VERSION).tar.gz /usr/ports/distfiles/
-	$(MAKE) -C deploy/freebsd clean
-	$(MAKE) -C deploy/freebsd makesum
-	$(MAKE) -C deploy/freebsd package
+	make -C deploy/freebsd clean
+	make -C deploy/freebsd makesum
+	make -C deploy/freebsd package
 	stat deploy/freebsd/work/pkg/$(PACKAGE)-$(VERSION).txz
 
 deploy-debug: all

@@ -3,7 +3,6 @@
 lib/libnetifyd.so
 lib/libnetifyd.so.0
 lib/libnetifyd.so.0.0.0
-lib/pkgconfig/libnetifyd.pc
 man/man5/netifyd.conf.5.gz
 man/man8/netifyd.8.gz
 sbin/netifyd
