@@ -34,6 +34,7 @@
 #endif
 
 #include <sys/param.h>
+#include <sys/socket.h>
 
 #ifndef CLOCK_MONOTONIC_RAW
 #define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
