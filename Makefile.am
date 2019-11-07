@@ -145,6 +145,7 @@ deploy-freebsd-txz:
 		./configure \
 			--disable-conntrack \
 			--disable-inotify
+	$(MAKE) -C deploy
 	$(MAKE) dist-gzip
 	sudo cp -v $(PACKAGE)-$(VERSION).tar.gz /usr/ports/distfiles/
 	$(MAKE) -C deploy/freebsd clean
