@@ -338,7 +338,7 @@ int ndFlow::dump(pcap_t *pcap, const uint8_t *digest)
     memcpy(p, ND_FLOW_CAPTURE_TEMPLATE, sizeof(ND_FLOW_CAPTURE_TEMPLATE));
 
     p += ND_FLOW_CAPTURE_SUB_OFFSET;
-    for (int i = 0; i < 4; i++, p += 2) sprintf(p, "%02x", digest[i]);
+    for (int i = 0; i < 4; i++, p += 2) sprintf(p, "%02hhx", digest[i]);
     strcat(p, ".cap");
 
     pcap_dumper_t *pcap_dumper = pcap_dump_open(pcap, capture_filename);
@@ -855,7 +855,8 @@ json_object *ndFlow::json_encode(ndJson &json,
     if (privacy_mask & PRIVATE_LOWER)
         snprintf(mac_addr, sizeof(mac_addr), "00:52:14:00:00:00");
     else {
-        snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
+        snprintf(mac_addr, sizeof(mac_addr),
+            "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
             lower_mac[0], lower_mac[1], lower_mac[2],
             lower_mac[3], lower_mac[4], lower_mac[5]
         );
@@ -865,7 +866,8 @@ json_object *ndFlow::json_encode(ndJson &json,
     if (privacy_mask & PRIVATE_UPPER)
         snprintf(mac_addr, sizeof(mac_addr), "00:52:FF:00:00:00");
     else {
-        snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
+        snprintf(mac_addr, sizeof(mac_addr),
+            "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
             upper_mac[0], upper_mac[1], upper_mac[2],
             upper_mac[3], upper_mac[4], upper_mac[5]
         );

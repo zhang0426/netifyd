@@ -45,6 +45,15 @@
 #include <sys/sysctl.h>
 #endif
 
+#define __FAVOR_BSD 1
+#include <netinet/in.h>
+
+#if defined(__linux__)
+#include <linux/if_packet.h>
+#elif defined(BSD4_4)
+#include <net/if_dl.h>
+#endif
+
 #include <unistd.h>
 #include <string.h>
 #include <syslog.h>
@@ -59,8 +68,13 @@
 
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <ifaddrs.h>
 
 #include <net/if.h>
+
+#ifndef AF_LINK
+#define AF_LINK AF_PACKET
+#endif
 
 #include <json.h>
 #include <pcap/pcap.h>
@@ -680,6 +694,117 @@ int nd_ifreq(const string &name, unsigned long request, struct ifreq *ifr)
     close(fd);
     return rc;
 }
+
+int nd_ifaddrs(nd_interface_addr_map &addr_map)
+{
+    int count = 0;
+    struct ifaddrs *ifaddr, *ifa;
+    nd_interface_addr_map::iterator i;
+    nd_interface_addr_array *addrs;
+
+    if (getifaddrs(&ifaddr) == -1) {
+        nd_printf("getifaddrs: %s\n", strerror(errno));
+        return -1;
+    }
+
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL) continue;
+
+        i = addr_map.find(ifa->ifa_name);
+        if (i == addr_map.end()) {
+            nd_interface_addr_insert addr_iter;
+
+            addrs = new nd_interface_addr_array;
+            if (addrs == NULL)
+                throw runtime_error(strerror(ENOMEM));
+            addr_iter = addr_map.insert(nd_interface_addr_pair(ifa->ifa_name, addrs));
+            i = addr_iter.first;
+        }
+        else
+            addrs = i->second;
+
+        struct ndInterfaceAddress *addr = new struct ndInterfaceAddress;
+        if (addr == NULL) throw runtime_error(strerror(ENOMEM));
+        memset(addr, 0, sizeof(struct ndInterfaceAddress));
+
+        addr->family = ifa->ifa_addr->sa_family;
+
+        switch (addr->family) {
+        case AF_LINK:
+            memset(addr->mac, 0, ETH_ALEN);
+#if defined(__linux__)
+            {
+                struct sockaddr_ll *s = (struct sockaddr_ll*)ifa->ifa_addr;
+                memcpy(addr->mac, s->sll_addr, ETH_ALEN);
+            }
+#elif defined(BSD4_4)
+            {
+                struct sockaddr_dl *s = (struct sockaddr_dl *)ifa->ifa_addr;
+                memcpy(addr->mac, s->sdl_data + s->sdl_nlen, ETH_ALEN);
+            }
+#endif
+            addrs->push_back(addr);
+            count++;
+            break;
+        case AF_INET:
+            memcpy(&addr->ip, ifa->ifa_addr, sizeof(struct sockaddr_in));
+            addrs->push_back(addr);
+            count++;
+            break;
+        case AF_INET6:
+            memcpy(&addr->ip, ifa->ifa_addr, sizeof(struct sockaddr_in6));
+            addrs->push_back(addr);
+            count++;
+            break;
+        default:
+            delete addr;
+        }
+    }
+
+    freeifaddrs(ifaddr);
+
+    return count;
+}
+
+int nd_ifaddrs_update(nd_interface_addr_map &addr_map)
+{
+    nd_ifaddrs_free(addr_map);
+    return nd_ifaddrs(addr_map);
+}
+
+void nd_ifaddrs_free(nd_interface_addr_map &addr_map)
+{
+    nd_interface_addr_map::iterator i;
+
+    for (i = addr_map.begin(); i != addr_map.end(); i++) {
+        vector<struct ndInterfaceAddress *>::iterator a;
+        for (a = i->second->begin(); a != i->second->end(); a++)
+            delete (*a);
+        delete (i->second);
+    }
+
+    addr_map.clear();
+}
+
+bool nd_ifaddrs_get_mac(
+    nd_interface_addr_map &addr_map,
+    const string &name, uint8_t *addr)
+{
+    nd_interface_addr_map::iterator i = addr_map.find(name);
+
+    if (i == addr_map.end()) return false;
+
+    vector<struct ndInterfaceAddress *>::iterator a;
+    for (a = i->second->begin(); a != i->second->end(); a++) {
+        if ((*a)->family == AF_LINK) {
+            memcpy(addr, (*a)->mac, ETH_ALEN);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 #if defined(__linux__)
 pid_t nd_is_running(pid_t pid, const char *exe_base)
 {

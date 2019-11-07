@@ -379,6 +379,20 @@ void nd_json_agent_hello(string &json_string);
 void nd_json_agent_status(string &json_string);
 void nd_json_protocols(string &json_string);
 
+struct ndInterfaceAddress
+{
+    sa_family_t family;
+    union {
+        uint8_t mac[ETH_ALEN];
+        struct sockaddr_storage ip;
+    };
+};
+
+typedef vector<struct ndInterfaceAddress *> nd_interface_addr_array;
+typedef map<string, nd_interface_addr_array *> nd_interface_addr_map;
+typedef pair<string, nd_interface_addr_array *> nd_interface_addr_pair;
+typedef pair<nd_interface_addr_map::iterator, bool> nd_interface_addr_insert;
+
 class ndException : public runtime_error
 {
 public:

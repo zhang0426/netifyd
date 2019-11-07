@@ -646,8 +646,6 @@ const uint8_t *ndSocketBuffer::GetBuffer(ssize_t &bytes)
 
 void ndSocketBuffer::Push(const string &data)
 {
-    ssize_t bytes;
-
     ostringstream payload;
     payload << "{\"length\": " << data.size() << "}\n";
     payload << data;

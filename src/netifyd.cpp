@@ -131,6 +131,7 @@ static nd_device_filter device_filters;
 static bool nd_detection_stopped_by_signal = false;
 static ndDNSHintCache *dns_hint_cache = NULL;
 static time_t nd_ethers_mtime = 0;
+static nd_interface_addr_map nd_interface_addrs;
 
 nd_device_ethers device_ethers;
 
@@ -596,22 +597,21 @@ static int nd_start_detection_threads(void)
         long cpus = sysconf(_SC_NPROCESSORS_ONLN);
         string netlink_dev;
         uint8_t private_addr = 0;
+        uint8_t mac[ETH_ALEN];
+
+        nd_ifaddrs_update(nd_interface_addrs);
 
         for (nd_ifaces::iterator i = ifaces.begin();
             i != ifaces.end(); i++) {
-#ifdef _ND_USE_NETLINK
-            if (ND_USE_NETLINK) {
-                nd_device_netlink::const_iterator j;
-                netlink_dev = (*i).second;
-                if ((j = device_netlink.find(netlink_dev)) != device_netlink.end())
-                    netlink_dev = j->second.c_str();
-            }
-#endif
+
+            if (! nd_ifaddrs_get_mac(nd_interface_addrs, (*i).second, mac))
+                memset(mac, 0, ETH_ALEN);
+
             threads[(*i).second] = new ndDetectionThread(
                 (*i).second,
+                mac,
                 (*i).first,
 #ifdef _ND_USE_NETLINK
-                netlink_dev,
                 netlink,
 #endif
                 thread_socket,
@@ -1036,39 +1036,27 @@ static void nd_json_add_interfaces(json_object *parent)
 {
     json_object *jobj;
     ndJson json(parent);
-/*
-    char addr[INET6_ADDRSTRLEN];
-    struct ifaddrs *ifap = NULL, *p = NULL;
 
-    if (getifaddrs(&ifap) < 0) {
-        fprintf(stderr, "Error collecting interface addresses: %s\n",
-            strerror(errno));
-    }
-*/
+    uint8_t mac[ETH_ALEN];
+    char mac_addr[ND_STR_ETHALEN + 1];
+
     for (nd_ifaces::const_iterator i = ifaces.begin(); i != ifaces.end(); i++) {
-/*
-        for (p = ifap; p != NULL; p = p->ifa_next) {
-            if (strncmp(p->ifa_name, i->second.c_str(), IFNAMSIZ)) continue;
-            break;
-        }
-*/
         string iface_name;
         nd_iface_name(i->second, iface_name);
 
         jobj = json.CreateObject(NULL, iface_name);
         json.AddObject(jobj, "role", (i->first) ? "LAN" : "WAN");
-/*
-        if (p == NULL) continue;
 
-        inet_ntop(p->ifa_addr, &new_flow->lower_addr.s_addr,
-            new_flow->lower_ip, INET_ADDRSTRLEN);
+        if (! nd_ifaddrs_get_mac(nd_interface_addrs, i->second, mac))
+            memset(mac, 0, ETH_ALEN);
 
-        inet_ntop(AF_INET6, &new_flow->lower_addr6.s6_addr,
-            new_flow->lower_ip, INET6_ADDRSTRLEN);
-*/
+        snprintf(mac_addr, sizeof(mac_addr),
+            "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
+        );
+
+        json.AddObject(jobj, "mac", mac_addr);
     }
-
-//    if (ifap) freeifaddrs(ifap);
 }
 
 static void nd_json_add_devices(json_object *parent)
@@ -1114,7 +1102,7 @@ static void nd_json_add_devices(json_object *parent)
         memcpy(mac_src, i->first.c_str(), ETH_ALEN);
         char mac_dst[ND_STR_ETHALEN + 1];
 
-        sprintf(mac_dst, "%02x:%02x:%02x:%02x:%02x:%02x",
+        sprintf(mac_dst, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
             mac_src[0], mac_src[1], mac_src[2],
             mac_src[3], mac_src[4], mac_src[5]);
 
@@ -1469,7 +1457,7 @@ static void nd_load_ethers(void)
             string key;
             key.assign((const char *)mac, ETH_ALEN);
             device_ethers[key] = name;
-            //nd_debug_printf("%2lu: %02x:%02x:%02x:%02x:%02x:%02x (%s): %s\n", line,
+            //nd_debug_printf("%2lu: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx (%s): %s\n", line,
             //    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], ether, name);
         }
     }
@@ -2660,6 +2648,8 @@ int main(int argc, char *argv[])
         dns_hint_cache->save();
         delete dns_hint_cache;
     }
+
+    nd_ifaddrs_free(nd_interface_addrs);
 
     nd_debug_printf("Normal exit.\n");
     pthread_mutex_destroy(nd_printf_mutex);

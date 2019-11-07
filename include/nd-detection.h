@@ -58,9 +58,9 @@ class ndDetectionThread : public ndThread
 public:
     ndDetectionThread(
         const string &dev,
+        const uint8_t *dev_mac,
         bool internal,
 #ifdef _ND_USE_NETLINK
-        const string &netlink_dev,
         ndNetlink *netlink,
 #endif
         ndSocketThread *thread_socket,
@@ -85,10 +85,10 @@ public:
     int GetCaptureStats(struct pcap_stat &stats);
 
 protected:
+    uint8_t dev_mac[ETH_ALEN];
     bool internal;
     bool capture_unknown_flows;
 #ifdef _ND_USE_NETLINK
-    string netlink_dev;
     ndNetlink *netlink;
 #endif
     ndSocketThread *thread_socket;
@@ -109,7 +109,6 @@ protected:
     struct ndpi_detection_module_struct *ndpi;
     uint32_t custom_proto_base;
     nd_private_addr private_addrs;
-    uint8_t dev_mac[ETH_ALEN];
 
     nd_flow_map *flows;
     nd_packet_stats *stats;

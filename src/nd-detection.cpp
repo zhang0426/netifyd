@@ -242,9 +242,9 @@ void ndPacketQueue::pop(const string &oper)
 
 ndDetectionThread::ndDetectionThread(
     const string &dev,
+    const uint8_t *dev_mac,
     bool internal,
 #ifdef _ND_USE_NETLINK
-    const string &netlink_dev,
     ndNetlink *netlink,
 #endif
     ndSocketThread *thread_socket,
@@ -260,7 +260,7 @@ ndDetectionThread::ndDetectionThread(
     internal(internal),
     capture_unknown_flows(ND_CAPTURE_UNKNOWN_FLOWS),
 #ifdef _ND_USE_NETLINK
-    netlink_dev(netlink_dev), netlink(netlink),
+    netlink(netlink),
 #endif
     thread_socket(thread_socket),
 #ifdef _ND_USE_CONNTRACK
@@ -293,24 +293,15 @@ ndDetectionThread::ndDetectionThread(
 
     private_addrs.second.ss_family = AF_INET6;
     nd_private_ipaddr(private_addr, private_addrs.second);
-#ifdef SIOCGIFHWADDR
-    struct ifreq ifr;
-    if (nd_ifreq(dev, SIOCGIFHWADDR, &ifr) == 0) {
-        if (ifr.ifr_hwaddr.sa_family == ARPHRD_ETHER) {
-            memcpy(dev_mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
-            nd_debug_printf(
-                "%s: hwaddr: %02hhx:%02hhx:%02hhx:%02hhx:%02hx:%02hhx\n",
-                dev.c_str(),
-                dev_mac[0], dev_mac[1], dev_mac[2],
-                dev_mac[3], dev_mac[4], dev_mac[5]
-            );
-        }
-        else {
-            nd_debug_printf("%s: Unsupported device address family: %hu\n",
-                dev.c_str(), ifr.ifr_hwaddr.sa_family);
-        }
-    }
-#endif
+
+    memcpy(this->dev_mac, dev_mac, ETH_ALEN);
+    nd_debug_printf(
+        "%s: hwaddr: %02hhx:%02hhx:%02hhx:%02hhx:%02hx:%02hhx\n",
+        dev.c_str(),
+        dev_mac[0], dev_mac[1], dev_mac[2],
+        dev_mac[3], dev_mac[4], dev_mac[5]
+    );
+
     nd_debug_printf("%s: detection thread created, custom_proto_base: %u.\n",
         tag.c_str(), custom_proto_base);
 }
@@ -411,7 +402,7 @@ void *ndDetectionThread::Entry(void)
             if (FD_ISSET(fd_ipc[0], &fds_read)) {
                 uint32_t id = RecvIPC();
 
-                if (id == ND_SIG_CONNECT)
+                if (id == (uint32_t)ND_SIG_CONNECT)
                     dump_flows = true;
                 else {
                     nd_debug_printf("%s: Unknown IPC ID: %u (ND_SIG_CONNECT: %u).\n",

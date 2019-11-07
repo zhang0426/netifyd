@@ -89,6 +89,9 @@ ndThread::ndThread(const string &tag, long cpu, bool ipc)
     if ((rc = pthread_mutex_init(&lock, NULL)) != 0)
         throw ndThreadException(strerror(rc));
 
+    if (ipc && socketpair(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0, fd_ipc) < 0)
+        throw ndThreadSystemException(__PRETTY_FUNCTION__, "socketpair", errno);
+
     if (cpu == -1) return;
 #if defined(HAVE_PTHREAD_ATTR_SETAFFINITY_NP) && defined(CPU_ALLOC)
     long cpus = sysconf(_SC_NPROCESSORS_ONLN);
@@ -111,8 +114,6 @@ ndThread::ndThread(const string &tag, long cpu, bool ipc)
 
     CPU_FREE(cpuset);
 #endif
-    if (ipc && socketpair(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0, fd_ipc) < 0)
-        throw ndThreadSystemException(__PRETTY_FUNCTION__, "socketpair", errno);
 }
 
 ndThread::~ndThread(void)

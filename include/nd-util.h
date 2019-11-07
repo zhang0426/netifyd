@@ -77,6 +77,13 @@ int nd_save_response_data(const char *filename, const ndJsonDataChunks &data);
 
 int nd_ifreq(const string &name, unsigned long request, struct ifreq *ifr);
 
+int nd_ifaddrs(nd_interface_addr_map &addr_map);
+int nd_ifaddrs_update(nd_interface_addr_map &addr_map);
+void nd_ifaddrs_free(nd_interface_addr_map &addr_map);
+bool nd_ifaddrs_get_mac(
+    nd_interface_addr_map &addr_map,
+    const string &name, uint8_t *addr);
+
 pid_t nd_is_running(pid_t pid, const char *exe_base);
 
 int nd_file_exists(const char *path);
