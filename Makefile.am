@@ -143,6 +143,7 @@ deploy-freebsd-txz:
 	./autogen.sh \
 		CC=clang CXX=clang++ \
 		./configure \
+			--disable-dependency-tracking \
 			--disable-conntrack \
 			--disable-inotify
 	$(MAKE) -C deploy
