@@ -2,7 +2,8 @@
 
 1. Install required build packages:
 
-  `# sudo pkg install auto-tools git gmake pkgconf json-c google-perftools`
+  `# pkg add http://pkg.freebsd.org/freebsd:11:x86:64/release_3/All/json-c-0.13.1.txz`
+  `# pkg install auto-tools git gmake pkgconf google-perftools`
 
 2. Clone source (recursive):
 
