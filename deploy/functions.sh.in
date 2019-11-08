@@ -146,6 +146,12 @@ load_edgeos()
     echo "$(/usr/share/netifyd/netify_edgeos/options.py)"
 }
 
+# pfSense: Dynamically add all configured LAN/WAN interfaces.
+load_pfsense()
+{
+    echo "$(/usr/local/share/netifyd/netify_pfsense/options.py)"
+}
+
 load_modules()
 {
     /sbin/modprobe -q nfnetlink
@@ -176,8 +182,12 @@ detect_os()
         echo "gentoo"
     elif [ -f /etc/openwrt_release ]; then
         echo "openwrt"
-    elif [ -f /bin/freebsd-version ]; then
-        echo "freebsd"
+    elif [ -x /bin/freebsd-version ]; then
+        if [ -f /etc/version ]; then
+            echo "pfsense"
+        else
+            echo "freebsd"
+        fi
     elif [ -f /etc/debian_version ]; then
         echo "debian"
     elif [ -f /etc/centos-release ]; then
@@ -205,6 +215,9 @@ auto_detect_options()
             ;;
             openwrt)
                 options=$(load_openwrt)
+            ;;
+            pfsense)
+                options=$(load_pfsense)
             ;;
             edgeos)
                 options=$(load_edgeos)

@@ -9,4 +9,6 @@ sbin/netifyd
 %%DATADIR%%/functions.sh
 %%DATADIR%%/netifyd.conf-sample
 %%DATADIR%%/watchdog.sh
+%%DATADIR%%/netify_pfsense/options.py
+%%DOCSDIR%%/INSTALL-pfsense-2.4.4-p3.md
 @dir /var/run/netifyd

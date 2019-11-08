@@ -23,6 +23,10 @@ start_precmd="${name}_prestart"
 
 netifyd_prestart()
 {
+    if [ -f /etc/version ]; then
+        # pfSense detected, enable auto-detect:
+        export NETIFYD_AUTODETECT="yes"
+    fi
     . %%DATADIR%%/functions.sh
     netifyd_opts=$(auto_detect_options)
     rc_flags="${netifyd_opts} ${rc_flags}"

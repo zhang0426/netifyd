@@ -3,7 +3,7 @@
 #
 # This is free software, licensed under the GNU General Public License v3.
 
-SUBDIRS = debian edgeos systemd
+SUBDIRS = debian edgeos pfsense systemd
 
 TEMPLATEFILES = functions.sh netifyd.conf netifyd.init watchdog.cron watchdog.sh
 TEMPLATEFILES_IN = functions.sh.in netifyd.conf.in netifyd.init.in watchdog.cron.in watchdog.sh.in

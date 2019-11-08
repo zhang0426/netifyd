@@ -297,7 +297,7 @@ AC_CONFIG_FILES([deploy/openwrt/Makefile deploy/openwrt/files/netifyd.init])
 AC_CONFIG_FILES([libnetifyd.pc])
 AC_CONFIG_FILES([Makefile src/Makefile include/Makefile doc/Makefile tests/Makefile \
     deploy/Makefile deploy/debian/Makefile deploy/edgeos/Makefile deploy/freebsd/Makefile \
-    deploy/systemd/Makefile])
+    deploy/pfsense/Makefile deploy/systemd/Makefile])
 AC_CONFIG_FILES([doc/netifyd.8 doc/netifyd.conf.5])
 AC_CONFIG_FILES([netifyd.spec])
 AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
