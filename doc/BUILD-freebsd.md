@@ -1,10 +1,10 @@
 # FreeBSD 10x/11x Build Notes
 
 1. Install required build packages:
-
-  `# pkg add http://pkg.freebsd.org/freebsd:11:x86:64/release_2/All/json-c-0.13.txz
-   # pkg install auto-tools git gmake pkgconf google-perftools`
-
+```
+  # pkg add http://pkg.freebsd.org/freebsd:11:x86:64/release_2/All/json-c-0.13.txz
+  # pkg install auto-tools git gmake pkgconf google-perftools`
+```
 2. Clone source (recursive):
 
   `# git clone --recursive git@gitlab.com:netify.ai/public/netify-agent.git`
