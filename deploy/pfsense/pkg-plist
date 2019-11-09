@@ -1,0 +1,7 @@
+%%DATADIR%%/info.xml
+%%DOCSDIR%%/INSTALL-pfSense-2.4.4-p3.md
+@dir /etc/inc
+@dir /etc/inc/priv
+pkg/netify.xml
+pkg/netify/netify.inc
+pkg/netify/netify_defs.inc

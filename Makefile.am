@@ -151,7 +151,12 @@ deploy-freebsd-txz:
 	make -C deploy/freebsd clean
 	make -C deploy/freebsd makesum
 	make -C deploy/freebsd package
-	stat deploy/freebsd/work/pkg/$(PACKAGE)-$(VERSION).txz
+	ls -lh deploy/freebsd/work/pkg/*.txz
+
+deploy-pfsense:
+	make -C deploy/pfsense clean
+	make -C deploy/pfsense package
+	ls -lh deploy/pfsense/work/pkg/*.txz
 
 deploy-debug: all
 	scp src/.libs/netifyd gw:/usr/sbin/

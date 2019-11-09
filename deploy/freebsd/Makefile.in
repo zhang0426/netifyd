@@ -1,16 +1,17 @@
 # $FreeBSD$
 
 PORTNAME=@PACKAGE_TARNAME@
-DISTVERSION=@PACKAGE_VERSION@
-CATEGORIES=net
+PORTVERSION=@PACKAGE_VERSION@
+PORTREVISION=1
+CATEGORIES=security
 MASTER_SITES=http://download.netify.ai/netify/freebsd/
-LICENSE=GPLv3+
-#LICENSE_NAME=GNU General Public License version 3 \(or later\)
-LICENSE_FILE=${WRKSRC}/LICENSE
-#LICENSE_PERMS=dist-mirror no-dist-sell pkg-mirror no-pkg-sell auto-accept
-#LICENSE_GROUPS=FSF GPL OSI
-MAINTAINER=darryl@sokoloski.ca
+MAINTAINER=team@netify.ai
 COMMENT=Netify Agent - Deep-packet Inspection Server
+LICENSE=GPLv3+
+LICENSE_FILE=${WRKSRC}/LICENSE
+
+RUN_DEPENDS=libunwind>=20170615:devel/libunwind \
+	google-perftools>=2.7:devel/google-perftools
 
 USES=gmake libtool
 USE_RC_SUBR=netifyd

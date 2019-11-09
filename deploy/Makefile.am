@@ -3,7 +3,7 @@
 #
 # This is free software, licensed under the GNU General Public License v3.
 
-SUBDIRS = debian edgeos pfsense systemd
+SUBDIRS = debian edgeos systemd
 
 TEMPLATEFILES = functions.sh netifyd.conf netifyd.init watchdog.cron watchdog.sh
 TEMPLATEFILES_IN = functions.sh.in netifyd.conf.in netifyd.init.in watchdog.cron.in watchdog.sh.in
@@ -16,7 +16,7 @@ persistentstate_DATA = netify-sink.conf
 
 BUILT_SOURCES = $(TEMPLATEFILES)
 CLEANFILES = $(TEMPLATEFILES)
-EXTRA_DIST = $(TEMPLATEFILES_IN) freebsd netifyd.default netify-sink.conf
+EXTRA_DIST = $(TEMPLATEFILES_IN) freebsd netifyd.default netify-sink.conf pfsense
 
 %: %.in
 	$(SED) \
