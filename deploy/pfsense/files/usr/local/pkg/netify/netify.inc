@@ -109,8 +109,8 @@ function netify_create_rc() {
 	}
 	*/
 
-	$rc_start = "{$rcdir}/netifyd start"
-	$rc_stop = "{$rcdir}/netifyd stop"
+	$rc_start = "{$rcdir}/netifyd onestart";
+	$rc_stop = "{$rcdir}/netifyd stop";
 
 	$netify_sh_text = <<<EOD
 #!/bin/sh

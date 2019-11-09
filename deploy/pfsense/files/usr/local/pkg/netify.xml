@@ -63,7 +63,6 @@
 	</tabs>
 	<fields>
 	</fields>
-	<!--
 	<custom_php_resync_config_command>
 		<![CDATA[
 		sync_netify_package_config();
@@ -78,8 +77,5 @@
 		<![CDATA[
 		include_once("/usr/local/pkg/netify/netify_uninstall.php");
 		]]>
-	-->
-	</custom_php_resync_config_command>
-	</custom_php_install_command>
 	</custom_php_pre_deinstall_command>
 </packagegui>
