@@ -154,8 +154,8 @@ deploy-freebsd-txz:
 	ls -lh deploy/freebsd/work/pkg/*.txz
 
 deploy-pfsense:
-	make -C deploy/pfsense clean
-	make -C deploy/pfsense package
+	make -C deploy/pfsense clean DISABLE_VULNERABILITIES=yes
+	make -C deploy/pfsense package DISABLE_VULNERABILITIES=yes
 	ls -lh deploy/pfsense/work/pkg/*.txz
 
 deploy-debug: all

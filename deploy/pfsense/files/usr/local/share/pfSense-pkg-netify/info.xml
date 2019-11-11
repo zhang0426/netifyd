@@ -3,10 +3,13 @@
 	<package>
 		<name>netify</name>
 		<pkginfolink>https://www.netify.ai/resources/documentation/requirements</pkginfolink>
-		<website>http://netify.ai/</website>
 		<descr><![CDATA[Netify provides full transparency into what's happening on your network. Local network monitoring coupled with cloud-based analytics to deliver exceptional, business-driven results.]]></descr>
+		<website>http://netify.ai/</website>
+		<category>Services</category>
 		<version>%%PKGVERSION%%</version>
-		<configurationfile>/netify.xml</configurationfile>
-		<after_install_info>Please visit Services - Netify - Provision tab to provision your Netify Agent.</after_install_info>
+		<status>Beta</status>
+		<configurationfile>netify.xml</configurationfile>
+		<maintainer>team@egloo.ca</maintainer>
+		<only_for_archs>amd64</only_for_archs>
 	</package>
 </pfsensepkgs>

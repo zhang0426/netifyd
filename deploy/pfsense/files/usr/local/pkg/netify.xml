@@ -10,40 +10,23 @@
  * Netify for pfSense
  * Copyright (C) 2015-2019 eGloo Incorporated
  *
- * This program comes with ABSOLUTELY NO WARRANTY.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * This is free software, and you are welcome to redistribute it
- * under certain conditions according to the GNU General Public
- * License version 3, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/* $Id$ */
-/* ====================================================================================== */
-/*
-	netify.xml
-	Netify for pfSense (https://netify.ai/)
-	Copyright (C) 2015-2019 eGloo Incorporated
-	All rights reserved.
-*/
-/* ====================================================================================== */
-/*
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-/* ====================================================================================== */
-	]]>
+]]>
 	</copyright>
-	<description>Netify Agent for pfSense</description>
 	<name>Netify</name>
+	<description>Netify Agent for pfSense</description>
 	<version>%%PKGVERSION%%</version>
 	<title>Services: Netify</title>
 	<include_file>/usr/local/pkg/netify/netify.inc</include_file>
@@ -63,19 +46,16 @@
 	</tabs>
 	<fields>
 	</fields>
+
 	<custom_php_resync_config_command>
-		<![CDATA[
-		sync_netify_package_config();
-		]]>
+		netify_package_sync();
 	</custom_php_resync_config_command>
+
 	<custom_php_install_command>
-		<![CDATA[
-		include_once("/usr/local/pkg/netify/netify_post_install.php");
-		]]>
+		netify_package_install();
 	</custom_php_install_command>
-	<custom_php_pre_deinstall_command>
-		<![CDATA[
-		include_once("/usr/local/pkg/netify/netify_uninstall.php");
-		]]>
-	</custom_php_pre_deinstall_command>
+
+	<custom_php_deinstall_command>
+		netify_package_deinstall();
+	</custom_php_deinstall_command>
 </packagegui>

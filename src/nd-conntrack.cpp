@@ -312,7 +312,7 @@ void ndConntrackThread::ProcessConntrackEvent(
 
         flow_iter = ct_flow_map.find(id_iter->second);
         if (flow_iter == ct_flow_map.end()) {
-            nd_printf("%s: [U:%u] Digest not found in flow map.\n",
+            nd_debug_printf("%s: [U:%u] Digest not found in flow map.\n",
                 tag.c_str(), id);
             ct_id_map.erase(id_iter);
             goto Unlock_ProcessConntrackEvent;
