@@ -29,32 +29,30 @@ $agent_status_url = netifyd_get_agent_status_url();
 
 ?>
 
-<form>
-	<div class="panel panel-default">
-		<div class="panel-heading">
-			<h2 class="panel-title">
-				<?=gettext("Netify Agent Provisioning")?>
-			</h2>
-		</div>
-		<div class="panel-body">
-			<div class="content table-responsive">
-				<table class="table table-striped table-hover table-condensed">
-					<tr>
-						<th style='text-align: right; vertical-align: middle;'>Provision Code</th>
-						<td><input type="text" value="<?=$agent_uuid;?>" readonly></td>
-						<th style='text-align: right; vertical-align: middle;'>Status</th>
-						<td><input id="provision-status" type="text" value="<?=gettext('Loading...');?>" readonly></td>
-					</tr>
-					<tr>
-						<td colspan="4" style='text-align: right;'>
-							<button id="btn-provision" class="btn btn-success" type="button" title="<?=gettext('Provision Agent on Netify Portal'); ?>">Provision Netify Agent</button>
-						</td>
-					</tr>
-				</table>
-			</div>
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h2 class="panel-title"><?=gettext("Netify Agent Provisioning")?></h2>
+	</div>
+	<div class="panel-body">
+		<div class="content table-responsive">
+			<table class="table table-striped table-hover table-condensed">
+				<tr>
+					<th style='text-align: right; vertical-align: middle;'>Provision Code</th>
+					<td><div style="font-family: monospace;"><?=$agent_uuid;?></div></td>
+				</tr>
+				<tr>
+					<th style='text-align: right; vertical-align: middle;'>Status</th>
+					<td id="provision-status"><?=gettext("Loading...");?></td>
+				</tr>
+				<tr>
+					<td colspan="2" style='text-align: right;'>
+						<button id="btn-provision" class="btn btn-success" type="button" title="<?=gettext('Provision Agent on Netify Portal'); ?>">Provision Netify Agent</button>
+					</td>
+				</tr>
+			</table>
 		</div>
 	</div>
-</form>
+</div>
 
 <script type="text/javascript">
 //<![CDATA[
@@ -77,7 +75,7 @@ $agent_status_url = netifyd_get_agent_status_url();
 				type: 'get',
 				success: agentProvisionUpdate,
 				complete: function() {
-					setTimeout(statusRequest, 3000);
+					setTimeout(statusRequest, 8000);
 				}
 			}
 		);
@@ -88,14 +86,14 @@ $agent_status_url = netifyd_get_agent_status_url();
 		console.log(responseData);
 
 		if (responseData.status_code != 0) {
-			$('#provision-status').val(responseData.status_message);
+			$('#provision-status').html(responseData.status_message);
 			$('#provision-status').addClass('text-danger');
 			$('#provision-status').removeClass('text-success');
 		}
 		else if (responseData.data['provisioned'])
-			$('#provision-status').val('Provisioned');
+			$('#provision-status').html('Provisioned');
 		else
-			$('#provision-status').val('Not provisioned');
+			$('#provision-status').html('Not provisioned');
 
 		$('#provision-status').addClass(
 			responseData.data['provisioned'] ? 'text-success' : 'text-danger'

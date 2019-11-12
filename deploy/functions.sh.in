@@ -149,7 +149,35 @@ load_edgeos()
 # pfSense: Dynamically add all configured LAN/WAN interfaces.
 load_pfsense()
 {
-    echo "$(/usr/local/share/netifyd/netify_pfsense/options.py)"
+    local conf="/cf/conf/config.xml"
+    local xpath_ifaces="/pfsense/interfaces"
+
+    for role in lan wan; do
+        i=1; while true; do
+            xpath="$xpath_ifaces/$role[$i]"
+            xmllint --xpath "$xpath/enable" $conf >/dev/null 2>&1 || break
+            enabled=$(xmllint --xpath "boolean($xpath/enable)" $conf)
+
+            if [ "$enabled" == "true" ]; then
+                ifn=$(xmllint --xpath "$xpath/if/text()" $conf)
+                case "$role" in
+                    lan)
+                        options="$options -I $ifn"
+                        ;;
+                    wan)
+                        options="$options -E $ifn"
+                        ;;
+                    esac
+            fi
+
+            i=$(expr $i + 1)
+        done
+    done
+
+    options=$(echo "$options" |\
+        sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$$//g')
+
+    echo "$options"
 }
 
 load_modules()

@@ -86,8 +86,8 @@ if ($_POST['status'] == 'update') {
 	exit;
 }
 
+include("head.inc");
 $pgtitle = array(gettext('Services'), gettext('Netify'), gettext('Status'));
-include_once("head.inc");
 
 $tab_array = array();
 $tab_array[] = array(gettext("Status"), true, "/netify/netify_status.php");

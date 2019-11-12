@@ -150,11 +150,11 @@ deploy-freebsd-txz:
 	sudo cp -v $(PACKAGE)-$(VERSION).tar.gz /usr/ports/distfiles/
 	make -C deploy/freebsd clean
 	make -C deploy/freebsd makesum
-	make -C deploy/freebsd package
+	make -C deploy/freebsd package DISABLE_VULNERABILITIES=yes
 	ls -lh deploy/freebsd/work/pkg/*.txz
 
 deploy-pfsense:
-	make -C deploy/pfsense clean DISABLE_VULNERABILITIES=yes
+	make -C deploy/pfsense clean
 	make -C deploy/pfsense package DISABLE_VULNERABILITIES=yes
 	ls -lh deploy/pfsense/work/pkg/*.txz
 
