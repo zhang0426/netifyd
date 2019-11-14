@@ -114,32 +114,6 @@ deploy-edgeos:
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 
 deploy-freebsd:
-	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)
-	./autogen.sh \
-		&& PKG_CONFIG_PATH=$(abs_top_builddir)/libs/json-c \
-		CC=clang CXX=clang++ \
-		./configure --disable-conntrack \
-		--disable-inotify --disable-libtcmalloc && gmake clean
-	$(MAKE) clean
-	$(MAKE) -j 5
-
-	$(MAKE) DESTDIR=$(abs_top_builddir)/$(PACKAGE)-$(VERSION)-freebsd-$(host_cpu) install
-
-	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(libdir)/libndpi*
-	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(libdir)/*.a
-	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(libdir)/*.la
-	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(includedir)
-	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(pkgconfigdir)
-
-	$(STRIP) $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(sbindir)/netifyd
-	$(STRIP) $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)/$(libdir)/libnetifyd.so.0.0.0
-
-	rm -f $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu).tar.gz
-	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu).tar.gz \
-		$(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)
-	rm -rf $(PACKAGE)-$(VERSION)-freebsd-$(host_cpu)
-
-deploy-freebsd-txz:
 	./autogen.sh \
 		CC=clang CXX=clang++ \
 		./configure \
