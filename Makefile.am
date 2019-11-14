@@ -113,6 +113,11 @@ deploy-edgeos:
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 
+deploy-rpm:
+	$(MAKE) dist-gzip
+	cp -v $(PACKAGE)-$(VERSION).tar.gz ~/rpmbuild/SOURCES/
+	rpmbuild -ba $(PACKAGE).spec
+
 deploy-freebsd:
 	./autogen.sh \
 		CC=clang CXX=clang++ \
