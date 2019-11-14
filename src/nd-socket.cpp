@@ -883,7 +883,8 @@ void *ndSocketThread::Entry(void)
                     try {
                         ssize_t bytes = ci->second->Write(p, length);
 
-                        bi->second->Pop(bytes);
+                        if (bytes > 0)
+                            bi->second->Pop(bytes);
 
                         if (bytes != length) break;
 
