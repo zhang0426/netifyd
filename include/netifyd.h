@@ -216,7 +216,8 @@ enum nd_global_flags {
     ndGF_REPLAY_DELAY = 0x20000,
     ndGF_REMAIN_IN_FOREGROUND = 0x40000,
     ndGF_FLOW_DUMP_ESTABLISHED = 0x80000,
-    ndGF_FLOW_DUMP_UNKNOWN = 0x100000
+    ndGF_FLOW_DUMP_UNKNOWN = 0x100000,
+    ndGF_UPLOAD_ENABLED = 0x200000
 };
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
@@ -238,6 +239,7 @@ enum nd_global_flags {
 #define ND_REMAIN_IN_FOREGROUND (nd_config.flags & ndGF_REMAIN_IN_FOREGROUND)
 #define ND_FLOW_DUMP_ESTABLISHED (nd_config.flags & ndGF_FLOW_DUMP_ESTABLISHED)
 #define ND_FLOW_DUMP_UNKNOWN (nd_config.flags & ndGF_FLOW_DUMP_UNKNOWN)
+#define ND_UPLOAD_ENABLED (nd_config.flags & ndGF_UPLOAD_ENABLED)
 
 #define ND_GF_SET_FLAG(flag, value) \
 { \
@@ -270,6 +272,7 @@ typedef struct nd_global_config_t {
     unsigned ttl_idle_flow;
     unsigned ttl_idle_tcp_flow;
     unsigned update_interval;
+    unsigned update_imf;
     FILE *h_flow;
     enum nd_dhc_save dhc_save;
     enum nd_fhc_save fhc_save;

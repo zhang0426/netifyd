@@ -520,7 +520,7 @@ void ndJsonStatus::Parse(const string &json)
 void ndJsonResponse::Parse(const string &json)
 {
     json_object *jver, *jresp_code, *jresp_message;
-    json_object *juuid_site, *jurl_sink, *jdata;
+    json_object *juuid_site, *jurl_sink, *jupdate_imf, *jupload_enabled, *jdata;
 #ifdef _ND_USE_PLUGINS
     json_object *jplugin_params;
     json_object *jplugin_request_service_param, *jplugin_request_task_exec;
@@ -601,6 +601,20 @@ void ndJsonResponse::Parse(const string &json)
                 throw ndJsonParseException("Unexpected Sink URL type");
 
             url_sink = json_object_get_string(jurl_sink);
+        }
+
+        // Extract and validate optional upload interval multiplication factor
+        if (json_object_object_get_ex(jobj, "update_imf", &jupdate_imf) &&
+            json_object_is_type(jupdate_imf, json_type_int)) {
+
+            update_imf = (unsigned)json_object_get_int(jupdate_imf);
+        }
+
+        // Extract and validate optional upload enabled boolean
+        if (json_object_object_get_ex(jobj, "upload_enabled", &jupload_enabled) &&
+            json_object_is_type(jupload_enabled, json_type_boolean)) {
+
+            upload_enabled = json_object_get_boolean(jupload_enabled);
         }
 
         // Extract and validate optional data payloads

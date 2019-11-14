@@ -128,10 +128,12 @@ class ndJsonResponse : public ndJsonObject
 {
 public:
     ndJsonResponse()
-        : ndJsonObject(), version(0), resp_code(ndJSON_RESP_NULL) { }
+        : ndJsonObject(), version(0), resp_code(ndJSON_RESP_NULL),
+        update_imf(1), upload_enabled(false) { }
 
     ndJsonResponse(ndJsonResponseCode code, const string &message)
-        : ndJsonObject(NULL), version(0), resp_code(code), resp_message(message) { }
+        : ndJsonObject(NULL), version(0), resp_code(code), resp_message(message),
+        update_imf(1), upload_enabled(false) { }
 
     virtual void Parse(const string &json);
 
@@ -142,6 +144,9 @@ public:
 
     string uuid_site;
     string url_sink;
+
+    unsigned update_imf;
+    bool upload_enabled;
 
     ndJsonData data;
 

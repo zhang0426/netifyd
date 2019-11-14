@@ -199,6 +199,7 @@ static void nd_config_init(void)
     nd_config.ttl_idle_flow = ND_TTL_IDLE_FLOW * 1000;
     nd_config.ttl_idle_tcp_flow = ND_TTL_IDLE_TCP_FLOW * 1000;
     nd_config.update_interval = ND_STATS_INTERVAL;
+    nd_config.update_imf = 1;
 
     memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
 
@@ -1595,7 +1596,24 @@ static void nd_dump_stats(void)
 #ifdef _ND_USE_WATCHDOGS
             nd_touch(ND_WD_UPLOAD);
 #endif
-            thread_sink->QueuePush(json_string);
+            if (ND_UPLOAD_ENABLED)
+                thread_sink->QueuePush(json_string);
+            else {
+                ndJson json_ping;
+
+                if (ND_USE_SINK || ND_JSON_SAVE) {
+                    json_ping.AddObject(NULL, "version", (double)ND_JSON_VERSION);
+                    json_ping.AddObject(NULL, "timestamp", (int64_t)time(NULL));
+                    json_ping.AddObject(NULL, "uptime",
+                        uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));
+                    json_ping.AddObject(NULL, "ping", (bool)true);
+
+                    json_ping.ToString(json_string);
+                    thread_sink->QueuePush(json_string);
+
+                    json_ping.Destroy();
+                }
+            }
         }
         catch (runtime_error &e) {
             nd_printf("Error pushing JSON payload to upload queue: %s\n", e.what());

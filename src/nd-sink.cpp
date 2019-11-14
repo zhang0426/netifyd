@@ -134,7 +134,8 @@ static int ndSinkThread_progress(void *user,
 
 ndSinkThread::ndSinkThread()
     : ndThread("nd-sink", -1),
-    headers(NULL), headers_gz(NULL), pending_size(0), post_errors(0)
+    headers(NULL), headers_gz(NULL), pending_size(0), post_errors(0),
+    update_imf(1), update_count(0)
 {
     int rc;
 
@@ -246,6 +247,11 @@ void *ndSinkThread::Entry(void)
         }
 
         do {
+            if (! ND_UPLOAD_ENABLED) {
+                pending.clear();
+                pending_size = 0;
+            }
+
             if (uploads.front().size() <= ND_COMPRESS_SIZE)
                 pending.push_back(make_pair(false, uploads.front()));
             else
@@ -288,6 +294,10 @@ void ndSinkThread::QueuePush(const string &json)
     int rc;
 
     Lock();
+
+    if (! ND_UPLOAD_ENABLED) {
+        while (! uploads.empty()) uploads.pop();
+    }
 
     uploads.push(json);
 
@@ -435,6 +445,14 @@ void ndSinkThread::Upload(void)
         curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_sink);
 
         post_errors = 0;
+    }
+
+    if (++update_count == update_imf || post_errors > 0)
+        update_count = 0;
+    else {
+        nd_debug_printf("%s: payload upload delay: %u of %u\n",
+            tag.c_str(), update_count, update_imf);
+        return;
     }
 
     do {
@@ -617,6 +635,9 @@ void ndSinkThread::ProcessResponse(void)
         if (response == NULL)
             throw runtime_error(strerror(ENOMEM));
 
+        response->update_imf = update_imf;
+        response->upload_enabled = ND_UPLOAD_ENABLED;
+
         response->Parse(body_data);
 
         if (response->resp_code == ndJSON_RESP_OK) {
@@ -659,6 +680,24 @@ void ndSinkThread::ProcessResponse(void)
 
             if (create_headers) CreateHeaders();
         }
+
+        if (response->update_imf > 0 && response->update_imf != update_imf) {
+            nd_debug_printf("%s: changing update multiplier from: %u"
+                " to: %u\n", tag.c_str(), update_imf, response->update_imf);
+            update_imf = response->update_imf;
+        }
+
+        if (response->upload_enabled != (ND_UPLOAD_ENABLED > 0)) {
+
+            if (response->upload_enabled)
+                nd_config.flags |= ndGF_UPLOAD_ENABLED;
+            else
+                nd_config.flags &= ~ndGF_UPLOAD_ENABLED;
+
+            nd_printf("%s: payload uploads: %s\n",
+                tag.c_str(), ND_UPLOAD_ENABLED ? "enabled" : "disabled");
+        }
+
     } catch (ndJsonParseException &e) {
         response->resp_code = ndJSON_RESP_PARSE_ERROR;
         response->resp_message = e.what();

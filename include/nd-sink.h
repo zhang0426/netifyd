@@ -68,6 +68,8 @@ protected:
     pthread_mutex_t response_mutex;
 
     unsigned post_errors;
+    unsigned update_imf;
+    unsigned update_count;
 
     void CreateHeaders(void);
     void FreeHeaders(void);
