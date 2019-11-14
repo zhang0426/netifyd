@@ -25,7 +25,7 @@ function netify_create_rc() {
 	$rcfile['start'] = 'mkdir -p ' .
 		NETIFYD_VOLATILE_STATEDIR . "\n\t" .
 		NETIFY_PREFIX . "etc/rc.d/netifyd onestart\n\t";
-	$rcfile['stop'] = NETIFY_PREFIX . "etc/rc.d/netifyd stop\n\t";
+	$rcfile['stop'] = NETIFY_PREFIX . "etc/rc.d/netifyd onestop\n\t";
 	write_rcfile($rcfile);
 }
 
