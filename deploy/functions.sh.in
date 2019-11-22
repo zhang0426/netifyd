@@ -258,7 +258,23 @@ auto_detect_options()
 
 restart_netifyd()
 {
-    @sysconfdir@/init.d/@PACKAGE_TARNAME@ restart
+    case "$(detect_os)" in
+        clearos)
+            systemctl restart netifyd
+        ;;
+        nethserver)
+            systemctl restart netifyd
+        ;;
+        freebsd)
+            @sysconfdir@/rc.d/@PACKAGE_TARNAME@ restart
+        ;;
+        pfsense)
+            @sysconfdir@/rc.d/@PACKAGE_TARNAME@.sh restart
+        ;;
+        *)
+            @sysconfdir@/init.d/@PACKAGE_TARNAME@ restart
+        ;;
+    esac
 }
 
 config_enable_sink()
