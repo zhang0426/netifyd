@@ -51,26 +51,29 @@ $agent_status_url = netifyd_get_agent_status_url();
             <div><img style="width: 18em; margin-bottom: 1em;" src="./images/netify.svg"></div>
             <table class="table table-striped table-condensed" style="margin-bottom: 1em;">
                 <tr>
-                    <th style='text-align: right; vertical-align: middle;'>Provision Code</th>
-                    <td><div style="font-family: monospace;"><?=$agent_uuid;?></div></td>
+                    <th style='width: 40%; text-align: right; vertical-align: middle;'>Provision Code</th>
+                    <td><span style="font-family: monospace; font-size: 1.3em;"><?=$agent_uuid;?></span><button id="btn-copy-code" class="fa fa-clipboard" style="font-size: 1.5em; margin-left: 0.5em;" title="<?=gettext("Copy Provision Code to clipboard.");?>"></button></td>
                 </tr>
                 <tr>
-                    <th id="sink-status" style='text-align: right; vertical-align: middle; width: 30%;'><?=gettext("Sink Status");?></th>
+                    <th style='text-align: right; vertical-align: middle;'>Status</th>
+                    <td><span id="provision-status" style="width: 25em; font-size: 1.5em;"><?=gettext("Loading...");?></span></td>
+                </tr>
+                <tr>
+                    <th id="sink-status" style='text-align: right; vertical-align: middle;'><?=gettext("Sink Status");?></th>
                     <td>
                         <div id="sink-warning" class="text-danger" style="display: none; width: 25em;">
                             <p><?=gettext("Please enable the Netify Agent to report metadata back to the Netify Informatics Cloud Sink Server before attempting to provision.");?></p>
                         </div>
-                        <div'><button id="btn-sink-enable" class="btn" style="width: 5em;" type="button" title="<?=gettext("Enable/disable access to the Netify Informatics Cloud Sink Server.");?>" disabled>...</button></div>
+                        <div'><button id="btn-sink-enable" class="btn" style="width: 12em;" type="button" title="<?=gettext("Enable/disable access to the Netify Informatics Cloud Sink Server.");?>" disabled>...</button></div>
                     </td>
                 </tr>
                 <tr>
-                    <th style='text-align: right; vertical-align: middle;'>Status</th>
-                    <td id="provision-status"><?=gettext("Loading...");?></td>
+                    <td></td>
+                    <td>
+                        <button id="btn-provision" class="btn btn-success" style="width: 12em;" type="button" title="<?=gettext('Provision Agent on Netify Portal'); ?>">Provision Netify Agent</button>
+                    </td>
                 </tr>
             </table>
-            <span style="float: right;">
-                <button id="btn-provision" class="btn btn-success" type="button" title="<?=gettext('Provision Agent on Netify Portal'); ?>">Provision Netify Agent</button>
-            </span>
         </div>
     </div>
 </div>
@@ -90,8 +93,22 @@ $agent_status_url = netifyd_get_agent_status_url();
             $('#btn-sink-enable').click(function() {
                 console.log('Enable/disable sink server.');
                 sinkEnable(! sinkEnabled);
+                return true;
+            });
+            $('#btn-copy-code').click(function() {
+                console.log('Copy Provision Code to clipboard.');
+                copyToClipboard("<?=$agent_uuid;?>");
+                return true;
             });
         });
+    }
+
+    function copyToClipboard(text) {
+        var $temp = $("<input>");
+        $("body").append($temp);
+        $temp.val(text).select();
+        document.execCommand("copy");
+        $temp.remove();
     }
 
     function statusRequest() {
