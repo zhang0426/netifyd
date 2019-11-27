@@ -5,5 +5,6 @@
 pkg/netify.xml
 pkg/netify/netify.inc
 pkg/netify/netify_defs.inc
-www/netify/netify_status.php
+pkg/shortcuts/netify.inc
 www/netify/netify_provision.php
+www/netify/netify_status.php

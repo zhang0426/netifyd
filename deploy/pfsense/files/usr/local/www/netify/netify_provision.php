@@ -60,7 +60,7 @@ $agent_status_url = netifyd_get_agent_status_url();
                         <div id="sink-warning" class="text-danger" style="display: none; width: 25em;">
                             <p><?=gettext("Please enable the Netify Agent to report metadata back to the Netify Informatics Cloud Sink Server before attempting to provision.");?></p>
                         </div>
-                        <div'><button id="btn-sink-enable" class="btn" type="button" title="<?=gettext("Enable/disable access to the Netify Informatics Cloud Sink Server.");?>" disabled>...</button></div>
+                        <div'><button id="btn-sink-enable" class="btn" style="width: 5em;" type="button" title="<?=gettext("Enable/disable access to the Netify Informatics Cloud Sink Server.");?>" disabled>...</button></div>
                     </td>
                 </tr>
                 <tr>

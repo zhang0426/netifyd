@@ -1,7 +1,7 @@
 # $FreeBSD$
 
 PORTNAME=pfSense-pkg-netify
-PORTVERSION=1.0.3
+PORTVERSION=1.0.4
 PORTREVISION=1
 CATEGORIES=security
 MASTER_SITES=
@@ -27,6 +27,7 @@ do-install:
 	${MKDIR} ${STAGEDIR}${DOCSDIR}
 	${MKDIR} ${STAGEDIR}${PREFIX}/pkg
 	${MKDIR} ${STAGEDIR}${PREFIX}/pkg/netify
+	${MKDIR} ${STAGEDIR}${PREFIX}/pkg/shortcuts
 	${MKDIR} ${STAGEDIR}${PREFIX}/www/netify
 	${MKDIR} ${STAGEDIR}/etc/inc/priv
 
@@ -40,6 +41,8 @@ do-install:
 		${STAGEDIR}${PREFIX}/pkg/netify
 	${INSTALL_DATA} ${FILESDIR}${PREFIX}/pkg/netify/netify_defs.inc \
 		${STAGEDIR}${PREFIX}/pkg/netify
+	${INSTALL_DATA} -m 0644 ${FILESDIR}${PREFIX}/pkg/shortcuts/netify.inc \
+		${STAGEDIR}${PREFIX}/pkg/shortcuts
 	${INSTALL_DATA} ${FILESDIR}${PREFIX}/www/netify/netify_status.php \
 		${STAGEDIR}${PREFIX}/www/netify
 	${INSTALL_DATA} ${FILESDIR}${PREFIX}/www/netify/netify_provision.php \
