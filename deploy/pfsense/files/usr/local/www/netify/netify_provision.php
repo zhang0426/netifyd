@@ -100,6 +100,7 @@ $agent_status_url = netifyd_get_agent_status_url();
                 copyToClipboard("<?=$agent_uuid;?>");
                 return true;
             });
+	    $('#btn-copy-code').blur();
         });
     }
 
