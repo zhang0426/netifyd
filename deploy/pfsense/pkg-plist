@@ -8,3 +8,4 @@ pkg/netify/netify_defs.inc
 pkg/shortcuts/netify.inc
 www/netify/netify_provision.php
 www/netify/netify_status.php
+www/netify/images/netify.svg
