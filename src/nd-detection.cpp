@@ -559,7 +559,11 @@ void ndDetectionThread::DumpFlows(void)
         j["interface"] = tag;
         j["internal"] = internal;
         j["established"] = true;
-        i->second->json_encode(j, ndpi, false);
+
+        json jf;
+        i->second->json_encode(jf, ndpi, false);
+
+        j["flow"] = jf;
 
         string json_string;
         nd_json_to_string(j, json_string, false);
@@ -1536,7 +1540,10 @@ void ndDetectionThread::ProcessPacket(void)
             j["interface"] = tag;
             j["internal"] = internal;
             j["established"] = false;
-            new_flow->json_encode(j, ndpi, false);
+
+            json jf;
+            new_flow->json_encode(jf, ndpi, false);
+            j["flow"] = jf;
 
             string json_string;
             nd_json_to_string(j, json_string, false);

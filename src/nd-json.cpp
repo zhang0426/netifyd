@@ -52,7 +52,10 @@ extern nd_global_config nd_config;
 
 void nd_json_to_string(const json &j, string &output, bool pretty)
 {
-    output = j.dump(pretty ? ND_JSON_INDENT : 0);
+    output = j.dump(
+        pretty ? ND_JSON_INDENT : -1,
+        ' ', false, json::error_handler_t::replace
+    );
 #ifdef HAVE_WORKING_REGEX
     vector<pair<regex *, string> >::const_iterator i;
     for (i = nd_config.privacy_regex.begin();
@@ -66,10 +69,14 @@ void nd_json_to_string(const json &j, string &output, bool pretty)
 
 void nd_json_save_to_file(const json &j, const string &filename, bool pretty)
 {
-    string output;
-    nd_json_to_string(j, output, pretty);
+    string json_string;
+    nd_json_to_string(j, json_string, pretty);
+    nd_json_save_to_file(json_string, filename);
+}
 
-    nd_file_save(filename, output,
+void nd_json_save_to_file(const string &j, const string &filename)
+{
+    nd_file_save(filename, j,
         false, ND_JSON_FILE_MODE, ND_JSON_FILE_USER, ND_JSON_FILE_GROUP);
 }
 

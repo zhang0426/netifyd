@@ -600,10 +600,9 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     }
 }
 
-void ndFlow::json_encode(json &parent,
+void ndFlow::json_encode(json &j,
     struct ndpi_detection_module_struct *ndpi, bool include_stats)
 {
-    json j;
     char mac_addr[ND_STR_ETHALEN + 1];
     string other_type = "unknown";
     string _lower_mac = "local_mac", _upper_mac = "other_mac";
@@ -983,8 +982,6 @@ void ndFlow::json_encode(json &parent,
     j["first_seen_at"] = ts_first_seen;
     j["first_update_at"] = ts_first_update;
     j["last_seen_at"] = ts_last_seen;
-
-    parent["flow"] = j;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

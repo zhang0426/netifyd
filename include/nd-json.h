@@ -35,6 +35,7 @@ public:
 
 void nd_json_to_string(const json &j, string &output, bool pretty = false);
 void nd_json_save_to_file(const json &j, const string &filename, bool pretty = false);
+void nd_json_save_to_file(const string &j, const string &filename);
 
 typedef vector<string> ndJsonDataChunks;
 typedef map<string, ndJsonDataChunks> ndJsonData;
