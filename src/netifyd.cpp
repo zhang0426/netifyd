@@ -56,10 +56,12 @@
 #include <netinet/in.h>
 
 #include <curl/curl.h>
-#include <json.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <resolv.h>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -955,76 +957,67 @@ static int nd_sink_process_responses(void)
 
 void nd_json_agent_hello(string &json_string)
 {
-    ndJson json;
-    json.AddObject(NULL, "type", "agent_hello");
-    json.AddObject(NULL, "build_version", nd_get_version_and_features());
-    json.AddObject(NULL, "agent_version", strtod(PACKAGE_VERSION, NULL));
-    json.AddObject(NULL, "json_version", (double)ND_JSON_VERSION);
+    json j;
 
-    json.ToString(json_string, false);
+    j["type"] = "agent_hello";
+    j["build_version"] = nd_get_version_and_features();
+    j["agent_version"] = strtod(PACKAGE_VERSION, NULL);
+    j["json_version"] = (double)ND_JSON_VERSION;
+
+    nd_json_to_string(json_string, false);
     json_string.append("\n");
-
-    json.Destroy();
 }
 
 void nd_json_agent_status(string &json_string)
 {
-    ndJson json;
-    json.AddObject(NULL, "type", "agent_status");
-    json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
-    json.AddObject(NULL, "uptime",
-        uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));
-    json.AddObject(NULL, "flows", nda_stats.flows);
-    json.AddObject(NULL, "flows_prev", nda_stats.flows_prev);
-    json.AddObject(NULL, "maxrss_kb", nda_stats.maxrss_kb);
-    json.AddObject(NULL, "maxrss_kb_prev", nda_stats.maxrss_kb_prev);
-#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
-#if (SIZEOF_LONG == 4)
-    json.AddObject(NULL, "tcm_kb", (uint32_t)nda_stats.tcm_alloc_kb);
-    json.AddObject(NULL, "tcm_kb_prev", (uint32_t)nda_stats.tcm_alloc_kb_prev);
-#elif (SIZEOF_LONG == 8)
-    json.AddObject(NULL, "tcm_kb", (uint64_t)nda_stats.tcm_alloc_kb);
-    json.AddObject(NULL, "tcm_kb_prev", (uint64_t)nda_stats.tcm_alloc_kb_prev);
-#endif
-#endif // _ND_USE_LIBTCMALLOC
-    json.AddObject(NULL, "dhc_status", nda_stats.dhc_status);
-    if (nda_stats.dhc_status)
-        json.AddObject(NULL, "dhc_size", nda_stats.dhc_size);
+    json j;
 
-    json.AddObject(NULL, "sink_status", nda_stats.sink_status);
+    j["type"] = "agent_status";
+    j["timestamp"] = time(NULL);
+    j["uptime"] =
+        unsigned(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec);
+    j["flows"] = nda_stats.flows;
+    j["flows_prev"] = nda_stats.flows_prev;
+    j["maxrss_kb"] = nda_stats.maxrss_kb;
+    j["maxrss_kb_prev"] = nda_stats.maxrss_kb_prev;
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+    j["tcm_kb"] = (unsigned)nda_stats.tcm_alloc_kb;
+    j["tcm_kb_prev"] = (unsigned)nda_stats.tcm_alloc_kb_prev;
+#endif // _ND_USE_LIBTCMALLOC
+    j["dhc_status"] = nda_stats.dhc_status;
+    if (nda_stats.dhc_status)
+        j["dhc_size"] = nda_stats.dhc_size;
+
+    j["sink_status"] = nda_stats.sink_status;
     if (nda_stats.sink_status) {
-        json.AddObject(NULL, "sink_queue_size_kb", nda_stats.sink_queue_size / 1024);
-        json.AddObject(NULL, "sink_queue_max_size_kb", nd_config.max_backlog / 1024);
-        json.AddObject(NULL, "sink_resp_code", nda_stats.sink_resp_code);
+        j["sink_queue_size_kb"] = nda_stats.sink_queue_size / 1024;
+        j["sink_queue_max_size_kb"] = nd_config.max_backlog / 1024;
+        j["sink_resp_code"] = nda_stats.sink_resp_code;
     }
 
-    json.ToString(json_string, false);
-    json_string.append("\n");
-
     try {
-        json.SaveToFile(ND_JSON_FILE_STATUS);
+        nd_json_save_to_file(j, ND_JSON_FILE_STATUS, ND_DEBUG);
     }
     catch (runtime_error &e) {
         nd_printf("Error saving Agent status to file: %s\n",
             e.what());
     }
-
-    json.Destroy();
 }
 
 void nd_json_protocols(string &json_string)
 {
-    ndJson json;
-    json.AddObject(NULL, "type", "protocols");
-    json_object *jarray = json.CreateArray(NULL, "protocols");
+    json j;
+    j["type"] = "protocols";
 
     struct ndpi_detection_module_struct *ndpi = ndpi_get_parent();
 
     for (unsigned i = 0; i < (unsigned)ndpi->ndpi_num_supported_protocols; i++) {
-        json_object *json_proto = json.CreateObject();
-        json.AddObject(json_proto, "id", i);
-        json.AddObject(json_proto, "tag", ndpi->proto_defaults[i].proto_name);
-        json.PushObject(jarray, json_proto);
+        json jo;
+
+        jo["id"] = i;
+        jo["tag"] = ndpi->proto_defaults[i].proto_name;
+
+        j.push_back(jo);
     }
 
     json.ToString(json_string, false);
@@ -1033,10 +1026,9 @@ void nd_json_protocols(string &json_string)
     json.Destroy();
 }
 
-static void nd_json_add_interfaces(json_object *parent)
+static void nd_json_add_interfaces(json &parent)
 {
-    json_object *jobj;
-    ndJson json(parent);
+    json j;
 
     uint8_t mac[ETH_ALEN];
     char mac_addr[ND_STR_ETHALEN + 1];
@@ -1045,8 +1037,9 @@ static void nd_json_add_interfaces(json_object *parent)
         string iface_name;
         nd_iface_name(i->second, iface_name);
 
-        jobj = json.CreateObject(NULL, iface_name);
-        json.AddObject(jobj, "role", (i->first) ? "LAN" : "WAN");
+        json jo;
+
+        jo[iface_name]["role"] = (i->first) ? "LAN" : "WAN";
 
         if (! nd_ifaddrs_get_mac(nd_interface_addrs, i->second, mac))
             memset(mac, 0, ETH_ALEN);
@@ -1056,7 +1049,9 @@ static void nd_json_add_interfaces(json_object *parent)
             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
         );
 
-        json.AddObject(jobj, "mac", mac_addr);
+        jo[iface_name]["mac"] = mac_addr;
+
+        j.push_back(jo);
     }
 }
 
@@ -1255,6 +1250,7 @@ static void nd_json_add_data(
 }
 
 #ifdef _ND_USE_PLUGINS
+
 static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
     json_object *json_plugin_task_replies, json_object *json_data)
 {
@@ -1328,7 +1324,7 @@ static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
         }
     }
 }
-#endif
+#endif // _ND_USE_PLUGINS
 
 static void nd_print_stats(void)
 {
@@ -1564,7 +1560,9 @@ static void nd_dump_stats(void)
 
             string iface_name;
             nd_iface_name(i->first, iface_name);
-            json_object_object_add(json_stats, iface_name.c_str(), json_obj);
+
+            json.AddObject(json_stats, iface_name.c_str(), json_obj);
+            //json_object_object_add(json_stats, iface_name.c_str(), json_obj);
 
             json_obj = json.CreateArray(json_flows, iface_name);
             nd_json_add_flows(json_obj,

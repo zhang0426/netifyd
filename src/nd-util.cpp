@@ -76,8 +76,10 @@
 #define AF_LINK AF_PACKET
 #endif
 
-#include <json.h>
 #include <pcap/pcap.h>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 using namespace std;
 

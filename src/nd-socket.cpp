@@ -65,11 +65,13 @@
 #endif
 
 #include <pcap/pcap.h>
-#include <json.h>
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #endif
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 using namespace std;
 

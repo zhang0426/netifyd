@@ -111,6 +111,7 @@
 #define ND_JSON_FILE_BAD_RECV   ND_VOLATILE_STATEDIR "/sink-bad-response.json"
 #define ND_JSON_FILE_STATUS     ND_VOLATILE_STATEDIR "/status.json"
 #define ND_JSON_DATA_CHUNKSIZ   4096
+#define ND_JSON_INDENT          4
 
 #define ND_PCAP_SNAPLEN         1536    // Capture snap length
 #define ND_PCAP_READ_TIMEOUT    500     // Milliseconds

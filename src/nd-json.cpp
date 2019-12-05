@@ -34,8 +34,10 @@
 
 #include <sys/socket.h>
 
-#include <json.h>
 #include <pcap/pcap.h>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 using namespace std;
 
@@ -48,236 +50,9 @@ using namespace std;
 
 extern nd_global_config nd_config;
 
-ndJson::ndJson()
-    : root(NULL)
+void nd_json_to_string(const json &j, string &output, bool pretty)
 {
-    root = json_object_new_object();
-    if (root == NULL)
-        throw runtime_error(strerror(ENOMEM));
-}
-
-ndJson::ndJson(json_object *root)
-    : root(root)
-{
-}
-
-void ndJson::Destroy(void)
-{
-    if (root != NULL) {
-        json_object_put(root);
-        root = NULL;
-    }
-}
-
-json_object *ndJson::CreateObject(void)
-{
-    json_object *object = json_object_new_object();
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    return object;
-}
-
-json_object *ndJson::CreateObject(json_object *parent, const string &name)
-{
-    json_object *object = json_object_new_object();
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-
-    return object;
-}
-
-json_object *ndJson::CreateArray(json_object *parent, const string &name)
-{
-    json_object *object = json_object_new_array();
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-
-    return object;
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, json_object *object)
-{
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, const char *value)
-{
-    json_object *object = json_object_new_string(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, const string &value)
-{
-    json_object *object = json_object_new_string(value.c_str());
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, int32_t value)
-{
-    json_object *object = json_object_new_int(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, int64_t value)
-{
-    json_object *object = json_object_new_int64(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, uint32_t value)
-{
-    json_object *object = json_object_new_int(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, uint64_t value)
-{
-    json_object *object = json_object_new_int64(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, double value)
-{
-    json_object *object = json_object_new_double(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::AddObject(json_object *parent, const string &name, bool value)
-{
-    json_object *object = json_object_new_boolean(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    if (parent == NULL)
-        json_object_object_add(root, name.c_str(), object);
-    else
-        json_object_object_add(parent, name.c_str(), object);
-}
-
-void ndJson::PushObject(json_object *parent, const char *value)
-{
-    json_object *object = json_object_new_string(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    json_object_array_add(parent, object);
-}
-
-void ndJson::PushObject(json_object *parent, const string &value)
-{
-    json_object *object = json_object_new_string(value.c_str());
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    json_object_array_add(parent, object);
-}
-
-void ndJson::PushObject(json_object *parent, int32_t value)
-{
-    json_object *object = json_object_new_int(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    json_object_array_add(parent, object);
-}
-
-void ndJson::PushObject(json_object *parent, int64_t value)
-{
-    json_object *object = json_object_new_int64(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    json_object_array_add(parent, object);
-}
-
-void ndJson::PushObject(json_object *parent, double value)
-{
-    json_object *object = json_object_new_double(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    json_object_array_add(parent, object);
-}
-
-void ndJson::PushObject(json_object *parent, bool value)
-{
-    json_object *object = json_object_new_boolean(value);
-    if (object == NULL)
-        throw runtime_error(strerror(ENOMEM));
-
-    json_object_array_add(parent, object);
-}
-
-void ndJson::PushObject(json_object *parent, json_object *object)
-{
-    if (parent == NULL)
-        json_object_array_add(root, object);
-    else
-        json_object_array_add(parent, object);
-}
-
-void ndJson::ToString(string &output, bool pretty)
-{
-    output = json_object_to_json_string_ext(
-        root,
-        (ND_DEBUG && pretty) ? JSON_C_TO_STRING_PRETTY : JSON_C_TO_STRING_PLAIN
-    );
+    output = j.dump(pretty ? ND_JSON_INDENT : 0);
 #ifdef HAVE_WORKING_REGEX
     vector<pair<regex *, string> >::const_iterator i;
     for (i = nd_config.privacy_regex.begin();
@@ -289,10 +64,10 @@ void ndJson::ToString(string &output, bool pretty)
 #endif
 }
 
-void ndJson::SaveToFile(const string &filename)
+void nd_json_save_to_file(const json &j, const string &filename, bool pretty)
 {
     string output;
-    ToString(output);
+    nd_json_to_string(j, output, pretty);
 
     nd_file_save(filename, output,
         false, ND_JSON_FILE_MODE, ND_JSON_FILE_USER, ND_JSON_FILE_GROUP);
@@ -300,6 +75,8 @@ void ndJson::SaveToFile(const string &filename)
 
 void ndJsonStatus::Parse(const string &json)
 {
+#if 1
+#else
     json_object *jtype, *jtimestamp, *juptime, *jflows, *jflows_prev;
     json_object *jmaxrss_kb, *jmaxrss_kb_prev, *jtcm_kb, *jtcm_kb_prev;
     json_object *jdhc_status, *jdhc_size, *jsink_status, *jsink_queue_size_kb;
@@ -515,10 +292,13 @@ void ndJsonStatus::Parse(const string &json)
     }
 
     json_object_put(jobj);
+#endif
 }
 
 void ndJsonResponse::Parse(const string &json)
 {
+#if 1
+#else
     json_object *jver, *jresp_code, *jresp_message;
     json_object *juuid_site, *jurl_sink, *jupdate_imf, *jupload_enabled, *jdata;
 #ifdef _ND_USE_PLUGINS
@@ -656,13 +436,16 @@ void ndJsonResponse::Parse(const string &json)
     }
 
     json_object_put(jobj);
+#endif
 }
 
-void ndJsonResponse::UnserializeData(json_object *jdata)
+void ndJsonResponse::UnserializeData(json &jdata)
 {
     int jchunks_length;
     json_object *jchunk;
 
+#if 1
+#else
     // XXX: This is a macro; char *jname, json_object *jchunks
     json_object_object_foreach(jdata, jname, jchunks) {
 
@@ -686,12 +469,15 @@ void ndJsonResponse::UnserializeData(json_object *jdata)
             );
         }
     }
+#endif
 }
 
 #ifdef _ND_USE_PLUGINS
 
-void ndJsonResponse::UnserializePluginRequest(json_object *jrequest, ndJsonPluginRequest &plugin_request)
+void ndJsonResponse::UnserializePluginRequest(json &jrequest, ndJsonPluginRequest &plugin_request)
 {
+#if 1
+#else
     // XXX: This is a macro; char *juuid_dispatch, json_object *jname
     json_object_object_foreach(jrequest, juuid_dispatch, jname) {
 
@@ -700,10 +486,13 @@ void ndJsonResponse::UnserializePluginRequest(json_object *jrequest, ndJsonPlugi
 
         plugin_request[juuid_dispatch] = json_object_get_string(jname);
     }
+#endif
 }
 
-void ndJsonResponse::UnserializePluginDispatch(json_object *jdispatch)
+void ndJsonResponse::UnserializePluginDispatch(json &jdispatch)
 {
+#if 1
+#else
     // XXX: This is a macro; char *juuid_dispatch, json_object *jparams
     json_object_object_foreach(jdispatch, juuid_dispatch, jparams) {
 
@@ -722,6 +511,7 @@ void ndJsonResponse::UnserializePluginDispatch(json_object *jdispatch)
                 base64_decode(encoded.c_str(), encoded.size());
         }
     }
+#endif
 }
 
 #endif // _ND_USE_PLUGINS

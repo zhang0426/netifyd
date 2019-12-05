@@ -41,8 +41,10 @@
 #include <linux/rtnetlink.h>
 #endif
 
-#include <json.h>
 #include <pcap/pcap.h>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 using namespace std;
 

@@ -105,7 +105,6 @@
 #include <resolv.h>
 #include <ctype.h>
 
-#include <json.h>
 #include <pcap/pcap.h>
 #ifdef HAVE_PCAP_SLL_H
 #include <pcap/sll.h>
@@ -117,6 +116,9 @@
 #else
 #include "pcap-compat/vlan.h"
 #endif
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -1530,6 +1532,7 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
             new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
+
             ndJson json;
 
             json.AddObject(NULL, "type", "flow");

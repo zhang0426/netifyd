@@ -7,7 +7,7 @@ AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I $(top_srcdir)/include \
 	-I $(top_srcdir)/libs/ndpi/src/include -I $(top_srcdir)/libs/inih/cpp \
-	$(JSONC_CFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS) $(LIBTCMALLOC_CFLAGS) \
+	$(NLOHMANN_JSON_CPPFLAGS) $(LIBCURL_CFLAGS) $(ZLIB_CFLAGS) $(LIBTCMALLOC_CFLAGS) \
 	-D_ND_INTERNAL=1 \
 	-D'ND_CONF_FILE_NAME="$(sysconfdir)/$(PACKAGE_TARNAME).conf"' \
 	-D'ND_DATADIR="$(datadir)/$(PACKAGE_TARNAME)"' \
@@ -15,6 +15,10 @@ AM_CPPFLAGS = $(CPPFLAGS) -D_GNU_SOURCE -I $(top_srcdir)/include \
 	-D'ND_PID_FILE_NAME="$(volatilestatedir)/$(PACKAGE_TARNAME).pid"' \
 	-D'ND_VOLATILE_STATEDIR="$(volatilestatedir)"' \
 	-D NDPI_LIB_COMPILATION=1
+
+if USE_CONNTRACK
+AM_CPPFLAGS += $(LIBNETFILTER_CONNTRACK_CFLAGS) $(LIBMNL_CFLAGS)
+endif
 
 lib_LTLIBRARIES = libnetifyd.la
 libnetifyd_la_SOURCES = nd-base64.cpp nd-detection.cpp nd-dhc.cpp \
@@ -36,14 +40,13 @@ libnetifyd_la_SOURCES += nd-plugin.cpp
 endif
 
 if USE_CONNTRACK
-AM_CPPFLAGS += $(LIBNETFILTER_CONNTRACK_CFLAGS) $(LIBMNL_CFLAGS)
 libnetifyd_la_SOURCES += nd-conntrack.cpp
 libnetifyd_la_LIBADD += $(LIBNETFILTER_CONNTRACK_LIBS) $(LIBMNL_LIBS)
 endif
 
 sbin_PROGRAMS = netifyd
 netifyd_SOURCES = netifyd.cpp
-netifyd_LDFLAGS = $(JSONC_LIBS) $(LIBCURL_LIBS) $(ZLIB_LIBS)
+netifyd_LDFLAGS = $(LIBCURL_LIBS) $(ZLIB_LIBS)
 netifyd_LDADD = ./libnetifyd.la $(top_srcdir)/libs/inih/libini.la
 
 if USE_LIBTCMALLOC

@@ -47,11 +47,13 @@
 #include <linux/netlink.h>
 #endif
 
-#include <json.h>
 #include <pcap/pcap.h>
 
 #include <libmnl/libmnl.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 using namespace std;
 

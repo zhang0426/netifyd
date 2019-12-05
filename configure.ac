@@ -6,7 +6,7 @@ m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
 m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
 
 AC_PREREQ([2.63])
-AC_INIT([Netify Agent], [2.97],
+AC_INIT([Netify Agent], [2.98],
     [https://gitlab.com/netify.ai/public/netify-agent/issues],
     [netifyd], [http://www.netify.ai/])
 AM_INIT_AUTOMAKE([1.9 tar-pax])
@@ -50,9 +50,11 @@ case "${host_os}" in
         ;;
 esac
 
-PKG_CHECK_MODULES([JSONC], [json-c])
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
 PKG_CHECK_MODULES([ZLIB], [zlib])
+
+NLOHMANN_JSON_CPPFLAGS="-I ${ac_abs_confdir}/libs/json/single_include"
+AC_SUBST(NLOHMANN_JSON_CPPFLAGS)
 
 # Parameters: --with/without
 AC_ARG_WITH([systemdsystemunitdir],
@@ -175,7 +177,7 @@ AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
         [Define to enable Thread Caching malloc support.])
     PKG_CHECK_MODULES([LIBTCMALLOC], [libtcmalloc], [
         AC_DEFINE([HAVE_LIBTCMALLOC], [1],
-            [Define to 1 if you have the `tcmalloc' library (-ltcmalloc).])], [
+            [Define to 1 if you have the tcmalloc library (-ltcmalloc).])], [
         LIBS_saved=$LIBS
         AC_CHECK_LIB([tcmalloc], [tc_version], [], AC_MSG_ERROR([libtcmalloc not found.]))
         LIBS=$LIBS_saved

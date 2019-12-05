@@ -39,8 +39,10 @@
 
 #include <arpa/inet.h>
 
-#include <json.h>
 #include <pcap/pcap.h>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 using namespace std;
 
