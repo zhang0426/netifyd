@@ -600,9 +600,10 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     }
 }
 
-json_object *ndFlow::json_encode(ndJson &json,
+void ndFlow::json_encode(json &parent,
     struct ndpi_detection_module_struct *ndpi, bool include_stats)
 {
+    json j;
     char mac_addr[ND_STR_ETHALEN + 1];
     string other_type = "unknown";
     string _lower_mac = "local_mac", _upper_mac = "other_mac";
@@ -611,19 +612,14 @@ json_object *ndFlow::json_encode(ndJson &json,
     string _lower_bytes = "local_bytes", _upper_bytes = "other_bytes";
     string _lower_packets = "local_packets", _upper_packets = "other_packets";
 
-    json_object *json_flow = json.CreateObject();
-
     string digest;
     nd_sha1_to_string(digest_mdata, digest);
-    json.AddObject(json_flow, "digest", digest);
 
-    json.AddObject(json_flow, "ip_nat", ip_nat);
-
-    json.AddObject(json_flow, "ip_version", (int32_t)ip_version);
-
-    json.AddObject(json_flow, "ip_protocol", (int32_t)ip_protocol);
-
-    json.AddObject(json_flow, "vlan_id", (int32_t)vlan_id);
+    j["digest"] = digest;
+    j["ip_nat"] = ip_nat;
+    j["ip_version"] = (unsigned)ip_version;
+    j["ip_protocol"] = (unsigned)ip_protocol;
+    j["vlan_id"] = (unsigned)vlan_id;
 #ifndef _ND_USE_NETLINK
     other_type = "unsupported";
 #else
@@ -839,17 +835,17 @@ json_object *ndFlow::json_encode(ndJson &json,
     }
 #endif
 #endif
-    json.AddObject(json_flow, "other_type", other_type);
+    j["other_type"] = other_type;
 
     switch (origin) {
     case ORIGIN_UPPER:
-        json.AddObject(json_flow, "local_origin",
-            (_lower_ip == "local_ip") ? false : true);
+        j["local_origin"] =
+            (_lower_ip == "local_ip") ? false : true;
         break;
     case ORIGIN_LOWER:
     default:
-        json.AddObject(json_flow, "local_origin",
-            (_lower_ip == "local_ip") ? true : false);
+        j["local_origin"] =
+            (_lower_ip == "local_ip") ? true : false;
         break;
     }
 
@@ -863,7 +859,7 @@ json_object *ndFlow::json_encode(ndJson &json,
             lower_mac[3], lower_mac[4], lower_mac[5]
         );
     }
-    json.AddObject(json_flow, _lower_mac, mac_addr);
+    j[_lower_mac] = mac_addr;
 
     if (privacy_mask & PRIVATE_UPPER)
         snprintf(mac_addr, sizeof(mac_addr), "00:52:FF:00:00:00");
@@ -874,134 +870,121 @@ json_object *ndFlow::json_encode(ndJson &json,
             upper_mac[3], upper_mac[4], upper_mac[5]
         );
     }
-    json.AddObject(json_flow, _upper_mac, mac_addr);
+    j[_upper_mac] = mac_addr;
 
     if (privacy_mask & PRIVATE_LOWER) {
         if (ip_version == 4)
-            json.AddObject(json_flow, _lower_ip, ND_PRIVATE_IPV4 "253");
+            j[_lower_ip] = ND_PRIVATE_IPV4 "253";
         else
-            json.AddObject(json_flow, _lower_ip, ND_PRIVATE_IPV6 "fd");
+            j[_lower_ip] = ND_PRIVATE_IPV6 "fd";
     }
     else
-        json.AddObject(json_flow, _lower_ip, lower_ip);
+        j[_lower_ip] = lower_ip;
 
     if (privacy_mask & PRIVATE_UPPER) {
         if (ip_version == 4)
-            json.AddObject(json_flow, _upper_ip, ND_PRIVATE_IPV4 "254");
+            j[_upper_ip] = ND_PRIVATE_IPV4 "254";
         else
-            json.AddObject(json_flow, _upper_ip, ND_PRIVATE_IPV6 "fe");
+            j[_upper_ip] = ND_PRIVATE_IPV6 "fe";
     }
     else
-        json.AddObject(json_flow, _upper_ip, upper_ip);
+        j[_upper_ip] = upper_ip;
 
-    json.AddObject(json_flow, _lower_port, (int32_t)ntohs(lower_port));
-    json.AddObject(json_flow, _upper_port, (int32_t)ntohs(upper_port));
+    j[_lower_port] = (unsigned)ntohs(lower_port);
+    j[_upper_port] = (unsigned)ntohs(upper_port);
 
     if (include_stats) {
-        json.AddObject(json_flow, _lower_bytes, lower_bytes);
-        json.AddObject(json_flow, _upper_bytes, upper_bytes);
-        json.AddObject(json_flow, _lower_packets, lower_packets);
-        json.AddObject(json_flow, _upper_packets, upper_packets);
-        json.AddObject(json_flow, "total_packets", total_packets);
-        json.AddObject(json_flow, "total_bytes", total_bytes);
+        j[_lower_bytes] = lower_bytes;
+        j[_upper_bytes] = upper_bytes;
+        j[_lower_packets] = lower_packets;
+        j[_upper_packets] = upper_packets;
+        j["total_packets"] = total_packets;
+        j["total_bytes"] = total_bytes;
     }
 
-    json.AddObject(json_flow, "detected_protocol",
-        (int32_t)detected_protocol.master_protocol);
-    json.AddObject(json_flow, "detected_protocol_name",
-        ndpi_get_proto_name(ndpi, detected_protocol.master_protocol));
+    j["detected_protocol"] =
+        (unsigned)detected_protocol.master_protocol;
+    j["detected_protocol_name"] =
+        ndpi_get_proto_name(ndpi, detected_protocol.master_protocol);
 
-    json.AddObject(json_flow, "detected_application",
-        (int32_t)detected_protocol.app_protocol);
-    json.AddObject(json_flow, "detected_application_name",
-        ndpi_get_proto_name(ndpi, detected_protocol.app_protocol));
+    j["detected_application"] =
+        (unsigned)detected_protocol.app_protocol;
+    j["detected_application_name"] =
+        ndpi_get_proto_name(ndpi, detected_protocol.app_protocol);
 
-    json.AddObject(json_flow, "detection_guessed", detection_guessed);
+    j["detection_guessed"] = detection_guessed;
 
-    if (host_server_name[0] != '\0') {
-        json.AddObject(json_flow,
-            "host_server_name", host_server_name);
-    }
+    if (host_server_name[0] != '\0')
+        j["host_server_name"] = host_server_name;
 
     if (has_http_user_agent() || has_http_url()) {
 
-        json_object *_http = json.CreateObject(json_flow, "http");
-
         if (has_http_user_agent())
-            json.AddObject(_http, "user_agent", http.user_agent);
+            j["http"]["user_agent"] = http.user_agent;
         if (has_http_url())
-            json.AddObject(_http, "url", http.url);
+            j["http"]["url"] = http.url;
     }
 
     if (has_dhcp_fingerprint() || has_dhcp_class_ident()) {
 
-        json_object *_dhcp = json.CreateObject(json_flow, "dhcp");
-
         if (has_dhcp_fingerprint())
-            json.AddObject(_dhcp, "fingerprint", dhcp.fingerprint);
+            j["dhcp"]["fingerprint"] = dhcp.fingerprint;
 
         if (has_dhcp_class_ident())
-            json.AddObject(_dhcp, "class_ident", dhcp.class_ident);
+            j["dhcp"]["class_ident"] = dhcp.class_ident;
     }
 
     if (has_ssh_client_agent() || has_ssh_server_agent()) {
 
-        json_object *_ssh = json.CreateObject(json_flow, "ssh");
-
         if (has_ssh_client_agent())
-            json.AddObject(_ssh, "client", ssh.client_agent);
+            j["ssh"]["client"] = ssh.client_agent;
 
         if (has_ssh_server_agent())
-            json.AddObject(_ssh, "server", ssh.server_agent);
+            j["ssh"]["server"] = ssh.server_agent;
     }
 
     if (has_ssl_client_sni() || has_ssl_server_cn()) {
 
         char tohex[7];
-        json_object *_ssl = json.CreateObject(json_flow, "ssl");
 
         sprintf(tohex, "0x%04hx", ssl.version);
-        json.AddObject(_ssl, "version", tohex);
+        j["ssl"]["version"] = tohex;
 
         sprintf(tohex, "0x%04hx", ssl.cipher_suite);
-        json.AddObject(_ssl, "cipher_suite", tohex);
+        j["ssl"]["cipher_suite"] = tohex;
 
         if (has_ssl_client_sni())
-            json.AddObject(_ssl, "client_sni", ssl.client_sni);
+            j["ssl"]["client_sni"] = ssl.client_sni;
 
         if (has_ssl_server_cn())
-            json.AddObject(_ssl, "server_cn", ssl.server_cn);
+            j["ssl"]["server_cn"] = ssl.server_cn;
 
         if (has_ssl_server_organization())
-            json.AddObject(_ssl, "organization", ssl.server_organization);
+            j["ssl"]["organization"] = ssl.server_organization;
 
         if (has_ssl_client_ja3())
-            json.AddObject(_ssl, "client_ja3", ssl.client_ja3);
+            j["ssl"]["client_ja3"] = ssl.client_ja3;
 
         if (has_ssl_server_ja3())
-            json.AddObject(_ssl, "server_ja3", ssl.server_ja3);
+            j["ssl"]["server_ja3"] = ssl.server_ja3;
     }
 
     if (has_bt_info_hash()) {
 
-        json_object *_bt = json.CreateObject(json_flow, "bt");
-
         nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
-        json.AddObject(_bt, "info_hash", digest);
+        j["bt"]["info_hash"] = digest;
     }
 
     if (has_mdns_answer()) {
 
-        json_object *_mdns = json.CreateObject(json_flow, "mdns");
-
-        json.AddObject(_mdns, "answer", mdns.answer);
+        j["mdns"]["answer"] = mdns.answer;
     }
 
-    json.AddObject(json_flow, "first_seen_at", ts_first_seen);
-    json.AddObject(json_flow, "first_update_at", ts_first_update);
-    json.AddObject(json_flow, "last_seen_at", ts_last_seen);
+    j["first_seen_at"] = ts_first_seen;
+    j["first_update_at"] = ts_first_update;
+    j["last_seen_at"] = ts_last_seen;
 
-    return json_flow;
+    parent["flow"] = j;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

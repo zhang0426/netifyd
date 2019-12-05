@@ -964,7 +964,7 @@ void nd_json_agent_hello(string &json_string)
     j["agent_version"] = strtod(PACKAGE_VERSION, NULL);
     j["json_version"] = (double)ND_JSON_VERSION;
 
-    nd_json_to_string(json_string, false);
+    nd_json_to_string(j, json_string, false);
     json_string.append("\n");
 }
 

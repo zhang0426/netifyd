@@ -33,8 +33,8 @@ public:
         : runtime_error(what_arg) { }
 };
 
-void nd_json_to_string(string &output, bool pretty);
-void nd_json_save_to_file(const string &filename);
+void nd_json_to_string(const json &j, string &output, bool pretty = false);
+void nd_json_save_to_file(const json &j, const string &filename, bool pretty = false);
 
 typedef vector<string> ndJsonDataChunks;
 typedef map<string, ndJsonDataChunks> ndJsonData;

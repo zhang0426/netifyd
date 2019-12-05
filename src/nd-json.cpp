@@ -441,11 +441,11 @@ void ndJsonResponse::Parse(const string &json)
 
 void ndJsonResponse::UnserializeData(json &jdata)
 {
+#if 1
+#else
     int jchunks_length;
     json_object *jchunk;
 
-#if 1
-#else
     // XXX: This is a macro; char *jname, json_object *jchunks
     json_object_object_foreach(jdata, jname, jchunks) {
 
