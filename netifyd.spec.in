@@ -40,7 +40,6 @@ BuildRoot: /var/tmp/%{name}-%{version}
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: bc
-BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
 %if %{?_without_bundled_libs:1}%{!?_without_bundled_libs:0}
 BuildRequires: gperftools-devel
