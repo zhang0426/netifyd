@@ -54,7 +54,7 @@ public:
     ndJsonObject() {}
     virtual ~ndJsonObject() {}
 
-    virtual void Parse(const string &json) = 0;
+    virtual void Parse(const string &json_string) = 0;
 };
 
 class ndJsonStatus : public ndJsonObject
@@ -66,7 +66,7 @@ public:
         memset(&stats, 0, sizeof(nd_agent_stats));
     }
 
-    virtual void Parse(const string &json);
+    virtual void Parse(const string &json_string);
 
     time_t timestamp, uptime;
     uint32_t sink_queue_max_size_kb;
@@ -85,7 +85,7 @@ public:
         : ndJsonObject(), version(0), resp_code(code), resp_message(message),
         update_imf(1), upload_enabled(false) { }
 
-    virtual void Parse(const string &json);
+    virtual void Parse(const string &json_string);
 
     double version;
 
