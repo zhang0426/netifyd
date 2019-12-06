@@ -9,11 +9,9 @@
 %{!?_with_inotify: %{!?_without_inotify: %define _with_inotify --enable-inotify}}
 %{!?_with_netlink: %{!?_without_netlink: %define _with_netlink --enable-netlink}}
 %{!?_with_bundled_libs: %{!?_without_bundled_libs: %define _without_bundled_libs 1}}
-%{!?_with_clang: %{!?_without_clang: %define _with_clang 1}}
 
 %if 0%{?centos_version} == 600
 %define _with_bundled_libs 1
-%define _with_clang 0
 %endif
 
 %{?_unitdir:%define _with_systemd 1}
@@ -42,9 +40,6 @@ BuildRoot: /var/tmp/%{name}-%{version}
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: bc
-%if %{?_with_clang:1}%{!?_with_clang:0}
-BuildRequires: clang >= 3.4.0
-%endif
 BuildRequires: libcurl-devel
 %if %{?_without_bundled_libs:1}%{!?_without_bundled_libs:0}
 BuildRequires: gperftools-devel
