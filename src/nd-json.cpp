@@ -93,9 +93,18 @@ void ndJsonStatus::Parse(const string &json_string)
 
         uptime = j["uptime"].get<time_t>();
         timestamp = j["timestamp"].get<time_t>();
+        update_interval = j["update_interval"].get<unsigned>();
+        update_imf = j["update_imf"].get<unsigned>();
 
         stats.flows = j["flows"].get<unsigned>();
         stats.flows_prev = j["flows_prev"].get<unsigned>();
+
+        stats.cpus = (long)j["cpu_cores"].get<unsigned>();
+
+        stats.cpu_user = j["cpu_user"].get<double>();
+        stats.cpu_user_prev = j["cpu_user_prev"].get<double>();
+        stats.cpu_system = j["cpu_system"].get<double>();
+        stats.cpu_system_prev = j["cpu_system_prev"].get<double>();
 
         stats.maxrss_kb = j["maxrss_kb"].get<unsigned>();
         stats.maxrss_kb_prev = j["maxrss_kb_prev"].get<unsigned>();
@@ -111,6 +120,8 @@ void ndJsonStatus::Parse(const string &json_string)
 
         stats.sink_status = j["sink_status"].get<bool>();
         if (stats.sink_status) {
+
+            stats.sink_uploads = j["sink_uploads"].get<bool>();
 
             stats.sink_queue_size = j["sink_queue_size_kb"].get<unsigned>();
             stats.sink_queue_size *= 1024;

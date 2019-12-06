@@ -597,7 +597,7 @@ static int nd_start_detection_threads(void)
 
     try {
         long cpu = 0;
-        long cpus = sysconf(_SC_NPROCESSORS_ONLN);
+        nda_stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
         string netlink_dev;
         uint8_t private_addr = 0;
         uint8_t mac[ETH_ALEN];
@@ -632,7 +632,7 @@ static int nd_start_detection_threads(void)
 
             threads[(*i).second]->Create();
 
-            if (cpu == cpus) cpu = 0;
+            if (cpu == nda_stats.cpus) cpu = 0;
         }
     }
     catch (exception &e) {
@@ -974,8 +974,15 @@ void nd_json_agent_status(string &json_string)
 
     j["type"] = "agent_status";
     j["timestamp"] = time(NULL);
+    j["update_interval"] = nd_config.update_interval;
+    j["update_imf"] = nd_config.update_imf;
     j["uptime"] =
         unsigned(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec);
+    j["cpu_cores"] = (unsigned)nda_stats.cpus;
+    j["cpu_user"] = nda_stats.cpu_user;
+    j["cpu_user_prev"] = nda_stats.cpu_user_prev;
+    j["cpu_system"] = nda_stats.cpu_system;
+    j["cpu_system_prev"] = nda_stats.cpu_system_prev;
     j["flows"] = nda_stats.flows;
     j["flows_prev"] = nda_stats.flows_prev;
     j["maxrss_kb"] = nda_stats.maxrss_kb;
@@ -989,6 +996,7 @@ void nd_json_agent_status(string &json_string)
         j["dhc_size"] = nda_stats.dhc_size;
 
     j["sink_status"] = nda_stats.sink_status;
+    j["sink_uploads"] = (ND_UPLOAD_ENABLED) ? true : false;
     if (nda_stats.sink_status) {
         j["sink_queue_size_kb"] = nda_stats.sink_queue_size / 1024;
         j["sink_queue_max_size_kb"] = nd_config.max_backlog / 1024;
@@ -1482,6 +1490,14 @@ static void nd_dump_stats(void)
 #endif
     struct rusage rusage_data;
     getrusage(RUSAGE_SELF, &rusage_data);
+
+    nda_stats.cpu_user_prev = nda_stats.cpu_user;
+    nda_stats.cpu_user = (double)rusage_data.ru_utime.tv_sec +
+        ((double)rusage_data.ru_utime.tv_usec / 1000000.0);
+    nda_stats.cpu_system_prev = nda_stats.cpu_system;
+    nda_stats.cpu_system = (double)rusage_data.ru_stime.tv_sec +
+        ((double)rusage_data.ru_stime.tv_usec / 1000000.0);
+
     nda_stats.maxrss_kb_prev = nda_stats.maxrss_kb;
     nda_stats.maxrss_kb = rusage_data.ru_maxrss;
 
@@ -1511,6 +1527,11 @@ static void nd_dump_stats(void)
         j["version"] = (double)ND_JSON_VERSION;
         j["timestamp"] = time(NULL);
         j["uptime"] = nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec;
+        j["cpu_cores"] = (unsigned)nda_stats.cpus;
+        j["cpu_user"] = nda_stats.cpu_user;
+        j["cpu_user_prev"] = nda_stats.cpu_user_prev;
+        j["cpu_system"] = nda_stats.cpu_system;
+        j["cpu_system_prev"] = nda_stats.cpu_system_prev;
         j["maxrss_kb"] = nda_stats.maxrss_kb;
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
         j["tcm_kb"] = nda_stats.tcm_alloc_kb;
@@ -1641,6 +1662,8 @@ static void nd_dump_protocols(void)
 
 static void nd_status(void)
 {
+    const char *color = ND_C_GREEN;
+
     fprintf(stderr, "%s\n", nd_get_version_and_features().c_str());
 
     pid_t nd_pid = -1;
@@ -1719,6 +1742,31 @@ static void nd_status(void)
             ND_C_GREEN, ND_C_RESET, uptime.c_str());
         fprintf(stderr, "%s-%s active flows: %u\n",
             ND_C_GREEN, ND_C_RESET, json_status.stats. flows);
+
+        double cpu_user_delta =
+            json_status.stats.cpu_user - json_status.stats.cpu_user_prev;
+        double cpu_system_delta =
+            json_status.stats.cpu_system - json_status.stats.cpu_system_prev;
+
+        double cpu_max_time =
+            (double)json_status.update_interval * (double)json_status.stats.cpus;
+
+        double cpu_user_percent = cpu_user_delta * 100.0 / cpu_max_time;
+        double cpu_system_percent = cpu_system_delta * 100.0 / cpu_max_time;
+        double cpu_total = cpu_user_percent + cpu_system_percent;
+
+        if (cpu_total < 33.34)
+            color = ND_C_GREEN;
+        else if (cpu_total < 66.67)
+            color = ND_C_YELLOW;
+        else
+            color = ND_C_RED;
+
+        fprintf(stderr, "%s-%s CPU utilization (user + system): %s%.1f%%%s\n",
+            color, ND_C_RESET, color, cpu_total, ND_C_RESET);
+        fprintf(stderr, "%s-%s CPU time (user / system): %.1fs / %.1fs\n",
+            color, ND_C_RESET, cpu_user_delta, cpu_system_delta);
+
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
 #if (SIZEOF_LONG == 4)
         fprintf(stderr, "%s-%s current memory usage: %u kB\n",
@@ -1756,15 +1804,20 @@ static void nd_status(void)
 
     fprintf(stderr, "%s-%s sink URL: %s\n",
         ND_C_GREEN, ND_C_RESET, nd_config.url_sink);
-    fprintf(stderr, "%s-%s sink uploads are %s.\n",
+    fprintf(stderr, "%s-%s sink services are %s.\n",
         (ND_USE_SINK) ? ND_C_GREEN : ND_C_RED, ND_C_RESET,
         (ND_USE_SINK) ? "enabled" : "disabled"
     );
-
     if (! ND_USE_SINK) {
-        fprintf(stderr, "  To enable uploads, run the following command:\n");
+        fprintf(stderr, "  To enable sink services, run the following command:\n");
         fprintf(stderr, "  # netifyd --enable-sink\n");
     }
+    fprintf(stderr, "%s-%s sink uploads are %s.\n",
+        (json_status.stats.sink_uploads) ? ND_C_GREEN : ND_C_RED, ND_C_RESET,
+        (json_status.stats.sink_uploads) ? "enabled" : "disabled"
+    );
+    if (! json_status.stats.sink_uploads)
+        fprintf(stderr, "  To enable sink uploads, ensure your Agent has been provisioned.\n");
 
     string uuid;
 
@@ -1809,7 +1862,7 @@ static void nd_status(void)
 
     if (json_status_valid && json_status.stats.sink_status) {
         string status, help;
-        const char *color = ND_C_GREEN;
+        color = ND_C_GREEN;
 
         switch (json_status.stats.sink_resp_code) {
         case ndJSON_RESP_NULL:

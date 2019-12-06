@@ -294,10 +294,15 @@ typedef struct nd_global_config_t {
 
 typedef struct nd_agent_stats_t
 {
+    long cpus;
     struct timespec ts_epoch;
     struct timespec ts_now;
     uint32_t flows;
     uint32_t flows_prev;
+    double cpu_user;
+    double cpu_user_prev;
+    double cpu_system;
+    double cpu_system_prev;
 #if (SIZEOF_LONG == 4)
     uint32_t maxrss_kb;
     uint32_t maxrss_kb_prev;
@@ -311,6 +316,7 @@ typedef struct nd_agent_stats_t
 #endif
     bool dhc_status;
     size_t dhc_size;
+    bool sink_uploads;
     bool sink_status;
     size_t sink_queue_size;
     ndJsonResponseCode sink_resp_code;
