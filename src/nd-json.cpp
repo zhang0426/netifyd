@@ -64,7 +64,7 @@ void nd_json_to_string(const json &j, string &output, bool pretty)
         string result = regex_replace(output, *((*i).first), (*i).second);
         if (result.size()) output = result;
     }
-#endif
+#endif // HAVE_WORKING_REGEX
 }
 
 void nd_json_save_to_file(const json &j, const string &filename, bool pretty)
@@ -103,7 +103,8 @@ void ndJsonStatus::Parse(const string &json_string)
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
         stats.tcm_alloc_kb = j["tcm_kb"].get<unsigned>();
         stats.tcm_alloc_kb_prev = j["tcm_kb_prev"].get<unsigned>();
-#endif
+#endif // _ND_USE_LIBTCMALLOC
+
         stats.dhc_status = j["dhc_status"].get<bool>();
         if (stats.dhc_status)
             stats.dhc_size = j["dhc_size"].get<unsigned>();
@@ -186,7 +187,7 @@ void ndJsonResponse::Parse(const string &json_string)
         auto it_pp = j.find("plugin_params");
         if (it_pp != j.end() && (*it_pp) != nullptr)
             UnserializePluginDispatch((*it_pp));
-#endif
+#endif // _ND_USE_PLUGINS
     }
     catch (ndJsonParseException &e) {
         throw;
@@ -213,40 +214,19 @@ void ndJsonResponse::UnserializeData(json &jdata)
 void ndJsonResponse::UnserializePluginRequest(
     json &jrequest, ndJsonPluginRequest &plugin_request)
 {
-#if 0
-    // XXX: This is a macro; char *juuid_dispatch, json_object *jname
-    json_object_object_foreach(jrequest, juuid_dispatch, jname) {
-
-        if (! json_object_is_type(jname, json_type_string))
-            throw ndJsonParseException("Unexpected plugin name type");
-
-        plugin_request[juuid_dispatch] = json_object_get_string(jname);
-    }
-#endif
+    for (auto it = jrequest.begin(); it != jrequest.end(); it++)
+        plugin_request[it.key()] = (*it).get<string>();
 }
 
 void ndJsonResponse::UnserializePluginDispatch(json &jdispatch)
 {
-#if 0
-    // XXX: This is a macro; char *juuid_dispatch, json_object *jparams
-    json_object_object_foreach(jdispatch, juuid_dispatch, jparams) {
-
-        if (! json_object_is_type(jparams, json_type_object))
-            throw ndJsonParseException("Unexpected plugin params type");
-
-        // XXX: This is a macro; char *jkey, json_object *jvalue
-        json_object_object_foreach(jparams, jkey, jvalue) {
-
-            if (! json_object_is_type(jvalue, json_type_string))
-                throw ndJsonParseException("Unexpected param value type");
-
-            string encoded(json_object_get_string(jvalue));
-
-            plugin_params[juuid_dispatch][jkey] =
+    for (auto it = jdispatch.begin(); it != jdispatch.end(); it++) {
+        for (auto it_param = (*it).begin(); it_param != (*it).end(); it_param++) {
+            string encoded = (*it_param).get<string>();
+            plugin_params[it.key()][it_param.key()] =
                 base64_decode(encoded.c_str(), encoded.size());
         }
     }
-#endif
 }
 
 #endif // _ND_USE_PLUGINS
