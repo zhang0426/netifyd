@@ -65,11 +65,13 @@
 #endif
 
 #include <pcap/pcap.h>
-#include <json.h>
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #endif
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 using namespace std;
 
@@ -747,13 +749,25 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     buffers[client->GetDescriptor()] = buffer;
     clients[client->GetDescriptor()] = client;
 
-    string json;
-    nd_json_agent_hello(json);
-    buffer->Push(json);
-    nd_json_agent_status(json);
-    buffer->Push(json);
-    nd_json_protocols(json);
-    buffer->Push(json);
+    try {
+        string json;
+        nd_json_agent_hello(json);
+        buffer->Push(json);
+        nd_json_agent_status(json);
+        buffer->Push(json);
+        nd_json_protocols(json);
+        buffer->Push(json);
+    }
+    catch (exception &e) {
+        Unlock();
+
+        nd_debug_printf("%s: Exception while sending JSON: %s\n",
+            tag.c_str(), e.what());
+
+        delete client;
+        delete buffer;
+        throw;
+    }
 
     Unlock();
 

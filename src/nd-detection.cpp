@@ -105,7 +105,6 @@
 #include <resolv.h>
 #include <ctype.h>
 
-#include <json.h>
 #include <pcap/pcap.h>
 #ifdef HAVE_PCAP_SLL_H
 #include <pcap/sll.h>
@@ -117,6 +116,9 @@
 #else
 #include "pcap-compat/vlan.h"
 #endif
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -551,22 +553,23 @@ void ndDetectionThread::DumpFlows(void)
         if (! ND_FLOW_DUMP_UNKNOWN &&
             i->second->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) continue;
 
-        ndJson json;
+        json j;
 
-        json.AddObject(NULL, "type", "flow");
-        json.AddObject(NULL, "interface", tag);
-        json.AddObject(NULL, "internal", internal);
-        json.AddObject(NULL, "established", true);
-        json_object *json_flow = i->second->json_encode(json, ndpi, false);
-        json.AddObject(NULL, "flow", json_flow);
+        j["type"] = "flow";
+        j["interface"] = tag;
+        j["internal"] = internal;
+        j["established"] = true;
+
+        json jf;
+        i->second->json_encode(jf, ndpi, false);
+
+        j["flow"] = jf;
 
         string json_string;
-        json.ToString(json_string, false);
+        nd_json_to_string(j, json_string, false);
         json_string.append("\n");
 
         thread_socket->QueueWrite(json_string);
-
-        json.Destroy();
 
         flow_count++;
     }
@@ -1530,22 +1533,23 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
             new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
-            ndJson json;
 
-            json.AddObject(NULL, "type", "flow");
-            json.AddObject(NULL, "interface", tag);
-            json.AddObject(NULL, "internal", internal);
-            json.AddObject(NULL, "established", false);
-            json_object *json_flow = new_flow->json_encode(json, ndpi, false);
-            json.AddObject(NULL, "flow", json_flow);
+            json j;
+
+            j["type"] = "flow";
+            j["interface"] = tag;
+            j["internal"] = internal;
+            j["established"] = false;
+
+            json jf;
+            new_flow->json_encode(jf, ndpi, false);
+            j["flow"] = jf;
 
             string json_string;
-            json.ToString(json_string, false);
+            nd_json_to_string(j, json_string, false);
             json_string.append("\n");
 
             thread_socket->QueueWrite(json_string);
-
-            json.Destroy();
         }
 
         if (ND_DEBUG || nd_config.h_flow != stderr)

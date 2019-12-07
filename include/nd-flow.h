@@ -230,7 +230,7 @@ public:
 
     void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
 
-    json_object *json_encode(ndJson &json,
+    void json_encode(json &j,
         struct ndpi_detection_module_struct *ndpi, bool include_stats = true);
 
     inline bool operator==(const ndFlow &f) const {

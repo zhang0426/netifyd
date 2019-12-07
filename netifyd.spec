@@ -28,7 +28,7 @@
 # RPM package details
 Name: netifyd
 Summary: Netify Agent
-Version: 2.97
+Version: 2.98
 Release: 1%{dist}
 Vendor: eGloo Incorporated
 URL: http://www.netify.ai/
@@ -40,7 +40,6 @@ BuildRoot: /var/tmp/%{name}-%{version}
 BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: bc
-BuildRequires: json-c-devel
 BuildRequires: libcurl-devel
 %if %{?_without_bundled_libs:1}%{!?_without_bundled_libs:0}
 BuildRequires: gperftools-devel

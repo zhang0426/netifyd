@@ -56,10 +56,12 @@
 #include <netinet/in.h>
 
 #include <curl/curl.h>
-#include <json.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <resolv.h>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 #ifdef _ND_USE_CONNTRACK
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
@@ -595,7 +597,7 @@ static int nd_start_detection_threads(void)
 
     try {
         long cpu = 0;
-        long cpus = sysconf(_SC_NPROCESSORS_ONLN);
+        nda_stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
         string netlink_dev;
         uint8_t private_addr = 0;
         uint8_t mac[ETH_ALEN];
@@ -630,7 +632,7 @@ static int nd_start_detection_threads(void)
 
             threads[(*i).second]->Create();
 
-            if (cpu == cpus) cpu = 0;
+            if (cpu == nda_stats.cpus) cpu = 0;
         }
     }
     catch (exception &e) {
@@ -955,89 +957,87 @@ static int nd_sink_process_responses(void)
 
 void nd_json_agent_hello(string &json_string)
 {
-    ndJson json;
-    json.AddObject(NULL, "type", "agent_hello");
-    json.AddObject(NULL, "build_version", nd_get_version_and_features());
-    json.AddObject(NULL, "agent_version", strtod(PACKAGE_VERSION, NULL));
-    json.AddObject(NULL, "json_version", (double)ND_JSON_VERSION);
+    json j;
 
-    json.ToString(json_string, false);
+    j["type"] = "agent_hello";
+    j["build_version"] = nd_get_version_and_features();
+    j["agent_version"] = strtod(PACKAGE_VERSION, NULL);
+    j["json_version"] = (double)ND_JSON_VERSION;
+
+    nd_json_to_string(j, json_string);
     json_string.append("\n");
-
-    json.Destroy();
 }
 
 void nd_json_agent_status(string &json_string)
 {
-    ndJson json;
-    json.AddObject(NULL, "type", "agent_status");
-    json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
-    json.AddObject(NULL, "uptime",
-        uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));
-    json.AddObject(NULL, "flows", nda_stats.flows);
-    json.AddObject(NULL, "flows_prev", nda_stats.flows_prev);
-    json.AddObject(NULL, "maxrss_kb", nda_stats.maxrss_kb);
-    json.AddObject(NULL, "maxrss_kb_prev", nda_stats.maxrss_kb_prev);
-#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
-#if (SIZEOF_LONG == 4)
-    json.AddObject(NULL, "tcm_kb", (uint32_t)nda_stats.tcm_alloc_kb);
-    json.AddObject(NULL, "tcm_kb_prev", (uint32_t)nda_stats.tcm_alloc_kb_prev);
-#elif (SIZEOF_LONG == 8)
-    json.AddObject(NULL, "tcm_kb", (uint64_t)nda_stats.tcm_alloc_kb);
-    json.AddObject(NULL, "tcm_kb_prev", (uint64_t)nda_stats.tcm_alloc_kb_prev);
-#endif
-#endif // _ND_USE_LIBTCMALLOC
-    json.AddObject(NULL, "dhc_status", nda_stats.dhc_status);
-    if (nda_stats.dhc_status)
-        json.AddObject(NULL, "dhc_size", nda_stats.dhc_size);
+    json j;
 
-    json.AddObject(NULL, "sink_status", nda_stats.sink_status);
+    j["type"] = "agent_status";
+    j["timestamp"] = time(NULL);
+    j["update_interval"] = nd_config.update_interval;
+    j["update_imf"] = nd_config.update_imf;
+    j["uptime"] =
+        unsigned(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec);
+    j["cpu_cores"] = (unsigned)nda_stats.cpus;
+    j["cpu_user"] = nda_stats.cpu_user;
+    j["cpu_user_prev"] = nda_stats.cpu_user_prev;
+    j["cpu_system"] = nda_stats.cpu_system;
+    j["cpu_system_prev"] = nda_stats.cpu_system_prev;
+    j["flows"] = nda_stats.flows;
+    j["flows_prev"] = nda_stats.flows_prev;
+    j["maxrss_kb"] = nda_stats.maxrss_kb;
+    j["maxrss_kb_prev"] = nda_stats.maxrss_kb_prev;
+#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+    j["tcm_kb"] = (unsigned)nda_stats.tcm_alloc_kb;
+    j["tcm_kb_prev"] = (unsigned)nda_stats.tcm_alloc_kb_prev;
+#endif // _ND_USE_LIBTCMALLOC
+    j["dhc_status"] = nda_stats.dhc_status;
+    if (nda_stats.dhc_status)
+        j["dhc_size"] = nda_stats.dhc_size;
+
+    j["sink_status"] = nda_stats.sink_status;
+    j["sink_uploads"] = (ND_UPLOAD_ENABLED) ? true : false;
     if (nda_stats.sink_status) {
-        json.AddObject(NULL, "sink_queue_size_kb", nda_stats.sink_queue_size / 1024);
-        json.AddObject(NULL, "sink_queue_max_size_kb", nd_config.max_backlog / 1024);
-        json.AddObject(NULL, "sink_resp_code", nda_stats.sink_resp_code);
+        j["sink_queue_size_kb"] = nda_stats.sink_queue_size / 1024;
+        j["sink_queue_max_size_kb"] = nd_config.max_backlog / 1024;
+        j["sink_resp_code"] = nda_stats.sink_resp_code;
     }
 
-    json.ToString(json_string, false);
-    json_string.append("\n");
-
     try {
-        json.SaveToFile(ND_JSON_FILE_STATUS);
+        nd_json_to_string(j, json_string);
+        json_string.append("\n");
+        nd_json_save_to_file(json_string, ND_JSON_FILE_STATUS);
     }
     catch (runtime_error &e) {
         nd_printf("Error saving Agent status to file: %s\n",
             e.what());
     }
-
-    json.Destroy();
 }
 
 void nd_json_protocols(string &json_string)
 {
-    ndJson json;
-    json.AddObject(NULL, "type", "protocols");
-    json_object *jarray = json.CreateArray(NULL, "protocols");
+    json j, ja;
+    j["type"] = "protocols";
 
     struct ndpi_detection_module_struct *ndpi = ndpi_get_parent();
 
     for (unsigned i = 0; i < (unsigned)ndpi->ndpi_num_supported_protocols; i++) {
-        json_object *json_proto = json.CreateObject();
-        json.AddObject(json_proto, "id", i);
-        json.AddObject(json_proto, "tag", ndpi->proto_defaults[i].proto_name);
-        json.PushObject(jarray, json_proto);
+        json jo;
+
+        jo["id"] = i;
+        jo["tag"] = ndpi->proto_defaults[i].proto_name;
+
+        ja.push_back(jo);
     }
 
-    json.ToString(json_string, false);
-    json_string.append("\n");
+    j["protocols"] = ja;
 
-    json.Destroy();
+    nd_json_to_string(j, json_string);
+    json_string.append("\n");
 }
 
-static void nd_json_add_interfaces(json_object *parent)
+static void nd_json_add_interfaces(json &parent)
 {
-    json_object *jobj;
-    ndJson json(parent);
-
     uint8_t mac[ETH_ALEN];
     char mac_addr[ND_STR_ETHALEN + 1];
 
@@ -1045,8 +1045,9 @@ static void nd_json_add_interfaces(json_object *parent)
         string iface_name;
         nd_iface_name(i->second, iface_name);
 
-        jobj = json.CreateObject(NULL, iface_name);
-        json.AddObject(jobj, "role", (i->first) ? "LAN" : "WAN");
+        json jo;
+
+        jo[iface_name]["role"] = (i->first) ? "LAN" : "WAN";
 
         if (! nd_ifaddrs_get_mac(nd_interface_addrs, i->second, mac))
             memset(mac, 0, ETH_ALEN);
@@ -1056,14 +1057,14 @@ static void nd_json_add_interfaces(json_object *parent)
             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
         );
 
-        json.AddObject(jobj, "mac", mac_addr);
+        jo[iface_name]["mac"] = mac_addr;
+
+        parent.push_back(jo);
     }
 }
 
-static void nd_json_add_devices(json_object *parent)
+static void nd_json_add_devices(json &parent)
 {
-    ndJson json(parent);
-    json_object *jarray;
     nd_device_addrs device_addrs;
 
     for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++) {
@@ -1107,69 +1108,69 @@ static void nd_json_add_devices(json_object *parent)
             mac_src[0], mac_src[1], mac_src[2],
             mac_src[3], mac_src[4], mac_src[5]);
 
-        jarray = json.CreateArray(NULL, mac_dst);
+        json ja;
 
         for (vector<string>::const_iterator j = i->second.begin();
             j != i->second.end(); j++) {
-            json.PushObject(jarray, (*j));
+            ja.push_back((*j));
         }
+
+        parent[mac_dst] = ja;
     }
 }
 
-static void nd_json_add_stats(json_object *parent,
+static void nd_json_add_stats(json &parent,
     nd_packet_stats *stats, struct pcap_stat *pcap)
 {
-    ndJson json(parent);
+    parent["raw"] = stats->pkt.raw;
+    parent["ethernet"] = stats->pkt.eth;
+    parent["mpls"] = stats->pkt.mpls;
+    parent["pppoe"] = stats->pkt.pppoe;
+    parent["vlan"] = stats->pkt.vlan;
+    parent["fragmented"] = stats->pkt.frags;
+    parent["discarded"] = stats->pkt.discard;
+    parent["discarded_bytes"] = stats->pkt.discard_bytes;
+    parent["largest_bytes"] = stats->pkt.maxlen;
+    parent["ip"] = stats->pkt.ip;
+    parent["tcp"] = stats->pkt.tcp;
+    parent["udp"] = stats->pkt.udp;
+    parent["icmp"] = stats->pkt.icmp;
+    parent["igmp"] = stats->pkt.igmp;
+    parent["ip_bytes"] = stats->pkt.ip_bytes;
+    parent["wire_bytes"] = stats->pkt.wire_bytes;
 
-    json.AddObject(NULL, "raw", stats->pkt.raw);
-    json.AddObject(NULL, "ethernet", stats->pkt.eth);
-    json.AddObject(NULL, "mpls", stats->pkt.mpls);
-    json.AddObject(NULL, "pppoe", stats->pkt.pppoe);
-    json.AddObject(NULL, "vlan", stats->pkt.vlan);
-    json.AddObject(NULL, "fragmented", stats->pkt.frags);
-    json.AddObject(NULL, "discarded", stats->pkt.discard);
-    json.AddObject(NULL, "discarded_bytes", stats->pkt.discard_bytes);
-    json.AddObject(NULL, "largest_bytes", stats->pkt.maxlen);
-    json.AddObject(NULL, "ip", stats->pkt.ip);
-    json.AddObject(NULL, "tcp", stats->pkt.tcp);
-    json.AddObject(NULL, "udp", stats->pkt.udp);
-    json.AddObject(NULL, "icmp", stats->pkt.icmp);
-    json.AddObject(NULL, "igmp", stats->pkt.igmp);
-    json.AddObject(NULL, "ip_bytes", stats->pkt.ip_bytes);
-    json.AddObject(NULL, "wire_bytes", stats->pkt.wire_bytes);
+    parent["pcap_recv"] = pcap->ps_recv - stats->pcap_last.ps_recv;
+    parent["pcap_drop"] = pcap->ps_drop - stats->pcap_last.ps_drop;
+    parent["pcap_ifdrop"] = pcap->ps_ifdrop - stats->pcap_last.ps_ifdrop;
 
-    json.AddObject(NULL, "pcap_recv", pcap->ps_recv - stats->pcap_last.ps_recv);
-    json.AddObject(NULL, "pcap_drop", pcap->ps_drop - stats->pcap_last.ps_drop);
-    json.AddObject(NULL, "pcap_ifdrop", pcap->ps_ifdrop - stats->pcap_last.ps_ifdrop);
-
-    json.AddObject(NULL, "queue_dropped", stats->pkt.queue_dropped);
+    parent["queue_dropped"] = stats->pkt.queue_dropped;
 
     stats->pcap_last.ps_recv = pcap->ps_recv;
     stats->pcap_last.ps_drop = pcap->ps_drop;
     stats->pcap_last.ps_ifdrop = pcap->ps_ifdrop;
 }
 
-static void nd_json_add_flows(json_object *parent,
+static void nd_json_add_flows(json &parent,
     struct ndpi_detection_module_struct *ndpi,
     const nd_flow_map *flows)
 {
-    ndJson json(parent);
-
     for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
 
         if (i->second->detection_complete == false || ! i->second->ts_first_update)
             continue;
 
-        json_object *json_flow = i->second->json_encode(json, ndpi);
-        json.PushObject(NULL, json_flow);
+        json jf;
+        i->second->json_encode(jf, ndpi);
+
+        parent.push_back(jf);
 
         i->second->reset();
     }
 }
 
 static void nd_json_add_file(
-    json_object *parent, const string &tag, const string &filename)
+    json &parent, const string &tag, const string &filename)
 {
     string digest;
     uint8_t _digest[SHA1_DIGEST_LENGTH];
@@ -1195,28 +1196,27 @@ static void nd_json_add_file(
         return;
     }
 
-    ndJson json(parent);
-    json_object *json_tag = json.CreateObject(NULL, tag.c_str());
+    json jd, jc;
 
-    json.AddObject(json_tag, "digest", digest);
-    // XXX: Cast down to 32-bit unsigned:
-    json.AddObject(json_tag, "size", (uint32_t)file_stat.st_size);
-
-    json_object *json_chunks = json.CreateArray(json_tag, "chunks");
+    jd["digest"] = digest;
+    jd["size"] = file_stat.st_size;
 
     size_t bytes;
 
     do {
         if ((bytes = read(fd, buffer, ND_JSON_DATA_CHUNKSIZ)) > 0)
-            json.PushObject(json_chunks, base64_encode(buffer, bytes));
+            jc.push_back(base64_encode(buffer, bytes));
     }
     while (bytes > 0);
 
     close(fd);
+
+    jd["chunks"] = jc;
+    parent[tag] = jd;
 }
 
 static void nd_json_add_data(
-    json_object *parent, const string &tag, const string &data)
+    json &parent, const string &tag, const string &data)
 {
     sha1 ctx;
     string digest;
@@ -1224,13 +1224,9 @@ static void nd_json_add_data(
 
     sha1_init(&ctx);
 
-    ndJson json(parent);
-    json_object *json_tag = json.CreateObject(NULL, tag.c_str());
+    json jd, jc;
 
-    json_object *json_chunks = json.CreateArray(json_tag, "chunks");
-
-    // XXX: Cast down to 32-bit unsigned:
-    json.AddObject(json_tag, "size", (uint32_t)data.size());
+    jd["size"] = data.size();
 
     size_t offset = 0;
 
@@ -1240,8 +1236,11 @@ static void nd_json_add_data(
         if (! chunk.size()) break;
 
         sha1_write(&ctx, chunk.c_str(), chunk.size());
-        json.PushObject(json_chunks,
-            base64_encode((const unsigned char *)chunk.c_str(), chunk.size()));
+
+        jc.push_back(
+            base64_encode((const unsigned char *)chunk.c_str(),
+            chunk.size())
+        );
 
         if (chunk.size() != ND_JSON_DATA_CHUNKSIZ) break;
 
@@ -1251,16 +1250,20 @@ static void nd_json_add_data(
 
     digest.assign((const char *)sha1_result(&ctx, _digest), SHA1_DIGEST_LENGTH);
     nd_sha1_to_string(_digest, digest);
-    json.AddObject(json_tag, "digest", digest);
+
+    jd["digest"] = digest;
+    jd["chunks"] = jc;
+
+    parent[tag] = jd;
 }
 
 #ifdef _ND_USE_PLUGINS
-static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
-    json_object *json_plugin_task_replies, json_object *json_data)
+
+static void nd_json_add_plugin_replies(
+    json &json_plugin_service_replies,
+    json &json_plugin_task_replies, json &json_data)
 {
     vector<ndPlugin *> plugins;
-    ndJson json_services(json_plugin_service_replies);
-    ndJson json_tasks(json_plugin_task_replies);
 
     for (nd_plugins::const_iterator i = plugin_services.begin();
         i != plugin_services.end(); i++)
@@ -1272,15 +1275,15 @@ static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
     for (vector<ndPlugin *>::const_iterator i = plugins.begin();
         i != plugins.end(); i++) {
 
-        ndJson *parent = NULL;
+        json *parent = NULL;
 
         switch ((*i)->GetType()) {
 
         case ndPlugin::TYPE_SERVICE:
-            parent = &json_services;
+            parent = &json_plugin_service_replies;
             break;
         case ndPlugin::TYPE_TASK:
-            parent = &json_tasks;
+            parent = &json_plugin_task_replies;
             break;
 
         default:
@@ -1302,19 +1305,22 @@ static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
         for (ndPluginReplies::const_iterator iter_reply = replies.begin();
             iter_reply != replies.end(); iter_reply++) {
 
-            json_object *jarray = parent->CreateArray(NULL, iter_reply->first.c_str());
+            json ja;
 
             for (ndJsonPluginReplies::const_iterator iter_params = iter_reply->second.begin();
                 iter_params != iter_reply->second.end(); iter_params++) {
 
-                json_object *json_reply = parent->CreateObject();
+                json jr;
 
-                parent->AddObject(json_reply, iter_params->first,
-                    base64_encode((const unsigned char *)iter_params->second.c_str(),
-                        iter_params->second.size())
+                jr[iter_params->first] = base64_encode(
+                    (const unsigned char *)iter_params->second.c_str(),
+                    iter_params->second.size()
                 );
-                parent->PushObject(jarray, json_reply);
+
+                ja.push_back(jr);
             }
+
+            (*parent)[iter_reply->first.c_str()] = ja;
         }
 
         for (ndPluginFiles::const_iterator iter_file = files.begin();
@@ -1328,7 +1334,7 @@ static void nd_json_add_plugin_replies(json_object *json_plugin_service_replies,
         }
     }
 }
-#endif
+#endif // _ND_USE_PLUGINS
 
 static void nd_print_stats(void)
 {
@@ -1484,6 +1490,14 @@ static void nd_dump_stats(void)
 #endif
     struct rusage rusage_data;
     getrusage(RUSAGE_SELF, &rusage_data);
+
+    nda_stats.cpu_user_prev = nda_stats.cpu_user;
+    nda_stats.cpu_user = (double)rusage_data.ru_utime.tv_sec +
+        ((double)rusage_data.ru_utime.tv_usec / 1000000.0);
+    nda_stats.cpu_system_prev = nda_stats.cpu_system;
+    nda_stats.cpu_system = (double)rusage_data.ru_stime.tv_sec +
+        ((double)rusage_data.ru_stime.tv_usec / 1000000.0);
+
     nda_stats.maxrss_kb_prev = nda_stats.maxrss_kb;
     nda_stats.maxrss_kb = rusage_data.ru_maxrss;
 
@@ -1507,44 +1521,29 @@ static void nd_dump_stats(void)
         nda_stats.sink_queue_size = thread_sink->QueuePendingSize();
     }
 
-    ndJson json;
-    json_object *json_obj = NULL;
-    json_object *json_ifaces = NULL;
-    json_object *json_devices = NULL;
-    json_object *json_stats = NULL;
-    json_object *json_flows = NULL;
-    json_object *json_data = NULL;
-#ifdef _ND_USE_PLUGINS
-    json_object *json_plugin_service_replies = NULL;
-    json_object *json_plugin_task_replies = NULL;
-#endif
+    json j;
 
     if (ND_USE_SINK || ND_JSON_SAVE) {
-        json.AddObject(NULL, "version", (double)ND_JSON_VERSION);
-        json.AddObject(NULL, "timestamp", (int64_t)time(NULL));
-        json.AddObject(NULL, "uptime",
-            uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));
-        json.AddObject(NULL, "maxrss_kb", nda_stats.maxrss_kb);
-
+        j["version"] = (double)ND_JSON_VERSION;
+        j["timestamp"] = time(NULL);
+        j["uptime"] = nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec;
+        j["cpu_cores"] = (unsigned)nda_stats.cpus;
+        j["cpu_user"] = nda_stats.cpu_user;
+        j["cpu_user_prev"] = nda_stats.cpu_user_prev;
+        j["cpu_system"] = nda_stats.cpu_system;
+        j["cpu_system_prev"] = nda_stats.cpu_system_prev;
+        j["maxrss_kb"] = nda_stats.maxrss_kb;
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
-#if (SIZEOF_LONG == 4)
-        json.AddObject(NULL, "tcm_kb", (uint32_t)nda_stats.tcm_alloc_kb);
-#elif (SIZEOF_LONG == 8)
-        json.AddObject(NULL, "tcm_kb", (uint64_t)nda_stats.tcm_alloc_kb);
-#endif
+        j["tcm_kb"] = nda_stats.tcm_alloc_kb;
 #endif // _ND_USE_LIBTCMALLOC
 
-        json_ifaces = json.CreateObject(NULL, "interfaces");
-        json_devices = json.CreateObject(NULL, "devices");
-        json_stats = json.CreateObject(NULL, "stats");
-        json_flows = json.CreateObject(NULL, "flows");
-        json_data = json.CreateObject(NULL, "data");
-#ifdef _ND_USE_PLUGINS
-        json_plugin_service_replies = json.CreateObject(NULL, "service_replies");
-        json_plugin_task_replies = json.CreateObject(NULL, "task_replies");
-#endif
-        nd_json_add_interfaces(json_ifaces);
-        nd_json_add_devices(json_devices);
+        json ji, jd;
+
+        nd_json_add_interfaces(ji);
+        j["interfaces"] = ji;
+
+        nd_json_add_devices(jd);
+        j["devices"] = jd;
     }
 
     for (nd_threads::iterator i = threads.begin();
@@ -1559,16 +1558,16 @@ static void nd_dump_stats(void)
             struct pcap_stat lpc_stat;
             i->second->GetCaptureStats(lpc_stat);
 
-            json_obj = json.CreateObject();
-            nd_json_add_stats(json_obj, stats[i->first], &lpc_stat);
+            json js, jf;
 
             string iface_name;
             nd_iface_name(i->first, iface_name);
-            json_object_object_add(json_stats, iface_name.c_str(), json_obj);
 
-            json_obj = json.CreateArray(json_flows, iface_name);
-            nd_json_add_flows(json_obj,
-                i->second->GetDetectionModule(), flows[i->first]);
+            nd_json_add_stats(js, stats[i->first], &lpc_stat);
+            j["stats"][iface_name] = js;
+
+            nd_json_add_flows(jf, i->second->GetDetectionModule(), flows[i->first]);
+            j["flows"][iface_name] = jf;
         }
 
         stats[i->first]->reset();
@@ -1577,10 +1576,19 @@ static void nd_dump_stats(void)
     }
 
 #ifdef _ND_USE_PLUGINS
-    nd_json_add_plugin_replies(
-        json_plugin_service_replies, json_plugin_task_replies, json_data
-    );
+    json jsr, jtr, jpd;
+    nd_json_add_plugin_replies(jsr, jtr, jpd);
+
+    if (ND_USE_SINK) {
+        j["service_replies"] = jsr;
+        j["task_replies"] = jtr;
+        j["data"] = jpd;
+    }
 #endif
+
+    string json_string;
+    if (ND_USE_SINK || ND_JSON_SAVE)
+        nd_json_to_string(j, json_string, ND_DEBUG);
 
     if (ND_USE_SINK) {
         try {
@@ -1588,30 +1596,27 @@ static void nd_dump_stats(void)
             for (nd_inotify_watch::const_iterator i = inotify_watches.begin();
                 i != inotify_watches.end(); i++) {
                 if (! inotify->EventOccured(i->first)) continue;
-                nd_json_add_file(json_data, i->first, i->second);
+
+                json jd;
+
+                nd_json_add_file(jd, i->first, i->second);
+                j["data"].push_back(jd);
             }
 #endif
-            string json_string;
-            json.ToString(json_string);
 #ifdef _ND_USE_WATCHDOGS
             nd_touch(ND_WD_UPLOAD);
 #endif
             if (ND_UPLOAD_ENABLED)
                 thread_sink->QueuePush(json_string);
             else {
-                ndJson json_ping;
-
                 if (ND_USE_SINK || ND_JSON_SAVE) {
-                    json_ping.AddObject(NULL, "version", (double)ND_JSON_VERSION);
-                    json_ping.AddObject(NULL, "timestamp", (int64_t)time(NULL));
-                    json_ping.AddObject(NULL, "uptime",
-                        uint32_t(nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec));
-                    json_ping.AddObject(NULL, "ping", (bool)true);
+                    j["version"] = (double)ND_JSON_VERSION;
+                    j["timestamp"] = time(NULL);
+                    j["uptime"] = nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec;
+                    j["ping"] = true;
 
-                    json_ping.ToString(json_string);
+                    nd_json_to_string(j, json_string);
                     thread_sink->QueuePush(json_string);
-
-                    json_ping.Destroy();
                 }
             }
         }
@@ -1622,14 +1627,12 @@ static void nd_dump_stats(void)
 
     try {
         if (ND_JSON_SAVE)
-            json.SaveToFile(nd_config.path_json);
+            nd_json_save_to_file(json_string, nd_config.path_json);
     }
     catch (runtime_error &e) {
         nd_printf("Error writing JSON playload to file: %s: %s\n",
             nd_config.path_json, e.what());
     }
-
-    json.Destroy();
 
     if (ND_DEBUG) {
 #ifndef _ND_LEAN_AND_MEAN
@@ -1659,6 +1662,8 @@ static void nd_dump_protocols(void)
 
 static void nd_status(void)
 {
+    const char *color = ND_C_GREEN;
+
     fprintf(stderr, "%s\n", nd_get_version_and_features().c_str());
 
     pid_t nd_pid = -1;
@@ -1737,6 +1742,31 @@ static void nd_status(void)
             ND_C_GREEN, ND_C_RESET, uptime.c_str());
         fprintf(stderr, "%s-%s active flows: %u\n",
             ND_C_GREEN, ND_C_RESET, json_status.stats. flows);
+
+        double cpu_user_delta =
+            json_status.stats.cpu_user - json_status.stats.cpu_user_prev;
+        double cpu_system_delta =
+            json_status.stats.cpu_system - json_status.stats.cpu_system_prev;
+
+        double cpu_max_time =
+            (double)json_status.update_interval * (double)json_status.stats.cpus;
+
+        double cpu_user_percent = cpu_user_delta * 100.0 / cpu_max_time;
+        double cpu_system_percent = cpu_system_delta * 100.0 / cpu_max_time;
+        double cpu_total = cpu_user_percent + cpu_system_percent;
+
+        if (cpu_total < 33.34)
+            color = ND_C_GREEN;
+        else if (cpu_total < 66.67)
+            color = ND_C_YELLOW;
+        else
+            color = ND_C_RED;
+
+        fprintf(stderr, "%s-%s CPU utilization (user + system): %s%.1f%%%s\n",
+            color, ND_C_RESET, color, cpu_total, ND_C_RESET);
+        fprintf(stderr, "%s-%s CPU time (user / system): %.1fs / %.1fs\n",
+            color, ND_C_RESET, cpu_user_delta, cpu_system_delta);
+
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
 #if (SIZEOF_LONG == 4)
         fprintf(stderr, "%s-%s current memory usage: %u kB\n",
@@ -1774,15 +1804,20 @@ static void nd_status(void)
 
     fprintf(stderr, "%s-%s sink URL: %s\n",
         ND_C_GREEN, ND_C_RESET, nd_config.url_sink);
-    fprintf(stderr, "%s-%s sink uploads are %s.\n",
+    fprintf(stderr, "%s-%s sink services are %s.\n",
         (ND_USE_SINK) ? ND_C_GREEN : ND_C_RED, ND_C_RESET,
         (ND_USE_SINK) ? "enabled" : "disabled"
     );
-
     if (! ND_USE_SINK) {
-        fprintf(stderr, "  To enable uploads, run the following command:\n");
+        fprintf(stderr, "  To enable sink services, run the following command:\n");
         fprintf(stderr, "  # netifyd --enable-sink\n");
     }
+    fprintf(stderr, "%s-%s sink uploads are %s.\n",
+        (json_status.stats.sink_uploads) ? ND_C_GREEN : ND_C_RED, ND_C_RESET,
+        (json_status.stats.sink_uploads) ? "enabled" : "disabled"
+    );
+    if (! json_status.stats.sink_uploads)
+        fprintf(stderr, "  To enable sink uploads, ensure your Agent has been provisioned.\n");
 
     string uuid;
 
@@ -1827,7 +1862,7 @@ static void nd_status(void)
 
     if (json_status_valid && json_status.stats.sink_status) {
         string status, help;
-        const char *color = ND_C_GREEN;
+        color = ND_C_GREEN;
 
         switch (json_status.stats.sink_resp_code) {
         case ndJSON_RESP_NULL:

@@ -46,10 +46,12 @@
 
 #include <curl/curl.h>
 
-#include <json.h>
 #include <pcap/pcap.h>
 
 #include <zlib.h>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 using namespace std;
 
