@@ -1933,7 +1933,8 @@ static void nd_status(void)
             color = ND_C_YELLOW;
         else
             color = ND_C_RED;
-        fprintf(stderr, "%s-%s sink queue utilization: %s%.02f%%%s\n",
+
+        fprintf(stderr, "%s-%s sink queue utilization: %s%.1f%%%s\n",
             color, ND_C_RESET, color, sink_util, ND_C_RESET);
     }
 }
