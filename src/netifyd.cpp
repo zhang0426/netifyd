@@ -1708,29 +1708,32 @@ static void nd_status(void)
     ndJsonStatus json_status;
     bool json_status_valid = false;
 
-    if (nd_pid > 0) {
-        try {
-            string status;
-            if (nd_file_load(ND_JSON_FILE_STATUS, status) < 0) {
-                fprintf(stderr,
-                    "%s-%s agent run-time status could not be determined.\n",
-                    ND_C_YELLOW, ND_C_RESET
-                );
-            }
-            else {
-                json_status.Parse(status);
-                json_status_valid = true;
-            }
+    try {
+        string status;
+        if (nd_file_load(ND_JSON_FILE_STATUS, status) < 0) {
+            fprintf(stderr,
+                "%s-%s agent run-time status could not be determined.\n",
+                ND_C_YELLOW, ND_C_RESET
+            );
         }
-        catch (runtime_error &e) {
-            fprintf(stderr, "%s-%s agent run-time status exception: %s%s%s\n",
-                ND_C_RED, ND_C_RESET, ND_C_RED, e.what(), ND_C_RESET);
+        else {
+            json_status.Parse(status);
+            json_status_valid = true;
         }
+    }
+    catch (runtime_error &e) {
+        fprintf(stderr, "%s-%s agent run-time status exception: %s%s%s\n",
+            ND_C_RED, ND_C_RESET, ND_C_RED, e.what(), ND_C_RESET);
     }
 
     if (json_status_valid) {
         char timestamp[64];
         struct tm *tm_local = localtime(&json_status.timestamp);
+
+        if (nd_pid <= 0) {
+            fprintf(stderr, "%sThe following information may be out-dated:%s\n",
+                ND_C_YELLOW, ND_C_RESET);
+        }
 
         if (strftime(timestamp, sizeof(timestamp), "%c", tm_local) > 0) {
             fprintf(stderr, "%s-%s agent timestamp: %s\n",
