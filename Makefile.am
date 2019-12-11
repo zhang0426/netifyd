@@ -6,12 +6,19 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
-SUBDIRS = libs/inih libs/ndpi include src deploy doc tests
+SUBDIRS_EXTRA=
+if USE_LIBTCMALLOC_BUNDLED
+SUBDIRS_EXTRA += libs/gperftools
+endif
+
+SUBDIRS = libs/inih libs/ndpi $(SUBDIRS_EXTRA) include src deploy doc tests
+
+DIST_SUBDIRS = libs/gperftools libs/libmnl \
+	libs/libnetfilter-conntrack libs/libnfnetlink
 
 EXTRA_DIST = LICENSE autogen.sh debian/compat \
 	util/generate-json-include.sh util/generate-protocol-csv.sh \
-	libs/gperftools libs/json libs/libmnl \
-	libs/libnetfilter-conntrack libs/libnfnetlink
+	libs/json
 
 DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \

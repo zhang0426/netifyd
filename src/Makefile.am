@@ -51,10 +51,9 @@ netifyd_LDADD = ./libnetifyd.la $(top_srcdir)/libs/inih/libini.la
 
 if USE_LIBTCMALLOC
 # XXX: Recommended compiler flags
-AM_CFLAGS = -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
-AM_CXXFLAGS = -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+AM_CPPFLAGS += $(LIBTCMALLOC_CFLAGS) -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
 # XXX: It's important that this library be linked after all others.
-LIBS += $(LIBTCMALLOC_LIBS)
+netifyd_LDADD += $(LIBTCMALLOC_LIBS)
 endif
 
 # For debugging ns_initparse
