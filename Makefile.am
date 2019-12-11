@@ -13,12 +13,9 @@ endif
 
 SUBDIRS = libs/inih libs/ndpi $(SUBDIRS_EXTRA) include src deploy doc tests
 
-DIST_SUBDIRS = libs/gperftools libs/libmnl \
-	libs/libnetfilter-conntrack libs/libnfnetlink
-
 EXTRA_DIST = LICENSE autogen.sh debian/compat \
 	util/generate-json-include.sh util/generate-protocol-csv.sh \
-	libs/json
+	libs/gperftools libs/json
 
 DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \
@@ -42,8 +39,11 @@ dist-git:
 	done
 	gzip $(PACKAGE)-$(VERSION).tar
 
+netifyd-CentOS_8.spec: netifyd.spec
+	grep -v 'gperftools-devel' netifyd.spec > netifyd-CentOS_8.spec
+
 if HAVE_OSC
-deploy-osc-update: dist-git
+deploy-osc-update: netifyd-CentOS_8.spec dist-git
 	./autogen.sh && \
 		./configure --prefix=/usr --includedir=\${prefix}/include \
 		--mandir=\${prefix}/share/man --sysconfdir=/etc --localstatedir=/var
@@ -59,8 +59,7 @@ deploy-osc-update: dist-git
 	chmod a+x $(HOME)/netify-osc/home\:egloo/netifyd/debian.postinst
 	cp deploy/debian/debian.rules $(HOME)/netify-osc/home\:egloo/netifyd
 	cp deploy/debian/netifyd.dsc $(HOME)/netify-osc/home\:egloo/netifyd
-	cp netifyd.spec $(HOME)/netify-osc/home\:egloo/netifyd
-	grep -v 'gperftools-devel' netifyd.spec > $(HOME)/netify-osc/home\:egloo/netifyd/netifyd-CentOS_6.spec
+	cp netifyd*.spec $(HOME)/netify-osc/home\:egloo/netifyd
 	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) rm --force $(PACKAGE)-*.tar.gz || true)
 	cp $(PACKAGE)-$(VERSION).tar.gz $(HOME)/netify-osc/home\:egloo/netifyd
 	(cd $(HOME)/netify-osc/home\:egloo/netifyd && $(osc) add $(PACKAGE)-*.tar.gz)
@@ -78,7 +77,7 @@ deploy-edgeos:
 		--build=x86_64-pc-linux-gnu --host=mips-linux \
 		--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sharedstatedir=/var/lib \
 		--disable-shared --enable-static --enable-watchdogs --enable-lean-and-mean \
-		--disable-json-c --disable-libtcmalloc --disable-plugins --without-systemdsystemunitdir
+		--disable-libtcmalloc --disable-plugins --without-systemdsystemunitdir
 
 	$(MAKE) clean
 	$(MAKE) -j 17
@@ -124,7 +123,7 @@ deploy-edgeos:
 deploy-rpm:
 	$(MAKE) dist-gzip
 	cp -v $(PACKAGE)-$(VERSION).tar.gz ~/rpmbuild/SOURCES/
-	rpmbuild -ba $(PACKAGE).spec
+	rpmbuild -ba $(PACKAGE)_ClearOS8.spec
 
 deploy-freebsd:
 	./autogen.sh \

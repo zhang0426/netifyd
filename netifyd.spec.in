@@ -4,11 +4,10 @@
 # This is free software, licensed under the GNU General Public License v3.
 
 # Configure conditionals
-# Default values: --with conntrack --with inotify --with netlink --without bundled_libs
+# Default values: --with conntrack --with inotify --with netlink
 %{!?_with_conntrack: %{!?_without_conntrack: %define _with_conntrack --enable-conntrack}}
 %{!?_with_inotify: %{!?_without_inotify: %define _with_inotify --enable-inotify}}
 %{!?_with_netlink: %{!?_without_netlink: %define _with_netlink --enable-netlink}}
-%{!?_with_bundled_libs: %{!?_without_bundled_libs: %define _without_bundled_libs 1}}
 
 %if 0%{?centos_version} == 600
 %define _with_bundled_libs 1
@@ -41,13 +40,9 @@ BuildRequires: autoconf >= 2.63
 BuildRequires: automake
 BuildRequires: bc
 BuildRequires: libcurl-devel
-%if %{?_without_bundled_libs:1}%{!?_without_bundled_libs:0}
 BuildRequires: gperftools-devel
-%if %{?_with_conntrack:1}%{!?_with_conntrack:0}
 BuildRequires: libmnl-devel
 BuildRequires: libnetfilter_conntrack-devel
-%endif
-%endif
 BuildRequires: libpcap-devel
 BuildRequires: libtool
 BuildRequires: pkgconfig
@@ -131,6 +126,16 @@ rm -rf %{buildroot}/%{_bindir}
 rm -rf %{buildroot}/%{_includedir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}/libndpi*
 rm -rf %{buildroot}/%{_libdir}/pkgconfig/libndpi*
+
+rm -rf %{buildroot}/%{_includedir}/google
+rm -rf %{buildroot}/%{_includedir}/gperftools
+rm -rf %{buildroot}/usr/lib/debug
+rm -rf %{buildroot}/%{_libdir}/libprofiler*
+rm -rf %{buildroot}/%{_libdir}/libtcmalloc*
+rm -rf %{buildroot}/%{_libdir}/pkgconfig/libprofiler*
+rm -rf %{buildroot}/%{_libdir}/pkgconfig/libtcmalloc*
+rm -rf %{buildroot}/%{_docdir}/gperftools
+rm -rf %{buildroot}/%{_mandir}/man1/pprof*
 
 install -d -m 0750 %{buildroot}/%{statedir_vdata}
 
