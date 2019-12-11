@@ -2,14 +2,14 @@ Netify Agent
 ============
 Copyright ©2015-2019 eGloo Incorporated ([www.egloo.ca](https://www.egloo.ca))
 
-1. Network Intelligence - Simplified
+Network Intelligence - Simplified
 ---------------------------------
 
 The [Netify Agent](https://www.netify.ai/) is a deep-packet inspection server.  The Agent is built on top of [nDPI](http://www.ntop.org/products/deep-packet-inspection/ndpi/) (formerly OpenDPI) to detect network protocols and applications.  Detections can be saved locally, served over a UNIX or TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party server.  Flow metadata, network statistics, and detection classifications are stored using JSON encoding.
 
 Optionally, the Netify Agent can be coupled with a [Netify Cloud](https://www.netify.ai/) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
 
-2.0 Download Packages
+Download Packages
 -----------------
 
 Supported platforms with installation instructions can be found [here](https://www.netify.ai/get-netify).
@@ -26,7 +26,7 @@ Alternatively, binary packages are available for the following OS distributions 
 - [RHEL](http://download.netify.ai/netify/rhel/)
 - [Ubuntu](http://download.netify.ai/netify/ubuntu/)
 
-2.1 Runtime Requirements
+Runtime Requirements
 --------------------
 
 Ensure that the nfnetlink and nf_conntrack_netlink kernel modules are loaded.
@@ -56,7 +56,7 @@ Configuring/Building From Source
 Read the appropriate documentation in the doc directory, prefixed with: `BUILD-*`
 
 Generally the process is:
-```
+```shell
 # ./autogen.sh
 # ./configure
 # make
