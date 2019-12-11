@@ -57,9 +57,9 @@ Read the appropriate documentation in the doc directory, prefixed with: `BUILD-*
 
 Generally the process is:
 ```shell
-# ./autogen.sh
-# ./configure
-# make
+./autogen.sh
+./configure
+make
 ```
 
 Online Documentation
