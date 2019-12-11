@@ -36,7 +36,9 @@ sub-modules.
 Download Packages
 -----------------
 
-Currently you can download binary packages for the following OS distributions:
+Supported platforms with installation documentation can be found [here](https://www.netify.ai/get-netify).
+
+Alternatively, binary packages are available for the following OS distributions (manual install):
 - [CentOS](http://download.netify.ai/netify/centos/)
 - [ClearOS](http://download.netify.ai/netify/clearos/)
 - [Debian](http://download.netify.ai/netify/debian/)
