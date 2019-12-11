@@ -19,14 +19,13 @@ Build Requirements
 
 Netify requires the following third-party packages:
 - libcurl
-- libjson-c
 - libmnl
 - libnetfilter-conntrack
 - libpcap
 - zlib
 
 Optional:
-- libtcmalloc (gperftools)
+- gperftools/libtcmalloc (will use bundled version if not available)
 
 Download Source
 ---------------
