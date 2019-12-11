@@ -37,11 +37,16 @@ Download Packages
 -----------------
 
 Currently you can download binary packages for the following OS distributions:
-- [ClearOS](https://www.clearos.com/products/purchase/clearos-marketplace-apps#cloud)
-- [CentOS](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
-- [Debian](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
-- [Fedora](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
-- [Ubuntu](http://software.opensuse.org/download.html?project=home%3Aegloo&package=netifyd)
+- [CentOS](http://download.netify.ai/netify/centos/)
+- [ClearOS](http://download.netify.ai/netify/clearos/)
+- [Debian](http://download.netify.ai/netify/debian/)
+- [FreeBSD](http://download.netify.ai/netify/freebsd/)
+- [NethServer](http://download.netify.ai/netify/nethserver/)
+- [OpenWrt/LEDE](https://downloads.openwrt.org/snapshots/packages/)
+- [pfSense](http://download.netify.ai/netify/pfsense/)
+- [Raspbian](https://software.opensuse.org//download.html?project=home%3Aegloo&package=netifyd)
+- [RHEL](http://download.netify.ai/netify/rhel/)
+- [Ubuntu](http://download.netify.ai/netify/ubuntu/)
 
 Developer Documentation
 -----------------------
