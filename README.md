@@ -1,17 +1,12 @@
-Netify Agent
-============
+# Netify Agent
 Copyright ©2015-2019 eGloo Incorporated ([www.egloo.ca](https://www.egloo.ca))
 
-Network Intelligence - Simplified
----------------------------------
-
+## Network Intelligence - Simplified
 The [Netify Agent](https://www.netify.ai/) is a deep-packet inspection server.  The Agent is built on top of [nDPI](http://www.ntop.org/products/deep-packet-inspection/ndpi/) (formerly OpenDPI) to detect network protocols and applications.  Detections can be saved locally, served over a UNIX or TCP socket, and/or "pushed" (via HTTP POSTs) to a remote third-party server.  Flow metadata, network statistics, and detection classifications are stored using JSON encoding.
 
 Optionally, the Netify Agent can be coupled with a [Netify Cloud](https://www.netify.ai/) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
 
-Download Packages
------------------
-
+## Download Packages
 Supported platforms with installation instructions can be found [here](https://www.netify.ai/get-netify).
 
 Alternatively, binary packages are available for the following OS distributions (manual install):
@@ -26,20 +21,14 @@ Alternatively, binary packages are available for the following OS distributions 
 - [RHEL](http://download.netify.ai/netify/rhel/)
 - [Ubuntu](http://download.netify.ai/netify/ubuntu/)
 
-Runtime Requirements
---------------------
-
+### Runtime Requirements
 Ensure that the nfnetlink and nf_conntrack_netlink kernel modules are loaded.
 
-Download Source
----------------
-
+## Download Source
 When cloning the source tree, ensure you use `--recursive` to include all
 sub-modules.
 
-Build Requirements
-------------------
-
+### Build Requirements
 Netify requires the following third-party packages:
 - libcurl
 - libmnl
@@ -50,9 +39,7 @@ Netify requires the following third-party packages:
 Optional:
 - gperftools/libtcmalloc (will use bundled version if not available)
 
-Configuring/Building From Source
---------------------------------
-
+### Configuring/Building From Source
 Read the appropriate documentation in the doc directory, prefixed with: `BUILD-*`
 
 Generally the process is:
@@ -62,13 +49,10 @@ Generally the process is:
 make
 ```
 
-Online Documentation
---------------------
-
+## Online Documentation
 Further user and developer documentation can be found [here](https://www.netify.ai/resources).
 
-License
--------
+## License
 >>>
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
