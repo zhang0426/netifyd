@@ -53,7 +53,7 @@ Optional:
 Configuring/Building From Source
 --------------------------------
 
-Read the appropriate documentation in the doc directory, prefixed with: BUILD-*
+Read the appropriate documentation in the doc directory, prefixed with: `BUILD-*`
 
 Generally the process is:
 ```
@@ -62,10 +62,10 @@ Generally the process is:
 # make
 ```
 
-Developer Documentation
------------------------
+Online Documentation
+--------------------
 
-Further developer documentation can be found [here](https://www.netify.ai/developer/netify-agent).
+Further user and developer documentation can be found [here](https://www.netify.ai/resources).
 
 License
 -------
