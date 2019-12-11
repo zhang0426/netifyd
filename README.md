@@ -12,7 +12,7 @@ Optionally, the Netify Agent can be coupled with a [Netify Cloud](https://www.ne
 Download Packages
 -----------------
 
-Supported platforms with installation documentation can be found [here](https://www.netify.ai/get-netify).
+Supported platforms with installation instructions can be found [here](https://www.netify.ai/get-netify).
 
 Alternatively, binary packages are available for the following OS distributions (manual install):
 - [CentOS](http://download.netify.ai/netify/centos/)
