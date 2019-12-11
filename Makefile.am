@@ -6,12 +6,13 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS} -I m4
 
-SUBDIRS_EXTRA=
+SUBDIRS_EXTRA =
 if USE_LIBTCMALLOC_BUNDLED
 SUBDIRS_EXTRA += libs/gperftools
 endif
 
 SUBDIRS = libs/inih libs/ndpi $(SUBDIRS_EXTRA) include src deploy doc tests
+DIST_SUBDIRS = $(SUBDIRS)
 
 EXTRA_DIST = LICENSE autogen.sh debian/compat \
 	util/generate-json-include.sh util/generate-protocol-csv.sh \
@@ -133,6 +134,7 @@ deploy-freebsd:
 			--disable-inotify
 	$(MAKE) -C deploy
 	$(MAKE) dist-gzip
+	rm -rf deploy/freebsd/work
 	sudo cp -v $(PACKAGE)-$(VERSION).tar.gz /usr/ports/distfiles/
 	make -C deploy/freebsd clean
 	make -C deploy/freebsd makesum

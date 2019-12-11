@@ -180,14 +180,7 @@ AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
     AC_DEFINE([_ND_USE_LIBTCMALLOC], [1],
         [Define to enable Thread Caching malloc support.])
 
-    PKG_CHECK_MODULES([LIBTCMALLOC], [libtcmalloc], [
-        LIBS_saved=$LIBS
-        AC_CHECK_LIB([tcmalloc], [tc_version], [], AC_MSG_ERROR([libtcmalloc not found.]))
-        LIBS=$LIBS_saved
-        LIBTCMALLOC_LIBS=-ltcmalloc
-        LIBTCMALLOC_CFLAGS=
-        AC_SUBST([LIBTCMALLOC_LIBS])
-
+    PKG_CHECK_MODULES([LIBTCMALLOC], [libtcmalloc_minimal], [
         AM_CONDITIONAL(USE_LIBTCMALLOC, true)
 
         AC_LANG_PUSH([C++])
@@ -204,7 +197,8 @@ AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
     AM_COND_IF([USE_LIBTCMALLOC_BUNDLED], [
         AC_CONFIG_SUBDIRS([libs/gperftools])
         AC_MSG_NOTICE([using tcmalloc from bundled gperftools...])
-        AC_DEFINE([HAVE_GPERFTOOLS_MALLOC_EXTENSION_H], [1], [Define to 1 if you have the <gperftools/malloc_extension.h> header file.])
+        AC_DEFINE([HAVE_GPERFTOOLS_MALLOC_EXTENSION_H], [1],
+            [Define to 1 if you have the <gperftools/malloc_extension.h> header file.])
     ])
 ])
 
