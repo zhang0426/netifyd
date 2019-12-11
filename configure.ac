@@ -197,7 +197,7 @@ AS_IF([test "x$enable_libtcmalloc" = "xyes"], [
         AM_CONDITIONAL(USE_LIBTCMALLOC, true)
         AM_CONDITIONAL(USE_LIBTCMALLOC_BUNDLED, true)
 
-        LIBTCMALLOC_LIBS="${ac_abs_confdir}/libs/gperftools/.libs/libtcmalloc.a"
+        LIBTCMALLOC_LIBS="${ac_abs_confdir}/libs/gperftools/.libs/libtcmalloc_minimal.a"
         LIBTCMALLOC_CFLAGS="-I ${ac_abs_confdir}/libs/gperftools/src"
     ])
 
