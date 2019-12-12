@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ "${2}" == "POST-INSTALL" ]; then
+    ${PKG_PREFIX}/sbin/netifyd --provision || exit $?
+fi
+
+exit 0

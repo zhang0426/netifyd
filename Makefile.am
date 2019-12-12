@@ -128,13 +128,13 @@ deploy-rpm:
 
 deploy-freebsd:
 	./autogen.sh \
-		CC=clang CXX=clang++ \
+		CC=clang CXX=clang++ CPPFLAGS=-I/usr/local/include \
 		./configure \
 			--disable-conntrack \
 			--disable-inotify
 	$(MAKE) -C deploy
-	$(MAKE) dist-gzip
 	rm -rf deploy/freebsd/work
+	$(MAKE) dist-gzip
 	sudo cp -v $(PACKAGE)-$(VERSION).tar.gz /usr/ports/distfiles/
 	make -C deploy/freebsd clean
 	make -C deploy/freebsd makesum
