@@ -43,7 +43,7 @@ Optional:
 Read the appropriate documentation in the doc directory, prefixed with: `BUILD-*`
 
 Generally the process is:
-```shell
+```sh
 ./autogen.sh
 ./configure
 make
