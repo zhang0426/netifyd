@@ -126,9 +126,8 @@ deploy-rpm:
 	cp -v $(PACKAGE)-$(VERSION).tar.gz ~/rpmbuild/SOURCES/
 	rpmbuild -ba $(PACKAGE)_ClearOS8.spec
 
-deploy-freebsd:
+deploy-freebsd-common:
 	./autogen.sh \
-		CC=clang CXX=clang++ CPPFLAGS=-I/usr/local/include \
 		./configure \
 			--disable-conntrack \
 			--disable-inotify
@@ -136,10 +135,22 @@ deploy-freebsd:
 	rm -rf deploy/freebsd/work
 	$(MAKE) dist-gzip
 	sudo cp -v $(PACKAGE)-$(VERSION).tar.gz /usr/ports/distfiles/
+
+deploy-freebsd-build:
 	make -C deploy/freebsd clean
 	make -C deploy/freebsd makesum
 	make -C deploy/freebsd package DISABLE_VULNERABILITIES=yes
 	ls -lh deploy/freebsd/work/pkg/*.txz
+
+deploy-freebsd-10x: deploy-freebsd-common
+	cp deploy/freebsd/Makefile-10x deploy/freebsd/Makefile
+	$(MAKE) deploy-freebsd-build
+
+deploy-freebsd-11x: deploy-freebsd-common
+	cp deploy/freebsd/Makefile-11x deploy/freebsd/Makefile
+	$(MAKE) deploy-freebsd-build
+
+deploy-freebsd: deploy-freebsd-11x
 
 deploy-pfsense:
 	make -C deploy/pfsense clean

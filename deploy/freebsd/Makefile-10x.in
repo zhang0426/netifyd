@@ -1,0 +1,35 @@
+# $FreeBSD$
+
+PORTNAME=@PACKAGE_TARNAME@
+PORTVERSION=@PACKAGE_VERSION@
+PORTREVISION=1
+CATEGORIES=security
+MASTER_SITES=http://download.netify.ai/netify/freebsd/
+MAINTAINER=team@netify.ai
+COMMENT=Netify Agent - Deep-packet Inspection Server
+LICENSE=GPLv3+
+LICENSE_FILE=${WRKSRC}/LICENSE
+LICENSE_NAME=GNU General Public License version 3 \(or later\)
+LICENSE_PERMS=dist-mirror no-dist-sell pkg-mirror no-pkg-sell auto-accept
+LICENSE_GROUPS=FSF GPL OSI
+
+USES=gmake libtool
+USE_RC_SUBR=netifyd
+USE_LDCONFIG=yes
+
+SUB_LIST=PACKAGE_TARNAME=@PACKAGE_TARNAME@
+
+GNU_CONFIGURE=1
+
+CONFIGURE_ARGS=\
+	CC=clang CXX=clang++ CPPFLAGS=-I/usr/local/include \
+	--disable-conntrack --disable-inotify
+
+INSTALL_TARGET=install-strip
+
+post-install:
+	${MKDIR} ${STAGEDIR}/var/run/netifyd
+	${MV} ${STAGEDIR}/usr/local/etc/netifyd.conf ${STAGEDIR}/usr/local/etc/netifyd.conf.sample
+	${MV} ${STAGEDIR}/usr/local/etc/netify.d/netify-sink.conf ${STAGEDIR}/usr/local/etc/netify.d/netify-sink.conf.sample
+
+.include <bsd.port.mk>

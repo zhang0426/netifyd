@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-SUBDIRS="libs/gperftools libs/libmnl libs/libnetfilter-conntrack libs/libnfnetlink libs/ndpi"
+SUBDIRS="libs/gperftools libs/ndpi"
 
 # Regenerate configuration files
 for d in $SUBDIRS; do
