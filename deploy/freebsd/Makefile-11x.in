@@ -22,7 +22,7 @@ SUB_LIST=PACKAGE_TARNAME=@PACKAGE_TARNAME@
 GNU_CONFIGURE=1
 
 CONFIGURE_ARGS=\
-	CC=clang CXX=clang++ \
+	CC=clang CXX=clang++ CPPFLAGS=-I/usr/local/include \
 	--disable-conntrack --disable-inotify
 
 INSTALL_TARGET=install-strip
