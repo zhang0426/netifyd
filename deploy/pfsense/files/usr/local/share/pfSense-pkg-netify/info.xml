@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <pfsensepkgs>
-	<package>
-		<name>netify</name>
-		<pkginfolink>https://www.netify.ai/resources/documentation/requirements</pkginfolink>
-		<descr><![CDATA[Netify provides full transparency into what's happening on your network. Local network monitoring coupled with cloud-based analytics to deliver exceptional, business-driven results.]]></descr>
-		<website>http://netify.ai/</website>
-		<category>Services</category>
-		<version>%%PKGVERSION%%</version>
-		<status>Beta</status>
-		<configurationfile>netify.xml</configurationfile>
-		<maintainer>team@egloo.ca</maintainer>
-		<only_for_archs>amd64</only_for_archs>
-	</package>
+    <package>
+        <name>netify</name>
+        <pkginfolink>https://www.netify.ai/resources/documentation/requirements</pkginfolink>
+        <descr><![CDATA[Netify provides full transparency into what's happening on your network. Local network monitoring coupled with cloud-based analytics to deliver exceptional, business-driven results.]]></descr>
+        <website>http://netify.ai/</website>
+        <category>Services</category>
+        <version>%%PKGVERSION%%</version>
+        <status>Beta</status>
+        <configurationfile>netify.xml</configurationfile>
+        <maintainer>team@egloo.ca</maintainer>
+        <only_for_archs>amd64</only_for_archs>
+    </package>
 </pfsensepkgs>

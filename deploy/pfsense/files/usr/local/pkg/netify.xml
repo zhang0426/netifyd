@@ -2,8 +2,8 @@
 <!DOCTYPE packagegui SYSTEM "../schema/packages.dtd">
 <?xml-stylesheet type="text/xsl" href="../xsl/package.xsl"?>
 <packagegui>
-	<copyright>
-	<![CDATA[
+    <copyright>
+    <![CDATA[
 /*
  * netify.xml
  *
@@ -24,38 +24,38 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 ]]>
-	</copyright>
-	<name>Netify</name>
-	<description>Netify Agent for pfSense</description>
-	<version>%%PKGVERSION%%</version>
-	<title>Services: Netify</title>
-	<include_file>/usr/local/pkg/netify/netify.inc</include_file>
-	<menu>
-		<name>Netify</name>
-		<tooltiptext>Configure and view Netify Agent settings</tooltiptext>
-		<section>Services</section>
-		<url>/netify/netify_status.php</url>
-	</menu>
-	<service>
-		<name>netifyd</name>
-		<rcfile>netifyd.sh</rcfile>
-		<executable>netifyd</executable>
-		<description>Netify Agent Daemon</description>
-	</service>
-	<tabs>
-	</tabs>
-	<fields>
-	</fields>
+    </copyright>
+    <name>Netify</name>
+    <description>Netify Agent for pfSense</description>
+    <version>%%PKGVERSION%%</version>
+    <title>Services: Netify</title>
+    <include_file>/usr/local/pkg/netify/netify.inc</include_file>
+    <menu>
+        <name>Netify</name>
+        <tooltiptext>Configure and view Netify Agent settings</tooltiptext>
+        <section>Services</section>
+        <url>/netify/netify_status.php</url>
+    </menu>
+    <service>
+        <name>netifyd</name>
+        <rcfile>netifyd.sh</rcfile>
+        <executable>netifyd</executable>
+        <description>Netify Agent Daemon</description>
+    </service>
+    <tabs>
+    </tabs>
+    <fields>
+    </fields>
 
-	<custom_php_resync_config_command>
-		netify_package_sync();
-	</custom_php_resync_config_command>
+    <custom_php_resync_config_command>
+        netify_package_sync();
+    </custom_php_resync_config_command>
 
-	<custom_php_install_command>
-		netify_package_install();
-	</custom_php_install_command>
+    <custom_php_install_command>
+        netify_package_install();
+    </custom_php_install_command>
 
-	<custom_php_deinstall_command>
-		netify_package_deinstall();
-	</custom_php_deinstall_command>
+    <custom_php_deinstall_command>
+        netify_package_deinstall();
+    </custom_php_deinstall_command>
 </packagegui>
