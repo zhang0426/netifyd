@@ -210,6 +210,8 @@ detect_os()
         echo "gentoo"
     elif [ -f /etc/openwrt_release ]; then
         echo "openwrt"
+    elif [ -f /usr/local/sbin/opnsense-version ]; then
+            echo "opnsense"
     elif [ -x /bin/freebsd-version ]; then
         if [ -f /etc/version ]; then
             echo "pfsense"
@@ -244,6 +246,10 @@ auto_detect_options()
             openwrt)
                 options=$(load_openwrt)
             ;;
+            opnsense)
+                # XXX: Same configuration source as pfSense.
+                options=$(load_pfsense)
+            ;;
             pfsense)
                 options=$(load_pfsense)
             ;;
@@ -266,6 +272,9 @@ restart_netifyd()
             systemctl restart netifyd
         ;;
         freebsd)
+            @sysconfdir@/rc.d/@PACKAGE_TARNAME@ restart
+        ;;
+        opnsense)
             @sysconfdir@/rc.d/@PACKAGE_TARNAME@ restart
         ;;
         pfsense)

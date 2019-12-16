@@ -2,15 +2,16 @@
 
 # $FreeBSD$
 #
-# PROVIDE: netifyd
+# PROVIDE: %%PACKAGE_TARNAME%%
 # REQUIRE: LOGIN
 # KEYWORD: shutdown
 #
 # Add these lines to /etc/rc.conf.local or /etc/rc.conf
 # to enable this service:
 #
-# netifyd_enable (bool):	Set to NO by default.
-#				Set it to YES to enable netifyd.
+# netifyd_enable (bool):    Set to NO by default.
+#                           Set it to YES to enable netifyd.
+# netifyd_opts (args):      Set manual configuration options.
 
 . /etc/rc.subr
 
@@ -24,12 +25,16 @@ start_precmd="${name}_prestart"
 
 netifyd_prestart()
 {
-    if [ -f /etc/version ]; then
-        # pfSense detected, enable auto-detect:
-        export NETIFYD_AUTODETECT="yes"
-    fi
     . %%DATADIR%%/functions.sh
-    netifyd_opts=$(auto_detect_options)
+
+    case "$(detect_os)" in
+    opnsense | pfsense)
+        # OPNsense/pfSense detected, enable auto-detect:
+        export NETIFYD_AUTODETECT="yes"
+        netifyd_opts=$(auto_detect_options)
+        ;;
+    esac
+
     rc_flags="${netifyd_opts} ${rc_flags}"
 
     return 0
