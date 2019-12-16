@@ -34,7 +34,7 @@ function netify_make_directories() {
 }
 
 function netifyd_is_running() {
-       return isvalidpid(NETIFYD_VOLATILE_STATEDIR . 'netifyd.pid');
+    return isvalidpid(NETIFYD_VOLATILE_STATEDIR . 'netifyd.pid');
 }
 
 function netifyd_get_uuid() {
