@@ -149,13 +149,13 @@ load_edgeos()
 # pfSense: Dynamically add all configured LAN/WAN interfaces.
 load_pfsense()
 {
-    local conf="/cf/conf/config.xml"
-    local xpath_ifaces="/pfsense/interfaces"
+    local conf="$1"
+    local xpath_ifaces="$2"
 
     for role in lan wan; do
         i=1; while true; do
             xpath="$xpath_ifaces/$role[$i]"
-            xmllint --xpath "$xpath/enable" $conf >/dev/null 2>&1 || break
+            /usr/local/bin/xmllint --xpath "$xpath/enable" $conf >/dev/null 2>&1 || break
             enabled=$(xmllint --xpath "boolean($xpath/enable)" $conf)
 
             if [ "$enabled" == "true" ]; then
@@ -247,11 +247,10 @@ auto_detect_options()
                 options=$(load_openwrt)
             ;;
             opnsense)
-                # XXX: Same configuration source as pfSense.
-                options=$(load_pfsense)
+                options=$(load_pfsense "/conf/config.xml" "/opnsense/interfaces")
             ;;
             pfsense)
-                options=$(load_pfsense)
+                options=$(load_pfsense "/cf/conf/config.xml" "/pfsense/interfaces")
             ;;
             edgeos)
                 options=$(load_edgeos)
