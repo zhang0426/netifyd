@@ -1,0 +1,96 @@
+stages:
+  - build
+  - test
+
+
+# -------------------------------------------------------------------------
+# Build stage
+# -------------------------------------------------------------------------
+
+#freebsd 11 build:
+#  variables:
+#    CI_DEBUG_TRACE: "true"
+#  stage: build
+#  tags:
+#    - freebsd11
+#  script:
+#    - ls -al /
+
+
+centos 7 build:
+  stage: build
+  tags:
+    - os-manager
+  image: registry.gitlab.com/egloo.ca/os-manager/builder-image:os7
+  before_script:
+    # Manually pull in submodules, the GIT_SUBMODULE_STRATEGY variable in GitLab is quirky
+    - git submodule sync --recursive
+    - git submodule update --init --recursive
+  script:
+    # Prep build
+    - tar --exclude=.git --transform "s,^,netifyd-2.99/," -czf netifyd-2.99.tar.gz *
+    - mkdir -p result centos7/builds centos7/logs
+    # Build packages
+    - rpmbuild -bs netifyd.spec --define "_sourcedir $PWD" --define "_srcrpmdir $PWD"
+    - mock -v --old-chroot --resultdir=result *.src.rpm
+    # Copy packags and logs to artifacts
+    - grep -v DEBUG result/root.log
+    - mv result/*rpm centos7/builds/
+    - mv result/*log centos7/logs/
+    - rm -rf result
+  artifacts:
+    when: always
+    paths:
+    - centos7
+    expire_in: 1 day
+
+
+centos 8 build:
+  stage: build
+  tags:
+    - os-manager
+  image: registry.gitlab.com/egloo.ca/os-manager/builder-image:os8
+  before_script:
+    # Manually pull in submodules, the GIT_SUBMODULE_STRATEGY variable in GitLab is quirky
+    - git submodule sync --recursive
+    - git submodule update --init --recursive
+  script:
+    # Prep build
+    - tar --exclude=.git --transform "s,^,netifyd-2.99/," -czf netifyd-2.99.tar.gz *
+    - mkdir -p result centos8/builds centos8/logs
+    # Build packages
+    - rpmbuild -bs netifyd.spec --define "_sourcedir $PWD" --define "_srcrpmdir $PWD"
+    - mock -v --old-chroot --resultdir=result *.src.rpm
+    # Copy packags and logs to artifacts
+    - grep -v DEBUG result/root.log
+    - mv result/*rpm centos8/builds/
+    - mv result/*log centos8/logs/
+    - rm -rf result
+  artifacts:
+    when: always
+    paths:
+    - centos8
+    expire_in: 1 day
+
+
+# -------------------------------------------------------------------------
+# Test stage
+# -------------------------------------------------------------------------
+
+#pfsense 2.4.x test:
+#  stage: test
+#  tags:
+#    - pfsense24
+#  script:
+#    - ls -al /
+
+clearos 7 test:
+  stage: test
+  tags:
+    - os-manager
+  image: centos:7
+  script:
+    - rpm -Uvh http://mirrors.egloo.ca/egloo/clearos/7/devel/staging/clearos-release-7-current.noarch.rpm
+    - rpm --import http://download.netify.ai/netify/clearos/7/testing/RPM-GPG-KEY-netify
+    - curl http://download.netify.ai/netify/clearos/7/netify.repo --output /etc/yum.repos.d/netify.repo
+    - yum -y --nogpgcheck --enablerepo=clearos-centos,clearos-centos-updates,clearos-contribs-testing,netify-testing localinstall centos7/builds/*.rpm
