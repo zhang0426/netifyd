@@ -167,6 +167,11 @@ void ndJsonResponse::Parse(const string &json_string)
         catch (exception &e) { }
 
         try {
+            uuid_site = j["uuid_site"].get<string>();
+        }
+        catch (exception &e) { }
+
+        try {
             url_sink = j["url_sink"].get<string>();
         }
         catch (exception &e) { }
