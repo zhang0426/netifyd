@@ -188,15 +188,15 @@ load_modules()
 
 detect_os()
 {
-    if [ -f @sysconfdir@/version ]; then
-        if egrep -q '^UniFiSecurityGateway' @sysconfdir@/version; then
+    if [ -f /etc/version ]; then
+        if egrep -q '^UniFiSecurityGateway' /etc/version; then
             echo "edgeos"
             return
         fi
     fi
 
-    if [ -f @sysconfdir@/issue ]; then
-        if egrep -q '^Ubuntu' @sysconfdir@/issue; then
+    if [ -f /etc/issue ]; then
+        if egrep -q '^Ubuntu' /etc/issue; then
             echo "ubuntu"
             return
         fi
