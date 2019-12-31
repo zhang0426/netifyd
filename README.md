@@ -22,7 +22,7 @@ Alternatively, binary packages are available for the following OS distributions 
 - [Ubuntu](http://download.netify.ai/netify/ubuntu/)
 
 ### Runtime Requirements
-Ensure that the nfnetlink and nf_conntrack_netlink kernel modules are loaded.
+- [Linux] Ensure that the nfnetlink and nf_conntrack_netlink kernel modules are loaded if NAT detection is enabled.
 
 ## Download Source
 When cloning the source tree, ensure you use `--recursive` to include all
