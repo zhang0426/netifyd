@@ -53,6 +53,7 @@ make
 Further user and developer documentation can be found [here](https://www.netify.ai/resources).
 
 ## License
+This software is licenced under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.txt):
 >>>
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
