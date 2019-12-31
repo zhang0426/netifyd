@@ -37,7 +37,7 @@ Netify requires the following third-party packages:
 - [Linux] libnetfilter-conntrack
 
 Optional:
-- gperftools/libtcmalloc (will use bundled version if not available)
+- google-perftools/gperftools/libtcmalloc (will use bundled version when not available)
 
 ### Configuring/Building From Source
 Read the appropriate documentation in the doc directory, prefixed with: `BUILD-*`
