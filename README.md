@@ -31,10 +31,10 @@ sub-modules.
 ### Build Requirements
 Netify requires the following third-party packages:
 - libcurl
-- libmnl
-- libnetfilter-conntrack
 - libpcap
 - zlib
+- [Linux] libmnl
+- [Linux] libnetfilter-conntrack
 
 Optional:
 - gperftools/libtcmalloc (will use bundled version if not available)
