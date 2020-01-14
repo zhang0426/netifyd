@@ -170,8 +170,6 @@ clearos 7 test:
     - pkg install -y rsync
     - rsync -v master-mirror.egloo.ca::netify-builds/$CI_PROJECT_NAME/freebsd/11.3/x86_64/netifyd-2.99_1.txz .
     - pkg add netifyd-2.99_1.txz
-    # FIXME: just temporary - fix in source
-    - sed -i -e 's/(xmllint/(\/usr\/local\/bin\/xmllint/' /usr/local/share/netifyd/functions.sh
     # Set our Agent UUID
     - echo "$AGENT_UUID" > /usr/local/etc/netify.d/agent.uuid
     - netifyd --enable-sink

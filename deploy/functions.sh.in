@@ -156,10 +156,10 @@ load_pfsense()
         i=1; while true; do
             xpath="$xpath_ifaces/$role[$i]"
             /usr/local/bin/xmllint --xpath "$xpath/enable" $conf >/dev/null 2>&1 || break
-            enabled=$(xmllint --xpath "boolean($xpath/enable)" $conf)
+            enabled=$(/usr/local/bin/xmllint --xpath "boolean($xpath/enable)" $conf)
 
             if [ "$enabled" == "true" ]; then
-                ifn=$(xmllint --xpath "$xpath/if/text()" $conf)
+                ifn=$(/usr/local/bin/xmllint --xpath "$xpath/if/text()" $conf)
                 case "$role" in
                     lan)
                         options="$options -I $ifn"
