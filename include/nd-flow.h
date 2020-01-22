@@ -32,6 +32,7 @@
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
 #define ND_FLOW_DHCPCI_LEN  96      // DHCP class identifier
 #define ND_FLOW_MDNS_ANSLEN 96      // MDNS answer length
+
 // BitTorrent info hash length
 #define ND_FLOW_BTIHASH_LEN SHA1_DIGEST_LENGTH
 
