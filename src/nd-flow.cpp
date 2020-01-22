@@ -530,6 +530,14 @@ bool ndFlow::has_mdns_answer(void)
     );
 }
 
+bool ndFlow::has_ssdp_headers(void)
+{
+    return (
+        detected_protocol.master_protocol == NDPI_PROTOCOL_SSDP &&
+        ssdp.headers.size()
+    );
+}
+
 void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 {
     char *p = NULL, buffer[64];
@@ -977,6 +985,12 @@ void ndFlow::json_encode(json &j,
     if (has_mdns_answer()) {
 
         j["mdns"]["answer"] = mdns.answer;
+    }
+
+    if (has_ssdp_headers()) {
+
+        j["ssdp"] = ssdp.headers;
+
     }
 
     j["first_seen_at"] = ts_first_seen;

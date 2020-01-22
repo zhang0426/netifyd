@@ -1120,42 +1120,40 @@ void ndDetectionThread::ProcessPacket(void)
                     ntohs(new_flow->lower_port),
                     ntohs(new_flow->upper_port)
             );
-#if 0
-            // XXX: In the *very* unlikely case that we have SNI from a partial TLS
-            // dissection, try to detect the application.  This has only been seen
-            // in one case so far, between a Microsoft client/server.
-            switch (new_flow->detected_protocol.master_protocol) {
-                case NDPI_PROTOCOL_HTTPS:
-                case NDPI_PROTOCOL_SSL:
-                case NDPI_PROTOCOL_MAIL_IMAPS:
-                case NDPI_PROTOCOL_MAIL_SMTPS:
-                case NDPI_PROTOCOL_MAIL_POPS:
-                case NDPI_PROTOCOL_SSL_NO_CERT:
-                case NDPI_PROTOCOL_OSCAR:
-                    if (new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate[0] != '\0') {
-                        nd_debug_printf("%s: WARNING: Extracted SSL CN from partial detection.\n", tag.c_str());
-                        ndpi_protocol_match_result ret_match;
-                        new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
-                            ndpi, new_flow->ndpi_flow,
-                            (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate,
-                            strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate),
-                            &ret_match
+        }
+        else if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_SSDP) {
+            if (new_flow->ndpi_flow->packet.packet_lines_parsed_complete) {
+                string buffer;
+                for (unsigned i = 0;
+                    i < new_flow->ndpi_flow->packet.parsed_lines; i++) {
+
+                    buffer.assign(
+                        (const char *)new_flow->ndpi_flow->packet.line[i].ptr,
+                        new_flow->ndpi_flow->packet.line[i].len
+                    );
+
+                    size_t n = buffer.find_first_of(":");
+                    if (n != string::npos && n > 0) {
+                        string key = buffer.substr(0, n);
+                        for_each(key.begin(), key.end(), [](char & c) {
+                            c = ::tolower(c);
+                        });
+
+                        if (key != "user-agent" && key != "server" &&
+                            ! (key.size() > 2 && key[0] == 'x' && key[1] == '-'))
+                            continue;
+
+                        string value = buffer.substr(n);
+                        value.erase(value.begin(),
+                            find_if(value.begin(), value.end(), [](int c) {
+                                return !isspace(c) && c != ':';
+                            })
                         );
+
+                        new_flow->ssdp.headers[key] = value;
                     }
-                    if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
-                        new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
-                        nd_debug_printf("%s: WARNING: Extracted SSL SNI from partial detection.\n", tag.c_str());
-                        ndpi_protocol_match_result ret_match;
-                        new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
-                            ndpi, new_flow->ndpi_flow,
-                            (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate,
-                            strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate),
-                            &ret_match
-                        );
-                    }
-                    break;
+                }
             }
-#endif
         }
 
         if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {

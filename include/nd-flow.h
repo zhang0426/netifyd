@@ -71,6 +71,8 @@ protected:
 typedef pair<const struct pcap_pkthdr *, const uint8_t *> nd_flow_push;
 typedef vector<nd_flow_push> nd_flow_capture;
 
+typedef unordered_map<string, string> nd_flow_kvmap;
+
 class ndFlow
 {
 public:
@@ -170,6 +172,10 @@ public:
         } mdns;
     };
 
+    struct {
+        nd_flow_kvmap headers;
+    } ssdp;
+
     enum {
         TYPE_LOWER,
         TYPE_UPPER,
@@ -227,6 +233,7 @@ public:
     bool has_ssl_server_ja3(void);
     bool has_bt_info_hash(void);
     bool has_mdns_answer(void);
+    bool has_ssdp_headers(void);
 
     void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
 
