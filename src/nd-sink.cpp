@@ -621,8 +621,12 @@ string ndSinkThread::Deflate(const string &data)
         throw ndSinkThreadException("deflate");
 
     if (ND_DEBUG || ND_DEBUG_UPLOAD) {
-        nd_debug_printf("%s: payload compressed: %lu -> %lu\n",
-            tag.c_str(), data.size(), buffer.size());
+
+        nd_debug_printf(
+            "%s: payload compressed: %lu -> %lu: %.1f%%\n",
+            tag.c_str(), data.size(), buffer.size(),
+            100.0f - ((float)buffer.size() * 100.0f / (float)data.size())
+        );
     }
 
     return buffer;
