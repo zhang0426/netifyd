@@ -1,5 +1,5 @@
 # Netify Agent Source Automake File
-# Copyright (C) 2016-2019 eGloo, Incorporated
+# Copyright (C) 2016-2020 eGloo, Incorporated
 #
 # This is free software, licensed under the GNU General Public License v3.
 

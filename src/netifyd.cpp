@@ -1,5 +1,5 @@
 // Netify Agent
-// Copyright (C) 2015-2019 eGloo Incorporated <http://www.egloo.ca>
+// Copyright (C) 2015-2020 eGloo Incorporated <http://www.egloo.ca>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -143,7 +143,7 @@ pthread_mutex_t *nd_printf_mutex = NULL;
 static void nd_usage(int rc = 0, bool version = false)
 {
     fprintf(stderr, "%s\n", nd_get_version_and_features().c_str());
-    fprintf(stderr, "Copyright (C) 2015-2019 eGloo Incorporated\n"
+    fprintf(stderr, "Copyright (C) 2015-2020 eGloo Incorporated\n"
             "[%s %s]\n", GIT_RELEASE, GIT_DATE);
     if (version) {
         fprintf(stderr, "\nThis application uses nDPI v%s\n"
