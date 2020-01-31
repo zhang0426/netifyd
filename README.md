@@ -13,6 +13,7 @@ Alternatively, binary packages are available for the following OS distributions 
 - [CentOS](http://download.netify.ai/netify/centos/)
 - [ClearOS](http://download.netify.ai/netify/clearos/)
 - [Debian](http://download.netify.ai/netify/debian/)
+- [EdgeOS](http://sokoloski.ca/netify-edgeos/)
 - [FreeBSD](http://download.netify.ai/netify/freebsd/)
 - [NethServer](http://download.netify.ai/netify/nethserver/)
 - [OpenWrt/LEDE](https://downloads.openwrt.org/snapshots/packages/)
