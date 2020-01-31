@@ -7,19 +7,23 @@ The @PACKAGE_NAME@ is a deep-packet inspection server.  The Agent is built on to
 Optionally, the @PACKAGE_NAME@ can be coupled with a Netify Cloud (\fIhttps://www.netify.ai/\fR) subscription for further cloud processing, historical storage, machine-learning analysis, event notifications, device detection/identification, along with the option (on supported platforms) to take an active role in policing/bandwidth-shaping specific network protocols and applications.
 .SH SYNOPSIS
 .B @PACKAGE_TARNAME@
-[\fB\-p\fR, \fB\-\-provision\fR]
+\fB\-p\fR, \fB\-\-provision\fR
 .IR
 
 .B @PACKAGE_TARNAME@
-[\fB\-\-enable/disable-sink\fR]
+\fB\-\-enable/disable-sink\fR
 .IR
 
 .B @PACKAGE_TARNAME@
-[\fB\-P\fR, \fB\-\-protocols\fR]
+\fB\-s\fR, \fB\-\-status\fR
 .IR
 
 .B @PACKAGE_TARNAME@
-[\fB\-U\fR, \fB\-\-uuidgen\fR]
+\fB\-P\fR, \fB\-\-protocols\fR
+.IR
+
+.B @PACKAGE_TARNAME@
+\fB\-U\fR, \fB\-\-uuidgen\fR
 .IR
 
 .B @PACKAGE_TARNAME@
@@ -28,12 +32,16 @@ Optionally, the @PACKAGE_NAME@ can be coupled with a Netify Cloud (\fIhttps://ww
 [\fB\-D\fR, \fB\-\-debug-uploads\fR]
 [\fB\-t\fR, \fB\-\-disable-conntrack\fR]
 [\fB\-l\fR, \fB\-\-disable-netlink\fR]
-[\fB\-I\fR, \fB\-\-internal\fR=\fIINTERFACE\fR]
-[\fB\-E\fR, \fB\-\-external\fR=\fIINTERFACE\fR]
-[\fB\-A\fR, \fB\-\-device-address\fR=\fIADDRESS\fR]
 [\fB\-c\fR, \fB\-\-config\fR=\fICONFIG\fR]
 [\fB\-s\fR, \fB\-\-serial\fR=\fIUUID\fR]
 [\fB\-C\fR, \fB\-\-sink-conf\fR=\fIFILENAME\fR]
+\fB\-I\fR, \fB\-\-internal\fR=\fIINTERFACE\fR [capture device opts...] [\fB\-I\fR, \fB\-\-internal\fR=\fIINTERFACE\fR]...
+\fB\-E\fR, \fB\-\-external\fR=\fIINTERFACE\fR [capture device opts...] [\fB\-E\fR, \fB\-\-external\fR=\fIINTERFACE\fR]...
+.IR
+
+.B Capture device options:
+[\fB\-A\fR, \fB\-\-device-address\fR=\fIADDRESS\fR]
+[\fB\-F\fR, \fB\-\-device-filter\fR=\fIBPF\fR]
 .IR
 .SH OPTIONS
 .BR \-p ", " \-\-provision
@@ -42,6 +50,9 @@ Generate a new client UUID if one hasn't already been set.  Display the URL used
 .TP
 .BR \-\-enable-sink ", " \-\-disable-sink
 Enable or disable access to the Netify Cloud.  When enabled, flow metadata and DPI detection information will be uploaded to the Cloud for further processing and analysis.  A Netify Cloud Subscription (\fIhttps://netify.ai/\fR) is required.  This option is disabled by default.
+.TP
+.BR \-s ", " \-\-status
+Display the latest service status.
 .TP
 .BR \-P ", " \-\-protocols
 Display the current protocol and service ID list.
@@ -64,12 +75,6 @@ Disable connection tracking support.  This option will disable IP NAT detection 
 .BR \-l ", " \-\-disable-netlink
 Disable netlink support.  This option will disable the detection of IP address and routing changes.  The address and routing configuration for an interface must be supplied using the \-\-device-address=\fIADDRESS\fR option (described below).
 .TP
-.BR \-I ", " \-\-internal=\fIINTERFACE\fR
-Capture packets on this internal (LAN) interface.  Can be specified more than once for multiple interfaces.
-.TP
-.BR \-E ", " \-\-external=\fIINTERFACE\fR
-Capture packets on this external (WAN) interface.  Can be specified more than once for multiple interfaces.
-.TP
 .BR \-A ", " \-\-device-address=\fIADDRESS\fR
 For interfaces receiving mirrored traffic, or when netlink is disabled or unavailable, use this to specify the addresses local to the previous interface (-I, or -E) parameter.  Can be specified more than once for multiple addresses.
 .TP
@@ -81,6 +86,12 @@ Specify a client serial number (UUID).  Used for device identification with the 
 .TP
 .BR \-f ", " \-\-sink-conf=\fIFILENAME\fR
 Specify an alternate Netify Cloud Sink configuration file.
+.TP
+.BR \-I ", " \-\-internal=\fIINTERFACE\fR
+Capture packets on this internal (LAN) interface.  Can be specified more than once for multiple interfaces.
+.TP
+.BR \-E ", " \-\-external=\fIINTERFACE\fR
+Capture packets on this external (WAN) interface.  Can be specified more than once for multiple interfaces.
 .SH BUGS
 If you find a bug or have a feature request, please report it here: \fI@PACKAGE_BUGREPORT@\fR
 .SH SEE ALSO
