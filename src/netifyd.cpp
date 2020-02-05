@@ -1047,7 +1047,7 @@ static void nd_json_add_interfaces(json &parent)
 
         json jo;
 
-        jo[iface_name]["role"] = (i->first) ? "LAN" : "WAN";
+        jo["role"] = (i->first) ? "LAN" : "WAN";
 
         if (! nd_ifaddrs_get_mac(nd_interface_addrs, i->second, mac))
             memset(mac, 0, ETH_ALEN);
@@ -1057,9 +1057,9 @@ static void nd_json_add_interfaces(json &parent)
             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
         );
 
-        jo[iface_name]["mac"] = mac_addr;
+        jo["mac"] = mac_addr;
 
-        parent.push_back(jo);
+        parent[iface_name] = jo;
     }
 }
 
