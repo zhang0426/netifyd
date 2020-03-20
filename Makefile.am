@@ -124,7 +124,7 @@ deploy-edgeos:
 deploy-rpm:
 	$(MAKE) dist-gzip
 	cp -v $(PACKAGE)-$(VERSION).tar.gz ~/rpmbuild/SOURCES/
-	rpmbuild -ba $(PACKAGE)_ClearOS8.spec
+	rpmbuild -ba $(PACKAGE).spec
 
 deploy-freebsd-common:
 	./autogen.sh \

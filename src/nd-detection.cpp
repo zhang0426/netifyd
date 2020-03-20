@@ -603,7 +603,7 @@ void ndDetectionThread::ProcessPacket(void)
     const uint8_t *l3 = NULL, *l4 = NULL, *pkt = NULL;
     uint16_t l2_len, l3_len, l4_len = 0, pkt_len = 0;
 
-    uint16_t type;
+    uint16_t type = 0;
     uint16_t ppp_proto;
     uint16_t frag_off = 0;
     uint8_t vlan_packet = 0;
@@ -680,6 +680,11 @@ void ndDetectionThread::ProcessPacket(void)
         l2_len = SLL_HDR_LEN;
         break;
 
+    case DLT_RAW:
+        l2_len = 0;
+        // type will be set to ETHERTYPE_IP/V6 below...
+        break;
+
     default:
         stats->pkt.discard++;
         stats->pkt.discard_bytes += pkt_header->len;
@@ -751,6 +756,9 @@ void ndDetectionThread::ProcessPacket(void)
     flow.ip_version = hdr_ip->ip_v;
 
     if (flow.ip_version == 4) {
+
+        if (type == 0) type = ETHERTYPE_IP;
+
         l3_len = ((uint16_t)hdr_ip->ip_hl * 4);
         l4_len = ntohs(hdr_ip->ip_len) - l3_len;
         flow.ip_protocol = hdr_ip->ip_p;
@@ -833,6 +841,9 @@ void ndDetectionThread::ProcessPacket(void)
         }
     }
     else if (flow.ip_version == 6) {
+
+        if (type == 0) type = ETHERTYPE_IPV6;
+
         hdr_ip6 = reinterpret_cast<const struct ip6_hdr *>(&pkt_data[l2_len]);
         l3_len = sizeof(struct ip6_hdr);
         l4_len = ntohs(hdr_ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
