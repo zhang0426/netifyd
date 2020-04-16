@@ -647,8 +647,7 @@ static void nd_stop_detection_threads(void)
 {
     if (threads.size() == 0) return;
 
-    for (nd_ifaces::iterator i = ifaces.begin();
-        i != ifaces.end(); i++) {
+    for (nd_ifaces::iterator i = ifaces.begin(); i != ifaces.end(); i++) {
         threads[(*i).second]->Terminate();
         delete threads[(*i).second];
 
