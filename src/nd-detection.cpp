@@ -182,12 +182,12 @@ size_t ndPacketQueue::push(struct pcap_pkthdr *pkt_header, const uint8_t *pkt_da
     if (ph == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
     memcpy(ph, pkt_header, sizeof(struct pcap_pkthdr));
 
-    uint8_t *pd = new uint8_t[pkt_header->len];
+    uint8_t *pd = new uint8_t[pkt_header->caplen];
     if (pd == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
-    memcpy(pd, pkt_data, pkt_header->len);
+    memcpy(pd, pkt_data, pkt_header->caplen);
 
     pkt_queue.push(make_pair(ph, pd));
-    pkt_queue_size += (sizeof(struct pcap_pkthdr) + pkt_header->len);
+    pkt_queue_size += (sizeof(struct pcap_pkthdr) + pkt_header->caplen);
 
 #ifdef _ND_LOG_PACKET_QUEUE
     nd_debug_printf("%s: packet queue push, new size: %lu\n",
@@ -229,7 +229,7 @@ void ndPacketQueue::pop(const string &oper)
     struct pcap_pkthdr *ph = pkt_queue.front().first;
     const uint8_t *pd = pkt_queue.front().second;
 
-    pkt_queue_size -= (sizeof(struct pcap_pkthdr) + ph->len);
+    pkt_queue_size -= (sizeof(struct pcap_pkthdr) + ph->caplen);
 
     delete ph;
     delete [] pd;
@@ -636,12 +636,6 @@ void ndDetectionThread::ProcessPacket(void)
     stats->pkt.raw++;
     if (pkt_header->len > stats->pkt.maxlen)
         stats->pkt.maxlen = pkt_header->len;
-#if 0
-    if (pkt_header->caplen < pkt_header->len) {
-        // XXX: Warning: capture size less than packet size.
-        // XXX: Increase capture size (detection may not work)...
-    }
-#endif
 
     switch (pcap_datalink_type) {
     case DLT_NULL:
@@ -1093,8 +1087,8 @@ void ndDetectionThread::ProcessPacket(void)
         new_flow->ndpi_flow,
         (new_flow->ip_version == 4) ?
             (const uint8_t *)hdr_ip : (const uint8_t *)hdr_ip6,
-        pkt_header->len - l2_len,
-        pkt_header->len,
+        pkt_header->caplen - l2_len,
+        ts_pkt,
         id_src,
         id_dst
     );
