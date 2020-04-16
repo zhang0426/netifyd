@@ -101,7 +101,7 @@ protected:
 
     int sd;
     int family;
-    sockaddr *sa;
+    struct sockaddr_storage *sa;
     socklen_t sa_size;
     string node;
     string service;

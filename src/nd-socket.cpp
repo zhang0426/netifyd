@@ -103,7 +103,7 @@ ndSocketLocal::ndSocketLocal(ndSocket *base, const string &node)
 
     base->node = node;
     base->sa_size = sizeof(struct sockaddr_un);
-    base->sa = (sockaddr *)sa_un;
+    base->sa = (struct sockaddr_storage *)sa_un;
 
     memset(sa_un, 0, base->sa_size);
 
@@ -542,7 +542,7 @@ void ndSocket::Create(void)
 
         family = rp->ai_family;
         sa_size = rp->ai_addrlen;
-        sa = (sockaddr *)new uint8_t[sa_size];
+        sa = new struct sockaddr_storage;
         memcpy(sa, rp->ai_addr, sa_size);
 
         freeaddrinfo(result);
@@ -552,24 +552,24 @@ void ndSocket::Create(void)
         }
 
         if (type == ndSOCKET_TYPE_SERVER) {
-            if (listen(sd, SOMAXCONN) != 0)
+            if (::listen(sd, SOMAXCONN) != 0)
                 throw ndSocketSystemException(__PRETTY_FUNCTION__, "listen", errno);
         }
     }
     else if (family == AF_LOCAL) {
-        if ((sd = socket(family, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
+        if ((sd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
             throw ndSocketSystemException(__PRETTY_FUNCTION__, "socket", errno);
 
         if (type == ndSOCKET_TYPE_CLIENT) {
-            if (connect(sd, sa, sa_size) != 0)
+            if (::connect(sd, (struct sockaddr *)sa, sa_size) != 0)
                 throw ndSocketSystemException(__PRETTY_FUNCTION__, "connect", errno);
             nd_printf("%s: connected\n", __PRETTY_FUNCTION__);
         }
         else if (type == ndSOCKET_TYPE_SERVER) {
-            if (::bind(sd, sa, sa_size) != 0)
+            if (::bind(sd, (struct sockaddr *)sa, sa_size) != 0)
                 throw ndSocketSystemException(__PRETTY_FUNCTION__, "bind", errno);
 
-            if (listen(sd, SOMAXCONN) != 0)
+            if (::listen(sd, SOMAXCONN) != 0)
                 throw ndSocketSystemException(__PRETTY_FUNCTION__, "listen", errno);
         }
     }
