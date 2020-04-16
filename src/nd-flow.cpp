@@ -578,7 +578,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         ip_nat ? 'n' : '-',
         (detection_guessed & ND_FLOW_GUESS_PROTO) ? 'g' : '-',
-        (detection_guessed & ND_FLOW_GUESS_DNS) ? 'G' : '-',
+        (detection_guessed & ND_FLOW_GUESS_DNS) ? 'd' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
             (privacy_mask & (PRIVATE_LOWER | PRIVATE_UPPER)) ? 'X' :
