@@ -150,7 +150,12 @@ deploy-freebsd-11x: deploy-freebsd-common
 	cp deploy/freebsd/Makefile-11x deploy/freebsd/Makefile
 	$(MAKE) deploy-freebsd-build
 
+deploy-freebsd-11x-debug: deploy-freebsd-common
+	cp deploy/freebsd/Makefile-11x-debug deploy/freebsd/Makefile
+	$(MAKE) deploy-freebsd-build
+
 deploy-freebsd: deploy-freebsd-11x
+deploy-freebsd-debug: deploy-freebsd-11x-debug
 
 deploy-pfsense:
 	make -C deploy/pfsense clean

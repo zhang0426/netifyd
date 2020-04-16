@@ -23,6 +23,8 @@ pidfile="/var/run/${name}/${name}.pid"
 
 start_precmd="${name}_prestart"
 
+export ASAN_OPTIONS=log_path=/var/run/${name}/${name}-asan.log:atexit=1
+
 netifyd_prestart()
 {
     . %%DATADIR%%/functions.sh

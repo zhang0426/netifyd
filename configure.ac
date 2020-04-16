@@ -307,11 +307,15 @@ AC_SUBST([GIT_SOURCE_URL], [https://gitlab.com/netify.ai/public/netify-agent.git
 # Output files
 AC_CONFIG_FILES([deploy/openwrt/Makefile deploy/openwrt/files/netifyd.init])
 AC_CONFIG_FILES([libnetifyd.pc])
-AC_CONFIG_FILES([Makefile src/Makefile include/Makefile doc/Makefile tests/Makefile \
-    deploy/Makefile deploy/debian/Makefile deploy/edgeos/Makefile deploy/freebsd/Makefile-10x \
-    deploy/freebsd/Makefile-11x deploy/pfsense/Makefile deploy/systemd/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile include/Makefile doc/Makefile tests/Makefile deploy/Makefile])
+AC_CONFIG_FILES([deploy/debian/Makefile])
+AC_CONFIG_FILES([deploy/edgeos/Makefile])
+AC_CONFIG_FILES([deploy/freebsd/Makefile-10x deploy/freebsd/Makefile-11x deploy/freebsd/Makefile-11x-debug])
+AC_CONFIG_FILES([deploy/pfsense/Makefile])
+AC_CONFIG_FILES([deploy/systemd/Makefile])
 AC_CONFIG_FILES([doc/netifyd.8 doc/netifyd.conf.5])
 AC_CONFIG_FILES([netifyd.spec])
 AC_CONFIG_FILES([util/generate-json-include.sh], [chmod +x util/generate-json-include.sh])
 AC_CONFIG_FILES([util/generate-protocol-csv.sh], [chmod +x util/generate-protocol-csv.sh])
+
 AC_OUTPUT
