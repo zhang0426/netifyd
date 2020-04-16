@@ -20,7 +20,7 @@
 ```
 To build a debug version with AddressSanitizer:
 ```
-  # ./autogen.sh && ./configure --disable-conntrack --disable-inotify --disable-libtcmalloc CC=clang CXX=clang++ CFLAGS='-O1 -fsnitize=address -fno-omit-frame-pointer' CXXFLAGS='-O1 -fsanitize=address -fno-omit-frame-pointer' MAKE=gmake
+  # ./autogen.sh && ./configure --disable-conntrack --disable-inotify --disable-libtcmalloc CC=clang CXX=clang++ CFLAGS='-O1 -fsanitize=address -fno-omit-frame-pointer' CXXFLAGS='-O1 -fsanitize=address -fno-omit-frame-pointer' MAKE=gmake
 ```
 4. Build (optionally adjust jobs for number of CPUs + 1):
 ```
