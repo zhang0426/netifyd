@@ -659,7 +659,7 @@ void ndDetectionThread::ProcessPacket(void)
             (hdr_eth->ether_dhost[0] == 0x01 && hdr_eth->ether_dhost[1] == 0x80 &&
             hdr_eth->ether_dhost[2] == 0xC2)) {
             stats->pkt.discard++;
-            stats->pkt.discard_bytes += pkt_header->len;
+            stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: STP protocol.\n", tag.c_str());
 #endif
@@ -681,7 +681,7 @@ void ndDetectionThread::ProcessPacket(void)
 
     default:
         stats->pkt.discard++;
-        stats->pkt.discard_bytes += pkt_header->len;
+        stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
         nd_debug_printf("%s: discard: Unsupported datalink type: 0x%x\n",
             tag.c_str(), (unsigned)pcap_datalink_type);
@@ -721,7 +721,7 @@ void ndDetectionThread::ProcessPacket(void)
             );
             if (ppp_proto != PPP_IP && ppp_proto != PPP_IPV6) {
                 stats->pkt.discard++;
-                stats->pkt.discard_bytes += pkt_header->len;
+                stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
                 nd_debug_printf("%s: discard: unsupported PPP protocol: 0x%04hx\n",
                     tag.c_str(), ppp_proto);
@@ -734,7 +734,7 @@ void ndDetectionThread::ProcessPacket(void)
         else if (type == ETHERTYPE_PPPOEDISC) {
             stats->pkt.pppoe++;
             stats->pkt.discard++;
-            stats->pkt.discard_bytes += pkt_header->len;
+            stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: PPPoE discovery protocol.\n", tag.c_str());
 #endif
@@ -766,7 +766,7 @@ void ndDetectionThread::ProcessPacket(void)
         if (pkt_header->len - l2_len < sizeof(struct ip)) {
             // XXX: header too small
             stats->pkt.discard++;
-            stats->pkt.discard_bytes += pkt_header->len;
+            stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: header too small\n", tag.c_str());
 #endif
@@ -777,7 +777,7 @@ void ndDetectionThread::ProcessPacket(void)
             // XXX: fragmented packets are not supported
             stats->pkt.frags++;
             stats->pkt.discard++;
-            stats->pkt.discard_bytes += pkt_header->len;
+            stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: fragmented 0x3FFF\n", tag.c_str());
 #endif
@@ -788,7 +788,7 @@ void ndDetectionThread::ProcessPacket(void)
             // XXX: fragmented packets are not supported
             stats->pkt.frags++;
             stats->pkt.discard++;
-            stats->pkt.discard_bytes += pkt_header->len;
+            stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: fragmented 0x1FFF\n", tag.c_str());
 #endif
@@ -797,7 +797,7 @@ void ndDetectionThread::ProcessPacket(void)
 
         if (l3_len > (pkt_header->len - l2_len)) {
             stats->pkt.discard++;
-            stats->pkt.discard_bytes += pkt_header->len;
+            stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: l3_len[%hu] > (pkt_header->len[%hu] - l2_len[%hu])(%hu)\n",
                 tag.c_str(), l3_len, pkt_header->len, l2_len, pkt_header->len - l2_len);
@@ -807,7 +807,7 @@ void ndDetectionThread::ProcessPacket(void)
 
         if ((pkt_header->len - l2_len) < ntohs(hdr_ip->ip_len)) {
             stats->pkt.discard++;
-            stats->pkt.discard_bytes += pkt_header->len;
+            stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
             nd_debug_printf("%s: discard: (pkt_header->len[%hu] - l2_len[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
                 tag.c_str(), pkt_header->len, l2_len, pkt_header->len - l2_len, ntohs(hdr_ip->ip_len));
@@ -833,26 +833,32 @@ void ndDetectionThread::ProcessPacket(void)
                 memcpy(flow.upper_mac, hdr_eth->ether_shost, ETH_ALEN);
             }
         }
+
+        l4 = reinterpret_cast<const uint8_t *>(l3 + l3_len);
     }
     else if (flow.ip_version == 6) {
 
         if (type == 0) type = ETHERTYPE_IPV6;
 
         hdr_ip6 = reinterpret_cast<const struct ip6_hdr *>(&pkt_data[l2_len]);
+
+        l3 = reinterpret_cast<const uint8_t *>(hdr_ip6);
         l3_len = sizeof(struct ip6_hdr);
+        l4 = reinterpret_cast<const uint8_t *>(l3 + l3_len);
         l4_len = ntohs(hdr_ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
         flow.ip_protocol = hdr_ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+
+        if (ndpi_handle_ipv6_extension_headers(NULL, &l4, &l4_len, &flow.ip_protocol)) {
+            stats->pkt.discard++;
+            stats->pkt.discard_bytes += pkt_header->caplen;
+#ifdef _ND_LOG_PKT_DISCARD
+            nd_debug_printf("%s: discard: Error walking IPv6 extensions.\n", tag.c_str());
+#endif
+            return;
+        }
+
         flow.lower_addr.ss_family = AF_INET6;
         flow.upper_addr.ss_family = AF_INET6;
-        l3 = reinterpret_cast<const uint8_t *>(hdr_ip6);
-
-        if (flow.ip_protocol == IPPROTO_DSTOPTS) {
-            const uint8_t *options = reinterpret_cast<const uint8_t *>(
-                hdr_ip6 + sizeof(const struct ip6_hdr)
-            );
-            flow.ip_protocol = options[0];
-            l3_len += 8 * (options[1] + 1);
-        }
 
         int i = 0;
         if (memcmp(&hdr_ip6->ip6_src, &hdr_ip6->ip6_dst, sizeof(struct in6_addr))) {
@@ -885,15 +891,13 @@ void ndDetectionThread::ProcessPacket(void)
     else {
         // XXX: Warning: unsupported IP protocol version (IPv4/6 only)
         stats->pkt.discard++;
-        stats->pkt.discard_bytes += pkt_header->len;
+        stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
         nd_debug_printf("%s: discard: invalid IP protocol version: %hhx\n",
             tag.c_str(), pkt_data[l2_len]);
 #endif
         return;
     }
-
-    l4 = reinterpret_cast<const uint8_t *>(l3 + l3_len);
 
     switch (flow.ip_protocol) {
     case IPPROTO_TCP:
