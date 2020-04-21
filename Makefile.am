@@ -73,8 +73,7 @@ endif
 deploy-edgeos:
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	./autogen.sh && \
-		PKG_CONFIG=$(abs_top_builddir)/../../build/buildroot/target-usg-3p/output/host/bin/pkg-config \
-		./configure \
+	./configure \
 		--build=x86_64-pc-linux-gnu --host=mips-linux \
 		--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sharedstatedir=/var/lib \
 		--disable-shared --enable-static --enable-watchdogs --enable-lean-and-mean \
@@ -120,6 +119,32 @@ deploy-edgeos:
 	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu).tar.gz \
 		$(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
 	rm -rf $(PACKAGE)-$(VERSION)-edgeos-$(host_cpu)
+
+deploy-ubios:
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)
+	./autogen.sh && \
+	./configure --build=x86_64-pc-linux-gnu --host=aarch64-buildroot-linux-gnu \
+		--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sharedstatedir=/var/lib \
+		--enable-watchdogs --enable-lean-and-mean --disable-plugins --without-systemdsystemunitdir
+
+	$(MAKE) clean
+	$(MAKE) -j 17
+	$(MAKE) DESTDIR=$(abs_top_builddir)/$(PACKAGE)-$(VERSION)-ubios-$(host_cpu) install-strip
+
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/bin
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/include
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/*.a
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/*.la
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/libtcmalloc*
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/libprof*
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/pkgconfig
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/share/doc
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/share/man
+
+	rm -f $(PACKAGE)-$(VERSION)-ubios-$(host_cpu).tar.gz
+	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu).tar.gz \
+		$(PACKAGE)-$(VERSION)-ubios-$(host_cpu)
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)
 
 deploy-rpm:
 	$(MAKE) dist-gzip

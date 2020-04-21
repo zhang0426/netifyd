@@ -196,6 +196,13 @@ detect_os()
         fi
     fi
 
+    if [ -f /etc/os-release ]; then
+        if egrep -q '^NAME=UbiOS' /etc/os-release; then
+            echo "ubios"
+            return
+        fi
+    fi
+
     if [ -f /etc/issue ]; then
         if egrep -q '^Ubuntu' /etc/issue; then
             echo "ubuntu"

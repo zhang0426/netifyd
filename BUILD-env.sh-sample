@@ -1,0 +1,11 @@
+# Build Environment Variables
+#
+# Edit to your needs and source before configuring/compiling.
+
+export BUILDROOT=${HOME}/build/buildroot
+
+# Ubiquiti USG 3P (MIPS)
+#export PATH=${BUILDROOT}/target-usg-3p/output/host/bin:${PATH}
+
+# Ubiquiti UDM (ARM64)
+#export PATH=${BUILDROOT}/target-aarch64-udm/output/host/bin:${PATH}
