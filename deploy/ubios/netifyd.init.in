@@ -1,0 +1,35 @@
+#!/bin/sh
+# Start/stop Netify Agent (@PACKAGE_TARNAME@)
+#
+# Copyright (C) 2016-2020 eGloo, Incorporated
+#
+# This is free software, licensed under the GNU General Public License v3.
+
+NETIFYD=@sbindir@/@PACKAGE_TARNAME@
+PIDFILE=@volatilestatedir@/@PACKAGE_TARNAME@.pid
+
+case "$1" in
+  start)
+    echo "Starting @PACKAGE_TARNAME@..."
+    mkdir -p @volatilestatedir@
+    start-stop-daemon -S -x "$NETIFYD" -p "$PIDFILE"
+    ;;
+  stop)
+    echo "Stopping @PACKAGE_TARNAME@..."
+    start-stop-daemon -K -x "$NETIFYD" -p "$PIDFILE" -o
+    ;;
+  status)
+    "$NETIFYD" --status
+    ;;
+  restart)
+    "$0" stop
+    sleep 1 # Prevent race condition: ensure @PACKAGE_TARNAME@ stops before start.
+    "$0" start
+    ;;
+  reload|force-reload)
+    "$0" restart
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|status|restart|reload|force-reload}"
+    exit 1
+esac
