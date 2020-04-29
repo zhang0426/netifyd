@@ -10,9 +10,17 @@ PIDFILE=@volatilestatedir@/@PACKAGE_TARNAME@.pid
 
 case "$1" in
   start)
+    if [ -f @datadir@/functions.sh ]; then
+        source @datadir@/functions.sh
+
+        NETIFYD_OPTS=$(auto_detect_options)
+
+        load_modules
+    fi
+
     echo "Starting @PACKAGE_TARNAME@..."
     mkdir -p @volatilestatedir@
-    start-stop-daemon -S -x "$NETIFYD" -p "$PIDFILE"
+    start-stop-daemon -S -x "$NETIFYD" -p "$PIDFILE" -- $NETIFYD_OPTS
     ;;
   stop)
     echo "Stopping @PACKAGE_TARNAME@..."

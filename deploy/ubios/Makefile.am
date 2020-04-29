@@ -13,8 +13,7 @@ EXTRA_DIST = $(TEMPLATEFILES_IN)
 %: %.in
 	$(SED) \
 		-e 's|[@]datadir@|$(datadir)/$(PACKAGE_TARNAME)|g' \
-		-e 's|[@]PACKAGE_NAME@|$(PACKAGE_NAME)|g' \
 		-e 's|[@]PACKAGE_TARNAME@|$(PACKAGE_TARNAME)|g' \
-		-e 's|[@]sysconfdir@|$(sysconfdir)|g' \
+		-e 's|[@]sbindir@|$(sbindir)|g' \
 		-e 's|[@]volatilestatedir@|$(volatilestatedir)|g' \
 		< "$<" > "$@"

@@ -122,22 +122,30 @@ deploy-ubios:
 	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)
 	./autogen.sh && \
 	./configure --build=x86_64-pc-linux-gnu --host=aarch64-buildroot-linux-gnu \
-		--prefix=/usr --sysconfdir=/etc --localstatedir=/var --sharedstatedir=/var/lib \
+		--prefix=/mnt/persistent/netify-agent --sysconfdir=/mnt/persistent/netify-agent/etc \
+		--datadir=/mnt/persistent/netify-agent/share --libdir=/mnt/persistent/netify-agent/lib \
+		--localstatedir=/var \
 		--enable-watchdogs --enable-lean-and-mean --disable-plugins --without-systemdsystemunitdir
 
 	$(MAKE) clean
 	$(MAKE) -j 17
 	$(MAKE) DESTDIR=$(abs_top_builddir)/$(PACKAGE)-$(VERSION)-ubios-$(host_cpu) install-strip
 
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/bin
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/include
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/*.a
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/*.la
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/libtcmalloc*
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/libprof*
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/lib/pkgconfig
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/share/doc
-	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/usr/share/man
+	$(INSTALL) -D -m 0644 deploy/ubios/netifyd.conf \
+		$(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/etc/netifyd.conf
+	$(INSTALL) -D -m 0755 deploy/ubios/netifyd.init \
+		$(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/etc/init.d/netifyd
+	$(INSTALL) -D -m 0640 deploy/ubios/netifyd.default \
+		$(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/etc/default/netifyd
+
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/bin
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/include
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/lib/*.a
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/lib/*.la
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/lib/libtcmalloc*
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/lib/libprof*
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/lib/pkgconfig
+	rm -rf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu)/mnt/persistent/netify-agent/share/{doc,man}
 
 	rm -f $(PACKAGE)-$(VERSION)-ubios-$(host_cpu).tar.gz
 	$(AMTAR) -czf $(PACKAGE)-$(VERSION)-ubios-$(host_cpu).tar.gz \
