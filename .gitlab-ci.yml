@@ -33,8 +33,9 @@ stages:
     # - ./autogen.sh
     # - ./configure
     # - make dist
-    # Build via raw source only - FIXME: extract version number
-    - tar --exclude=.git --transform "s,^,netifyd-2.99/," -czf netifyd-2.99.tar.gz *
+    # Build via raw source only
+    - grep ^Version netifyd.spec | sed 's/.*[[:space:]]//' > /tmp/version
+    - tar --exclude=.git --transform "s,^,netifyd-`cat /tmp/version`/," -czf netifyd-`cat /tmp/version`.tar.gz *
     # Build packages
     - mkdir -p result builds/$CI_PROJECT_NAME/$RPMOS_OS/$RPMOS_VERSION/$RPMOS_ARCH logs/$RPMOS_OS/$RPMOS_VERSION/$RPMOS_ARCH
     - rpmbuild -bs netifyd.spec --define "_sourcedir $PWD" --define "_srcrpmdir $PWD"
