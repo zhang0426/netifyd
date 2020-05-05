@@ -105,7 +105,7 @@ centos 7 test:
     RPMOS_VERSION: "7"
     RPMOS_IMAGE: "centos:7"
     RPMOS_ARCH: "x86_64"
-    RPMOS_UUID: "NE-CE-07-3C"
+    RPMOS_UUID: "NE-CE-07-X1"
   <<: *rpmos_test_script
 
 centos 8 test:
@@ -114,5 +114,5 @@ centos 8 test:
     RPMOS_VERSION: "8"
     RPMOS_IMAGE: "centos:8"
     RPMOS_ARCH: "x86_64"
-    RPMOS_UUID: "NE-CE-08-3C"
+    RPMOS_UUID: "NE-CE-08-X1"
   <<: *rpmos_test_script
