@@ -176,9 +176,11 @@ ndNetlink::ndNetlink(const nd_ifaces &ifaces)
     // Add private networks for when all else fails...
     AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "127.0.0.0", 8);
     AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "10.0.0.0", 8);
+    AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "100.64.0.0", 10);
     AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "172.16.0.0", 12);
     AddNetwork(AF_INET, _ND_NETLINK_PRIVATE, "192.168.0.0", 16);
     AddNetwork(AF_INET6, _ND_NETLINK_PRIVATE, "fc00::", 7);
+    AddNetwork(AF_INET6, _ND_NETLINK_PRIVATE, "fd00::", 8);
     AddNetwork(AF_INET6, _ND_NETLINK_PRIVATE, "fe80::", 10);
 
     // Add multicast networks
