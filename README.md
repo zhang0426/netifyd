@@ -20,6 +20,7 @@ Alternatively, binary packages are available for the following OS distributions 
 - [pfSense](http://download.netify.ai/netify/pfsense/)
 - [Raspbian](https://software.opensuse.org//download.html?project=home%3Aegloo&package=netifyd)
 - [RHEL](http://download.netify.ai/netify/rhel/)
+- [UbiOS](http://sokoloski.ca/netify-ubios/)
 - [Ubuntu](http://download.netify.ai/netify/ubuntu/)
 
 ### Runtime Requirements
