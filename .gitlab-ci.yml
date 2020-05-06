@@ -6,7 +6,6 @@ stages:
 #  - bootstrap
   - build
   - test
-  - deploy
 
 #variables:
 #  CI_DEBUG_TRACE: "true"
@@ -33,8 +32,9 @@ stages:
     # - ./autogen.sh
     # - ./configure
     # - make dist
-    # Build via raw source only - FIXME: extract version number
-    - tar --exclude=.git --transform "s,^,netifyd-2.99/," -czf netifyd-2.99.tar.gz *
+    # Build via raw source only
+    - grep ^Version netifyd.spec | sed 's/.*[[:space:]]//' > /tmp/version
+    - tar --exclude=.git --transform "s,^,netifyd-`cat /tmp/version`/," -czf netifyd-`cat /tmp/version`.tar.gz *
     # Build packages
     - mkdir -p result builds/$CI_PROJECT_NAME/$RPMOS_OS/$RPMOS_VERSION/$RPMOS_ARCH logs/$RPMOS_OS/$RPMOS_VERSION/$RPMOS_ARCH
     - rpmbuild -bs netifyd.spec --define "_sourcedir $PWD" --define "_srcrpmdir $PWD"
@@ -71,33 +71,6 @@ centos 8 build:
   <<: *rpmos_build_script
 
 
-# xBSD
-#-----
-
-.xbsd_build: &xbsd_build_script
-  stage: build
-  before_script:
-    # Manually pull in submodules, the GIT_SUBMODULE_STRATEGY variable in GitLab is quirky
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
-  script:
-    # Prep build directory
-    - mkdir -p builds/$CI_PROJECT_NAME/$XBSD_OS/$XBSD_VERSION/$XBSD_ARCH logs/$CI_PROJECT_NAME/$XBSD_OS/$XBSD_VERSION/$XBSD_ARCH
-    # Pretend that a build was successful - push it up to the master mirror builds directory
-    - curl http://download.netify.ai/netify/freebsd/11.2/netifyd-2.99_1.txz -o builds/$CI_PROJECT_NAME/$XBSD_OS/$XBSD_VERSION/$XBSD_ARCH/netifyd-2.99_1.txz
-    - rsync -rtv builds/* master-mirror.egloo.ca::netify-builds/
-
-freebsd 11 build:
-  tags:
-    - freebsd11
-  variables:
-    XBSD_OS: "freebsd"
-    XBSD_TAG: "freebsd11"
-    XBSD_VERSION: "11.3"
-    XBSD_ARCH: "x86_64"
-  <<: *xbsd_build_script
-
-
 # -------------------------------------------------------------------------
 # Test stage
 # -------------------------------------------------------------------------
@@ -132,7 +105,7 @@ centos 7 test:
     RPMOS_VERSION: "7"
     RPMOS_IMAGE: "centos:7"
     RPMOS_ARCH: "x86_64"
-    RPMOS_UUID: "NE-CE-07-3C"
+    RPMOS_UUID: "NE-CE-07-X1"
   <<: *rpmos_test_script
 
 centos 8 test:
@@ -141,71 +114,5 @@ centos 8 test:
     RPMOS_VERSION: "8"
     RPMOS_IMAGE: "centos:8"
     RPMOS_ARCH: "x86_64"
-    RPMOS_UUID: "NE-CE-08-3C"
+    RPMOS_UUID: "NE-CE-08-X1"
   <<: *rpmos_test_script
-
-#  ClearOS
-#---------
-
-clearos 7 test:
-  stage: test
-  tags:
-    - docker
-  image: centos:7
-  script:
-    # FIXME: this is not a real ClearOS 7 test, just a start
-    - rpm -Uvh http://mirrors.egloo.ca/egloo/clearos/7/devel/staging/clearos-release-7-current.noarch.rpm
-    - rpm --import http://download.netify.ai/netify/clearos/7/testing/RPM-GPG-KEY-netify
-    - curl http://download.netify.ai/netify/clearos/7/netify.repo --output /etc/yum.repos.d/netify.repo
-    - yum -y --nogpgcheck --enablerepo=clearos-centos,clearos-centos-updates,clearos-contribs-testing,netify-testing localinstall centos/7/x86_64/*.rpm
-
-# OPNsense/pfSense
-#-----------------
-
-.xbsd_test: &xbsd_test_script
-  stage: test
-  script:
-    - pkg add http://pkg.freebsd.org/freebsd:11:x86:64/release_3/All/libunwind-20170615.txz
-    - pkg add http://pkg.freebsd.org/freebsd:11:x86:64/release_3/All/google-perftools-2.7.txz
-    - pkg install -y rsync
-    - rsync -v master-mirror.egloo.ca::netify-builds/$CI_PROJECT_NAME/freebsd/11.3/x86_64/netifyd-2.99_1.txz .
-    - pkg add netifyd-2.99_1.txz
-    # FIXME: just temporary - fix in source
-    - sed -i -e 's/(xmllint/(\/usr\/local\/bin\/xmllint/' /usr/local/share/netifyd/functions.sh
-    # Set our Agent UUID
-    - echo "$AGENT_UUID" > /usr/local/etc/netify.d/agent.uuid
-    - netifyd --enable-sink
-    # netifyd returns exit code 0 if --enable-sink fails.  Add extra test
-    - grep "enable_sink.*=.*yes" /usr/local/etc/netifyd.conf || exit 1
-    - ( cmdpid=$BASHPID; (sleep 35; kill $cmdpid) & exec netifyd -d -I em1 )
-    - curl "https://manager.netify.ai/api/v1/deployment/agents/status/$AGENT_UUID"
-    - service netifyd onestart
-    - netifyd --status
-    - ps afx | grep netify
-
-pfsense 2.4.x test:
-  tags:
-    - pfsense24
-  variables:
-    AGENT_UUID: "NE-PF-24-XC"
-  <<: *xbsd_test_script
-
-opnsense 19.7 test:
-  tags:
-    - opnsense197
-  variables:
-    AGENT_UUID: "NE-OP-19-XC"
-  <<: *xbsd_test_script
-
-
-# -------------------------------------------------------------------------
-# Deploy
-# -------------------------------------------------------------------------
-
-clearos 7 deploy:
-  stage: deploy
-  tags:
-    - docker
-  image: centos:7
-  script:
-    - ls # build testing repos and rsync to master server?
