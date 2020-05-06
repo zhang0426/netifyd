@@ -278,6 +278,8 @@ static int nd_config_load(void)
         "netifyd", "upload_connect_timeout", ND_SINK_CONNECT_TIMEOUT);
     nd_config.sink_xfer_timeout = (unsigned)reader.GetInteger(
         "netifyd", "upload_timeout", ND_SINK_XFER_TIMEOUT);
+    ND_GF_SET_FLAG(ndGF_UPLOAD_NAT_FLOWS, reader.GetBoolean(
+        "netifyd", "upload_nat_flows", false));
 
     ND_GF_SET_FLAG(ndGF_JSON_SAVE,
         reader.GetBoolean("netifyd", "json_save", false));
@@ -1156,8 +1158,8 @@ static void nd_json_add_flows(json &parent,
     for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
 
-        if (i->second->detection_complete == false || ! i->second->ts_first_update)
-            continue;
+        if (i->second->detection_complete == false || ! i->second->ts_first_update
+            || (! ND_UPLOAD_NAT_FLOWS && i->second->ip_nat)) continue;
 
         json jf;
         i->second->json_encode(jf, ndpi);

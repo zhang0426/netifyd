@@ -218,7 +218,8 @@ enum nd_global_flags {
     ndGF_REMAIN_IN_FOREGROUND = 0x40000,
     ndGF_FLOW_DUMP_ESTABLISHED = 0x80000,
     ndGF_FLOW_DUMP_UNKNOWN = 0x100000,
-    ndGF_UPLOAD_ENABLED = 0x200000
+    ndGF_UPLOAD_ENABLED = 0x200000,
+    ndGF_UPLOAD_NAT_FLOWS = 0x400000
 };
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
@@ -241,6 +242,7 @@ enum nd_global_flags {
 #define ND_FLOW_DUMP_ESTABLISHED (nd_config.flags & ndGF_FLOW_DUMP_ESTABLISHED)
 #define ND_FLOW_DUMP_UNKNOWN (nd_config.flags & ndGF_FLOW_DUMP_UNKNOWN)
 #define ND_UPLOAD_ENABLED (nd_config.flags & ndGF_UPLOAD_ENABLED)
+#define ND_UPLOAD_NAT_FLOWS (nd_config.flags & ndGF_UPLOAD_NAT_FLOWS)
 
 #define ND_GF_SET_FLAG(flag, value) \
 { \

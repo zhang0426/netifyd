@@ -27,6 +27,9 @@ max_udp_pkts = <number of UDP packets to perform DPI on before giving up>
 ttl_idle_flow = <idle flow TTL in seconds>
 ttl_idle_tcp_flow = <idle TCP flow TTL in seconds>
 capture_unknown_flows = <yes/no>
+upload_connect_timeout = <timeout in seconds>
+upload_xfer_timeout = <timeout in seconds>
+upload_nat_flows = <yes/no>
 
 [flow_hash_cache]
 enable = <yes/no>
