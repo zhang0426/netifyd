@@ -157,7 +157,12 @@ static void nd_usage(int rc = 0, bool version = false)
 #endif
     }
     else {
-        fprintf(stderr, "See netifyd(8) and netifyd.conf(5) for help.\n");
+        fprintf(stderr, "Basic options:\n"
+            "\t--status\tdisplay agent status\n"
+            "\t--provision\tprovision agent\n"
+            "\t--enable-sink\tenable/disable sink uploads\n"
+            "\t--disable-sink\n\n"
+            "See netifyd(8) and netifyd.conf(5) for further help.\n");
     }
 
     exit(rc);
