@@ -70,6 +70,7 @@ protected:
     void Hash(void);
 
     uint32_t id;
+    uint32_t mark;
     time_t updated_at;
     string digest;
     sa_family_t l3_proto;

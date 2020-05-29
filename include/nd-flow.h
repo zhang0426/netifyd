@@ -84,7 +84,10 @@ public:
 
     bool ip_nat;
     bool tcp_fin;
-
+#ifdef _ND_USE_CONNTRACK
+    uint32_t ct_id;
+    uint32_t ct_mark;
+#endif
     uint64_t ts_first_seen;
     uint64_t ts_first_update;
     uint64_t ts_last_seen;

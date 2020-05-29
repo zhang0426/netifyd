@@ -56,8 +56,7 @@ Further user and developer documentation can be found [here](https://www.netify.
 
 ## License
 This software is licenced under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.txt):
->>>
-Copyright (C) 2015-2020 eGloo Incorporated
+>>>Copyright (C) 2015-2020 eGloo Incorporated
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -67,5 +66,4 @@ the Free Software Foundation, either version 3 of the License, or
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
->>>
+GNU General Public License for more details.>>>

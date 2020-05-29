@@ -188,6 +188,9 @@ void ndFlowHashCache::load(void)
 ndFlow::ndFlow(bool internal)
     : internal(internal), ip_version(0), ip_protocol(0), vlan_id(0),
     ip_nat(false), tcp_fin(false),
+#ifdef _ND_USE_CONNTRACK
+    ct_id(0), ct_mark(0),
+#endif
     ts_first_seen(0), ts_first_update(0), ts_last_seen(0),
     lower_port(0), upper_port(0),
     lower_bytes(0), upper_bytes(0), total_bytes(0),
@@ -624,6 +627,10 @@ void ndFlow::json_encode(json &j,
 
     j["digest"] = digest;
     j["ip_nat"] = ip_nat;
+#ifdef _ND_USE_CONNTRACK
+    j["ct_id"] = ct_id;
+    j["ct_mark"] = ct_mark;
+#endif
     j["ip_version"] = (unsigned)ip_version;
     j["ip_protocol"] = (unsigned)ip_protocol;
     j["vlan_id"] = (unsigned)vlan_id;
