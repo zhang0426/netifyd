@@ -110,8 +110,10 @@ if __name__ == '__main__':
         print('\nSink/provisioning status will be available in 15 seconds...')
         print('To check current status, run:\n')
         print('# sudo /usr/sbin/netifyd --status\n')
-        sys.exit(1)
     else:
         print('Something went wrong :(')
         print('Try starting the Netify Agent in debug mode:')
         print('# sudo /usr/sbin/netifyd -d %s\n' %(netifyd_options))
+        sys.exit(1)
+
+    sys.exit(0)
