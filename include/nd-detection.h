@@ -85,6 +85,7 @@ public:
     int GetCaptureStats(struct pcap_stat &stats);
 
 protected:
+    string dev;
     uint8_t dev_mac[ETH_ALEN];
     bool internal;
     bool capture_unknown_flows;
