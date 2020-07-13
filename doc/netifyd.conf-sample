@@ -67,4 +67,5 @@ private_external_addresses = <yes/no>
 
 [sink_headers]
 <header> = <value>
+
 # vi: syntax=ini
