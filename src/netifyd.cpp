@@ -1615,15 +1615,13 @@ static void nd_dump_stats(void)
             if (ND_UPLOAD_ENABLED)
                 thread_sink->QueuePush(json_string);
             else {
-                if (ND_USE_SINK || ND_JSON_SAVE) {
-                    j["version"] = (double)ND_JSON_VERSION;
-                    j["timestamp"] = time(NULL);
-                    j["uptime"] = nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec;
-                    j["ping"] = true;
+                j["version"] = (double)ND_JSON_VERSION;
+                j["timestamp"] = time(NULL);
+                j["uptime"] = nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec;
+                j["ping"] = true;
 
-                    nd_json_to_string(j, json_string);
-                    thread_sink->QueuePush(json_string);
-                }
+                nd_json_to_string(j, json_string);
+                thread_sink->QueuePush(json_string);
             }
         }
         catch (runtime_error &e) {
