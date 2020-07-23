@@ -7,4 +7,3 @@ lo: [i4----] DNS.121.netify.dropbox 192.168.1.105:49112 --> 192.168.1.254:53 H: 
 lo: [i4----] DNS.121.netify.dropbox 192.168.1.105:50789 --> 192.168.1.254:53 H: d.dropbox.com
 lo: [i4----] DNS.121.netify.dropbox 192.168.1.105:36173 --> 192.168.1.254:53 H: log.getdropbox.com
 lo: [i4----] DNS.121.netify.dropbox 192.168.1.105:33189 --> 192.168.1.254:53 H: notify.dropbox.com
-lo: [i4-g--] Dropbox 192.168.1.105:17500 --> 255.255.255.255:17500

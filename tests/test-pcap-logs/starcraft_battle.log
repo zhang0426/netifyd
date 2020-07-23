@@ -6,23 +6,23 @@ lo: [i4----] DNS.10006.netify.reverse-dns 192.168.1.100:58851 --> 192.168.1.254:
 lo: [i4----] DNS.10006.netify.reverse-dns 192.168.1.100:58851 <-- 192.168.1.254:53 H: 22.40.194.173.in-addr.arpa
 lo: [i4----] SSDP 192.168.1.254:38605 --> 239.255.255.250:1900
 lo: [i4----] HTTP.10001.netify.analytics 173.194.113.224:80 <-- 192.168.1.100:3506 H: www.google-analytics.com
-lo: [i4----] DNS 192.168.1.100:60026 --> 192.168.1.254:53 H: llnw.blizzard.com
-lo: [i4----] HTTP 87.248.221.254:80 <-- 192.168.1.100:3508 H: llnw.blizzard.com
+lo: [i4----] DNS.10368.netify.blizzard 192.168.1.100:60026 --> 192.168.1.254:53 H: llnw.blizzard.com
+lo: [i4----] HTTP.10368.netify.blizzard 87.248.221.254:80 <-- 192.168.1.100:3508 H: llnw.blizzard.com
 lo: [i4----] HTTP 12.129.222.54:80 <-- 192.168.1.100:3512 H: us.scan.worldofwarcraft.com
 lo: [i4-g--] Starcraft 80.239.208.193:1119 <-- 192.168.1.100:3427
 lo: [i4----] IGMP 192.168.1.107:0 --> 224.0.0.22:0
-lo: [i4----] DNS 192.168.1.100:53145 --> 192.168.1.254:53 H: nydus.battle.net
-lo: [i4----] HTTP 80.239.186.26:80 <-- 192.168.1.100:3515 H: nydus.battle.net
-lo: [i4----] HTTP 80.239.186.21:80 <-- 192.168.1.100:3516 H: eu.launcher.battle.net
-lo: [i4----] HTTP 80.239.186.26:80 <-- 192.168.1.100:3518 H: nydus.battle.net
+lo: [i4----] DNS.10368.netify.blizzard 192.168.1.100:53145 --> 192.168.1.254:53 H: nydus.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.26:80 <-- 192.168.1.100:3515 H: nydus.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.21:80 <-- 192.168.1.100:3516 H: eu.launcher.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.26:80 <-- 192.168.1.100:3518 H: nydus.battle.net
 lo: [i4----] Starcraft 192.168.1.100:3517 --> 213.248.127.130:1119
-lo: [i4----] HTTP 80.239.186.21:80 <-- 192.168.1.100:3519 H: eu.launcher.battle.net
-lo: [i4----] HTTP 80.239.186.26:80 <-- 192.168.1.100:3521 H: nydus.battle.net
-lo: [i4----] HTTP 80.239.186.21:80 <-- 192.168.1.100:3522 H: eu.launcher.battle.net
-lo: [i4----] HTTP 80.239.186.26:80 <-- 192.168.1.100:3523 H: nydus.battle.net
-lo: [i4----] HTTP 80.239.186.26:80 <-- 192.168.1.100:3524 H: nydus.battle.net
-lo: [i4----] HTTP 80.239.186.40:80 <-- 192.168.1.100:3525 H: eu.battle.net
-lo: [i4----] HTTP 80.239.186.40:80 <-- 192.168.1.100:3526 H: eu.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.21:80 <-- 192.168.1.100:3519 H: eu.launcher.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.26:80 <-- 192.168.1.100:3521 H: nydus.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.21:80 <-- 192.168.1.100:3522 H: eu.launcher.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.26:80 <-- 192.168.1.100:3523 H: nydus.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.26:80 <-- 192.168.1.100:3524 H: nydus.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.40:80 <-- 192.168.1.100:3525 H: eu.battle.net
+lo: [i4----] HTTP.10368.netify.blizzard 80.239.186.40:80 <-- 192.168.1.100:3526 H: eu.battle.net
 lo: [i4----] DNS.10011.netify.akamai 192.168.1.100:55468 --> 192.168.1.254:53 H: bnetcmsus-a.akamaihd.net
 lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3527 H: bnetcmsus-a.akamaihd.net
 lo: [i4----] HTTP.10011.netify.akamai 2.228.46.112:80 <-- 192.168.1.100:3529 H: bnetcmsus-a.akamaihd.net
