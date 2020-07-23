@@ -17,8 +17,6 @@
 #ifndef _ND_JSON_H
 #define _ND_JSON_H
 
-#define ND_JSON_TOKENER_DEPTH   16
-
 class ndJsonInitException : public runtime_error
 {
 public:
