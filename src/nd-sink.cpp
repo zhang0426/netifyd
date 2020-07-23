@@ -150,6 +150,7 @@ ndSinkThread::ndSinkThread()
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(ch, CURLOPT_CONNECTTIMEOUT, (long)nd_config.sink_connect_timeout);
     curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)nd_config.sink_xfer_timeout);
+    curl_easy_setopt(ch, CURLOPT_DNS_CACHE_TIMEOUT, 0);
     curl_easy_setopt(ch, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (ND_DEBUG_UPLOAD) ? ND_COOKIE_JAR : "");
 
@@ -508,10 +509,10 @@ void ndSinkThread::Upload(void)
         char *content_type = NULL;
         curl_easy_getinfo(ch, CURLINFO_CONTENT_TYPE, &content_type);
 
-        double content_length = 0;
+        double content_length = 0.0f;
         curl_easy_getinfo(ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &content_length);
 
-        if (content_type != NULL && content_length != 0.0f) {
+        if (content_type != NULL && content_length > 0.0f) {
             if (strcasecmp("application/json", content_type) == 0)
                 ProcessResponse();
             else {
