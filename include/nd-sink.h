@@ -71,6 +71,9 @@ protected:
     unsigned update_imf;
     unsigned update_count;
 
+    void CreateHandle(void);
+    void DestroyHandle(void);
+
     void CreateHeaders(void);
     void FreeHeaders(void);
 
