@@ -139,8 +139,49 @@ ndSinkThread::ndSinkThread()
     headers(NULL), headers_gz(NULL), pending_size(0), post_errors(0),
     update_imf(1), update_count(0)
 {
+    CreateHandle();
+
     int rc;
 
+    pthread_condattr_t cond_attr;
+
+    pthread_condattr_init(&cond_attr);
+    pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+    if ((rc = pthread_cond_init(&uploads_cond, &cond_attr)) != 0)
+        throw ndSinkThreadException(strerror(rc));
+    pthread_condattr_destroy(&cond_attr);
+
+    if ((rc = pthread_mutex_init(&uploads_cond_mutex, NULL)) != 0)
+        throw ndSinkThreadException(strerror(rc));
+
+    if ((rc = pthread_mutex_init(&response_mutex, NULL)) != 0)
+        throw ndSinkThreadException(strerror(rc));
+}
+
+ndSinkThread::~ndSinkThread()
+{
+    pthread_cond_broadcast(&uploads_cond);
+
+    Join();
+
+    DestroyHandle();
+
+    pthread_cond_destroy(&uploads_cond);
+    pthread_mutex_destroy(&uploads_cond_mutex);
+
+    pthread_mutex_lock(&response_mutex);
+
+    for (ndResponseQueue::const_iterator i = responses.begin();
+        i != responses.end(); i++) delete (*i);
+
+    responses.clear();
+
+    pthread_mutex_unlock(&response_mutex);
+    pthread_mutex_destroy(&response_mutex);
+}
+
+void ndSinkThread::CreateHandle(void)
+{
     if ((ch = curl_easy_init()) == NULL)
         throw ndSinkThreadException("curl_easy_init");
 
@@ -150,7 +191,6 @@ ndSinkThread::ndSinkThread()
     curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(ch, CURLOPT_CONNECTTIMEOUT, (long)nd_config.sink_connect_timeout);
     curl_easy_setopt(ch, CURLOPT_TIMEOUT, (long)nd_config.sink_xfer_timeout);
-    curl_easy_setopt(ch, CURLOPT_DNS_CACHE_TIMEOUT, 0);
     curl_easy_setopt(ch, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(ch, CURLOPT_COOKIEFILE, (ND_DEBUG_UPLOAD) ? ND_COOKIE_JAR : "");
 
@@ -188,43 +228,16 @@ ndSinkThread::ndSinkThread()
         curl_easy_setopt(ch, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1);
 
     CreateHeaders();
-
-    pthread_condattr_t cond_attr;
-
-    pthread_condattr_init(&cond_attr);
-    pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
-    if ((rc = pthread_cond_init(&uploads_cond, &cond_attr)) != 0)
-        throw ndSinkThreadException(strerror(rc));
-    pthread_condattr_destroy(&cond_attr);
-
-    if ((rc = pthread_mutex_init(&uploads_cond_mutex, NULL)) != 0)
-        throw ndSinkThreadException(strerror(rc));
-
-    if ((rc = pthread_mutex_init(&response_mutex, NULL)) != 0)
-        throw ndSinkThreadException(strerror(rc));
 }
 
-ndSinkThread::~ndSinkThread()
+void ndSinkThread::DestroyHandle(void)
 {
-    pthread_cond_broadcast(&uploads_cond);
+    if (ch != NULL) {
+        curl_easy_cleanup(ch);
+        ch = NULL;
+    }
 
-    Join();
-
-    if (ch != NULL) curl_easy_cleanup(ch);
     FreeHeaders();
-
-    pthread_cond_destroy(&uploads_cond);
-    pthread_mutex_destroy(&uploads_cond_mutex);
-
-    pthread_mutex_lock(&response_mutex);
-
-    for (ndResponseQueue::const_iterator i = responses.begin();
-        i != responses.end(); i++) delete (*i);
-
-    responses.clear();
-
-    pthread_mutex_unlock(&response_mutex);
-    pthread_mutex_destroy(&response_mutex);
 }
 
 void *ndSinkThread::Entry(void)
@@ -445,6 +458,9 @@ void ndSinkThread::Upload(void)
         nd_printf("%s: reverted to default sink URL: %s\n", tag.c_str(),
             nd_config.url_sink);
 
+        DestroyHandle();
+        CreateHandle();
+
         curl_easy_setopt(ch, CURLOPT_URL, nd_config.url_sink);
 
         post_errors = 0;
@@ -512,25 +528,12 @@ void ndSinkThread::Upload(void)
         double content_length = 0.0f;
         curl_easy_getinfo(ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &content_length);
 
-        if (content_type != NULL && content_length > 0.0f) {
-            if (strcasecmp("application/json", content_type) == 0)
-                ProcessResponse();
-            else {
-                ndJsonResponse *response = new ndJsonResponse(
-                    ndJSON_RESP_INVALID_CONTENT_TYPE,
-                    "Invalid content type, expected: application/json"
-                );
+        if (content_type == NULL) {
+            nd_debug_printf("%s: Missing content type.\n", tag.c_str());
 
-                if (response == NULL)
-                    throw runtime_error(strerror(ENOMEM));
-                else
-                    PushResponse(response);
-            }
-        }
-        else {
             ndJsonResponse *response = new ndJsonResponse(
-                ndJSON_RESP_INVALID_RESPONSE,
-                "Unknown content type or invalid content length"
+                ndJSON_RESP_INVALID_CONTENT_TYPE,
+                "Missing content type, expected: application/json"
             );
 
             if (response == NULL)
@@ -538,6 +541,35 @@ void ndSinkThread::Upload(void)
             else
                 PushResponse(response);
         }
+        else if (content_length == 0.0f) {
+            nd_debug_printf("%s: Zero-length content length.\n", tag.c_str());
+
+            ndJsonResponse *response = new ndJsonResponse(
+                ndJSON_RESP_INVALID_RESPONSE,
+                "Invalid content length (zero-bytes)"
+            );
+
+            if (response == NULL)
+                throw runtime_error(strerror(ENOMEM));
+            else
+                PushResponse(response);
+        }
+        else if (strcasecmp("application/json", content_type) != 0) {
+
+            nd_debug_printf("%s: Unexpected content type.\n", tag.c_str());
+
+            ndJsonResponse *response = new ndJsonResponse(
+                ndJSON_RESP_INVALID_CONTENT_TYPE,
+                "Invalid content type, expected: application/json"
+            );
+
+            if (response == NULL)
+                throw runtime_error(strerror(ENOMEM));
+            else
+                PushResponse(response);
+        }
+        else
+            ProcessResponse();
 
         switch (http_rc) {
         case 200:
