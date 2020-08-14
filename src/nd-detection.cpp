@@ -613,6 +613,7 @@ void ndDetectionThread::ProcessPacket(void)
 
     struct ndpi_id_struct *id_src, *id_dst;
     uint16_t ndpi_proto = NDPI_PROTOCOL_UNKNOWN;
+    ndpi_protocol_match_result npmr;
 
     uint64_t ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) *
             ND_DETECTION_TICKS +
@@ -1165,66 +1166,116 @@ void ndDetectionThread::ProcessPacket(void)
             }
         }
 
-        if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
+        if (dhc != NULL) {
+            string hostname;
+#ifdef _ND_USE_NETLINK
+            if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN)
+                dhc->lookup(&new_flow->lower_addr, hostname);
+            else if (new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
+                dhc->lookup(&new_flow->upper_addr, hostname);
+            }
+#endif
+            if (! hostname.size()) {
+                if (new_flow->origin == ndFlow::ORIGIN_LOWER)
+                    dhc->lookup(&new_flow->upper_addr, hostname);
+                else if (new_flow->origin == ndFlow::ORIGIN_UPPER)
+                    dhc->lookup(&new_flow->lower_addr, hostname);
+            }
 
-            if (dhc != NULL &&
+            if (hostname.size() &&
                 (new_flow->ndpi_flow->host_server_name[0] == '\0' ||
                 nd_is_ipaddr((const char *)new_flow->ndpi_flow->host_server_name))) {
-
-                string hostname;
-#ifdef _ND_USE_NETLINK
-                if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN)
-                    dhc->lookup(&new_flow->lower_addr, hostname);
-                else if (new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
-                    dhc->lookup(&new_flow->upper_addr, hostname);
-                }
-#else
-                // TODO: Best effort for now:
-                // First try the lower address, if not found in cache...
-                // ...try the upper address.
-                if (! dhc->lookup(&new_flow->lower_addr, hostname))
-                    dhc->lookup(&new_flow->upper_addr, hostname);
-#endif
-                if (hostname.size()) {
-                    ndpi_protocol_match_result ret_match;
-
-                    new_flow->detection_guessed |= ND_FLOW_GUESS_DNS;
-
-                    snprintf(
-                        (char *)new_flow->ndpi_flow->host_server_name,
-                        sizeof(new_flow->ndpi_flow->host_server_name) - 1,
-                        "%s", hostname.c_str()
-                    );
-
-                    new_flow->detected_protocol.app_protocol = ndpi_match_host_app_proto(
-                        ndpi,
-                        new_flow->ndpi_flow,
-                        (char *)new_flow->ndpi_flow->host_server_name,
-                        strlen((const char *)new_flow->ndpi_flow->host_server_name),
-                        &ret_match
-                    );
-#if 0
-                    nd_debug_printf("%s: Found hostname for undetected app proto: %s [%hu]\n",
-                        tag.c_str(), hostname.c_str(), new_flow->detected_protocol.app_protocol);
-#endif
-                }
+                snprintf(
+                    (char *)new_flow->ndpi_flow->host_server_name,
+                    sizeof(new_flow->ndpi_flow->host_server_name) - 1,
+                    "%s", hostname.c_str()
+                );
             }
         }
 
         // Sanitize host server name; RFC 952 plus underscore for SSDP.
-        snprintf(
-            new_flow->host_server_name, ND_MAX_HOSTNAME,
-            "%s", new_flow->ndpi_flow->host_server_name
-        );
+        for(int i = 0;
+            i < ND_MAX_HOSTNAME &&
+            i < sizeof(new_flow->ndpi_flow->host_server_name); i++) {
 
-        for (int i = 0; i < ND_MAX_HOSTNAME; i++) {
-            if (! isalnum(new_flow->host_server_name[i]) &&
-                new_flow->host_server_name[i] != '-' &&
-                new_flow->host_server_name[i] != '_' &&
-                new_flow->host_server_name[i] != '.') {
+            if (isalnum(new_flow->ndpi_flow->host_server_name[i]) ||
+                new_flow->ndpi_flow->host_server_name[i] == '-' ||
+                new_flow->ndpi_flow->host_server_name[i] == '_' ||
+                new_flow->ndpi_flow->host_server_name[i] == '.') {
+                new_flow->host_server_name[i] = tolower(new_flow->ndpi_flow->host_server_name[i]);
+            }
+            else {
                 new_flow->host_server_name[i] = '\0';
                 break;
             }
+        }
+
+        // Determine application protocol
+        if (new_flow->host_server_name[0] != '\0') {
+            new_flow->detected_protocol.app_protocol = ndpi_match_host_app_proto(
+                ndpi,
+                new_flow->ndpi_flow,
+                (char *)new_flow->host_server_name,
+                strlen((const char *)new_flow->host_server_name),
+                &npmr
+            );
+        }
+
+        // Determine application protocol based on master protocol
+        switch (new_flow->detected_protocol.master_protocol) {
+        case NDPI_PROTOCOL_HTTPS:
+        case NDPI_PROTOCOL_SSL:
+        case NDPI_PROTOCOL_MAIL_IMAPS:
+        case NDPI_PROTOCOL_MAIL_SMTPS:
+        case NDPI_PROTOCOL_MAIL_POPS:
+        case NDPI_PROTOCOL_SSL_NO_CERT:
+        case NDPI_PROTOCOL_OSCAR:
+            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
+                new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate[0] != '\0') {
+                new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+                    ndpi,
+                    new_flow->ndpi_flow,
+                    (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate,
+                    strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate),
+                    &npmr);
+            }
+            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
+                new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
+                new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+                    ndpi,
+                    new_flow->ndpi_flow,
+                    (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate,
+                    strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate),
+                    &npmr);
+            }
+            break;
+
+        case NDPI_PROTOCOL_SPOTIFY:
+            new_flow->detected_protocol.app_protocol = ndpi_get_protocol_id(ndpi, "netify.spotify");
+            break;
+
+        case NDPI_PROTOCOL_MDNS:
+            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
+                    new_flow->ndpi_flow->protos.mdns.answer[0] != '\0') {
+                new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+                    ndpi, new_flow->ndpi_flow,
+                    (char *)new_flow->ndpi_flow->protos.mdns.answer,
+                    strlen((const char*)new_flow->ndpi_flow->protos.mdns.answer),
+                    &npmr
+                );
+            }
+            break;
+        }
+
+        if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
+            new_flow->detected_protocol.app_protocol = ndpi_match_host_proto_id(ndpi, new_flow->ndpi_flow);
+        }
+
+        if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_STUN) {
+            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_FACEBOOK)
+                new_flow->detected_protocol.app_protocol = NDPI_PROTOCOL_MESSENGER;
+            else if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_GOOGLE)
+                new_flow->detected_protocol.app_protocol = NDPI_PROTOCOL_HANGOUT;
         }
 
         // Additional protocol-specific processing...

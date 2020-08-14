@@ -59,8 +59,8 @@ lo: [i4----] DHCP 192.168.5.41:68 --> 255.255.255.255:67 H: kevin-pc
 lo: [i4----] DNS 168.95.1.1:53 --> 192.168.5.16:63372 H: dl-obs.official.line.naver.jp
 lo: [i4----] HTTP 192.168.5.16:53628 --> 203.69.81.73:80 H: dl-obs.official.line.naver.jp
 lo: [i4----] HTTP 192.168.5.16:53627 --> 203.69.81.73:80 H: dl-obs.official.line.naver.jp
-lo: [i4--d-] HTTP 192.168.5.16:53628 --> 203.69.81.73:80 H: dl-obs.official.line.naver.jp
-lo: [i4--d-] HTTP 192.168.5.16:53627 --> 203.69.81.73:80 H: dl-obs.official.line.naver.jp
+lo: [i4----] HTTP 192.168.5.16:53628 --> 203.69.81.73:80 H: dl-obs.official.line.naver.jp
+lo: [i4----] HTTP 192.168.5.16:53627 --> 203.69.81.73:80 H: dl-obs.official.line.naver.jp
 lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67 H: sanji-lifebook-lh531
 lo: [i4-g--] HTTPS 192.168.5.16:53626 --> 192.168.115.75:443 SSL C: 1
 lo: [i6----] DHCPV6 fe80::f65c:89ff:fe89:e607:546 --> ff02::1:2:547

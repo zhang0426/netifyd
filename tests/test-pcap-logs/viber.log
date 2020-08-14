@@ -1,21 +1,21 @@
 lo: [i4----] DNS.119.netify.facebook 192.168.0.15:53 <-- 192.168.0.17:45743 H: graph.facebook.com
 lo: [i4----] DNS 192.168.0.15:53 <-- 192.168.0.17:35283 H: app.adjust.com
 lo: [i4----] DNS 192.168.0.15:53 <-- 192.168.0.17:62872 H: mapi.apptimize.com
-lo: [i4--d-] HTTPS 54.69.166.226:443 <-- 192.168.0.17:36986 H: mapi.apptimize.com SSL C: mapi.apptimize.com S: *.apptimize.com
-lo: [i4--d-] HTTPS 54.69.166.226:443 <-- 192.168.0.17:36988 H: mapi.apptimize.com SSL C: mapi.apptimize.com S: *.apptimize.com
+lo: [i4----] HTTPS 54.69.166.226:443 <-- 192.168.0.17:36986 H: mapi.apptimize.com SSL C: mapi.apptimize.com S: *.apptimize.com
+lo: [i4----] HTTPS 54.69.166.226:443 <-- 192.168.0.17:36988 H: mapi.apptimize.com SSL C: mapi.apptimize.com S: *.apptimize.com
 lo: [i4----] DNS.10489.netify.viber 192.168.0.15:53 <-- 192.168.0.17:37418 H: media.cdn.viber.com
-lo: [i4----] HTTPS.10489.netify.viber 54.230.93.96:443 <-- 192.168.0.17:57520 SSL C: media.cdn.viber.com S: *.cdn.viber.com
+lo: [i4----] HTTPS.10489.netify.viber 54.230.93.96:443 <-- 192.168.0.17:57520 H: media.cdn.viber.com SSL C: media.cdn.viber.com S: *.cdn.viber.com
 lo: [i4----] DNS.10489.netify.viber 192.168.0.15:53 <-- 192.168.0.17:40445 H: dl-media.viber.com
-lo: [i4----] HTTPS.10489.netify.viber 54.230.93.53:443 <-- 192.168.0.17:53934 SSL C: dl-media.viber.com S: *.viber.com
+lo: [i4----] HTTPS.10489.netify.viber 54.230.93.53:443 <-- 192.168.0.17:53934 H: dl-media.viber.com SSL C: dl-media.viber.com S: *.viber.com
 lo: [i4----] QUIC.126.netify.google 172.217.23.106:443 <-- 192.168.0.17:41993
 lo: [i4----] DNS.10041.netify.google-ads 192.168.0.15:53 <-- 192.168.0.17:35331 H: app-measurement.com
-lo: [i4----] HTTPS.10041.netify.google-ads 172.217.23.78:443 <-- 192.168.0.17:43702 SSL C: app-measurement.com
+lo: [i4----] HTTPS.10041.netify.google-ads 172.217.23.78:443 <-- 192.168.0.17:43702 H: app-measurement.com SSL C: app-measurement.com
 lo: [i4----] MDNS 192.168.0.17:5353 --> 224.0.0.251:5353
 lo: [i6----] ICMPV6 fe80::3207:4dff:fea3:5fa7:0 --> ff02::2:0
 lo: [i4----] DNS.10246.netify.braze 192.168.0.15:53 <-- 192.168.0.17:44376 H: venetia.iad.appboy.com
-lo: [i4----] HTTPS.10281.netify.fastly 151.101.1.130:443 <-- 192.168.0.17:55746 SSL C: venetia.iad.appboy.com S: y.ssl.fastly.net
+lo: [i4----] HTTPS.10246.netify.braze 151.101.1.130:443 <-- 192.168.0.17:55746 H: venetia.iad.appboy.com SSL C: venetia.iad.appboy.com S: y.ssl.fastly.net
 lo: [i4-g--] Unknown 52.0.253.101:4244 <-- 192.168.0.17:33208
-lo: [i4--d-] HTTPS 54.187.91.182:443 <-- 192.168.0.17:49048 H: mapi.apptimize.com SSL C: brahe.apptimize.com S: *.apptimize.com
+lo: [i4----] HTTPS 54.187.91.182:443 <-- 192.168.0.17:49048 H: mapi.apptimize.com SSL C: brahe.apptimize.com S: *.apptimize.com
 lo: [i4-g--] Unknown 18.201.4.32:7985 <-- 192.168.0.17:47171
 lo: [i4-g--] Unknown 18.201.4.3:7985 <-- 192.168.0.17:38190
 lo: [i4----] DNS.126.netify.google 192.168.0.15:53 <-- 192.168.0.17:50097 H: www.google.com
