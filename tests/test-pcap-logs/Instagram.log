@@ -11,10 +11,10 @@ lo: [i4----] ICMP 192.168.0.103:0 <-- 192.168.0.103:0
 lo: [i4----] DNS.10011.netify.akamai 8.8.8.8:53 <-- 192.168.0.103:51219 H: igcdn-photos-h-a.akamaihd.net
 lo: [i4----] DNS.10011.netify.akamai 8.8.8.8:53 <-- 192.168.0.103:33603 H: igcdn-photos-a-a.akamaihd.net
 lo: [i4----] DNS.10011.netify.akamai 8.8.8.8:53 <-- 192.168.0.103:26540 H: igcdn-photos-g-a.akamaihd.net
-lo: [i4----] HTTPS.10011.netify.akamai 46.33.70.136:443 <-- 192.168.0.103:60908 H: igcdn-photos-g-a.akamaihd.net SSL C: igcdn-photos-g-a.akamaihd.net S: a248.e.akamai.net
-lo: [i4----] HTTPS.10011.netify.akamai 46.33.70.174:443 <-- 192.168.0.103:44558 H: igcdn-photos-h-a.akamaihd.net SSL C: igcdn-photos-h-a.akamaihd.net S: a248.e.akamai.net
-lo: [i4----] HTTPS.10011.netify.akamai 82.85.26.154:443 <-- 192.168.0.103:41181 H: igcdn-photos-a-a.akamaihd.net SSL C: igcdn-photos-a-a.akamaihd.net S: a248.e.akamai.net
-lo: [i4----] HTTPS.10011.netify.akamai 82.85.26.154:443 <-- 192.168.0.103:41182 H: igcdn-photos-a-a.akamaihd.net SSL C: igcdn-photos-a-a.akamaihd.net S: a248.e.akamai.net
+lo: [i4--d-] HTTPS.10011.netify.akamai 46.33.70.136:443 <-- 192.168.0.103:60908 H: igcdn-photos-g-a.akamaihd.net SSL C: igcdn-photos-g-a.akamaihd.net S: a248.e.akamai.net
+lo: [i4--d-] HTTPS.10011.netify.akamai 46.33.70.174:443 <-- 192.168.0.103:44558 H: igcdn-photos-h-a.akamaihd.net SSL C: igcdn-photos-h-a.akamaihd.net S: a248.e.akamai.net
+lo: [i4--d-] HTTPS.10011.netify.akamai 82.85.26.154:443 <-- 192.168.0.103:41181 H: igcdn-photos-a-a.akamaihd.net SSL C: igcdn-photos-a-a.akamaihd.net S: a248.e.akamai.net
+lo: [i4--d-] HTTPS.10011.netify.akamai 82.85.26.154:443 <-- 192.168.0.103:41182 H: igcdn-photos-a-a.akamaihd.net SSL C: igcdn-photos-a-a.akamaihd.net S: a248.e.akamai.net
 lo: [i4-g--] HTTPS.119.netify.facebook 31.13.93.52:443 <-- 192.168.0.103:33763
 lo: [i4-g--] HTTP 92.122.48.138:80 --> 192.168.0.103:41562
 lo: [i4----] HTTP.201.netify.instagram 82.85.26.162:80 <-- 192.168.0.103:58052 H: photos-g.ak.instagram.com

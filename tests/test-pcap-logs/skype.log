@@ -5,7 +5,7 @@ lo: [i4----] Skype.125.netify.skype 65.55.223.33:40002 <-- 192.168.1.34:50026
 lo: [i4----] DNS.10011.netify.akamai 192.168.1.1:53 <-- 192.168.1.34:51879 H: e4593.g.akamaiedge.net
 lo: [i4----] SSDP 192.168.0.254:1025 --> 239.255.255.250:1900
 lo: [i4----] Skype 64.4.23.166:40022 <-- 192.168.1.34:13021
-lo: [i4-g--] HTTPS.10011.netify.akamai 23.223.73.34:443 <-- 192.168.1.34:50027 H: e7768.b.akamaiedge.net SSL C: apps.skypeassets.com
+lo: [i4-gd-] HTTPS.10011.netify.akamai 23.223.73.34:443 <-- 192.168.1.34:50027 H: e7768.b.akamaiedge.net SSL C: apps.skypeassets.com
 lo: [i4----] Skype.125.netify.skype 157.55.130.155:40020 <-- 192.168.1.34:13021
 lo: [i4----] Skype.125.netify.skype 111.221.77.142:40023 <-- 192.168.1.34:13021
 lo: [i4----] Skype.125.netify.skype 111.221.74.15:40024 <-- 192.168.1.34:13021
@@ -40,7 +40,7 @@ lo: [i4----] Skype.125.netify.skype 157.55.235.175:40008 <-- 192.168.1.34:13021
 lo: [i4----] Skype.125.netify.skype 65.55.223.43:40002 <-- 192.168.1.34:13021
 lo: [i4----] Skype.125.netify.skype 157.55.56.161:40012 <-- 192.168.1.34:13021
 lo: [i4----] Skype.125.netify.skype 111.221.74.17:40022 <-- 192.168.1.34:13021
-lo: [i4-g--] HTTPS.10011.netify.akamai 23.206.33.166:443 <-- 192.168.1.34:50029 H: e4593.g.akamaiedge.net SSL C: apps.skype.com
+lo: [i4-gd-] HTTPS.10011.netify.akamai 23.206.33.166:443 <-- 192.168.1.34:50029 H: e4593.g.akamaiedge.net SSL C: apps.skype.com
 lo: [i4----] Skype 192.168.1.34:50035 --> 213.199.179.175:40021
 lo: [i4----] Skype.125.netify.skype 65.55.223.18:33033 <-- 192.168.1.34:13021
 lo: [i4----] Skype.125.netify.skype 157.55.130.154:40005 <-- 192.168.1.34:13021
@@ -192,7 +192,7 @@ lo: [i4----] Skype.125.netify.skype 65.55.223.15:40026 <-- 192.168.1.34:50098
 lo: [i4----] Skype.125.netify.skype 111.221.74.46:40027 <-- 192.168.1.34:50096
 lo: [i4----] Skype 64.4.23.166:40022 <-- 192.168.1.34:50099
 lo: [i4-g--] HTTPS.125.netify.skype 157.55.235.146:443 <-- 192.168.1.34:50091
-lo: [i4-g--] HTTPS.10011.netify.akamai 23.206.33.166:443 <-- 192.168.1.34:50090 H: e4593.g.akamaiedge.net SSL C: apps.skype.com
+lo: [i4-gd-] HTTPS.10011.netify.akamai 23.206.33.166:443 <-- 192.168.1.34:50090 H: e4593.g.akamaiedge.net SSL C: apps.skype.com
 lo: [i4----] Skype.125.netify.skype 157.56.52.28:40009 <-- 192.168.1.34:50108
 lo: [i4-g--] HTTPS.125.netify.skype 157.55.130.155:443 <-- 192.168.1.34:50094
 lo: [i4----] SSDP 192.168.1.34:49485 --> 239.255.255.250:1900
@@ -226,7 +226,7 @@ lo: [i4----] ApplePush.140.netify.apple 17.143.160.22:5223 --> 192.168.1.34:4944
 lo: [i4----] Skype.125.netify.skype 91.190.216.23:12350 <-- 192.168.1.34:50126
 lo: [i4-g--] Unknown 80.14.46.121:4415 <-- 192.168.1.34:50127
 lo: [i4----] DNS.143.netify.apple-icloud 192.168.1.1:53 <-- 192.168.1.34:62454 H: p05-keyvalueservice.icloud.com.akadns.net
-lo: [i4----] HTTPS.143.netify.apple-icloud 17.172.100.36:443 <-- 192.168.1.34:50128 H: p05-keyvalueservice.icloud.com.akadns.net SSL C: p05-keyvalueservice.icloud.com
+lo: [i4--d-] HTTPS.143.netify.apple-icloud 17.172.100.36:443 <-- 192.168.1.34:50128 H: p05-keyvalueservice.icloud.com.akadns.net SSL C: p05-keyvalueservice.icloud.com
 lo: [i4-g--] HTTPS.125.netify.skype 111.221.74.46:443 <-- 192.168.1.34:50100
 lo: [i4-g--] HTTPS.125.netify.skype 91.190.216.125:443 <-- 192.168.1.34:50111
 lo: [i4----] Skype 192.168.1.34:50130 --> 212.161.8.36:13392

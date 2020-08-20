@@ -1,21 +1,21 @@
 lo: [i4----] QUIC.126.netify.google 192.168.1.105:49361 <-- 216.58.210.14:443
 lo: [i4----] QUIC.126.netify.google 192.168.1.105:53656 --> 216.58.210.227:443
 lo: [i4----] DNS.210.netify.weibo 192.168.1.1:53 <-- 192.168.1.105:54988 H: weibo.com
-lo: [i4----] HTTP.210.netify.weibo 114.134.80.162:80 <-- 192.168.1.105:59119 H: weibo.com
+lo: [i4--d-] HTTP.210.netify.weibo 114.134.80.162:80 <-- 192.168.1.105:59119 H: weibo.com
 lo: [i4----] DNS.210.netify.weibo 192.168.1.1:53 <-- 192.168.1.105:7148 H: www.weibo.com
-lo: [i4----] HTTP.210.netify.weibo 93.188.134.137:80 <-- 192.168.1.105:51698 H: www.weibo.com
+lo: [i4--d-] HTTP.210.netify.weibo 93.188.134.137:80 <-- 192.168.1.105:51698 H: www.weibo.com
 lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.105:53543 H: img.t.sinajs.cn
-lo: [i4----] HTTP 93.188.134.246:80 <-- 192.168.1.105:35803 H: img.t.sinajs.cn
-lo: [i4----] HTTP 93.188.134.246:80 <-- 192.168.1.105:35804 H: img.t.sinajs.cn
-lo: [i4----] HTTP 93.188.134.246:80 <-- 192.168.1.105:35805 H: img.t.sinajs.cn
-lo: [i4----] HTTP 93.188.134.246:80 <-- 192.168.1.105:35806 H: img.t.sinajs.cn
-lo: [i4----] HTTP 93.188.134.246:80 <-- 192.168.1.105:35807 H: img.t.sinajs.cn
-lo: [i4----] HTTP 93.188.134.246:80 <-- 192.168.1.105:35809 H: img.t.sinajs.cn
+lo: [i4--d-] HTTP 93.188.134.246:80 <-- 192.168.1.105:35803 H: img.t.sinajs.cn
+lo: [i4--d-] HTTP 93.188.134.246:80 <-- 192.168.1.105:35804 H: img.t.sinajs.cn
+lo: [i4--d-] HTTP 93.188.134.246:80 <-- 192.168.1.105:35805 H: img.t.sinajs.cn
+lo: [i4--d-] HTTP 93.188.134.246:80 <-- 192.168.1.105:35806 H: img.t.sinajs.cn
+lo: [i4--d-] HTTP 93.188.134.246:80 <-- 192.168.1.105:35807 H: img.t.sinajs.cn
+lo: [i4--d-] HTTP 93.188.134.246:80 <-- 192.168.1.105:35809 H: img.t.sinajs.cn
 lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.105:18035 H: u1.img.mobile.sina.cn
 lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.105:41352 H: js.t.sinajs.cn
 lo: [i4----] DNS.10124.netify.aliexpress 192.168.1.1:53 <-- 192.168.1.105:51440 H: g.alicdn.com
 lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.105:53466 H: log.mmstat.com
-lo: [i4----] HTTP 93.188.134.246:80 <-- 192.168.1.105:35811 H: js.t.sinajs.cn
+lo: [i4--d-] HTTP 93.188.134.246:80 <-- 192.168.1.105:35811 H: js.t.sinajs.cn
 lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.105:50640 H: acjstb.aliyun.com
 lo: [i4----] DNS.10109.netify.taobao 192.168.1.1:53 <-- 192.168.1.105:33822 H: login.taobao.com
-lo: [i4----] HTTP 192.168.1.105:42275 --> 222.73.28.96:80 H: u1.img.mobile.sina.cn
+lo: [i4--d-] HTTP 192.168.1.105:42275 --> 222.73.28.96:80 H: u1.img.mobile.sina.cn
