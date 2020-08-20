@@ -581,7 +581,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         ip_nat ? 'n' : '-',
         (detection_guessed & ND_FLOW_GUESS_PROTO) ? 'g' : '-',
-        (detection_guessed & ND_FLOW_GUESS_DNS) ? 'd' : '-',
+        (dhc_hit) ? 'd' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
             (privacy_mask & (PRIVATE_LOWER | PRIVATE_UPPER)) ? 'X' :
@@ -627,6 +627,7 @@ void ndFlow::json_encode(json &j,
 
     j["digest"] = digest;
     j["ip_nat"] = ip_nat;
+    j["dhc_hit"] = dhc_hit;
 #ifdef _ND_USE_CONNTRACK
     j["ct_id"] = ct_id;
     j["ct_mark"] = ct_mark;

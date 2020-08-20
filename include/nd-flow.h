@@ -84,6 +84,8 @@ public:
 
     bool ip_nat;
     bool tcp_fin;
+    bool dhc_hit;
+
 #ifdef _ND_USE_CONNTRACK
     uint32_t ct_id;
     uint32_t ct_mark;

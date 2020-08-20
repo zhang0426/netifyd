@@ -1170,19 +1170,19 @@ void ndDetectionThread::ProcessPacket(void)
             string hostname;
 #ifdef _ND_USE_NETLINK
             if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN)
-                dhc->lookup(&new_flow->lower_addr, hostname);
+                new_flow->dhc_hit = dhc->lookup(&new_flow->lower_addr, hostname);
             else if (new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
-                dhc->lookup(&new_flow->upper_addr, hostname);
+                new_flow->dhc_hit = dhc->lookup(&new_flow->upper_addr, hostname);
             }
 #endif
-            if (! hostname.size()) {
+            if (! new_flow->dhc_hit) {
                 if (new_flow->origin == ndFlow::ORIGIN_LOWER)
-                    dhc->lookup(&new_flow->upper_addr, hostname);
+                    new_flow->dhc_hit = dhc->lookup(&new_flow->upper_addr, hostname);
                 else if (new_flow->origin == ndFlow::ORIGIN_UPPER)
-                    dhc->lookup(&new_flow->lower_addr, hostname);
+                    new_flow->dhc_hit = dhc->lookup(&new_flow->lower_addr, hostname);
             }
 
-            if (hostname.size() &&
+            if (new_flow->dhc_hit &&
                 (new_flow->ndpi_flow->host_server_name[0] == '\0' ||
                 nd_is_ipaddr((const char *)new_flow->ndpi_flow->host_server_name))) {
                 snprintf(
