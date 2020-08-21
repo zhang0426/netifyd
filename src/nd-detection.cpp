@@ -764,7 +764,7 @@ void ndDetectionThread::ProcessPacket(void)
         if (pkt_header->caplen >= l2_len)
             frag_off = ntohs(hdr_ip->ip_off);
 
-        if (pkt_header->len - l2_len < sizeof(struct ip)) {
+        if (pkt_header->caplen - l2_len < sizeof(struct ip)) {
             // XXX: header too small
             stats->pkt.discard++;
             stats->pkt.discard_bytes += pkt_header->caplen;
@@ -796,22 +796,22 @@ void ndDetectionThread::ProcessPacket(void)
             return;
         }
 
-        if (l3_len > (pkt_header->len - l2_len)) {
+        if (l3_len > (pkt_header->caplen - l2_len)) {
             stats->pkt.discard++;
             stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
-            nd_debug_printf("%s: discard: l3_len[%hu] > (pkt_header->len[%hu] - l2_len[%hu])(%hu)\n",
-                tag.c_str(), l3_len, pkt_header->len, l2_len, pkt_header->len - l2_len);
+            nd_debug_printf("%s: discard: l3_len[%hu] > (pkt_header->caplen[%hu] - l2_len[%hu])(%hu)\n",
+                tag.c_str(), l3_len, pkt_header->caplen, l2_len, pkt_header->caplen - l2_len);
 #endif
             return;
         }
 
-        if ((pkt_header->len - l2_len) < ntohs(hdr_ip->ip_len)) {
+        if ((pkt_header->caplen - l2_len) < ntohs(hdr_ip->ip_len)) {
             stats->pkt.discard++;
             stats->pkt.discard_bytes += pkt_header->caplen;
 #ifdef _ND_LOG_PKT_DISCARD
-            nd_debug_printf("%s: discard: (pkt_header->len[%hu] - l2_len[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
-                tag.c_str(), pkt_header->len, l2_len, pkt_header->len - l2_len, ntohs(hdr_ip->ip_len));
+            nd_debug_printf("%s: discard: (pkt_header->caplen[%hu] - l2_len[%hu](%hu)) < hdr_ip->ip_len[%hu]\n",
+                tag.c_str(), pkt_header->caplen, l2_len, pkt_header->caplen - l2_len, ntohs(hdr_ip->ip_len));
 #endif
             return;
         }
