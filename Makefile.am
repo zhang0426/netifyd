@@ -161,8 +161,7 @@ deploy-freebsd-common:
 	./autogen.sh \
 		./configure \
 			--disable-conntrack \
-			--disable-inotify \
-			--disable-libtcmalloc
+			--disable-inotify
 	$(MAKE) -C deploy
 	rm -rf deploy/freebsd/work
 	$(MAKE) dist-gzip
@@ -187,7 +186,7 @@ deploy-freebsd-11x-debug: deploy-freebsd-common
 	$(MAKE) deploy-freebsd-build
 
 deploy-freebsd-12x: deploy-freebsd-common
-	cp deploy/freebsd/Makefile-11x deploy/freebsd/Makefile
+	cp deploy/freebsd/Makefile-12x deploy/freebsd/Makefile
 	$(MAKE) deploy-freebsd-build
 
 deploy-freebsd: deploy-freebsd-11x
