@@ -1,0 +1,55 @@
+lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67 H: lucas-imac
+lo: [i4----] Spotify.156.netify.spotify 192.168.2.1:57621 --> 192.168.2.255:57621
+lo: [i4----] MDNS 169.254.225.216:5353 --> 224.0.0.251:5353
+lo: [i4----] MDNS 192.168.2.1:5353 --> 224.0.0.251:5353
+lo: [i4----] SSDP 169.254.225.216:60538 --> 239.255.255.250:1900
+lo: [i4----] SSDP 192.168.2.1:51411 --> 239.255.255.250:1900
+lo: [i6----] ICMPV6 :::0 --> ff02::1:ff9f:f627:0
+lo: [i6----] ICMPV6 :::0 --> ff02::16:0
+lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67
+lo: [i4----] DHCP 192.168.2.1:67 --> 192.168.2.16:68
+lo: [i6----] DHCPV6 fe80::4e6a:f6ff:fe9f:f627:546 --> ff02::1:2:547
+lo: [i6----] ICMPV6 fe80::4e6a:f6ff:fe9f:f627:0 --> ff02::16:0
+lo: [i6----] ICMPV6 fe80::4e6a:f6ff:fe9f:f627:0 --> ff02::2:0
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.16:52953 H: captive.apple.com
+lo: [i4--d-] HTTP.140.netify.apple 17.253.53.201:80 <-- 192.168.2.16:58338 H: captive.apple.com
+lo: [i4----] RTP.10007.netify.android 192.168.2.1:53 <-- 192.168.2.16:35825 H: time.android.com
+lo: [i4----] NTP 192.168.2.16:45863 --> 216.239.35.8:123
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:34540 H: clients1.google.com
+lo: [i4----] DNS.10007.netify.android 192.168.2.1:53 <-- 192.168.2.16:54837 H: play.googleapis.com
+lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:32974 --> 216.239.38.120:443 H: clients1.google.com SSL C: clients1.google.com S: *.google.com
+lo: [i4--d-] HTTPS.10007.netify.android 172.217.20.74:443 <-- 192.168.2.16:52486 H: play.googleapis.com SSL C: play.googleapis.com S: *.storage.googleapis.com
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:47081 H: connectivitycheck.gstatic.com
+lo: [i4----] DNS.10041.netify.google-ads 192.168.2.1:53 <-- 192.168.2.16:51430 H: app-measurement.com
+lo: [i4--d-] HTTPS.126.netify.google 172.217.18.3:443 <-- 192.168.2.16:36890 H: connectivitycheck.gstatic.com SSL C: connectivitycheck.gstatic.com S: *.google.com
+lo: [i4--d-] HTTPS.126.netify.google 172.217.18.3:443 <-- 192.168.2.16:36888 H: connectivitycheck.gstatic.com SSL C: connectivitycheck.gstatic.com S: *.google.com
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:39008 H: mtalk.google.com
+lo: [i4--d-] HTTPS.10041.netify.google-ads 172.217.168.206:443 <-- 192.168.2.16:50384 H: app-measurement.com SSL C: app-measurement.com S: *.google-analytics.com
+lo: [i4----] DNS.10007.netify.android 192.168.2.1:53 <-- 192.168.2.16:36613 H: android.clients.google.com
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:32412 H: check.googlezip.net
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:7660 H: datasaver.googleapis.com
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:40580 H: www.google.com
+lo: [i4--d-] HTTP.126.netify.google 173.194.79.114:80 <-- 192.168.2.16:36834 H: check.googlezip.net
+lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:32990 --> 216.239.38.120:443 H: clients1.google.com SSL C: android.clients.google.com
+lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:32986 --> 216.239.38.120:443 H: clients1.google.com SSL C: android.clients.google.com
+lo: [i4--d-] HTTPS.126.netify.google 172.217.21.202:443 <-- 192.168.2.16:51928 H: datasaver.googleapis.com SSL C: datasaver.googleapis.com
+lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:32996 --> 216.239.38.120:443 H: clients1.google.com SSL C: www.google.com S: www.google.com
+lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:32988 --> 216.239.38.120:443 H: clients1.google.com SSL C: android.clients.google.com
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:46359 H: accounts.google.com
+lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:32998 --> 216.239.38.120:443 H: clients1.google.com SSL C: accounts.google.com
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:35689 H: semanticlocation-pa.googleapis.com
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:22850 H: proxy.googlezip.net
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:58892 H: accounts.google.com
+lo: [i4--d-] HTTPS.126.netify.google 172.217.20.76:443 <-- 192.168.2.16:43634 H: proxy.googlezip.net SSL C: proxy.googlezip.net
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:33240 H: check.googlezip.net
+lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:33002 --> 216.239.38.120:443 H: clients1.google.com SSL C: accounts.google.com
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:18379 H: datasaver.googleapis.com
+lo: [i4--d-] HTTP.126.netify.google 173.194.79.114:80 <-- 192.168.2.16:36848 H: check.googlezip.net
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:10677 H: proxy.googlezip.net
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:32832 H: www.google.com
+lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:33014 --> 216.239.38.120:443 H: clients1.google.com SSL C: www.google.com
+lo: [i4--d-] HTTPS.126.netify.google 172.217.21.202:443 <-- 192.168.2.16:51944 H: datasaver.googleapis.com SSL C: datasaver.googleapis.com
+lo: [i4----] DNS.10007.netify.android 192.168.2.1:53 <-- 192.168.2.16:39760 H: android.googleapis.com
+lo: [i4--d-] HTTPS.126.netify.google 172.217.20.76:443 <-- 192.168.2.16:43646 H: proxy.googlezip.net SSL C: proxy.googlezip.net
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:56312 H: proxy.googlezip.net
+lo: [i4--d-] HTTPS.10007.netify.android 172.217.22.10:443 <-- 192.168.2.16:44374 H: android.googleapis.com SSL C: android.googleapis.com

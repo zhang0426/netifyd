@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 ND_PCAPS=$(find "${TESTDIR}/pcap/" -name '*.cap.gz' | sort)
 NDPI_PCAPS=$(sort "${TESTDIR}/ndpi-pcap-files.txt" | xargs -n 1 -i find "${TESTDIR}/../libs/ndpi/tests/pcap" -name '{}*cap' | egrep -v -- '-test.cap$')
