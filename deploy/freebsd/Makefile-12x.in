@@ -10,8 +10,7 @@ COMMENT=Netify Agent - Deep-packet Inspection Server
 LICENSE=GPLv3+
 LICENSE_FILE=${WRKSRC}/LICENSE
 
-RUN_DEPENDS=libunwind>=20170615:devel/libunwind \
-	google-perftools>=2.7:devel/google-perftools
+#RUN_DEPENDS=
 
 USES=gmake libtool
 USE_RC_SUBR=netifyd
