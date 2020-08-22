@@ -152,7 +152,7 @@ freebsd 11.3 build:
     OS_ARCH: "x86_64"
   <<: *xbsd_build_script
 
-.freebsd 12.1 build:
+freebsd 12.1 build:
   tags:
     - freebsd121
   variables:
@@ -255,7 +255,7 @@ opnsense 20.1 test:
   needs: ["freebsd 11.2 build"]
   <<: *xsense_test_script
 
-.opnsense 20.7 test:
+opnsense 20.7 test:
   tags:
    - opnsense207
   variables:
