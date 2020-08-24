@@ -223,8 +223,6 @@ centos 8 test:
 .xsense_test: &xsense_test_script
   stage: test
   script:
-    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
-    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
     - pkg install -y rsync
     - rsync master-mirror.egloo.ca::netify-builds/$CI_PROJECT_NAME/freebsd/$FREEBSD_VERSION.$FREEBSD_RELEASE/x86_64/netifyd-${NETIFYD_VERSION}_1.txz .
     - pkg add netifyd-${NETIFYD_VERSION}_1.txz
@@ -247,6 +245,9 @@ opnsense 19.7 test:
     FREEBSD_VERSION: "11"
     FREEBSD_RELEASE: "2"
     FREEBSD_LIBS_RELEASE: "3"
+  before_script:
+    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
+    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
   needs: ["freebsd 11.2 build"]
   <<: *xsense_test_script
 
@@ -258,6 +259,9 @@ opnsense 20.1 test:
     FREEBSD_VERSION: "11"
     FREEBSD_RELEASE: "2"
     FREEBSD_LIBS_RELEASE: "3"
+  before_script:
+    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
+    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
   needs: ["freebsd 11.2 build"]
   <<: *xsense_test_script
 
@@ -265,7 +269,7 @@ opnsense 20.7 test:
   tags:
    - opnsense207
   variables:
-    AGENT_UUID: "NE-PN-20-XC"
+    AGENT_UUID: "NE-PN-27-XC"
     FREEBSD_VERSION: "12"
     FREEBSD_RELEASE: "1"
     FREEBSD_LIBS_RELEASE: "1"
