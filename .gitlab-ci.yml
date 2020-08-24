@@ -223,7 +223,6 @@ centos 8 test:
 .xsense_test: &xsense_test_script
   stage: test
   script:
-    - pkg install -y rsync
     - rsync master-mirror.egloo.ca::netify-builds/$CI_PROJECT_NAME/freebsd/$FREEBSD_VERSION.$FREEBSD_RELEASE/x86_64/netifyd-${NETIFYD_VERSION}_1.txz .
     - pkg add netifyd-${NETIFYD_VERSION}_1.txz
     # Set our Agent UUID
@@ -248,6 +247,7 @@ opnsense 19.7 test:
   before_script:
     - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
     - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
+    - pkg install -y rsync
   needs: ["freebsd 11.2 build"]
   <<: *xsense_test_script
 
@@ -262,6 +262,7 @@ opnsense 20.1 test:
   before_script:
     - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
     - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
+    - pkg install -y rsync
   needs: ["freebsd 11.2 build"]
   <<: *xsense_test_script
 
@@ -273,6 +274,8 @@ opnsense 20.7 test:
     FREEBSD_VERSION: "12"
     FREEBSD_RELEASE: "1"
     FREEBSD_LIBS_RELEASE: "1"
+  before_script:
+    - pkg install -y rsync
   needs: ["freebsd 12.1 build"]
   <<: *xsense_test_script
 
@@ -287,6 +290,8 @@ pfsense 2.4.4 test:
   before_script:
     - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
     - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
+    # pkg repo deprecated - download rsync directly
+    - IGNORE_OSVERSION=yes pkg add http://pkg.freebsd.org/FreeBSD:11:amd64/quarterly/All/rsync-3.1.3_1.txz
   needs: ["freebsd 11.2 build"]
   <<: *xsense_test_script
 
@@ -301,5 +306,6 @@ pfsense 2.4.5 test:
   before_script:
     - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
     - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
+    - pkg install -y rsync
   needs: ["freebsd 11.3 build"]
   <<: *xsense_test_script
