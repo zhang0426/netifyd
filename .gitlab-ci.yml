@@ -284,6 +284,9 @@ pfsense 2.4.4 test:
     FREEBSD_VERSION: "11"
     FREEBSD_RELEASE: "2"
     FREEBSD_LIBS_RELEASE: "3"
+  before_script:
+    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
+    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
   needs: ["freebsd 11.2 build"]
   <<: *xsense_test_script
 
@@ -295,5 +298,8 @@ pfsense 2.4.5 test:
     FREEBSD_VERSION: "11"
     FREEBSD_RELEASE: "3"
     FREEBSD_LIBS_RELEASE: "3"
+  before_script:
+    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/libunwind-20170615.txz
+    - pkg add http://pkg.freebsd.org/freebsd:$FREEBSD_VERSION:x86:64/release_$FREEBSD_LIBS_RELEASE/All/google-perftools-2.7.txz
   needs: ["freebsd 11.3 build"]
   <<: *xsense_test_script
