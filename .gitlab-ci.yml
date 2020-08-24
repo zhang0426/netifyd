@@ -121,9 +121,9 @@ centos 8 build:
     - ntpdate time.nist.gov
     # Build packages
     - ./autogen.sh
-    - ./configure --disable-conntrack --disable-inotify CC=clang CXX=clang++ MAKE=gmake
+    - ./configure --disable-conntrack --disable-inotify $OS_CONFIGURE_FLAGS CC=clang CXX=clang++ MAKE=gmake
     - mkdir -p /usr/ports/distfiles
-    - gmake deploy-freebsd
+    - gmake $OS_MAKE_TARGET
     # Push build to master mirror
     - mkdir -p builds/$CI_PROJECT_NAME/$OS_BASENAME/$OS_VERSION.$OS_RELEASE/$OS_ARCH/
     - mv deploy/$OS_BASENAME/work/pkg/*.txz builds/$CI_PROJECT_NAME/$OS_BASENAME/$OS_VERSION.$OS_RELEASE/$OS_ARCH/
@@ -140,6 +140,8 @@ freebsd 11.2 build:
     OS_VERSION: "11"
     OS_RELEASE: "2"
     OS_ARCH: "x86_64"
+    OS_MAKE_TARGET: "deploy-freebsd-11x"
+    OS_CONFIGURE_FLAGS: ""
   <<: *xbsd_build_script
 
 freebsd 11.3 build:
@@ -150,6 +152,8 @@ freebsd 11.3 build:
     OS_VERSION: "11"
     OS_RELEASE: "3"
     OS_ARCH: "x86_64"
+    OS_MAKE_TARGET: "deploy-freebsd-11x"
+    OS_CONFIGURE_FLAGS: ""
   <<: *xbsd_build_script
 
 freebsd 12.1 build:
@@ -160,6 +164,8 @@ freebsd 12.1 build:
     OS_VERSION: "12"
     OS_RELEASE: "1"
     OS_ARCH: "x86_64"
+    OS_MAKE_TARGET: "deploy-freebsd-12x"
+    OS_CONFIGURE_FLAGS: "--disable-libtcmalloc"
   <<: *xbsd_build_script
 
 
