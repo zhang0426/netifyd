@@ -1,0 +1,53 @@
+lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67 H: lucas-imac
+lo: [i4----] MDNS.10036.netify.internal-network 192.168.2.1:5353 --> 224.0.0.251:5353 H: Luca’s iMac._odisk._tcp.local
+lo: [i6----] MDNS.10036.netify.internal-network fe80::c42c:3ff:fe60:6a64:5353 --> ff02::fb:5353 H: Luca’s iMac._odisk._tcp.local
+lo: [i4----] MDNS.10036.netify.internal-network 169.254.225.216:5353 --> 224.0.0.251:5353 H: Luca’s iMac._odisk._tcp.local
+lo: [i4----] Spotify.156.netify.spotify 192.168.2.1:57621 --> 192.168.2.255:57621
+lo: [i4----] MDNS 192.168.2.1:5353 --> 224.0.0.251:5353
+lo: [i6----] MDNS fe80::c42c:3ff:fe60:6a64:5353 --> ff02::fb:5353
+lo: [i4----] MDNS 169.254.225.216:5353 --> 224.0.0.251:5353
+lo: [i4----] SSDP 169.254.225.216:60538 --> 239.255.255.250:1900
+lo: [i4----] SSDP 192.168.2.1:51411 --> 239.255.255.250:1900
+lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67 H: lucas-iphone
+lo: [i4----] DHCP 192.168.2.1:67 --> 192.168.2.17:68
+lo: [i6----] ICMPV6 :::0 --> ff02::1:ff98:a29c:0
+lo: [i6----] ICMPV6 fe80::823:3f17:8298:a29c:0 --> ff02::2:0
+lo: [i6----] MDNS fe80::823:3f17:8298:a29c:5353 --> ff02::fb:5353
+lo: [i6----] ICMPV6 fe80::823:3f17:8298:a29c:0 --> ff02::16:0
+lo: [i4----] DNS.143.netify.apple-icloud 192.168.2.1:53 <-- 192.168.2.17:63143 H: p26-fmfmobile.icloud.com
+lo: [i4----] DNS.143.netify.apple-icloud 192.168.2.1:53 <-- 192.168.2.17:63381 H: p26-keyvalueservice.icloud.com
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:61862 H: gspe35-ssl.ls.apple.com
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:55914 H: gsp85-ssl.ls.apple.com
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:51007 H: captive.apple.com
+lo: [i4----] MDNS 192.168.2.17:5353 --> 224.0.0.251:5353
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:55457 H: mesu.apple.com
+lo: [i4--d-] HTTPS.140.netify.apple 95.101.25.53:443 <-- 192.168.2.17:50576 H: gspe35-ssl.ls.apple.com SSL C: gspe35-ssl.ls.apple.com
+lo: [i4--d-] HTTP.140.netify.apple 17.253.105.202:80 <-- 192.168.2.17:49152 H: captive.apple.com
+lo: [i4--d-] HTTPS.143.netify.apple-icloud 17.248.185.140:443 <-- 192.168.2.17:50575 H: p26-fmfmobile.icloud.com SSL C: p26-fmfmobile.icloud.com S: fmfmobile.icloud.com
+lo: [i4----] DNS.143.netify.apple-icloud 192.168.2.1:53 <-- 192.168.2.17:52852 H: gateway.icloud.com
+lo: [i4--d-] HTTPS.140.netify.apple 17.253.105.202:443 <-- 192.168.2.17:50579 H: captive.apple.com SSL C: mesu.apple.com
+lo: [i4--d-] HTTPS.140.netify.apple 17.253.105.202:443 <-- 192.168.2.17:50578 H: captive.apple.com SSL C: mesu.apple.com
+lo: [i4--d-] HTTPS.140.netify.apple 17.130.2.46:443 <-- 192.168.2.17:50577 H: gsp85-ssl.ls.apple.com SSL C: gsp85-ssl.ls.apple.com S: *.ls.apple.com
+lo: [i4----] DNS.143.netify.apple-icloud 192.168.2.1:53 <-- 192.168.2.17:52682 H: www.icloud.com
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:53317 H: iphone-ld.apple.com
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:64203 H: basejumper.apple.com
+lo: [i4----] DNS.145.netify.apple-itunes 192.168.2.1:53 <-- 192.168.2.17:63377 H: bag.itunes.apple.com
+lo: [i4----] DNS.145.netify.apple-itunes 192.168.2.1:53 <-- 192.168.2.17:53983 H: bag.itunes.apple.com
+lo: [i4--d-] HTTPS.143.netify.apple-icloud 17.248.176.75:443 <-- 192.168.2.17:50580 H: gateway.icloud.com SSL C: gateway.icloud.com S: gateway.icloud.com
+lo: [i4----] DNS.145.netify.apple-itunes 192.168.2.1:53 <-- 192.168.2.17:49880 H: init.itunes.apple.com
+lo: [i4----] DNS.145.netify.apple-itunes 192.168.2.1:53 <-- 192.168.2.17:53272 H: play.itunes.apple.com
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:62526 H: cl4.apple.com
+lo: [i4----] ICMP 192.168.2.1:0 <-- 192.168.2.17:0
+lo: [i4--d-] HTTPS.140.netify.apple 92.122.252.82:443 <-- 192.168.2.17:50582 H: iphone-ld.apple.com SSL C: iphone-ld.apple.com
+lo: [i4--d-] HTTPS.140.netify.apple 104.73.61.30:443 <-- 192.168.2.17:50583 H: cl4.apple.com SSL C: cl4.apple.com
+lo: [i4--d-] HTTPS.143.netify.apple-icloud 17.248.185.87:443 <-- 192.168.2.17:50581 H: p26-keyvalueservice.icloud.com SSL C: p26-keyvalueservice.icloud.com S: keyvalueservice.icloud.com
+lo: [i4----] IGMP 192.168.2.17:0 --> 224.0.0.22:0
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:62160 H: gsa.apple.com
+lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.17:52031 H: gsa.apple.com
+lo: [i4--d-] HTTPS.143.netify.apple-icloud 17.248.176.75:443 <-- 192.168.2.17:50584 H: gateway.icloud.com SSL C: gateway.icloud.com S: gateway.icloud.com
+lo: [i4--d-] HTTPS.140.netify.apple 17.137.166.35:443 <-- 192.168.2.17:50585 H: gsa.apple.com SSL C: gsa.apple.com S: gsa.apple.com
+lo: [i4--d-] HTTPS.143.netify.apple-icloud 17.248.176.75:443 <-- 192.168.2.17:50586 H: gateway.icloud.com SSL C: gateway.icloud.com S: gateway.icloud.com
+lo: [i4----] DNS.145.netify.apple-itunes 192.168.2.1:53 <-- 192.168.2.17:65079 H: play.itunes.apple.com
+lo: [i4--d-] HTTPS.145.netify.apple-itunes 92.123.77.26:443 <-- 192.168.2.17:50587 H: play.itunes.apple.com SSL C: play.itunes.apple.com
+lo: [i4----] DNS.145.netify.apple-itunes 192.168.2.1:53 <-- 192.168.2.17:63677 H: sync.itunes.apple.com
+lo: [i4--d-] HTTPS.145.netify.apple-itunes 95.101.24.53:443 <-- 192.168.2.17:50588 H: bag.itunes.apple.com SSL C: sync.itunes.apple.com

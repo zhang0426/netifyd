@@ -1,0 +1,71 @@
+lo: [i4----] DHCP 192.168.0.1:68 --> 255.255.255.255:67 H: tl-sg116e
+lo: [i4----] DNS.10236.netify.azure 192.168.1.1:53 <-- 192.168.1.6:60813 H: skypedataprdcolneu04.cloudapp.net
+lo: [i4----] HTTPS.10264.netify.teams 52.113.194.132:443 <-- 192.168.1.6:60533 SSL C: teams.microsoft.com S: teams.microsoft.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60532 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4----] HTTPS.205.netify.office-365 40.126.9.5:443 <-- 192.168.1.6:60534 SSL C: login.microsoftonline.com S: stamp2.login.microsoftonline.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60535 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4----] HTTPS.10264.netify.teams 52.113.194.132:443 <-- 192.168.1.6:60536 SSL C: teams.microsoft.com S: teams.microsoft.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60537 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.6:64046 H: b._dns-sd._udp.ntop.org
+lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67
+lo: [i4----] DNS.140.netify.apple 192.168.1.1:53 <-- 192.168.1.6:56634 H: captive.apple.com.edgekey.net
+lo: [i4----] DNS.10264.netify.teams 192.168.1.1:53 <-- 192.168.1.6:63106 H: eu-prod.asyncgw.teams.microsoft.com
+lo: [i4----] DNS.125.netify.skype 192.168.1.1:53 <-- 192.168.1.6:51033 H: eu-api.asm.skype.com
+lo: [i4--d-] HTTPS.10264.netify.teams 52.114.75.70:443 <-- 192.168.1.6:60538 H: eu-prod.asyncgw.teams.microsoft.com SSL C: eu-prod.asyncgw.teams.microsoft.com S: *.asyncgw.teams.microsoft.com
+lo: [i4--d-] HTTPS.125.netify.skype 52.114.75.69:443 <-- 192.168.1.6:60539 H: eu-api.asm.skype.com SSL C: eu-api.asm.skype.com S: *.asm.skype.com
+lo: [i4--d-] HTTPS.10264.netify.teams 52.114.75.70:443 <-- 192.168.1.6:60540 H: eu-prod.asyncgw.teams.microsoft.com SSL C: eu-prod.asyncgw.teams.microsoft.com S: *.asyncgw.teams.microsoft.com
+lo: [i4--d-] HTTPS.125.netify.skype 52.114.75.69:443 <-- 192.168.1.6:60541 H: eu-api.asm.skype.com SSL C: eu-api.asm.skype.com S: *.asm.skype.com
+lo: [i4----] DNS.10264.netify.teams 192.168.1.1:53 <-- 192.168.1.6:49514 H: config.teams.microsoft.com
+lo: [i4--d-] HTTPS.10264.netify.teams 52.113.194.132:443 <-- 192.168.1.6:60542 H: config.teams.microsoft.com SSL C: config.teams.microsoft.com S: config.teams.microsoft.com
+lo: [i4----] DNS.10236.netify.azure 192.168.1.1:53 <-- 192.168.1.6:65387 H: northeuropecns.trafficmanager.net
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.76.48:443 <-- 192.168.1.6:60544 H: northeuropecns.trafficmanager.net SSL C: northeurope.notifications.teams.microsoft.com S: *.notifications.teams.microsoft.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60543 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4----] DNS.10236.netify.azure 192.168.1.1:53 <-- 192.168.1.6:57530 H: presence.services.sfb.trafficmanager.net
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.58:443 <-- 192.168.1.6:60545 H: presence.services.sfb.trafficmanager.net SSL C: presence.teams.microsoft.com S: presence.teams.microsoft.com
+lo: [i4-g--] HTTPS 162.125.19.131:443 --> 192.168.1.6:60344
+lo: [i4----] SSL 167.99.215.164:4434 <-- 192.168.1.6:60546 SSL C: dati.ntop.org
+lo: [i4----] DNS.205.netify.office-365 192.168.1.1:53 <-- 192.168.1.6:57504 H: chatsvcagg.svcs.teams.office.com
+lo: [i4--d-] HTTPS.205.netify.office-365 52.114.88.59:443 <-- 192.168.1.6:60547 H: chatsvcagg.svcs.teams.office.com SSL C: chatsvcagg.teams.microsoft.com S: chatsvcagg.teams.microsoft.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60548 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4----] DNS.205.netify.office-365 192.168.1.1:53 <-- 192.168.1.6:59403 H: substrate.office.com
+lo: [i4--d-] HTTPS.205.netify.office-365 13.107.18.11:443 <-- 192.168.1.6:60549 H: substrate.office.com SSL C: substrate.office.com S: outlook.office.com
+lo: [i4----] DNS.10264.netify.teams 192.168.1.1:53 <-- 192.168.1.6:53678 H: trouter2-asse-a.trouter.teams.microsoft.com
+lo: [i4----] DNS.10264.netify.teams 192.168.1.1:53 <-- 192.168.1.6:65230 H: trouter2-asse-a.trouter.teams.microsoft.com
+lo: [i4----] DNS.10264.netify.teams 192.168.1.1:53 <-- 192.168.1.6:50653 H: api.flightproxy.teams.microsoft.com
+lo: [i4----] DNS.10264.netify.teams 192.168.1.1:53 <-- 192.168.1.6:61245 H: euaz.tr.teams.microsoft.com
+lo: [i4----] DNS.205.netify.office-365 192.168.1.1:53 <-- 192.168.1.6:58457 H: outlook.office.com
+lo: [i4----] DNS.10236.netify.azure 192.168.1.1:53 <-- 192.168.1.6:51309 H: skypedataprdcolneu04.cloudapp.net
+lo: [i4--d-] HTTPS.10264.netify.teams 52.113.194.132:443 <-- 192.168.1.6:60554 H: config.teams.microsoft.com SSL C: config.teams.microsoft.com S: config.teams.microsoft.com
+lo: [i4----] HTTPS.205.netify.office-365 40.126.9.7:443 <-- 192.168.1.6:60556 SSL C: login.microsoftonline.com S: stamp2.login.microsoftonline.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60552 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60555 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4--d-] HTTPS.10264.netify.teams 52.114.15.45:443 <-- 192.168.1.6:60551 H: trouter2-asse-a.trouter.teams.microsoft.com SSL C: trouter2-asse-a.trouter.teams.microsoft.com S: *.trouter.teams.microsoft.com
+lo: [i4--d-] HTTPS.10264.netify.teams 52.113.194.132:443 <-- 192.168.1.6:60557 H: config.teams.microsoft.com SSL C: teams.microsoft.com S: teams.microsoft.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60559 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4----] Spotify.156.netify.spotify 192.168.1.112:57621 --> 192.168.1.255:57621
+lo: [i4----] HTTPS.205.netify.office-365 40.126.9.67:443 <-- 192.168.1.6:60560 SSL C: login.microsoftonline.com S: stamp2.login.microsoftonline.com
+lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.6:54069 H: api.microsoftstream.com
+lo: [i4--d-] HTTPS 104.40.187.151:443 <-- 192.168.1.6:60562 H: api.microsoftstream.com SSL C: api.microsoftstream.com S: *.api.microsoftstream.com
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.77.33:443 <-- 192.168.1.6:60561 H: skypedataprdcolneu04.cloudapp.net SSL C: mobile.pipe.aria.microsoft.com S: *.events.data.microsoft.com
+lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.6:62735 H: euno-1.api.microsoftstream.com
+lo: [i4--d-] HTTPS 52.169.186.119:443 <-- 192.168.1.6:60563 H: euno-1.api.microsoftstream.com SSL C: euno-1.api.microsoftstream.com S: *.api.microsoftstream.com
+lo: [i4----] DNS.202.netify.microsoft 192.168.1.1:53 <-- 192.168.1.6:63930 H: dc.applicationinsights.microsoft.com
+lo: [i4--d-] HTTPS.202.netify.microsoft 40.79.138.41:443 <-- 192.168.1.6:60564 H: dc.applicationinsights.microsoft.com SSL C: gate.hockeyapp.net S: dc.services.visualstudio.com
+lo: [i4----] DNS.10236.netify.azure 192.168.1.1:53 <-- 192.168.1.6:62863 H: emea.ng.msg.teams-msgapi.trafficmanager.net
+lo: [i4--d-] HTTPS.10236.netify.azure 52.114.108.8:443 <-- 192.168.1.6:60565 H: emea.ng.msg.teams-msgapi.trafficmanager.net SSL C: emea.ng.msg.teams.microsoft.com S: msgapi.teams.microsoft.com
+lo: [i4----] SSL 167.99.215.164:4434 <-- 192.168.1.6:60566 SSL C: dati.ntop.org
+lo: [i4----] DNS.10236.netify.azure 192.168.1.1:53 <-- 192.168.1.6:55765 H: b-tr-teams-euno-05.northeurope.cloudapp.azure.com
+lo: [i4--d-] HTTPS.10264.netify.teams 52.114.250.123:443 <-- 192.168.1.6:50018 H: euaz.tr.teams.microsoft.com SSL C: euaz.tr.teams.microsoft.com S: tr.teams.microsoft.com
+lo: [i4--d-] HTTPS.10264.netify.teams 52.114.250.123:443 <-- 192.168.1.6:50021 H: euaz.tr.teams.microsoft.com SSL C: euaz.tr.teams.microsoft.com S: tr.teams.microsoft.com
+lo: [i4----] HTTPS.10264.netify.teams 52.114.250.152:443 <-- 192.168.1.6:50014 SSL C: 5 S: tr.teams.microsoft.com
+lo: [i4----] HTTPS.10264.netify.teams 52.114.250.153:443 <-- 192.168.1.6:50036 SSL C: 5 S: tr.teams.microsoft.com
+lo: [i4----] DNS.10236.netify.azure 192.168.1.1:53 <-- 192.168.1.6:60837 H: c-flightproxy-euno-01-teams.cloudapp.net
+lo: [i4-gd-] STUN.10264.netify.teams 52.114.77.136:3478 <-- 192.168.1.6:51681 H: api.flightproxy.teams.microsoft.com
+lo: [i4--d-] HTTPS.10264.netify.teams 52.114.77.136:443 <-- 192.168.1.6:60567 H: api.flightproxy.teams.microsoft.com SSL C: api.flightproxy.teams.microsoft.com S: *.flightproxy.teams.microsoft.com
+lo: [i4----] SkypeCall 192.168.0.4:50005 <-- 192.168.1.6:50016
+lo: [i4----] SkypeCall 192.168.0.4:50020 <-- 192.168.1.6:50036
+lo: [i4--d-] HTTPS.202.netify.microsoft 40.79.138.41:443 <-- 192.168.1.6:60568 H: dc.applicationinsights.microsoft.com SSL C: gate.hockeyapp.net S: dc.services.visualstudio.com
+lo: [i4----] SkypeCall 93.71.110.205:16332 --> 192.168.1.6:50016
+lo: [i4----] SkypeCall 93.71.110.205:16333 --> 192.168.1.6:50036
+lo: [i4----] ICMP 93.71.110.205:0 --> 192.168.1.6:0
+lo: [i4-g--] STUN 52.114.250.137:3478 <-- 192.168.1.6:50036

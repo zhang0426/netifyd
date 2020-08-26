@@ -1,0 +1,46 @@
+lo: [i4----] DHCP 192.168.0.1:68 --> 255.255.255.255:67 H: tl-sg116e
+lo: [i4----] SSDP 192.168.1.53:54306 --> 239.255.255.250:1900
+lo: [i4----] MDNS 192.168.1.53:5353 --> 224.0.0.251:5353
+lo: [i4----] MDNS.10036.netify.internal-network 192.168.1.69:5353 --> 224.0.0.251:5353 H: _spotify-connect._tcp.local
+lo: [i4----] MDNS.10036.netify.internal-network 192.168.1.75:5353 --> 224.0.0.251:5353 H: _dacp._tcp.local
+lo: [i6----] MDNS.10036.netify.internal-network fe80::4ba:91a:7817:e318:5353 --> ff02::fb:5353 H: _dacp._tcp.local
+lo: [i4----] MDNS 192.168.1.75:5353 --> 224.0.0.251:5353
+lo: [i6----] MDNS fe80::4ba:91a:7817:e318:5353 --> ff02::fb:5353
+lo: [i4----] MDNS.10036.netify.internal-network 192.168.1.75:5353 <-- 192.168.1.77:5353 H: _companion-link._tcp.local
+lo: [i4----] DNS.10011.netify.akamai 192.168.1.1:53 <-- 192.168.1.77:61631 H: e7047.e12.akamaiedge.net
+lo: [i6----] MDNS fe80::18a0:a412:8935:c01b:5353 --> ff02::fb:5353
+lo: [i4----] MDNS.10036.netify.internal-network 192.168.1.53:5353 <-- 192.168.1.77:5353 H: _companion-link._tcp.local
+lo: [i4----] DNS.202.netify.microsoft 192.168.1.1:53 <-- 192.168.1.77:52118 H: in.appcenter.ms
+lo: [i4----] Spotify.156.netify.spotify 192.168.1.53:57621 --> 192.168.1.255:57621
+lo: [i4----] SSDP 192.168.1.75:57916 --> 239.255.255.250:1900
+lo: [i4----] DNS.10011.netify.akamai 192.168.1.1:53 <-- 192.168.1.77:61120 H: e4518.dscx.akamaiedge.net
+lo: [i4----] MDNS 192.168.1.52:5353 --> 224.0.0.251:5353
+lo: [i6----] MDNS fe80::4dc:edec:5b0c:a661:5353 --> ff02::fb:5353
+lo: [i4-g--] Unknown 91.108.8.7:521 <-- 192.168.1.77:23174
+lo: [i4-g--] Unknown 91.108.8.8:538 <-- 192.168.1.77:23174
+lo: [i4-g--] Unknown 91.108.12.5:523 <-- 192.168.1.77:23174
+lo: [i4-g--] Unknown 91.108.12.1:536 <-- 192.168.1.77:23174
+lo: [i4-g--] 10185.netify.telegram 91.108.16.1:527 <-- 192.168.1.77:23174
+lo: [i4-g--] 10185.netify.telegram 91.108.16.4:538 <-- 192.168.1.77:23174
+lo: [i4----] DNS.10001.netify.analytics 192.168.1.1:53 --> 192.168.1.77:47127 H: www.googletagservices.com
+lo: [i4-g--] Unknown 192.168.1.52:31480 <-- 192.168.1.77:23174
+lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67
+lo: [i4----] NetBIOS 192.168.1.43:138 --> 192.168.1.255:138
+lo: [i4----] NetBIOS 192.168.1.77:137 --> 192.168.1.255:137
+lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.77:49764 H: dati.ntop.org
+lo: [i4----] DNS.10070.netify.wordpress 192.168.1.1:53 --> 192.168.1.77:5812 H: pixel.wp.com
+lo: [i4----] Spotify.156.netify.spotify 192.168.1.77:57621 --> 192.168.1.255:57621
+lo: [i4----] DNS 192.168.1.1:53 <-- 192.168.1.77:54595 H: b._dns-sd._udp.ntop.org
+lo: [i4----] SSDP 192.168.1.77:52127 --> 239.255.255.250:1900
+lo: [i4-g--] Unknown 91.108.8.8:529 <-- 192.168.1.77:28150
+lo: [i4-g--] 10185.netify.telegram 91.108.16.3:537 <-- 192.168.1.77:28150
+lo: [i4-g--] Unknown 91.108.8.1:533 <-- 192.168.1.77:28150
+lo: [i4-g--] 10185.netify.telegram 91.108.16.1:529 <-- 192.168.1.77:28150
+lo: [i4-g--] Unknown 91.108.12.3:530 <-- 192.168.1.77:28150
+lo: [i4-g--] Unknown 91.108.12.5:537 <-- 192.168.1.77:28150
+lo: [i4----] MDNS.10036.netify.internal-network 192.168.1.75:5353 <-- 192.168.1.77:5353 H: _companion-link._tcp.local
+lo: [i4----] MDNS.10036.netify.internal-network 192.168.1.69:5353 --> 224.0.0.251:5353 H: _spotify-connect._tcp.local
+lo: [i4----] SSDP 192.168.1.53:50698 --> 239.255.255.250:1900
+lo: [i4----] SSDP 192.168.1.53:56384 --> 239.255.255.250:1900
+lo: [i4----] DNS.10011.netify.akamai 192.168.1.1:53 <-- 192.168.1.77:49533 H: e4518.dscx.akamaiedge.net
+lo: [i4----] DNS.121.netify.dropbox 192.168.1.1:53 <-- 192.168.1.77:58615 H: telemetry.dropbox.com

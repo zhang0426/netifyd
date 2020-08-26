@@ -1,0 +1,26 @@
+lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.12:51431 H: www.google.com
+lo: [i4----] DNS.142.netify.whatsapp 192.168.2.1:53 <-- 192.168.2.12:60765 H: g.whatsapp.net
+lo: [i4----] ApplePush.140.netify.apple 17.242.60.84:5223 <-- 192.168.2.12:49354
+lo: [i4----] Spotify.156.netify.spotify 192.168.2.1:57621 --> 192.168.2.255:57621
+lo: [i4-gd-] 142.netify.whatsapp 157.240.20.53:5222 <-- 192.168.2.12:49355 H: g.whatsapp.net
+lo: [i4----] DNS.142.netify.whatsapp 192.168.2.1:53 <-- 192.168.2.12:55296 H: media-mxp1-1.cdn.whatsapp.net
+lo: [i4--d-] HTTPS.142.netify.whatsapp 31.13.86.51:443 <-- 192.168.2.12:50503 H: media-mxp1-1.cdn.whatsapp.net SSL C: media-mxp1-1.cdn.whatsapp.net
+lo: [i4----] SSDP 169.254.162.244:50384 --> 239.255.255.250:1900
+lo: [i4----] SSDP 192.168.2.1:50384 --> 239.255.255.250:1900
+lo: [i4----] MDNS 192.168.2.12:5353 --> 224.0.0.251:5353
+lo: [i6----] MDNS fe80::414:409d:8afd:9f05:5353 --> ff02::fb:5353
+lo: [i4----] SSDP 192.168.2.12:64716 --> 239.255.255.250:1900
+lo: [i4----] DNS.142.netify.whatsapp 192.168.2.1:53 <-- 192.168.2.12:60549 H: pps.whatsapp.net
+lo: [i4--d-] HTTPS.142.netify.whatsapp 157.240.20.52:443 <-- 192.168.2.12:50504 H: pps.whatsapp.net SSL C: pps.whatsapp.net
+lo: [i4----] WhatsAppVoice.119.netify.facebook 31.13.86.48:3478 <-- 192.168.2.12:56328
+lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67 H: lucas-imac
+lo: [i4----] Spotify.156.netify.spotify 192.168.2.1:57621 --> 192.168.2.255:57621
+lo: [i4----] WhatsAppVoice 91.252.56.51:32704 --> 192.168.2.12:56328
+lo: [i4----] STUN 1.60.78.64:64282 <-- 192.168.2.12:56328
+lo: [i4----] WhatsAppVoice 185.60.216.51:3478 <-- 192.168.2.12:56328
+lo: [i4----] WhatsAppVoice.119.netify.facebook 157.240.193.48:3478 <-- 192.168.2.12:56328
+lo: [i4----] WhatsAppVoice 179.60.192.48:3478 <-- 192.168.2.12:56328
+lo: [i4----] WhatsAppVoice.119.netify.facebook 157.240.196.62:3478 <-- 192.168.2.12:56328
+lo: [i4----] SSDP 192.168.2.12:50191 --> 239.255.255.250:1900
+lo: [i4----] SSDP 192.168.2.12:57546 --> 239.255.255.250:1900
+lo: [i4----] ICMP 91.252.56.51:0 <-- 192.168.2.12:0

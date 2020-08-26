@@ -1231,21 +1231,21 @@ void ndDetectionThread::ProcessPacket(void)
         case NDPI_PROTOCOL_SSL_NO_CERT:
         case NDPI_PROTOCOL_OSCAR:
             if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate[0] != '\0') {
-                new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
-                    ndpi,
-                    new_flow->ndpi_flow,
-                    (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate,
-                    strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate),
-                    &npmr);
-            }
-            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
                 new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
                 new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
                     ndpi,
                     new_flow->ndpi_flow,
                     (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate,
                     strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate),
+                    &npmr);
+            }
+            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
+                new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate[0] != '\0') {
+                new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+                    ndpi,
+                    new_flow->ndpi_flow,
+                    (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate,
+                    strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate),
                     &npmr);
             }
             break;

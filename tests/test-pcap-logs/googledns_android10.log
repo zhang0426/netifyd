@@ -1,0 +1,6 @@
+lo: [i4----] SSL.10300.netify.google-dns 8.8.4.4:853 <-- 192.168.1.159:48044 SSL C: dns.google S: dns.google
+lo: [i4----] SSL.10300.netify.google-dns 8.8.8.8:853 <-- 192.168.1.159:56024 SSL C: dns.google S: dns.google
+lo: [i4----] SSL.10300.netify.google-dns 8.8.4.4:853 <-- 192.168.1.159:48048 SSL C: dns.google S: dns.google
+lo: [i4----] ICMP 8.8.8.8:0 <-- 192.168.1.159:0
+lo: [i4----] SSL.10300.netify.google-dns 8.8.4.4:853 <-- 192.168.1.159:48098 SSL C: dns.google
+lo: [i4----] SSL.10300.netify.google-dns 8.8.4.4:853 <-- 192.168.1.159:48210 SSL C: dns.google S: dns.google

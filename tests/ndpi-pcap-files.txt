@@ -45,9 +45,9 @@ fbzero-missing-lengthcheck
 fix
 ftp_failed
 ftp
-fuzz-2006-06-26-2594
-fuzz-2006-09-29-28586
-fuzz-2020-02-16-11740
+#fuzz-2006-06-26-2594
+#fuzz-2006-09-29-28586
+#fuzz-2020-02-16-11740
 git
 googledns_android10
 google_ssl

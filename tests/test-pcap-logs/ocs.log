@@ -1,0 +1,10 @@
+lo: [i4----] HTTP.204.netify.orange-cinema-series 178.248.208.54:80 <-- 192.168.180.2:48250 H: ocu03.labgency.ws
+lo: [i4----] HTTP 137.135.129.206:80 <-- 192.168.180.2:53356 H: api.eu01.capptain.com
+lo: [i4----] HTTP 137.135.129.206:80 <-- 192.168.180.2:44959 H: api.eu01.capptain.com
+lo: [i4----] HTTPS.126.netify.google 192.168.180.2:41223 --> 216.58.208.46:443
+lo: [i4-g--] HTTPS.10042.netify.crashlytics 23.21.230.199:443 <-- 192.168.180.2:39263 SSL C: settings.crashlytics.com
+lo: [i4----] HTTP.204.netify.orange-cinema-series 178.248.208.54:80 <-- 192.168.180.2:49881 H: ocu03.labgency.ws
+lo: [i4-g--] HTTPS.204.netify.orange-cinema-series 178.248.208.54:443 <-- 192.168.180.2:36680 SSL C: ocs.labgency.ws
+lo: [i4-g--] HTTPS.126.netify.google 64.233.184.188:443 <-- 192.168.180.2:32946 SSL C: mtalk.google.com
+lo: [i4----] HTTPS.126.netify.google 64.233.166.95:443 <-- 192.168.180.2:47803
+lo: [i4----] HTTP.204.netify.orange-cinema-series 178.248.208.210:80 <-- 192.168.180.2:42590 H: www.ocs.fr
