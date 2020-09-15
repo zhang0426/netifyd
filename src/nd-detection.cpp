@@ -590,8 +590,8 @@ int ndDetectionThread::GetCaptureStats(struct pcap_stat &stats)
 
 void ndDetectionThread::ProcessPacket(void)
 {
-    ndFlow *new_flow;
-    nd_flow_insert flow_iter;
+    ndFlow *nf;
+    nd_flow_insert fi;
 
     const struct ether_header *hdr_eth = NULL;
     const struct sll_header *hdr_sll = NULL;
@@ -976,57 +976,57 @@ void ndDetectionThread::ProcessPacket(void)
 
     flow.hash(tag);
     flow_digest.assign((const char *)flow.digest_lower, SHA1_DIGEST_LENGTH);
-    flow_iter.first = flows->find(flow_digest);
+    fi.first = flows->find(flow_digest);
 
-    if (flow_iter.first != flows->end()) {
+    if (fi.first != flows->end()) {
         // Flow exists in map.
-        new_flow = flow_iter.first->second;
+        nf = fi.first->second;
 
-        if (flow == *new_flow)
-            id_src = new_flow->id_src, id_dst = new_flow->id_dst;
+        if (flow == *nf)
+            id_src = nf->id_src, id_dst = nf->id_dst;
         else
-            id_src = new_flow->id_dst, id_dst = new_flow->id_src;
+            id_src = nf->id_dst, id_dst = nf->id_src;
     }
     else {
-        new_flow = new ndFlow(flow);
-        if (new_flow == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
+        nf = new ndFlow(flow);
+        if (nf == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
 
-        flow_iter = flows->insert(nd_flow_pair(flow_digest, new_flow));
+        fi = flows->insert(nd_flow_pair(flow_digest, nf));
 
-        if (! flow_iter.second) {
+        if (! fi.second) {
             // Flow exists in map!  Impossible!
             throw ndDetectionThreadException(strerror(EINVAL));
         }
 
         // New flow inserted, initialize...
 
-        new_flow->ts_first_seen = ts_pkt;
+        nf->ts_first_seen = ts_pkt;
 
-        new_flow->ndpi_flow = (ndpi_flow_struct *)ndpi_malloc(sizeof(ndpi_flow_struct));
-        if (new_flow->ndpi_flow == NULL)
+        nf->ndpi_flow = (ndpi_flow_struct *)ndpi_malloc(sizeof(ndpi_flow_struct));
+        if (nf->ndpi_flow == NULL)
             throw ndDetectionThreadException(strerror(ENOMEM));
 
-        memset(new_flow->ndpi_flow, 0, sizeof(ndpi_flow_struct));
+        memset(nf->ndpi_flow, 0, sizeof(ndpi_flow_struct));
 
-        new_flow->id_src = new ndpi_id_struct;
-        if (new_flow->id_src == NULL)
+        nf->id_src = new ndpi_id_struct;
+        if (nf->id_src == NULL)
             throw ndDetectionThreadException(strerror(ENOMEM));
-        new_flow->id_dst = new ndpi_id_struct;
-        if (new_flow->id_dst == NULL)
+        nf->id_dst = new ndpi_id_struct;
+        if (nf->id_dst == NULL)
             throw ndDetectionThreadException(strerror(ENOMEM));
 
-        memset(new_flow->id_src, 0, sizeof(ndpi_id_struct));
-        memset(new_flow->id_dst, 0, sizeof(ndpi_id_struct));
+        memset(nf->id_src, 0, sizeof(ndpi_id_struct));
+        memset(nf->id_dst, 0, sizeof(ndpi_id_struct));
 
-        id_src = new_flow->id_src;
-        id_dst = new_flow->id_dst;
+        id_src = nf->id_src;
+        id_dst = nf->id_dst;
 
         // Set initial flow origin:
         // XXX: A 50-50 guess based on which side we saw first.
         if (addr_cmp < 0)
-            new_flow->origin = ndFlow::ORIGIN_LOWER;
+            nf->origin = ndFlow::ORIGIN_LOWER;
         else
-            new_flow->origin = ndFlow::ORIGIN_UPPER;
+            nf->origin = ndFlow::ORIGIN_UPPER;
 
         // Try to refine flow origin for TCP flows using SYN/ACK flags
         if (flow.ip_protocol == IPPROTO_TCP) {
@@ -1035,15 +1035,15 @@ void ndDetectionThread::ProcessPacket(void)
 
                 if (! (hdr_tcp->th_flags & TH_ACK)) {
                     if (addr_cmp < 0)
-                        new_flow->origin = ndFlow::ORIGIN_LOWER;
+                        nf->origin = ndFlow::ORIGIN_LOWER;
                     else
-                        new_flow->origin = ndFlow::ORIGIN_UPPER;
+                        nf->origin = ndFlow::ORIGIN_UPPER;
                 }
                 else {
                     if (addr_cmp < 0)
-                        new_flow->origin = ndFlow::ORIGIN_UPPER;
+                        nf->origin = ndFlow::ORIGIN_UPPER;
                     else
-                        new_flow->origin = ndFlow::ORIGIN_LOWER;
+                        nf->origin = ndFlow::ORIGIN_LOWER;
                 }
             }
         }
@@ -1054,7 +1054,7 @@ void ndDetectionThread::ProcessPacket(void)
     stats->pkt.ip++;
     stats->pkt.ip_bytes += pkt_header->len;
 
-    if (new_flow->ip_version == 4) {
+    if (nf->ip_version == 4) {
         stats->pkt.ip4++;
         stats->pkt.ip4_bytes += pkt_header->len;
     }
@@ -1063,34 +1063,34 @@ void ndDetectionThread::ProcessPacket(void)
         stats->pkt.ip6_bytes += pkt_header->len;
     }
 
-    new_flow->total_packets++;
-    new_flow->total_bytes += pkt_header->len;
+    nf->total_packets++;
+    nf->total_bytes += pkt_header->len;
 
     if (addr_cmp < 0) {
-        new_flow->lower_packets++;
-        new_flow->lower_bytes += pkt_header->len;
+        nf->lower_packets++;
+        nf->lower_bytes += pkt_header->len;
     }
     else {
-        new_flow->upper_packets++;
-        new_flow->upper_bytes += pkt_header->len;
+        nf->upper_packets++;
+        nf->upper_bytes += pkt_header->len;
     }
 
-    new_flow->ts_last_seen = ts_pkt;
-    if (! new_flow->ts_first_update)
-        new_flow->ts_first_update = ts_pkt;
+    nf->ts_last_seen = ts_pkt;
+    if (! nf->ts_first_update)
+        nf->ts_first_update = ts_pkt;
 
-    if (new_flow->ip_protocol == IPPROTO_TCP &&
+    if (nf->ip_protocol == IPPROTO_TCP &&
         (hdr_tcp->th_flags & TH_FIN || hdr_tcp->th_flags & TH_RST))
-        new_flow->tcp_fin = true;
+        nf->tcp_fin = true;
 
-    if (new_flow->detection_complete) return;
+    if (nf->detection_complete) return;
 
-    if (capture_unknown_flows) new_flow->push(pkt_header, pkt_data);
+    if (capture_unknown_flows) nf->push(pkt_header, pkt_data);
 
-    new_flow->detected_protocol = ndpi_detection_process_packet(
+    nf->detected_protocol = ndpi_detection_process_packet(
         ndpi,
-        new_flow->ndpi_flow,
-        (new_flow->ip_version == 4) ?
+        nf->ndpi_flow,
+        (nf->ip_version == 4) ?
             (const uint8_t *)hdr_ip : (const uint8_t *)hdr_ip6,
         pkt_header->caplen - l2_len,
         ts_pkt,
@@ -1099,47 +1099,47 @@ void ndDetectionThread::ProcessPacket(void)
     );
 
 //    nd_debug_printf("%s: %hhu.%hhu\n", tag.c_str(),
-//        new_flow->detected_protocol.master_protocol,
-//        new_flow->detected_protocol.app_protocol);
+//        nf->detected_protocol.master_protocol,
+//        nf->detected_protocol.app_protocol);
 
-    if (new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN
-        || (new_flow->ip_protocol != IPPROTO_TCP &&
-            new_flow->ip_protocol != IPPROTO_UDP)
-        || (new_flow->ip_protocol == IPPROTO_UDP &&
-            new_flow->total_packets > nd_config.max_udp_pkts)
-        || (new_flow->ip_protocol == IPPROTO_TCP &&
-            new_flow->total_packets > nd_config.max_tcp_pkts)) {
+    if (nf->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN
+        || (nf->ip_protocol != IPPROTO_TCP &&
+            nf->ip_protocol != IPPROTO_UDP)
+        || (nf->ip_protocol == IPPROTO_UDP &&
+            nf->total_packets > nd_config.max_udp_pkts)
+        || (nf->ip_protocol == IPPROTO_TCP &&
+            nf->total_packets > nd_config.max_tcp_pkts)) {
 
-        new_flow->detection_complete = true;
+        nf->detection_complete = true;
 
 #ifdef _ND_USE_NETLINK
         if (ND_USE_NETLINK) {
-            new_flow->lower_type = netlink->ClassifyAddress(&new_flow->lower_addr);
-            new_flow->upper_type = netlink->ClassifyAddress(&new_flow->upper_addr);
+            nf->lower_type = netlink->ClassifyAddress(&nf->lower_addr);
+            nf->upper_type = netlink->ClassifyAddress(&nf->upper_addr);
         }
 #endif
-        if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
+        if (nf->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            new_flow->detection_guessed |= ND_FLOW_GUESS_PROTO;
+            nf->detection_guessed |= ND_FLOW_GUESS_PROTO;
 
-            new_flow->detected_protocol.master_protocol =
+            nf->detected_protocol.master_protocol =
                 ndpi_guess_undetected_protocol(
                     ndpi,
                     NULL,
-                    new_flow->ip_protocol,
-                    ntohs(new_flow->lower_port),
-                    ntohs(new_flow->upper_port)
+                    nf->ip_protocol,
+                    ntohs(nf->lower_port),
+                    ntohs(nf->upper_port)
             );
         }
-        else if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_SSDP) {
-            if (new_flow->ndpi_flow->packet.packet_lines_parsed_complete) {
+        else if (nf->detected_protocol.master_protocol == NDPI_PROTOCOL_SSDP) {
+            if (nf->ndpi_flow->packet.packet_lines_parsed_complete) {
                 string buffer;
                 for (unsigned i = 0;
-                    i < new_flow->ndpi_flow->packet.parsed_lines; i++) {
+                    i < nf->ndpi_flow->packet.parsed_lines; i++) {
 
                     buffer.assign(
-                        (const char *)new_flow->ndpi_flow->packet.line[i].ptr,
-                        new_flow->ndpi_flow->packet.line[i].len
+                        (const char *)nf->ndpi_flow->packet.line[i].ptr,
+                        nf->ndpi_flow->packet.line[i].len
                     );
 
                     size_t n = buffer.find_first_of(":");
@@ -1160,7 +1160,7 @@ void ndDetectionThread::ProcessPacket(void)
                             })
                         );
 
-                        new_flow->ssdp.headers[key] = value;
+                        nf->ssdp.headers[key] = value;
                     }
                 }
             }
@@ -1169,25 +1169,25 @@ void ndDetectionThread::ProcessPacket(void)
         if (dhc != NULL) {
             string hostname;
 #ifdef _ND_USE_NETLINK
-            if (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN)
-                new_flow->dhc_hit = dhc->lookup(&new_flow->lower_addr, hostname);
-            else if (new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
-                new_flow->dhc_hit = dhc->lookup(&new_flow->upper_addr, hostname);
+            if (nf->lower_type == ndNETLINK_ATYPE_UNKNOWN)
+                nf->dhc_hit = dhc->lookup(&nf->lower_addr, hostname);
+            else if (nf->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
+                nf->dhc_hit = dhc->lookup(&nf->upper_addr, hostname);
             }
 #endif
-            if (! new_flow->dhc_hit) {
-                if (new_flow->origin == ndFlow::ORIGIN_LOWER)
-                    new_flow->dhc_hit = dhc->lookup(&new_flow->upper_addr, hostname);
-                else if (new_flow->origin == ndFlow::ORIGIN_UPPER)
-                    new_flow->dhc_hit = dhc->lookup(&new_flow->lower_addr, hostname);
+            if (! nf->dhc_hit) {
+                if (nf->origin == ndFlow::ORIGIN_LOWER)
+                    nf->dhc_hit = dhc->lookup(&nf->upper_addr, hostname);
+                else if (nf->origin == ndFlow::ORIGIN_UPPER)
+                    nf->dhc_hit = dhc->lookup(&nf->lower_addr, hostname);
             }
 
-            if (new_flow->dhc_hit &&
-                (new_flow->ndpi_flow->host_server_name[0] == '\0' ||
-                nd_is_ipaddr((const char *)new_flow->ndpi_flow->host_server_name))) {
+            if (nf->dhc_hit &&
+                (nf->ndpi_flow->host_server_name[0] == '\0' ||
+                nd_is_ipaddr((const char *)nf->ndpi_flow->host_server_name))) {
                 snprintf(
-                    (char *)new_flow->ndpi_flow->host_server_name,
-                    sizeof(new_flow->ndpi_flow->host_server_name) - 1,
+                    (char *)nf->ndpi_flow->host_server_name,
+                    sizeof(nf->ndpi_flow->host_server_name) - 1,
                     "%s", hostname.c_str()
                 );
             }
@@ -1196,33 +1196,33 @@ void ndDetectionThread::ProcessPacket(void)
         // Sanitize host server name; RFC 952 plus underscore for SSDP.
         for(int i = 0;
             i < ND_MAX_HOSTNAME &&
-            i < sizeof(new_flow->ndpi_flow->host_server_name); i++) {
+            i < sizeof(nf->ndpi_flow->host_server_name); i++) {
 
-            if (isalnum(new_flow->ndpi_flow->host_server_name[i]) ||
-                new_flow->ndpi_flow->host_server_name[i] == '-' ||
-                new_flow->ndpi_flow->host_server_name[i] == '_' ||
-                new_flow->ndpi_flow->host_server_name[i] == '.') {
-                new_flow->host_server_name[i] = tolower(new_flow->ndpi_flow->host_server_name[i]);
+            if (isalnum(nf->ndpi_flow->host_server_name[i]) ||
+                nf->ndpi_flow->host_server_name[i] == '-' ||
+                nf->ndpi_flow->host_server_name[i] == '_' ||
+                nf->ndpi_flow->host_server_name[i] == '.') {
+                nf->host_server_name[i] = tolower(nf->ndpi_flow->host_server_name[i]);
             }
             else {
-                new_flow->host_server_name[i] = '\0';
+                nf->host_server_name[i] = '\0';
                 break;
             }
         }
 
         // Determine application protocol
-        if (new_flow->host_server_name[0] != '\0') {
-            new_flow->detected_protocol.app_protocol = ndpi_match_host_app_proto(
+        if (nf->host_server_name[0] != '\0') {
+            nf->detected_protocol.app_protocol = ndpi_match_host_app_proto(
                 ndpi,
-                new_flow->ndpi_flow,
-                (char *)new_flow->host_server_name,
-                strlen((const char *)new_flow->host_server_name),
+                nf->ndpi_flow,
+                (char *)nf->host_server_name,
+                strlen((const char *)nf->host_server_name),
                 &npmr
             );
         }
 
         // Determine application protocol based on master protocol
-        switch (new_flow->detected_protocol.master_protocol) {
+        switch (nf->detected_protocol.master_protocol) {
         case NDPI_PROTOCOL_HTTPS:
         case NDPI_PROTOCOL_SSL:
         case NDPI_PROTOCOL_MAIL_IMAPS:
@@ -1230,137 +1230,145 @@ void ndDetectionThread::ProcessPacket(void)
         case NDPI_PROTOCOL_MAIL_POPS:
         case NDPI_PROTOCOL_SSL_NO_CERT:
         case NDPI_PROTOCOL_OSCAR:
-            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
-                new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+            if (nf->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
+                nf->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
+                nf->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
                     ndpi,
-                    new_flow->ndpi_flow,
-                    (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate,
-                    strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate),
+                    nf->ndpi_flow,
+                    (char *)nf->ndpi_flow->protos.stun_ssl.ssl.client_certificate,
+                    strlen((const char*)nf->ndpi_flow->protos.stun_ssl.ssl.client_certificate),
                     &npmr);
             }
-            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate[0] != '\0') {
-                new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+            if (nf->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
+                nf->ndpi_flow->protos.stun_ssl.ssl.server_certificate[0] != '\0') {
+                nf->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
                     ndpi,
-                    new_flow->ndpi_flow,
-                    (char *)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate,
-                    strlen((const char*)new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate),
+                    nf->ndpi_flow,
+                    (char *)nf->ndpi_flow->protos.stun_ssl.ssl.server_certificate,
+                    strlen((const char*)nf->ndpi_flow->protos.stun_ssl.ssl.server_certificate),
                     &npmr);
             }
             break;
 
         case NDPI_PROTOCOL_SPOTIFY:
-            new_flow->detected_protocol.app_protocol = ndpi_get_protocol_id(ndpi, "netify.spotify");
+            nf->detected_protocol.app_protocol = ndpi_get_protocol_id(ndpi, "netify.spotify");
             break;
 
         case NDPI_PROTOCOL_MDNS:
-            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
-                    new_flow->ndpi_flow->protos.mdns.answer[0] != '\0') {
-                new_flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
-                    ndpi, new_flow->ndpi_flow,
-                    (char *)new_flow->ndpi_flow->protos.mdns.answer,
-                    strlen((const char*)new_flow->ndpi_flow->protos.mdns.answer),
+            if (nf->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
+                    nf->ndpi_flow->protos.mdns.answer[0] != '\0') {
+                nf->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
+                    ndpi, nf->ndpi_flow,
+                    (char *)nf->ndpi_flow->protos.mdns.answer,
+                    strlen((const char*)nf->ndpi_flow->protos.mdns.answer),
                     &npmr
                 );
             }
             break;
         }
 
-        if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
-            new_flow->detected_protocol.app_protocol = ndpi_match_host_proto_id(ndpi, new_flow->ndpi_flow);
+        if (nf->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
+            nf->detected_protocol.app_protocol = ndpi_match_host_proto_id(ndpi, nf->ndpi_flow);
         }
 
-        if (new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_STUN) {
-            if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_FACEBOOK)
-                new_flow->detected_protocol.app_protocol = NDPI_PROTOCOL_MESSENGER;
-            else if (new_flow->detected_protocol.app_protocol == NDPI_PROTOCOL_GOOGLE)
-                new_flow->detected_protocol.app_protocol = NDPI_PROTOCOL_HANGOUT;
+        if (nf->detected_protocol.master_protocol == NDPI_PROTOCOL_STUN) {
+            if (nf->detected_protocol.app_protocol == NDPI_PROTOCOL_FACEBOOK)
+                nf->detected_protocol.app_protocol = NDPI_PROTOCOL_MESSENGER;
+            else if (nf->detected_protocol.app_protocol == NDPI_PROTOCOL_GOOGLE)
+                nf->detected_protocol.app_protocol = NDPI_PROTOCOL_HANGOUT;
         }
 
         // Additional protocol-specific processing...
-        ndpi_proto = new_flow->master_protocol();
+        ndpi_proto = nf->master_protocol();
 
         switch (ndpi_proto) {
 
         case NDPI_PROTOCOL_MDNS:
             snprintf(
-                new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN,
-                "%s", new_flow->ndpi_flow->protos.mdns.answer
+                nf->mdns.answer, ND_FLOW_MDNS_ANSLEN,
+                "%s", nf->ndpi_flow->protos.mdns.answer
             );
             break;
 
         case NDPI_PROTOCOL_SSL:
-            new_flow->ssl.version =
-                (new_flow->ndpi_flow->protos.stun_ssl.ssl.version) ?
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.version :
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.ssl_version;
-            new_flow->ssl.cipher_suite =
-                new_flow->ndpi_flow->protos.stun_ssl.ssl.server_cipher;
+            nf->ssl.version =
+                (nf->ndpi_flow->protos.stun_ssl.ssl.version) ?
+                nf->ndpi_flow->protos.stun_ssl.ssl.version :
+                nf->ndpi_flow->protos.stun_ssl.ssl.ssl_version;
+            nf->ssl.cipher_suite =
+                nf->ndpi_flow->protos.stun_ssl.ssl.server_cipher;
 
-            snprintf(new_flow->ssl.client_sni, ND_FLOW_SSL_CNLEN,
-                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate);
-            snprintf(new_flow->ssl.server_cn, ND_FLOW_SSL_CNLEN,
-                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
-            snprintf(new_flow->ssl.server_organization, ND_FLOW_SSL_ORGLEN,
-                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.server_organization);
-            snprintf(new_flow->ssl.client_ja3, ND_FLOW_SSL_JA3LEN,
-                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.ja3_client);
-            snprintf(new_flow->ssl.server_ja3, ND_FLOW_SSL_JA3LEN,
-                "%s", new_flow->ndpi_flow->protos.stun_ssl.ssl.ja3_server);
+            snprintf(nf->ssl.client_sni, ND_FLOW_SSL_CNLEN,
+                "%s", nf->ndpi_flow->protos.stun_ssl.ssl.client_certificate);
+            snprintf(nf->ssl.server_cn, ND_FLOW_SSL_CNLEN,
+                "%s", nf->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
+            snprintf(nf->ssl.server_organization, ND_FLOW_SSL_ORGLEN,
+                "%s", nf->ndpi_flow->protos.stun_ssl.ssl.server_organization);
+            snprintf(nf->ssl.client_ja3, ND_FLOW_SSL_JA3LEN,
+                "%s", nf->ndpi_flow->protos.stun_ssl.ssl.ja3_client);
+            snprintf(nf->ssl.server_ja3, ND_FLOW_SSL_JA3LEN,
+                "%s", nf->ndpi_flow->protos.stun_ssl.ssl.ja3_server);
+
+            if (nf->ndpi_flow->l4.tcp.tls_fingerprint_len) {
+                memcpy(nf->ssl.cert_fingerprint,
+                    nf->ndpi_flow->l4.tcp.tls_sha1_certificate_fingerprint,
+                    ND_FLOW_SSL_HASH_LEN);
+                nf->ssl.cert_fingerprint_found = true;
+            }
+
             break;
         case NDPI_PROTOCOL_HTTP:
             for (size_t i = 0;
-                i < strlen((const char *)new_flow->ndpi_flow->protos.http.user_agent); i++) {
-                if (! isprint(new_flow->ndpi_flow->protos.http.user_agent[i])) {
+                i < strlen((const char *)nf->ndpi_flow->protos.http.user_agent); i++) {
+                if (! isprint(nf->ndpi_flow->protos.http.user_agent[i])) {
                     // XXX: Sanitize user_agent of non-printable characters.
-                    new_flow->ndpi_flow->protos.http.user_agent[i] = '\0';
+                    nf->ndpi_flow->protos.http.user_agent[i] = '\0';
                     break;
                 }
             }
             snprintf(
-                new_flow->http.user_agent, ND_FLOW_UA_LEN,
-                "%s", new_flow->ndpi_flow->protos.http.user_agent
+                nf->http.user_agent, ND_FLOW_UA_LEN,
+                "%s", nf->ndpi_flow->protos.http.user_agent
             );
             break;
         case NDPI_PROTOCOL_DHCP:
             snprintf(
-                new_flow->dhcp.fingerprint, ND_FLOW_DHCPFP_LEN,
-                "%s", new_flow->ndpi_flow->protos.dhcp.fingerprint
+                nf->dhcp.fingerprint, ND_FLOW_DHCPFP_LEN,
+                "%s", nf->ndpi_flow->protos.dhcp.fingerprint
             );
             snprintf(
-                new_flow->dhcp.class_ident, ND_FLOW_DHCPCI_LEN,
-                "%s", new_flow->ndpi_flow->protos.dhcp.class_ident
+                nf->dhcp.class_ident, ND_FLOW_DHCPCI_LEN,
+                "%s", nf->ndpi_flow->protos.dhcp.class_ident
             );
             break;
         case NDPI_PROTOCOL_SSH:
-            snprintf(new_flow->ssh.client_agent, ND_FLOW_SSH_UALEN,
-                "%s", new_flow->ndpi_flow->protos.ssh.client_signature);
-            snprintf(new_flow->ssh.server_agent, ND_FLOW_SSH_UALEN,
-                "%s", new_flow->ndpi_flow->protos.ssh.server_signature);
+            snprintf(nf->ssh.client_agent, ND_FLOW_SSH_UALEN,
+                "%s", nf->ndpi_flow->protos.ssh.client_signature);
+            snprintf(nf->ssh.server_agent, ND_FLOW_SSH_UALEN,
+                "%s", nf->ndpi_flow->protos.ssh.server_signature);
             break;
         case NDPI_PROTOCOL_BITTORRENT:
-            if (new_flow->ndpi_flow->protos.bittorrent.hash_valid) {
-                new_flow->bt.info_hash_valid = true;
+            if (nf->ndpi_flow->protos.bittorrent.hash_valid) {
+                nf->bt.info_hash_valid = true;
                 memcpy(
-                    new_flow->bt.info_hash,
-                    new_flow->ndpi_flow->protos.bittorrent.hash,
+                    nf->bt.info_hash,
+                    nf->ndpi_flow->protos.bittorrent.hash,
                     ND_FLOW_BTIHASH_LEN
                 );
             }
             break;
         }
 
-        if (new_flow->ndpi_flow->http.url != NULL) {
+        if (nf->ndpi_flow->http.url != NULL) {
             snprintf(
-                new_flow->http.url, ND_FLOW_URL_LEN,
-                "%s", new_flow->ndpi_flow->http.url
+                nf->http.url, ND_FLOW_URL_LEN,
+                "%s", nf->ndpi_flow->http.url
             );
         }
 
         if ((ndpi_proto == NDPI_PROTOCOL_DNS &&
             dhc != NULL && pkt != NULL && pkt_len > 12 &&
-            ProcessDNSResponse(new_flow->host_server_name, pkt, pkt_len)) ||
+            ProcessDNSResponse(nf->host_server_name, pkt, pkt_len)) ||
             ndpi_proto == NDPI_PROTOCOL_MDNS) {
 
             // Rehash M/DNS flows:
@@ -1371,107 +1379,107 @@ void ndDetectionThread::ProcessPacket(void)
             // guarantees that we see all DNS queries/responses.
 
             if (ndpi_proto == NDPI_PROTOCOL_DNS) {
-                new_flow->hash(tag, false,
-                    (const uint8_t *)new_flow->host_server_name,
-                    strnlen(new_flow->host_server_name, ND_MAX_HOSTNAME));
+                nf->hash(tag, false,
+                    (const uint8_t *)nf->host_server_name,
+                    strnlen(nf->host_server_name, ND_MAX_HOSTNAME));
             }
             else {
-                new_flow->hash(tag, false,
-                    (const uint8_t *)new_flow->mdns.answer,
-                    strnlen(new_flow->mdns.answer, ND_FLOW_MDNS_ANSLEN));
+                nf->hash(tag, false,
+                    (const uint8_t *)nf->mdns.answer,
+                    strnlen(nf->mdns.answer, ND_FLOW_MDNS_ANSLEN));
             }
 
-            flows->erase(flow_iter.first);
+            flows->erase(fi.first);
 
-            memcpy(new_flow->digest_mdata, new_flow->digest_lower,
+            memcpy(nf->digest_mdata, nf->digest_lower,
                 SHA1_DIGEST_LENGTH);
-            flow_digest.assign((const char *)new_flow->digest_lower,
+            flow_digest.assign((const char *)nf->digest_lower,
                 SHA1_DIGEST_LENGTH);
 
-            flow_iter = flows->insert(nd_flow_pair(flow_digest, new_flow));
+            fi = flows->insert(nd_flow_pair(flow_digest, nf));
 
-            if (! flow_iter.second) {
+            if (! fi.second) {
                 // Flow exists...  update stats and return.
-                *flow_iter.first->second += *new_flow;
+                *fi.first->second += *nf;
 
-                delete new_flow;
+                delete nf;
 
                 return;
             }
         }
 
-        if (ND_USE_FHC && new_flow->lower_port != 0 && new_flow->upper_port != 0) {
+        if (ND_USE_FHC && nf->lower_port != 0 && nf->upper_port != 0) {
             if (! fhc->pop(flow_digest, flow_digest_mdata)) {
 
-                new_flow->hash(tag, true);
+                nf->hash(tag, true);
 
                 flow_digest_mdata.assign(
-                    (const char *)new_flow->digest_mdata, SHA1_DIGEST_LENGTH
+                    (const char *)nf->digest_mdata, SHA1_DIGEST_LENGTH
                 );
 
-                if (memcmp(new_flow->digest_lower, new_flow->digest_mdata,
+                if (memcmp(nf->digest_lower, nf->digest_mdata,
                     SHA1_DIGEST_LENGTH))
                     fhc->push(flow_digest, flow_digest_mdata);
             }
             else {
-                if (memcmp(new_flow->digest_mdata, flow_digest_mdata.c_str(),
+                if (memcmp(nf->digest_mdata, flow_digest_mdata.c_str(),
                     SHA1_DIGEST_LENGTH)) {
 #ifdef _ND_LOG_FHC
                     nd_debug_printf("%s: Resurrected flow metadata hash from cache.\n",
                         tag.c_str());
 #endif
-                    memcpy(new_flow->digest_mdata, flow_digest_mdata.c_str(),
+                    memcpy(nf->digest_mdata, flow_digest_mdata.c_str(),
                         SHA1_DIGEST_LENGTH);
                 }
             }
         }
         else {
-            new_flow->hash(tag, true);
+            nf->hash(tag, true);
             flow_digest_mdata.assign(
-                (const char *)new_flow->digest_mdata, SHA1_DIGEST_LENGTH
+                (const char *)nf->digest_mdata, SHA1_DIGEST_LENGTH
             );
         }
 
-        struct sockaddr_in *laddr4 = new_flow->lower_addr4;
-        struct sockaddr_in6 *laddr6 = new_flow->lower_addr6;
-        struct sockaddr_in *uaddr4 = new_flow->upper_addr4;
-        struct sockaddr_in6 *uaddr6 = new_flow->upper_addr6;
+        struct sockaddr_in *laddr4 = nf->lower_addr4;
+        struct sockaddr_in6 *laddr6 = nf->lower_addr6;
+        struct sockaddr_in *uaddr4 = nf->upper_addr4;
+        struct sockaddr_in6 *uaddr6 = nf->upper_addr6;
 
         if (ND_PRIVATE_EXTADDR &&
             internal == false && pcap_datalink_type == DLT_EN10MB) {
 
-            if (! memcmp(dev_mac, new_flow->lower_mac, ETH_ALEN)) {
-                if (new_flow->ip_version == 4)
+            if (! memcmp(dev_mac, nf->lower_mac, ETH_ALEN)) {
+                if (nf->ip_version == 4)
                     laddr4 = (struct sockaddr_in *)&private_addrs.first;
                 else
                     laddr6 = (struct sockaddr_in6 *)&private_addrs.second;
             }
-            else if (! memcmp(dev_mac, new_flow->upper_mac, ETH_ALEN)) {
-                if (new_flow->ip_version == 4)
+            else if (! memcmp(dev_mac, nf->upper_mac, ETH_ALEN)) {
+                if (nf->ip_version == 4)
                     uaddr4 = (struct sockaddr_in *)&private_addrs.first;
                 else
                     uaddr6 = (struct sockaddr_in6 *)&private_addrs.second;
             }
         }
 
-        switch (new_flow->ip_version) {
+        switch (nf->ip_version) {
         case 4:
             inet_ntop(AF_INET, &laddr4->sin_addr.s_addr,
-                new_flow->lower_ip, INET_ADDRSTRLEN);
+                nf->lower_ip, INET_ADDRSTRLEN);
             inet_ntop(AF_INET, &uaddr4->sin_addr.s_addr,
-                new_flow->upper_ip, INET_ADDRSTRLEN);
+                nf->upper_ip, INET_ADDRSTRLEN);
             break;
 
         case 6:
             inet_ntop(AF_INET6, &laddr6->sin6_addr.s6_addr,
-                new_flow->lower_ip, INET6_ADDRSTRLEN);
+                nf->lower_ip, INET6_ADDRSTRLEN);
             inet_ntop(AF_INET6, &uaddr6->sin6_addr.s6_addr,
-                new_flow->upper_ip, INET6_ADDRSTRLEN);
+                nf->upper_ip, INET6_ADDRSTRLEN);
             break;
 
         default:
             nd_printf("%s: ERROR: Unknown IP version: %d\n",
-                tag.c_str(), new_flow->ip_version);
+                tag.c_str(), nf->ip_version);
             throw ndDetectionThreadException(strerror(EINVAL));
         }
 
@@ -1482,20 +1490,20 @@ void ndDetectionThread::ProcessPacket(void)
                 const uint8_t *umac = NULL;
 
                 if (t == ndFlow::TYPE_LOWER &&
-                    (new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP ||
-                     new_flow->lower_type == ndNETLINK_ATYPE_LOCALNET ||
-                     new_flow->lower_type == ndNETLINK_ATYPE_PRIVATE)) {
+                    (nf->lower_type == ndNETLINK_ATYPE_LOCALIP ||
+                     nf->lower_type == ndNETLINK_ATYPE_LOCALNET ||
+                     nf->lower_type == ndNETLINK_ATYPE_PRIVATE)) {
 
-                    umac = new_flow->lower_mac;
-                    ip = new_flow->lower_ip;
+                    umac = nf->lower_mac;
+                    ip = nf->lower_ip;
                 }
                 else if (t == ndFlow::TYPE_UPPER &&
-                    (new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP ||
-                     new_flow->upper_type == ndNETLINK_ATYPE_LOCALNET ||
-                     new_flow->upper_type == ndNETLINK_ATYPE_PRIVATE)) {
+                    (nf->upper_type == ndNETLINK_ATYPE_LOCALIP ||
+                     nf->upper_type == ndNETLINK_ATYPE_LOCALNET ||
+                     nf->upper_type == ndNETLINK_ATYPE_PRIVATE)) {
 
-                    umac = new_flow->upper_mac;
-                    ip = new_flow->upper_ip;
+                    umac = nf->upper_mac;
+                    ip = nf->upper_ip;
                 }
                 else continue;
 
@@ -1530,38 +1538,38 @@ void ndDetectionThread::ProcessPacket(void)
         }
 #endif
         if (capture_unknown_flows &&
-            new_flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
-            new_flow->dump(pcap, flow.digest_lower);
+            nf->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
+            nf->dump(pcap, flow.digest_lower);
         }
 
-        new_flow->release();
+        nf->release();
 
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
         if (thread_conntrack != NULL) {
-            if ((new_flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
-                new_flow->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
-                (new_flow->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
-                new_flow->upper_type == ndNETLINK_ATYPE_LOCALIP)) {
+            if ((nf->lower_type == ndNETLINK_ATYPE_LOCALIP &&
+                nf->upper_type == ndNETLINK_ATYPE_UNKNOWN) ||
+                (nf->lower_type == ndNETLINK_ATYPE_UNKNOWN &&
+                nf->upper_type == ndNETLINK_ATYPE_LOCALIP)) {
 
-                thread_conntrack->ClassifyFlow(new_flow);
+                thread_conntrack->ClassifyFlow(nf);
             }
         }
 #endif
         for (vector<uint8_t *>::const_iterator i =
             nd_config.privacy_filter_mac.begin();
             i != nd_config.privacy_filter_mac.end() &&
-                new_flow->privacy_mask !=
+                nf->privacy_mask !=
                 (ndFlow::PRIVATE_LOWER | ndFlow::PRIVATE_UPPER); i++) {
-            if (! memcmp((*i), new_flow->lower_mac, ETH_ALEN))
-                new_flow->privacy_mask |= ndFlow::PRIVATE_LOWER;
-            if (! memcmp((*i), new_flow->upper_mac, ETH_ALEN))
-                new_flow->privacy_mask |= ndFlow::PRIVATE_UPPER;
+            if (! memcmp((*i), nf->lower_mac, ETH_ALEN))
+                nf->privacy_mask |= ndFlow::PRIVATE_LOWER;
+            if (! memcmp((*i), nf->upper_mac, ETH_ALEN))
+                nf->privacy_mask |= ndFlow::PRIVATE_UPPER;
         }
 
         for (vector<struct sockaddr *>::const_iterator i =
             nd_config.privacy_filter_host.begin();
             i != nd_config.privacy_filter_host.end() &&
-                new_flow->privacy_mask !=
+                nf->privacy_mask !=
                 (ndFlow::PRIVATE_LOWER | ndFlow::PRIVATE_UPPER); i++) {
 
             struct sockaddr_in *sa_in;
@@ -1570,27 +1578,27 @@ void ndDetectionThread::ProcessPacket(void)
             switch ((*i)->sa_family) {
             case AF_INET:
                 sa_in = reinterpret_cast<struct sockaddr_in *>((*i));
-                if (! memcmp(&new_flow->lower_addr4, &sa_in->sin_addr,
+                if (! memcmp(&nf->lower_addr4, &sa_in->sin_addr,
                     sizeof(struct in_addr)))
-                    new_flow->privacy_mask |= ndFlow::PRIVATE_LOWER;
-                if (! memcmp(&new_flow->upper_addr4, &sa_in->sin_addr,
+                    nf->privacy_mask |= ndFlow::PRIVATE_LOWER;
+                if (! memcmp(&nf->upper_addr4, &sa_in->sin_addr,
                     sizeof(struct in_addr)))
-                    new_flow->privacy_mask |= ndFlow::PRIVATE_UPPER;
+                    nf->privacy_mask |= ndFlow::PRIVATE_UPPER;
                 break;
             case AF_INET6:
                 sa_in6 = reinterpret_cast<struct sockaddr_in6 *>((*i));
-                if (! memcmp(&new_flow->lower_addr6, &sa_in6->sin6_addr,
+                if (! memcmp(&nf->lower_addr6, &sa_in6->sin6_addr,
                     sizeof(struct in6_addr)))
-                    new_flow->privacy_mask |= ndFlow::PRIVATE_LOWER;
-                if (! memcmp(&new_flow->upper_addr6, &sa_in6->sin6_addr,
+                    nf->privacy_mask |= ndFlow::PRIVATE_LOWER;
+                if (! memcmp(&nf->upper_addr6, &sa_in6->sin6_addr,
                     sizeof(struct in6_addr)))
-                    new_flow->privacy_mask |= ndFlow::PRIVATE_UPPER;
+                    nf->privacy_mask |= ndFlow::PRIVATE_UPPER;
                 break;
             }
         }
 
         if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
-            new_flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
+            nf->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
 
             json j;
 
@@ -1600,7 +1608,7 @@ void ndDetectionThread::ProcessPacket(void)
             j["established"] = false;
 
             json jf;
-            new_flow->json_encode(jf, ndpi, false);
+            nf->json_encode(jf, ndpi, false);
             j["flow"] = jf;
 
             string json_string;
@@ -1611,7 +1619,7 @@ void ndDetectionThread::ProcessPacket(void)
         }
 
         if (ND_DEBUG || nd_config.h_flow != stderr)
-            new_flow->print(tag.c_str(), ndpi);
+            nf->print(tag.c_str(), ndpi);
     }
 
     if (ts_last_idle_scan + ND_TTL_IDLE_SCAN < ts_pkt_last) {

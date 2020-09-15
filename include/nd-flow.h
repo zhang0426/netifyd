@@ -34,7 +34,10 @@
 #define ND_FLOW_MDNS_ANSLEN 96      // MDNS answer length
 
 // BitTorrent info hash length
-#define ND_FLOW_BTIHASH_LEN SHA1_DIGEST_LENGTH
+#define ND_FLOW_BTIHASH_LEN     SHA1_DIGEST_LENGTH
+
+// SSL certificate fingerprint hash length
+#define ND_FLOW_SSL_HASH_LEN    SHA1_DIGEST_LENGTH
 
 // Bits for detection guess types
 #define ND_FLOW_GUESS_NONE  0x00    // No guesses made
@@ -162,6 +165,8 @@ public:
             char server_organization[ND_FLOW_SSL_ORGLEN];
             char client_ja3[ND_FLOW_SSL_JA3LEN];
             char server_ja3[ND_FLOW_SSL_JA3LEN];
+            bool cert_fingerprint_found;
+            char cert_fingerprint[ND_FLOW_SSL_HASH_LEN];
         } ssl;
 
         struct {

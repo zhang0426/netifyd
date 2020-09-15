@@ -236,6 +236,7 @@ ndFlow::ndFlow(bool internal)
     memset(ssl.server_organization, 0, ND_FLOW_SSL_ORGLEN);
     memset(ssl.client_ja3, 0, ND_FLOW_SSL_JA3LEN);
     memset(ssl.server_ja3, 0, ND_FLOW_SSL_JA3LEN);
+    memset(ssl.cert_fingerprint, 0, ND_FLOW_SSL_HASH_LEN);
 
     smtp.tls = false;
 
@@ -982,6 +983,11 @@ void ndFlow::json_encode(json &j,
 
         if (has_ssl_server_ja3())
             j["ssl"]["server_ja3"] = ssl.server_ja3;
+
+        if (ssl.cert_fingerprint_found) {
+            nd_sha1_to_string((const uint8_t *)ssl.cert_fingerprint, digest);
+            j["ssl"]["fingerprint"] = digest;
+        }
     }
 
     if (has_bt_info_hash()) {
