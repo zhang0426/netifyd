@@ -126,6 +126,8 @@ using json = nlohmann::json;
 
 #define _ND_PPP_PROTOCOL(p)	((((uint8_t *)(p))[0] << 8) + ((uint8_t *)(p))[1])
 
+#define _ND_GTP_U_V1_PORT   2152
+
 using namespace std;
 
 #include "netifyd.h"
@@ -603,6 +605,8 @@ void ndDetectionThread::ProcessPacket(void)
     const uint8_t *l3 = NULL, *l4 = NULL, *pkt = NULL;
     uint16_t l2_len, l3_len, l4_len = 0, pkt_len = 0;
 
+    bool gtp = false;
+
     uint16_t type = 0;
     uint16_t ppp_proto;
     uint16_t frag_off = 0;
@@ -747,7 +751,9 @@ void ndDetectionThread::ProcessPacket(void)
 
     stats->pkt.vlan += vlan_packet;
 
+nd_process_ip:
     hdr_ip = reinterpret_cast<const struct ip *>(&pkt_data[l2_len]);
+
     flow.ip_version = hdr_ip->ip_v;
 
     if (flow.ip_version == 4) {
@@ -898,6 +904,39 @@ void ndDetectionThread::ProcessPacket(void)
             tag.c_str(), pkt_data[l2_len]);
 #endif
         return;
+    }
+
+    if (l4_len >= 8 && flow.ip_protocol == IPPROTO_UDP) {
+        hdr_udp = reinterpret_cast<const struct udphdr *>(l4);
+
+        if (ntohs(hdr_udp->uh_sport) == _ND_GTP_U_V1_PORT ||
+            ntohs(hdr_udp->uh_dport) == _ND_GTP_U_V1_PORT) {
+
+            pkt = reinterpret_cast<const uint8_t *>(l4 + sizeof(struct udphdr));
+
+            uint8_t flags = pkt[0];
+            uint8_t message_type = pkt[1];
+
+            if ((((flags & 0xE0) >> 5) == 1 /* GTPv1 */) &&
+                (message_type == 0xFF /* T-PDU */)) {
+
+                //fprintf(stderr, "GTP: flags: %0hhx, type: %0hhx, l2_len: %hu, l3_len: %hu, l4_len: %hu, l4 offset: %ld, recursive: %s\n",
+                //    flags, message_type, l2_len, l3_len, l4_len, l4 - pkt_data,
+                //    gtp ? "yes" : "no");
+
+                if (! gtp) {
+                    l2_len = (l4 - pkt_data) + sizeof(struct udphdr) + 8; /* GTPv1 header len */
+                    //fprintf(stderr, "GTP: l2_len adjusted: %hu\n", l2_len);
+
+                    if (flags & 0x04) l2_len += 1; /* next_ext_header is present */
+                    if (flags & 0x02) l2_len += 4; /* sequence_number is present (it also includes next_ext_header and pdu_number) */
+                    if (flags & 0x01) l2_len += 1; /* pdu_number is present */
+
+                    gtp = true;
+                    goto nd_process_ip;
+                }
+            }
+        }
     }
 
     switch (flow.ip_protocol) {
