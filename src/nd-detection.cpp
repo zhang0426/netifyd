@@ -906,7 +906,7 @@ nd_process_ip:
         return;
     }
 
-    if (l4_len >= 8 && flow.ip_protocol == IPPROTO_UDP) {
+    if (! gtp && l4_len >= 8 && flow.ip_protocol == IPPROTO_UDP) {
         hdr_udp = reinterpret_cast<const struct udphdr *>(l4);
 
         if (ntohs(hdr_udp->uh_sport) == _ND_GTP_U_V1_PORT ||
@@ -924,17 +924,15 @@ nd_process_ip:
                 //    flags, message_type, l2_len, l3_len, l4_len, l4 - pkt_data,
                 //    gtp ? "yes" : "no");
 
-                if (! gtp) {
-                    l2_len = (l4 - pkt_data) + sizeof(struct udphdr) + 8; /* GTPv1 header len */
-                    //fprintf(stderr, "GTP: l2_len adjusted: %hu\n", l2_len);
+                l2_len = (l4 - pkt_data) + sizeof(struct udphdr) + 8; /* GTPv1 header len */
+                //fprintf(stderr, "GTP: l2_len adjusted: %hu\n", l2_len);
 
-                    if (flags & 0x04) l2_len += 1; /* next_ext_header is present */
-                    if (flags & 0x02) l2_len += 4; /* sequence_number is present (it also includes next_ext_header and pdu_number) */
-                    if (flags & 0x01) l2_len += 1; /* pdu_number is present */
+                if (flags & 0x04) l2_len += 1; /* next_ext_header is present */
+                if (flags & 0x02) l2_len += 4; /* sequence_number is present (it also includes next_ext_header and pdu_number) */
+                if (flags & 0x01) l2_len += 1; /* pdu_number is present */
 
-                    gtp = true;
-                    goto nd_process_ip;
-                }
+                gtp = true;
+                goto nd_process_ip;
             }
         }
     }

@@ -13,8 +13,8 @@ lo: [i6----] ICMPV6 fe80::4e6a:f6ff:fe9f:f627:0 --> ff02::16:0
 lo: [i6----] ICMPV6 fe80::4e6a:f6ff:fe9f:f627:0 --> ff02::2:0
 lo: [i4----] DNS.140.netify.apple 192.168.2.1:53 <-- 192.168.2.16:52953 H: captive.apple.com
 lo: [i4--d-] HTTP.140.netify.apple 17.253.53.201:80 <-- 192.168.2.16:58338 H: captive.apple.com
-lo: [i4----] RTP.10007.netify.android 192.168.2.1:53 <-- 192.168.2.16:35825 H: time.android.com
-lo: [i4----] NTP 192.168.2.16:45863 --> 216.239.35.8:123
+lo: [i4----] DNS.10007.netify.android 192.168.2.1:53 <-- 192.168.2.16:35825 H: time.android.com
+lo: [i4--d-] NTP.10007.netify.android 192.168.2.16:45863 --> 216.239.35.8:123 H: time.android.com
 lo: [i4----] DNS.126.netify.google 192.168.2.1:53 <-- 192.168.2.16:34540 H: clients1.google.com
 lo: [i4----] DNS.10007.netify.android 192.168.2.1:53 <-- 192.168.2.16:54837 H: play.googleapis.com
 lo: [i4--d-] HTTPS.126.netify.google 192.168.2.16:32974 --> 216.239.38.120:443 H: clients1.google.com SSL C: clients1.google.com S: *.google.com
