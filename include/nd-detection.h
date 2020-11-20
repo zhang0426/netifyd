@@ -42,6 +42,7 @@ public:
     }
 
     bool empty(void) { return pkt_queue.empty(); }
+    size_t size(void) { return pkt_queue.size(); }
 
     size_t push(struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data);
     bool front(struct pcap_pkthdr **pkt_header, const uint8_t **pkt_data);

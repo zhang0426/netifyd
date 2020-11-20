@@ -915,7 +915,6 @@ static int nd_sink_process_responses(void)
                     reloaded = true;
                 }
             }
-
 #ifdef _ND_USE_PLUGINS
             for (ndJsonPluginRequest::const_iterator
                 i = response->plugin_request_service_param.begin();
@@ -1163,8 +1162,8 @@ static void nd_json_add_flows(json &parent,
     for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
 
-        if (i->second->detection_complete == false || ! i->second->ts_first_update
-            || (! ND_UPLOAD_NAT_FLOWS && i->second->ip_nat)) continue;
+        if (i->second->flags.detection_complete == false || ! i->second->ts_first_update
+            || (! ND_UPLOAD_NAT_FLOWS && i->second->flags.ip_nat)) continue;
 
         json jf;
         i->second->json_encode(jf, ndpi);
@@ -1583,9 +1582,10 @@ static void nd_dump_stats(void)
 
 #ifdef _ND_USE_PLUGINS
     json jsr, jtr, jpd;
-    nd_json_add_plugin_replies(jsr, jtr, jpd);
 
     if (ND_USE_SINK) {
+        nd_json_add_plugin_replies(jsr, jtr, jpd);
+
         j["service_replies"] = jsr;
         j["task_replies"] = jtr;
         j["data"] = jpd;
@@ -2143,6 +2143,7 @@ int main(int argc, char *argv[])
         { "test-output", 1, 0, 'T' },
         { "uuid", 1, 0, 'u' },
         { "uuidgen", 0, 0, 'U' },
+        { "verbose", 0, 0, 'v' },
         { "version", 0, 0, 'V' },
 
         { "enable-sink", 0, NULL, _ND_LO_ENABLE_SINK },
@@ -2156,7 +2157,7 @@ int main(int argc, char *argv[])
     for (optind = 1;; ) {
         int o = 0;
         if ((rc = getopt_long(argc, argv,
-            "?A:c:DdE:eF:f:hI:i:j:lN:PpRrS:stT:Uu:V",
+            "?A:c:DdE:eF:f:hI:i:j:lN:PpRrS:stT:Uu:vV",
             options, &o)) == -1) break;
         switch (rc) {
         case 0:
@@ -2316,6 +2317,10 @@ int main(int argc, char *argv[])
             break;
         case 'V':
             nd_usage(0, true);
+            break;
+        case 'v':
+            nd_config.flags |= ndGF_VERBOSE;
+            break;
         default:
             nd_usage(1);
         }

@@ -187,18 +187,19 @@ void ndFlowHashCache::load(void)
 
 ndFlow::ndFlow(bool internal)
     : internal(internal), ip_version(0), ip_protocol(0), vlan_id(0),
-    ip_nat(false), tcp_fin(false),
 #ifdef _ND_USE_CONNTRACK
     ct_id(0), ct_mark(0),
 #endif
     ts_first_seen(0), ts_first_update(0), ts_last_seen(0),
     lower_port(0), upper_port(0),
+    lower_map(LOWER_UNKNOWN), other_type(OTHER_UNKNOWN), tunnel_type(TUNNEL_NONE),
     lower_bytes(0), upper_bytes(0), total_bytes(0),
     lower_packets(0), upper_packets(0), total_packets(0),
-    detection_complete(false), detection_guessed(0),
+    detection_guessed(0),
     ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
-    privacy_mask(0), origin(0)
+    privacy_mask(0), origin(0), direction(0)
 {
+    memset(&flags, 0, sizeof(flags));
     memset(lower_mac, 0, ETH_ALEN);
     memset(upper_mac, 0, ETH_ALEN);
 
@@ -212,6 +213,15 @@ ndFlow::ndFlow(bool internal)
 
     memset(lower_ip, 0, INET6_ADDRSTRLEN);
     memset(upper_ip, 0, INET6_ADDRSTRLEN);
+
+    gtp.version = 0xFF;
+    gtp.ip_version = 0;
+    gtp.lower_teid = gtp.upper_teid = 0;
+    memset(&gtp.lower_addr, 0, sizeof(struct sockaddr_storage));
+    memset(&gtp.upper_addr, 0, sizeof(struct sockaddr_storage));
+    gtp.lower_port = gtp.upper_port = 0;
+    gtp.lower_map = LOWER_UNKNOWN;
+    gtp.other_type = OTHER_UNKNOWN;
 
     memset(&detected_protocol, 0, sizeof(ndpi_protocol));
 
@@ -265,8 +275,8 @@ void ndFlow::hash(const string &device,
     sha1_write(&ctx, (const char *)&ip_protocol, sizeof(ip_protocol));
     sha1_write(&ctx, (const char *)&vlan_id, sizeof(vlan_id));
 
-    sha1_write(&ctx, (const char *)&lower_mac, ETH_ALEN);
-    sha1_write(&ctx, (const char *)&upper_mac, ETH_ALEN);
+//    sha1_write(&ctx, (const char *)&lower_mac, ETH_ALEN);
+//    sha1_write(&ctx, (const char *)&upper_mac, ETH_ALEN);
 
     switch (ip_version) {
     case 4:
@@ -287,6 +297,12 @@ void ndFlow::hash(const string &device,
 
     sha1_write(&ctx, (const char *)&lower_port, sizeof(lower_port));
     sha1_write(&ctx, (const char *)&upper_port, sizeof(upper_port));
+
+//    nd_debug_printf("hash: %s, %hhu, %hhu, %hu, [%hhx%hhx%hhx%hhx%hhx%hhx], [%hhx%hhx%hhx%hhx%hhx%hhx], %hhu, %hhu\n",
+//        device.c_str(), ip_version, ip_protocol, vlan_id,
+//        lower_mac[0], lower_mac[1], lower_mac[2], lower_mac[3], lower_mac[4], lower_mac[5],
+//        upper_mac[0], upper_mac[1], upper_mac[2], upper_mac[3], upper_mac[4], upper_mac[5],
+//        lower_port, upper_port);
 
     if (hash_mdata) {
         sha1_write(&ctx,
@@ -580,9 +596,9 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
         tag,
         (internal) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
-        ip_nat ? 'n' : '-',
+        flags.ip_nat ? 'n' : '-',
         (detection_guessed & ND_FLOW_GUESS_PROTO) ? 'g' : '-',
-        (dhc_hit) ? 'd' : '-',
+        (flags.dhc_hit) ? 'd' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
             (privacy_mask & (PRIVATE_LOWER | PRIVATE_UPPER)) ? 'X' :
@@ -612,144 +628,53 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     }
 }
 
-void ndFlow::json_encode(json &j,
-    struct ndpi_detection_module_struct *ndpi, bool include_stats)
-{
-    char mac_addr[ND_STR_ETHALEN + 1];
-    string other_type = "unknown";
-    string _lower_mac = "local_mac", _upper_mac = "other_mac";
-    string _lower_ip = "local_ip", _upper_ip = "other_ip";
-    string _lower_port = "local_port", _upper_port = "other_port";
-    string _lower_bytes = "local_bytes", _upper_bytes = "other_bytes";
-    string _lower_packets = "local_packets", _upper_packets = "other_packets";
-
-    string digest;
-    nd_sha1_to_string(digest_mdata, digest);
-
-    j["digest"] = digest;
-    j["ip_nat"] = ip_nat;
-    j["dhc_hit"] = dhc_hit;
-#ifdef _ND_USE_CONNTRACK
-    j["ct_id"] = ct_id;
-    j["ct_mark"] = ct_mark;
+void ndFlow::get_lower_map(
+#ifdef _ND_USE_NETLINK
+    ndNetlinkAddressType lt,
+    ndNetlinkAddressType ut,
 #endif
-    j["ip_version"] = (unsigned)ip_version;
-    j["ip_protocol"] = (unsigned)ip_protocol;
-    j["vlan_id"] = (unsigned)vlan_id;
-#ifndef _ND_USE_NETLINK
-    other_type = "unsupported";
-#else
-    if (lower_type == ndNETLINK_ATYPE_ERROR ||
-        upper_type == ndNETLINK_ATYPE_ERROR) {
-        other_type = "error";
+    uint8_t &lm, uint8_t &ot)
+{
+    if (lt == ndNETLINK_ATYPE_ERROR ||
+        ut == ndNETLINK_ATYPE_ERROR) {
+        ot = OTHER_ERROR;
+        return;
     }
-    else if (lower_type == ndNETLINK_ATYPE_LOCALIP &&
-        upper_type == ndNETLINK_ATYPE_LOCALNET) {
-        other_type = "local";
-        _lower_mac = "other_mac";
-        _lower_ip = "other_ip";
-        _lower_port = "other_port";
-        _lower_bytes = "other_bytes";
-        _lower_packets = "other_packets";
-        _upper_mac = "local_mac";
-        _upper_ip = "local_ip";
-        _upper_port = "local_port";
-        _upper_bytes = "local_bytes";
-        _upper_packets = "local_packets";
+    else if (lt == ndNETLINK_ATYPE_LOCALIP &&
+        ut == ndNETLINK_ATYPE_LOCALNET) {
+        lm = LOWER_OTHER;
+        ot = OTHER_LOCAL;
     }
-    else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
-        upper_type == ndNETLINK_ATYPE_LOCALIP) {
-        other_type = "local";
-        _lower_mac = "local_mac";
-        _lower_ip = "local_ip";
-        _lower_port = "local_port";
-        _lower_bytes = "local_bytes";
-        _lower_packets = "local_packets";
-        _upper_mac = "other_mac";
-        _upper_ip = "other_ip";
-        _upper_port = "other_port";
-        _upper_bytes = "other_bytes";
-        _upper_packets = "other_packets";
+    else if (lt == ndNETLINK_ATYPE_LOCALNET &&
+        ut == ndNETLINK_ATYPE_LOCALIP) {
+        lm = LOWER_LOCAL;
+        ot = OTHER_LOCAL;
     }
-    else if (lower_type == ndNETLINK_ATYPE_MULTICAST) {
-        other_type = "multicast";
-        _lower_mac = "other_mac";
-        _lower_ip = "other_ip";
-        _lower_port = "other_port";
-        _lower_bytes = "other_bytes";
-        _lower_packets = "other_packets";
-        _upper_mac = "local_mac";
-        _upper_ip = "local_ip";
-        _upper_port = "local_port";
-        _upper_bytes = "local_bytes";
-        _upper_packets = "local_packets";
+    else if (lt == ndNETLINK_ATYPE_MULTICAST) {
+        lm = LOWER_OTHER;
+        ot = OTHER_MULTICAST;
     }
-    else if (upper_type == ndNETLINK_ATYPE_MULTICAST) {
-        other_type = "multicast";
-        _lower_mac = "local_mac";
-        _lower_ip = "local_ip";
-        _lower_port = "local_port";
-        _lower_bytes = "local_bytes";
-        _lower_packets = "local_packets";
-        _upper_mac = "other_mac";
-        _upper_ip = "other_ip";
-        _upper_port = "other_port";
-        _upper_bytes = "other_bytes";
-        _upper_packets = "other_packets";
+    else if (ut == ndNETLINK_ATYPE_MULTICAST) {
+        lm = LOWER_LOCAL;
+        ot = OTHER_MULTICAST;
     }
-    else if (lower_type == ndNETLINK_ATYPE_BROADCAST) {
-        other_type = "broadcast";
-        _lower_mac = "other_mac";
-        _lower_ip = "other_ip";
-        _lower_port = "other_port";
-        _lower_bytes = "other_bytes";
-        _lower_packets = "other_packets";
-        _upper_mac = "local_mac";
-        _upper_ip = "local_ip";
-        _upper_port = "local_port";
-        _upper_bytes = "local_bytes";
-        _upper_packets = "local_packets";
+    else if (lt == ndNETLINK_ATYPE_BROADCAST) {
+        lm = LOWER_OTHER;
+        ot = OTHER_BROADCAST;
     }
-    else if (upper_type == ndNETLINK_ATYPE_BROADCAST) {
-        other_type = "broadcast";
-        _lower_mac = "local_mac";
-        _lower_ip = "local_ip";
-        _lower_port = "local_port";
-        _lower_bytes = "local_bytes";
-        _lower_packets = "local_packets";
-        _upper_mac = "other_mac";
-        _upper_ip = "other_ip";
-        _upper_port = "other_port";
-        _upper_bytes = "other_bytes";
-        _upper_packets = "other_packets";
+    else if (ut == ndNETLINK_ATYPE_BROADCAST) {
+        lm = LOWER_LOCAL;
+        ot = OTHER_BROADCAST;
     }
-    else if (lower_type == ndNETLINK_ATYPE_PRIVATE &&
-        upper_type == ndNETLINK_ATYPE_LOCALNET) {
-        other_type = "local";
-        _lower_mac = "other_mac";
-        _lower_ip = "other_ip";
-        _lower_port = "other_port";
-        _lower_bytes = "other_bytes";
-        _lower_packets = "other_packets";
-        _upper_mac = "local_mac";
-        _upper_ip = "local_ip";
-        _upper_port = "local_port";
-        _upper_bytes = "local_bytes";
-        _upper_packets = "local_packets";
+    else if (lt == ndNETLINK_ATYPE_PRIVATE &&
+        ut == ndNETLINK_ATYPE_LOCALNET) {
+        lm = LOWER_OTHER;
+        ot = OTHER_LOCAL;
     }
-    else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
-        upper_type == ndNETLINK_ATYPE_PRIVATE) {
-        other_type = "local";
-        _lower_mac = "local_mac";
-        _lower_ip = "local_ip";
-        _lower_port = "local_port";
-        _lower_bytes = "local_bytes";
-        _lower_packets = "local_packets";
-        _upper_mac = "other_mac";
-        _upper_ip = "other_ip";
-        _upper_port = "other_port";
-        _upper_bytes = "other_bytes";
-        _upper_packets = "other_packets";
+    else if (lt == ndNETLINK_ATYPE_LOCALNET &&
+        ut == ndNETLINK_ATYPE_PRIVATE) {
+        lm = LOWER_LOCAL;
+        ot = OTHER_LOCAL;
     }
 #if 0
     // TODO: Further investigation required!
@@ -759,9 +684,70 @@ void ndFlow::json_encode(json &j,
     // deployment (gateway/port mirror modes).
 #endif
     else if (ip_version != 6 &&
-        lower_type == ndNETLINK_ATYPE_PRIVATE &&
-        upper_type == ndNETLINK_ATYPE_PRIVATE) {
-        other_type = "local";
+        lt == ndNETLINK_ATYPE_PRIVATE &&
+        ut == ndNETLINK_ATYPE_PRIVATE) {
+        lm = LOWER_LOCAL;
+        ot = OTHER_LOCAL;
+    }
+    else if (lt == ndNETLINK_ATYPE_PRIVATE &&
+        ut == ndNETLINK_ATYPE_LOCALIP) {
+        lm = LOWER_OTHER;
+        ot = OTHER_REMOTE;
+    }
+    else if (lt == ndNETLINK_ATYPE_LOCALIP &&
+        ut == ndNETLINK_ATYPE_PRIVATE) {
+        lm = LOWER_LOCAL;
+        ot = OTHER_REMOTE;
+    }
+    else if (lt == ndNETLINK_ATYPE_LOCALNET &&
+        ut == ndNETLINK_ATYPE_LOCALNET) {
+        lm = LOWER_LOCAL;
+        ot = OTHER_LOCAL;
+    }
+    else if (lt == ndNETLINK_ATYPE_UNKNOWN) {
+        lm = LOWER_OTHER;
+        ot = OTHER_REMOTE;
+    }
+    else if (ut == ndNETLINK_ATYPE_UNKNOWN) {
+        lm = LOWER_LOCAL;
+        ot = OTHER_REMOTE;
+    }
+}
+
+void ndFlow::json_encode(json &j,
+    struct ndpi_detection_module_struct *ndpi, uint8_t encode_includes)
+{
+    char mac_addr[ND_STR_ETHALEN + 1];
+    string _other_type = "unknown";
+    string _lower_mac = "local_mac", _upper_mac = "other_mac";
+    string _lower_ip = "local_ip", _upper_ip = "other_ip";
+    string _lower_gtp_ip = "local_ip", _upper_gtp_ip = "other_ip";
+    string _lower_port = "local_port", _upper_port = "other_port";
+    string _lower_gtp_port = "local_port", _upper_gtp_port = "other_port";
+    string _lower_bytes = "local_bytes", _upper_bytes = "other_bytes";
+    string _lower_packets = "local_packets", _upper_packets = "other_packets";
+
+    string digest;
+    uint8_t digest_null[SHA1_DIGEST_LENGTH] = { '\0' };
+
+    if (memcmp(digest_mdata, digest_null, SHA1_DIGEST_LENGTH) != 0) {
+        nd_sha1_to_string(digest_mdata, digest);
+        j["digest"] = digest;
+    } else {
+        nd_sha1_to_string(digest_lower, digest);
+        j["digest"] = digest;
+    }
+
+    j["last_seen_at"] = ts_last_seen;
+
+#ifndef _ND_USE_NETLINK
+    _other_type = "unsupported";
+#else
+    if (lower_map == LOWER_UNKNOWN)
+        get_lower_map(lower_type, upper_type, lower_map, other_type);
+
+    switch (lower_map) {
+    case LOWER_LOCAL:
         _lower_mac = "local_mac";
         _lower_ip = "local_ip";
         _lower_port = "local_port";
@@ -772,10 +758,8 @@ void ndFlow::json_encode(json &j,
         _upper_port = "other_port";
         _upper_bytes = "other_bytes";
         _upper_packets = "other_packets";
-    }
-    else if (lower_type == ndNETLINK_ATYPE_PRIVATE &&
-        upper_type == ndNETLINK_ATYPE_LOCALIP) {
-        other_type = "remote";
+        break;
+    case LOWER_OTHER:
         _lower_mac = "other_mac";
         _lower_ip = "other_ip";
         _lower_port = "other_port";
@@ -786,130 +770,259 @@ void ndFlow::json_encode(json &j,
         _upper_port = "local_port";
         _upper_bytes = "local_bytes";
         _upper_packets = "local_packets";
-    }
-    else if (lower_type == ndNETLINK_ATYPE_LOCALIP &&
-        upper_type == ndNETLINK_ATYPE_PRIVATE) {
-        other_type = "remote";
-        _lower_mac = "local_mac";
-        _lower_ip = "local_ip";
-        _lower_port = "local_port";
-        _lower_bytes = "local_bytes";
-        _lower_packets = "local_packets";
-        _upper_mac = "other_mac";
-        _upper_ip = "other_ip";
-        _upper_port = "other_port";
-        _upper_bytes = "other_bytes";
-        _upper_packets = "other_packets";
-    }
-    else if (lower_type == ndNETLINK_ATYPE_LOCALNET &&
-        upper_type == ndNETLINK_ATYPE_LOCALNET) {
-        other_type = "local";
-        _lower_mac = "local_mac";
-        _lower_ip = "local_ip";
-        _lower_port = "local_port";
-        _lower_bytes = "local_bytes";
-        _lower_packets = "local_packets";
-        _upper_mac = "other_mac";
-        _upper_ip = "other_ip";
-        _upper_port = "other_port";
-        _upper_bytes = "other_bytes";
-        _upper_packets = "other_packets";
-    }
-    else if (lower_type == ndNETLINK_ATYPE_UNKNOWN) {
-        other_type = "remote";
-        _lower_mac = "other_mac";
-        _lower_ip = "other_ip";
-        _lower_port = "other_port";
-        _lower_bytes = "other_bytes";
-        _lower_packets = "other_packets";
-        _upper_mac = "local_mac";
-        _upper_ip = "local_ip";
-        _upper_port = "local_port";
-        _upper_bytes = "local_bytes";
-        _upper_packets = "local_packets";
-    }
-    else if (upper_type == ndNETLINK_ATYPE_UNKNOWN) {
-        other_type = "remote";
-        _lower_mac = "local_mac";
-        _lower_ip = "local_ip";
-        _lower_port = "local_port";
-        _lower_bytes = "local_bytes";
-        _lower_packets = "local_packets";
-        _upper_mac = "other_mac";
-        _upper_ip = "other_ip";
-        _upper_port = "other_port";
-        _upper_bytes = "other_bytes";
-        _upper_packets = "other_packets";
-    }
-#ifndef _ND_LEAN_AND_MEAN
-    // 10.110.80.1: address is: PRIVATE
-    // 67.204.229.236: address is: LOCALIP
-    if (ND_DEBUG && other_type == "unknown") {
-        ndNetlink::PrintType(lower_ip, lower_type);
-        ndNetlink::PrintType(upper_ip, upper_type);
-        //exit(1);
-    }
-#endif
-#endif
-    j["other_type"] = other_type;
-
-    switch (origin) {
-    case ORIGIN_UPPER:
-        j["local_origin"] =
-            (_lower_ip == "local_ip") ? false : true;
-        break;
-    case ORIGIN_LOWER:
-    default:
-        j["local_origin"] =
-            (_lower_ip == "local_ip") ? true : false;
         break;
     }
 
-    // 00-52-14 to 00-52-FF: Unassigned (small allocations)
-    if (privacy_mask & PRIVATE_LOWER)
-        snprintf(mac_addr, sizeof(mac_addr), "00:52:14:00:00:00");
-    else {
-        snprintf(mac_addr, sizeof(mac_addr),
-            "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-            lower_mac[0], lower_mac[1], lower_mac[2],
-            lower_mac[3], lower_mac[4], lower_mac[5]
-        );
+    switch (other_type) {
+    case OTHER_LOCAL:
+        _other_type = "local";
+        break;
+    case OTHER_MULTICAST:
+        _other_type = "multicast";
+        break;
+    case OTHER_BROADCAST:
+        _other_type = "broadcast";
+        break;
+    case OTHER_REMOTE:
+        _other_type = "remote";
+        break;
+    case OTHER_UNSUPPORTED:
+        _other_type = "unsupported";
+        break;
+    case OTHER_ERROR:
+        _other_type = "error";
+        break;
     }
-    j[_lower_mac] = mac_addr;
 
-    if (privacy_mask & PRIVATE_UPPER)
-        snprintf(mac_addr, sizeof(mac_addr), "00:52:FF:00:00:00");
-    else {
-        snprintf(mac_addr, sizeof(mac_addr),
-            "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-            upper_mac[0], upper_mac[1], upper_mac[2],
-            upper_mac[3], upper_mac[4], upper_mac[5]
-        );
-    }
-    j[_upper_mac] = mac_addr;
+    if (encode_includes & ENCODE_METADATA) {
+        j["ip_nat"] = (bool)flags.ip_nat;
+        j["dhc_hit"] = (bool)flags.dhc_hit;
+    #ifdef _ND_USE_CONNTRACK
+        j["ct_id"] = ct_id;
+        j["ct_mark"] = ct_mark;
+    #endif
+        j["ip_version"] = (unsigned)ip_version;
+        j["ip_protocol"] = (unsigned)ip_protocol;
+        j["vlan_id"] = (unsigned)vlan_id;
+    #ifndef _ND_LEAN_AND_MEAN
+        // 10.110.80.1: address is: PRIVATE
+        // 67.204.229.236: address is: LOCALIP
+        if (ND_DEBUG && _other_type == "unknown") {
+            ndNetlink::PrintType(lower_ip, lower_type);
+            ndNetlink::PrintType(upper_ip, upper_type);
+            //exit(1);
+        }
+    #endif
+    #endif
+        j["other_type"] = _other_type;
 
-    if (privacy_mask & PRIVATE_LOWER) {
-        if (ip_version == 4)
-            j[_lower_ip] = ND_PRIVATE_IPV4 "253";
+        switch (origin) {
+        case ORIGIN_UPPER:
+            j["local_origin"] =
+                (_lower_ip == "local_ip") ? false : true;
+            break;
+        case ORIGIN_LOWER:
+        default:
+            j["local_origin"] =
+                (_lower_ip == "local_ip") ? true : false;
+            break;
+        }
+
+        // 00-52-14 to 00-52-FF: Unassigned (small allocations)
+        if (privacy_mask & PRIVATE_LOWER)
+            snprintf(mac_addr, sizeof(mac_addr), "00:52:14:00:00:00");
+        else {
+            snprintf(mac_addr, sizeof(mac_addr),
+                "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+                lower_mac[0], lower_mac[1], lower_mac[2],
+                lower_mac[3], lower_mac[4], lower_mac[5]
+            );
+        }
+        j[_lower_mac] = mac_addr;
+
+        if (privacy_mask & PRIVATE_UPPER)
+            snprintf(mac_addr, sizeof(mac_addr), "00:52:FF:00:00:00");
+        else {
+            snprintf(mac_addr, sizeof(mac_addr),
+                "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+                upper_mac[0], upper_mac[1], upper_mac[2],
+                upper_mac[3], upper_mac[4], upper_mac[5]
+            );
+        }
+        j[_upper_mac] = mac_addr;
+
+        if (privacy_mask & PRIVATE_LOWER) {
+            if (ip_version == 4)
+                j[_lower_ip] = ND_PRIVATE_IPV4 "253";
+            else
+                j[_lower_ip] = ND_PRIVATE_IPV6 "fd";
+        }
         else
-            j[_lower_ip] = ND_PRIVATE_IPV6 "fd";
-    }
-    else
-        j[_lower_ip] = lower_ip;
+            j[_lower_ip] = lower_ip;
 
-    if (privacy_mask & PRIVATE_UPPER) {
-        if (ip_version == 4)
-            j[_upper_ip] = ND_PRIVATE_IPV4 "254";
+        if (privacy_mask & PRIVATE_UPPER) {
+            if (ip_version == 4)
+                j[_upper_ip] = ND_PRIVATE_IPV4 "254";
+            else
+                j[_upper_ip] = ND_PRIVATE_IPV6 "fe";
+        }
         else
-            j[_upper_ip] = ND_PRIVATE_IPV6 "fe";
+            j[_upper_ip] = upper_ip;
+
+        j[_lower_port] = (unsigned)ntohs(lower_port);
+        j[_upper_port] = (unsigned)ntohs(upper_port);
+
+        j["detected_protocol"] =
+            (unsigned)detected_protocol.master_protocol;
+        j["detected_protocol_name"] =
+            ndpi_get_proto_name(ndpi, detected_protocol.master_protocol);
+
+        j["detected_application"] =
+            (unsigned)detected_protocol.app_protocol;
+        j["detected_application_name"] =
+            ndpi_get_proto_name(ndpi, detected_protocol.app_protocol);
+
+        j["detection_guessed"] = detection_guessed;
+
+        if (host_server_name[0] != '\0')
+            j["host_server_name"] = host_server_name;
+
+        if (has_http_user_agent() || has_http_url()) {
+
+            if (has_http_user_agent())
+                j["http"]["user_agent"] = http.user_agent;
+            if (has_http_url())
+                j["http"]["url"] = http.url;
+        }
+
+        if (has_dhcp_fingerprint() || has_dhcp_class_ident()) {
+
+            if (has_dhcp_fingerprint())
+                j["dhcp"]["fingerprint"] = dhcp.fingerprint;
+
+            if (has_dhcp_class_ident())
+                j["dhcp"]["class_ident"] = dhcp.class_ident;
+        }
+
+        if (has_ssh_client_agent() || has_ssh_server_agent()) {
+
+            if (has_ssh_client_agent())
+                j["ssh"]["client"] = ssh.client_agent;
+
+            if (has_ssh_server_agent())
+                j["ssh"]["server"] = ssh.server_agent;
+        }
+
+        if (has_ssl_client_sni() || has_ssl_server_cn()) {
+
+            char tohex[7];
+
+            sprintf(tohex, "0x%04hx", ssl.version);
+            j["ssl"]["version"] = tohex;
+
+            sprintf(tohex, "0x%04hx", ssl.cipher_suite);
+            j["ssl"]["cipher_suite"] = tohex;
+
+            if (has_ssl_client_sni())
+                j["ssl"]["client_sni"] = ssl.client_sni;
+
+            if (has_ssl_server_cn())
+                j["ssl"]["server_cn"] = ssl.server_cn;
+
+            if (has_ssl_server_organization())
+                j["ssl"]["organization"] = ssl.server_organization;
+
+            if (has_ssl_client_ja3())
+                j["ssl"]["client_ja3"] = ssl.client_ja3;
+
+            if (has_ssl_server_ja3())
+                j["ssl"]["server_ja3"] = ssl.server_ja3;
+
+            if (ssl.cert_fingerprint_found) {
+                nd_sha1_to_string((const uint8_t *)ssl.cert_fingerprint, digest);
+                j["ssl"]["fingerprint"] = digest;
+            }
+        }
+
+        if (has_bt_info_hash()) {
+
+            nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
+            j["bt"]["info_hash"] = digest;
+        }
+
+        if (has_mdns_answer()) {
+
+            j["mdns"]["answer"] = mdns.answer;
+        }
+
+        if (has_ssdp_headers()) {
+
+            j["ssdp"] = ssdp.headers;
+
+        }
+
+        j["first_seen_at"] = ts_first_seen;
+        j["first_update_at"] = ts_first_update;
     }
-    else
-        j[_upper_ip] = upper_ip;
 
-    j[_lower_port] = (unsigned)ntohs(lower_port);
-    j[_upper_port] = (unsigned)ntohs(upper_port);
+    if (encode_includes & ENCODE_TUNNELS) {
+        switch (tunnel_type) {
+        case TUNNEL_GTP:
+            if (gtp.lower_map == LOWER_UNKNOWN)
+                get_lower_map(gtp.lower_type, gtp.upper_type, gtp.lower_map, gtp.other_type);
 
-    if (include_stats) {
+            string _lower_teid = "local_teid", _upper_teid = "other_teid";
+
+            switch (gtp.lower_map) {
+            case LOWER_LOCAL:
+                _lower_ip = "local_ip";
+                _lower_port = "local_port";
+                _lower_teid = "local_teid";
+                _upper_ip = "other_ip";
+                _upper_port = "other_port";
+                _upper_teid = "other_teid";
+                break;
+            case LOWER_OTHER:
+                _lower_ip = "other_ip";
+                _lower_port = "other_port";
+                _lower_teid = "other_teid";
+                _upper_ip = "local_ip";
+                _upper_port = "local_port";
+                _upper_teid = "local_teid";
+                break;
+            }
+
+            switch (gtp.other_type) {
+            case OTHER_LOCAL:
+                _other_type = "local";
+                break;
+            case OTHER_REMOTE:
+                _other_type = "remote";
+                break;
+            case OTHER_ERROR:
+                _other_type = "error";
+                break;
+            case OTHER_UNSUPPORTED:
+            default:
+                _other_type = "unsupported";
+                break;
+            }
+
+            j["gtp"]["version"] = gtp.version;
+            j["gtp"]["ip_version"] = gtp.ip_version;
+            j["gtp"][_lower_ip] = gtp.lower_ip;
+            j["gtp"][_upper_ip] = gtp.upper_ip;
+            j["gtp"][_lower_port] = (unsigned)htons(gtp.lower_port);
+            j["gtp"][_upper_port] = (unsigned)htons(gtp.upper_port);
+            j["gtp"][_lower_teid] = htonl(gtp.lower_teid);
+            j["gtp"][_upper_teid] = htonl(gtp.upper_teid);
+            j["gtp"]["other_type"] = _other_type;
+
+            break;
+        }
+    }
+
+    if (encode_includes & ENCODE_STATS) {
         j[_lower_bytes] = lower_bytes;
         j[_upper_bytes] = upper_bytes;
         j[_lower_packets] = lower_packets;
@@ -917,99 +1030,6 @@ void ndFlow::json_encode(json &j,
         j["total_packets"] = total_packets;
         j["total_bytes"] = total_bytes;
     }
-
-    j["detected_protocol"] =
-        (unsigned)detected_protocol.master_protocol;
-    j["detected_protocol_name"] =
-        ndpi_get_proto_name(ndpi, detected_protocol.master_protocol);
-
-    j["detected_application"] =
-        (unsigned)detected_protocol.app_protocol;
-    j["detected_application_name"] =
-        ndpi_get_proto_name(ndpi, detected_protocol.app_protocol);
-
-    j["detection_guessed"] = detection_guessed;
-
-    if (host_server_name[0] != '\0')
-        j["host_server_name"] = host_server_name;
-
-    if (has_http_user_agent() || has_http_url()) {
-
-        if (has_http_user_agent())
-            j["http"]["user_agent"] = http.user_agent;
-        if (has_http_url())
-            j["http"]["url"] = http.url;
-    }
-
-    if (has_dhcp_fingerprint() || has_dhcp_class_ident()) {
-
-        if (has_dhcp_fingerprint())
-            j["dhcp"]["fingerprint"] = dhcp.fingerprint;
-
-        if (has_dhcp_class_ident())
-            j["dhcp"]["class_ident"] = dhcp.class_ident;
-    }
-
-    if (has_ssh_client_agent() || has_ssh_server_agent()) {
-
-        if (has_ssh_client_agent())
-            j["ssh"]["client"] = ssh.client_agent;
-
-        if (has_ssh_server_agent())
-            j["ssh"]["server"] = ssh.server_agent;
-    }
-
-    if (has_ssl_client_sni() || has_ssl_server_cn()) {
-
-        char tohex[7];
-
-        sprintf(tohex, "0x%04hx", ssl.version);
-        j["ssl"]["version"] = tohex;
-
-        sprintf(tohex, "0x%04hx", ssl.cipher_suite);
-        j["ssl"]["cipher_suite"] = tohex;
-
-        if (has_ssl_client_sni())
-            j["ssl"]["client_sni"] = ssl.client_sni;
-
-        if (has_ssl_server_cn())
-            j["ssl"]["server_cn"] = ssl.server_cn;
-
-        if (has_ssl_server_organization())
-            j["ssl"]["organization"] = ssl.server_organization;
-
-        if (has_ssl_client_ja3())
-            j["ssl"]["client_ja3"] = ssl.client_ja3;
-
-        if (has_ssl_server_ja3())
-            j["ssl"]["server_ja3"] = ssl.server_ja3;
-
-        if (ssl.cert_fingerprint_found) {
-            nd_sha1_to_string((const uint8_t *)ssl.cert_fingerprint, digest);
-            j["ssl"]["fingerprint"] = digest;
-        }
-    }
-
-    if (has_bt_info_hash()) {
-
-        nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
-        j["bt"]["info_hash"] = digest;
-    }
-
-    if (has_mdns_answer()) {
-
-        j["mdns"]["answer"] = mdns.answer;
-    }
-
-    if (has_ssdp_headers()) {
-
-        j["ssdp"] = ssdp.headers;
-
-    }
-
-    j["first_seen_at"] = ts_first_seen;
-    j["first_update_at"] = ts_first_update;
-    j["last_seen_at"] = ts_last_seen;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

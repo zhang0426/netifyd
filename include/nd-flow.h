@@ -85,9 +85,13 @@ public:
     uint8_t ip_protocol;
     uint16_t vlan_id;
 
-    bool ip_nat;
-    bool tcp_fin;
-    bool dhc_hit;
+    struct {
+        uint8_t ip_nat:1;
+        uint8_t tcp_fin:1;
+        uint8_t dhc_hit:1;
+        uint8_t detection_complete:1;
+    } flags;
+    uint8_t detection_guessed;
 
 #ifdef _ND_USE_CONNTRACK
     uint32_t ct_id;
@@ -100,6 +104,26 @@ public:
     ndNetlinkAddressType lower_type;
     ndNetlinkAddressType upper_type;
 #endif
+    enum {
+        LOWER_UNKNOWN = 0x00,
+        LOWER_LOCAL = 0x01,
+        LOWER_OTHER = 0x02
+    };
+
+    uint8_t lower_map;
+
+    enum {
+        OTHER_UNKNOWN = 0x00,
+        OTHER_UNSUPPORTED = 0x01,
+        OTHER_LOCAL = 0x02,
+        OTHER_MULTICAST = 0x03,
+        OTHER_BROADCAST = 0x04,
+        OTHER_REMOTE = 0x05,
+        OTHER_ERROR = 0x06
+    };
+
+    uint8_t other_type;
+
     uint8_t lower_mac[ETH_ALEN];
     uint8_t upper_mac[ETH_ALEN];
 
@@ -118,6 +142,34 @@ public:
     uint16_t lower_port;
     uint16_t upper_port;
 
+    enum {
+        TUNNEL_NONE = 0x00,
+        TUNNEL_GTP = 0x01
+    };
+
+    uint8_t tunnel_type;
+
+    union {
+        struct {
+            uint8_t version;
+            uint8_t ip_version;
+            uint32_t lower_teid;
+            uint32_t upper_teid;
+#ifdef _ND_USE_NETLINK
+            ndNetlinkAddressType lower_type;
+            ndNetlinkAddressType upper_type;
+#endif
+            struct sockaddr_storage lower_addr;
+            struct sockaddr_storage upper_addr;
+            char lower_ip[INET6_ADDRSTRLEN];
+            char upper_ip[INET6_ADDRSTRLEN];
+            uint16_t lower_port;
+            uint16_t upper_port;
+            uint8_t lower_map;
+            uint8_t other_type;
+        } gtp;
+    };
+
     uint64_t lower_bytes;
     uint64_t upper_bytes;
     uint64_t total_bytes;
@@ -125,9 +177,6 @@ public:
     uint32_t lower_packets;
     uint32_t upper_packets;
     uint32_t total_packets;
-
-    bool detection_complete;
-    uint8_t detection_guessed;
 
     ndpi_protocol detected_protocol;
 
@@ -212,6 +261,8 @@ public:
 
     uint8_t origin;
 
+    int direction;
+
     nd_flow_capture capture;
     char capture_filename[sizeof(ND_FLOW_CAPTURE_TEMPLATE)];
 
@@ -248,8 +299,23 @@ public:
 
     void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
 
+    void get_lower_map(
+#ifdef _ND_USE_NETLINK
+        ndNetlinkAddressType lt,
+        ndNetlinkAddressType ut,
+#endif
+        uint8_t &lm, uint8_t &ot);
+
+    enum nd_encode_include {
+        ENCODE_NONE = 0x00,
+        ENCODE_METADATA = 0x01,
+        ENCODE_TUNNELS = 0x02,
+        ENCODE_STATS = 0x04,
+        ENCODE_ALL = (ENCODE_METADATA | ENCODE_TUNNELS | ENCODE_STATS)
+    };
+
     void json_encode(json &j,
-        struct ndpi_detection_module_struct *ndpi, bool include_stats = true);
+        struct ndpi_detection_module_struct *ndpi, uint8_t encode_includes = ENCODE_ALL);
 
     inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;

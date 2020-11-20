@@ -126,7 +126,8 @@ using json = nlohmann::json;
 
 #define _ND_PPP_PROTOCOL(p)	((((uint8_t *)(p))[0] << 8) + ((uint8_t *)(p))[1])
 
-#define _ND_GTP_U_V1_PORT   2152
+#define _ND_GTP_U_PORT    2152
+#define _ND_GTP_G_PDU     0xff
 
 using namespace std;
 
@@ -163,6 +164,9 @@ using namespace std;
 // Enable packet queue debug logging
 //#define _ND_LOG_PACKET_QUEUE    1
 
+// Enable GTP tunnel dissection
+#define _ND_DISSECT_GTP       1
+
 extern nd_global_config nd_config;
 
 struct __attribute__((packed)) nd_mpls_header_t
@@ -175,6 +179,55 @@ struct __attribute__((packed)) nd_mpls_header_t
 #error Endianess not defined (__BYTE_ORDER__).
 #endif
 };
+#ifdef _ND_DISSECT_GTP
+struct __attribute__((packed)) nd_gtpv1_header_t
+{
+    struct {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        uint8_t npdu_num:1;
+        uint8_t seq_num:1;
+        uint8_t ext_hdr:1;
+        uint8_t reserved:1;
+        uint8_t proto_type:1;
+        uint8_t version:3;
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        uint8_t version:3;
+        uint8_t proto_type:1;
+        uint8_t reserved:1;
+        uint8_t ext_hdr:1;
+        uint8_t seq_num:1;
+        uint8_t npdu_num:1;
+#error Endianess not defined (__BYTE_ORDER__).
+#endif
+    } flags;
+
+    uint8_t type;
+    uint16_t length;
+    uint32_t teid;
+};
+
+struct __attribute__((packed)) nd_gtpv2_header_t
+{
+    struct {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        uint8_t reserved:3;
+        uint8_t teid:1;
+        uint8_t piggyback:1;
+        uint8_t version:3;
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        uint8_t version:3;
+        uint8_t piggyback:1;
+        uint8_t teid:1;
+        uint8_t reserved:3;
+#error Endianess not defined (__BYTE_ORDER__).
+#endif
+    } flags;
+
+    uint8_t type;
+    uint16_t length;
+    uint32_t teid;
+};
+#endif // _ND_DISSECT_GTP
 
 size_t ndPacketQueue::push(struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data)
 {
@@ -332,7 +385,7 @@ void *ndDetectionThread::Entry(void)
     struct ifreq ifr;
 
     do {
-        if (pcap == NULL) {
+        if (pcap == NULL && ! terminate) {
             if (nd_ifreq(tag, SIOCGIFFLAGS, &ifr) == -1) {
                 sleep(1);
                 continue;
@@ -356,115 +409,150 @@ void *ndDetectionThread::Entry(void)
                 tag.c_str(), cpu >= 0 ? cpu : 0);
         }
 
-        if (pcap_fd != -1) {
-            int rc, max_fd = 0;
-            struct timeval tv;
-            fd_set fds_read;
+        if (! pkt_queue.empty() && pthread_mutex_trylock(&lock) == 0) {
 
-            FD_ZERO(&fds_read);
-            FD_SET(fd_ipc[0], &fds_read);
-            FD_SET(pcap_fd, &fds_read);
+            pkt_queue.front(&pkt_header, &pkt_data);
 
-            memset(&tv, 0, sizeof(struct timeval));
-
-            if (pkt_queue.empty()) tv.tv_sec = 1;
-            tv.tv_usec = ND_TTL_PCAP_SELECT_USEC;
-
-            max_fd = max(fd_ipc[0], pcap_fd);
-            rc = select(max_fd + 1, &fds_read, NULL, NULL, &tv);
-
-            if (rc == -1)
-                throw ndDetectionThreadException(strerror(errno));
-
-            if (! pkt_queue.empty() && pthread_mutex_trylock(&lock) == 0) {
-
-                pkt_queue.front(&pkt_header, &pkt_data);
-
-                try {
-                    ProcessPacket();
-                }
-                catch (exception &e) {
-                    pthread_mutex_unlock(&lock);
-                    throw;
-                }
-
+            try {
+                ProcessPacket();
+            }
+            catch (exception &e) {
                 pthread_mutex_unlock(&lock);
-
-                pkt_queue.pop();
+                throw;
             }
 
-            if (dump_flows && pthread_mutex_trylock(&lock) == 0) {
+            pthread_mutex_unlock(&lock);
 
-                if (ND_FLOW_DUMP_ESTABLISHED)
-                    DumpFlows();
-
-                dump_flows = false;
-                pthread_mutex_unlock(&lock);
-            }
-
-            if (rc == 0) continue;
-
-            if (FD_ISSET(fd_ipc[0], &fds_read)) {
-                uint32_t id = RecvIPC();
-
-                if (id == (uint32_t)ND_SIG_CONNECT)
-                    dump_flows = true;
-                else {
-                    nd_debug_printf("%s: Unknown IPC ID: %u (ND_SIG_CONNECT: %u).\n",
-                        tag.c_str(), id, ND_SIG_CONNECT);
-                }
-            }
-
-            if (! FD_ISSET(pcap_fd, &fds_read)) continue;
+            pkt_queue.pop();
         }
 
-        switch (pcap_next_ex(pcap, &pkt_header, &pkt_data)) {
-        case 0:
-            break;
-        case 1:
-            if (pthread_mutex_trylock(&lock) != 0) {
+        if (! terminate) {
+            if (pcap_fd != -1) {
+                int rc, max_fd = 0;
+                struct timeval tv;
+                fd_set fds_read;
 
-                stats->pkt.queue_dropped += pkt_queue.push(pkt_header, pkt_data);
-            }
-            else {
-                bool from_queue = false;
+                FD_ZERO(&fds_read);
+                FD_SET(fd_ipc[0], &fds_read);
+                FD_SET(pcap_fd, &fds_read);
 
-                if (! pkt_queue.empty()) {
-                    stats->pkt.queue_dropped += pkt_queue.push(pkt_header, pkt_data);
-                    from_queue = pkt_queue.front(&pkt_header, &pkt_data);
-                }
+                memset(&tv, 0, sizeof(struct timeval));
 
-                try {
-                    ProcessPacket();
-                }
-                catch (exception &e) {
+                if (pkt_queue.empty()) tv.tv_sec = 1;
+                tv.tv_usec = ND_TTL_PCAP_SELECT_USEC;
+
+                max_fd = max(fd_ipc[0], pcap_fd);
+                rc = select(max_fd + 1, &fds_read, NULL, NULL, &tv);
+
+                if (rc == -1)
+                    throw ndDetectionThreadException(strerror(errno));
+
+                if (dump_flows && pthread_mutex_trylock(&lock) == 0) {
+
+                    if (ND_FLOW_DUMP_ESTABLISHED)
+                        DumpFlows();
+
+                    dump_flows = false;
                     pthread_mutex_unlock(&lock);
-                    throw;
                 }
-                pthread_mutex_unlock(&lock);
 
-                if (from_queue)
-                    pkt_queue.pop();
+                if (rc == 0) continue;
+
+                if (FD_ISSET(fd_ipc[0], &fds_read)) {
+                    uint32_t id = RecvIPC();
+
+                    if (id == (uint32_t)ND_SIG_CONNECT)
+                        dump_flows = true;
+                    else {
+                        nd_debug_printf("%s: Unknown IPC ID: %u (ND_SIG_CONNECT: %u).\n",
+                            tag.c_str(), id, ND_SIG_CONNECT);
+                    }
+                }
+
+                if (! FD_ISSET(pcap_fd, &fds_read)) continue;
             }
-            break;
-        case -1:
-            nd_printf("%s: %s.\n", tag.c_str(), pcap_geterr(pcap));
-            pcap_close(pcap);
-            pcap = NULL;
-            break;
-        case -2:
-            nd_debug_printf("%s: end of capture file: %s\n",
-                tag.c_str(), pcap_file.c_str());
-            pcap_close(pcap);
-            pcap = NULL;
-            terminate = true;
-            break;
+
+            switch (pcap_next_ex(pcap, &pkt_header, &pkt_data)) {
+            case 0:
+                break;
+            case 1:
+                if (pthread_mutex_trylock(&lock) != 0) {
+
+                    stats->pkt.queue_dropped += pkt_queue.push(pkt_header, pkt_data);
+                }
+                else {
+                    bool from_queue = false;
+
+                    if (! pkt_queue.empty()) {
+                        stats->pkt.queue_dropped += pkt_queue.push(pkt_header, pkt_data);
+                        from_queue = pkt_queue.front(&pkt_header, &pkt_data);
+                    }
+
+                    try {
+                        ProcessPacket();
+                    }
+                    catch (exception &e) {
+                        pthread_mutex_unlock(&lock);
+                        throw;
+                    }
+                    pthread_mutex_unlock(&lock);
+
+                    if (from_queue)
+                        pkt_queue.pop();
+                }
+                break;
+            case -1:
+                nd_printf("%s: %s.\n", tag.c_str(), pcap_geterr(pcap));
+                pcap_close(pcap);
+                pcap = NULL;
+                pcap_fd = -1;
+                break;
+            case -2:
+                nd_debug_printf("%s: end of capture file: %s, flushing queued packets: %lu\n",
+                    tag.c_str(), pcap_file.c_str(), pkt_queue.size());
+                pcap_close(pcap);
+                pcap = NULL;
+                terminate = true;
+                pcap_fd = -1;
+                break;
+            }
         }
     }
-    while (terminate == false);
+    while (terminate == false || ! pkt_queue.empty());
 
     nd_debug_printf("%s: capture ended on CPU: %lu\n",
         tag.c_str(), cpu >= 0 ? cpu : 0);
+
+    nd_flow_map::iterator i = flows->begin();
+    while (i != flows->end()) {
+
+        if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
+            i->second->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
+
+            json j;
+
+            j["type"] = "flow_purge";
+            j["reason"] = "terminate";
+            j["interface"] = tag;
+            j["internal"] = internal;
+            j["established"] = false;
+
+            json jf;
+            i->second->json_encode(jf, ndpi, ndFlow::ENCODE_STATS | ndFlow::ENCODE_TUNNELS);
+            j["flow"] = jf;
+
+            string json_string;
+            nd_json_to_string(j, json_string, false);
+            json_string.append("\n");
+#if 0
+            nd_debug_printf("%s: Purge %3u: %s\n", tag.c_str(), ++purged,
+                jf["digest"].get<string>().c_str());
+#endif
+            thread_socket->QueueWrite(json_string);
+        }
+
+        i++;
+    }
 
     return NULL;
 }
@@ -551,7 +639,7 @@ void ndDetectionThread::DumpFlows(void)
 
     for (nd_flow_map::const_iterator i = flows->begin(); i != flows->end(); i++) {
 
-        if (i->second->detection_complete == false) continue;
+        if (i->second->flags.detection_complete == false) continue;
         if (! ND_FLOW_DUMP_UNKNOWN &&
             i->second->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) continue;
 
@@ -563,7 +651,7 @@ void ndDetectionThread::DumpFlows(void)
         j["established"] = true;
 
         json jf;
-        i->second->json_encode(jf, ndpi, false);
+        i->second->json_encode(jf, ndpi, ndFlow::ENCODE_METADATA);
 
         j["flow"] = jf;
 
@@ -601,11 +689,12 @@ void ndDetectionThread::ProcessPacket(void)
     const struct ip6_hdr *hdr_ip6 = NULL;
     const struct tcphdr *hdr_tcp = NULL;
     const struct udphdr *hdr_udp = NULL;
-
+#ifdef _ND_DISSECT_GTP
+    const struct nd_gtpv1_header_t *hdr_gtpv1 = NULL;
+    const struct nd_gtpv2_header_t *hdr_gtpv2 = NULL;
+#endif
     const uint8_t *l3 = NULL, *l4 = NULL, *pkt = NULL;
     uint16_t l2_len, l3_len, l4_len = 0, pkt_len = 0;
-
-    bool gtp = false;
 
     uint16_t type = 0;
     uint16_t ppp_proto;
@@ -905,38 +994,108 @@ nd_process_ip:
 #endif
         return;
     }
-
-    if (! gtp && l4_len >= 8 && flow.ip_protocol == IPPROTO_UDP) {
+#if _ND_DISSECT_GTP
+    if (l4_len > 8 && flow.ip_protocol == IPPROTO_UDP) {
         hdr_udp = reinterpret_cast<const struct udphdr *>(l4);
 
-        if (ntohs(hdr_udp->uh_sport) == _ND_GTP_U_V1_PORT ||
-            ntohs(hdr_udp->uh_dport) == _ND_GTP_U_V1_PORT) {
+        if (ntohs(hdr_udp->uh_sport) == _ND_GTP_U_PORT ||
+            ntohs(hdr_udp->uh_dport) == _ND_GTP_U_PORT) {
 
-            pkt = reinterpret_cast<const uint8_t *>(l4 + sizeof(struct udphdr));
+            hdr_gtpv1 = reinterpret_cast<const struct nd_gtpv1_header_t *>(
+                l4 + sizeof(struct udphdr)
+            );
 
-            uint8_t flags = pkt[0];
-            uint8_t message_type = pkt[1];
+            if (hdr_gtpv1->flags.version == 1) {
 
-            if ((((flags & 0xE0) >> 5) == 1 /* GTPv1 */) &&
-                (message_type == 0xFF /* T-PDU */)) {
+                if (flow.tunnel_type == ndFlow::TUNNEL_NONE) {
+                    flow.tunnel_type = ndFlow::TUNNEL_GTP;
 
-                //fprintf(stderr, "GTP: flags: %0hhx, type: %0hhx, l2_len: %hu, l3_len: %hu, l4_len: %hu, l4 offset: %ld, recursive: %s\n",
-                //    flags, message_type, l2_len, l3_len, l4_len, l4 - pkt_data,
-                //    gtp ? "yes" : "no");
+                    flow.gtp.version = hdr_gtpv1->flags.version;
+                    memcpy(&flow.gtp.lower_addr,
+                        &flow.lower_addr, sizeof(struct sockaddr_storage));
+                    memcpy(&flow.gtp.upper_addr,
+                        &flow.upper_addr, sizeof(struct sockaddr_storage));
 
-                l2_len = (l4 - pkt_data) + sizeof(struct udphdr) + 8; /* GTPv1 header len */
-                //fprintf(stderr, "GTP: l2_len adjusted: %hu\n", l2_len);
+                    struct sockaddr_in *laddr4 = flow.lower_addr4;
+                    struct sockaddr_in6 *laddr6 = flow.lower_addr6;
+                    struct sockaddr_in *uaddr4 = flow.upper_addr4;
+                    struct sockaddr_in6 *uaddr6 = flow.upper_addr6;
 
-                if (flags & 0x04) l2_len += 1; /* next_ext_header is present */
-                if (flags & 0x02) l2_len += 4; /* sequence_number is present (it also includes next_ext_header and pdu_number) */
-                if (flags & 0x01) l2_len += 1; /* pdu_number is present */
+                    flow.gtp.ip_version = flow.ip_version;
 
-                gtp = true;
-                goto nd_process_ip;
+                    switch (flow.ip_version) {
+                    case 4:
+                        inet_ntop(AF_INET, &laddr4->sin_addr.s_addr,
+                            flow.gtp.lower_ip, INET_ADDRSTRLEN);
+                        inet_ntop(AF_INET, &uaddr4->sin_addr.s_addr,
+                            flow.gtp.upper_ip, INET_ADDRSTRLEN);
+                        break;
+
+                    case 6:
+                        inet_ntop(AF_INET6, &laddr6->sin6_addr.s6_addr,
+                            flow.gtp.lower_ip, INET6_ADDRSTRLEN);
+                        inet_ntop(AF_INET6, &uaddr6->sin6_addr.s6_addr,
+                            flow.gtp.upper_ip, INET6_ADDRSTRLEN);
+                        break;
+
+                    default:
+                        nd_printf("%s: ERROR: Unknown GTP IP version: %d\n",
+                            tag.c_str(), flow.ip_version);
+                        throw ndDetectionThreadException(strerror(EINVAL));
+                    }
+
+                    if (addr_cmp < 0) {
+                        flow.gtp.lower_port = hdr_udp->uh_sport;
+                        flow.gtp.upper_port = hdr_udp->uh_dport;
+                    }
+                    else if (addr_cmp > 0) {
+                        flow.gtp.lower_port = hdr_udp->uh_dport;
+                        flow.gtp.upper_port = hdr_udp->uh_sport;
+                    }
+                    else {
+                        if (hdr_udp->uh_sport < hdr_udp->uh_dport) {
+                            flow.gtp.lower_port = hdr_udp->uh_sport;
+                            flow.gtp.upper_port = hdr_udp->uh_dport;
+                        }
+                        else {
+                            flow.gtp.lower_port = hdr_udp->uh_dport;
+                            flow.gtp.upper_port = hdr_udp->uh_sport;
+                        }
+                    }
+                }
+
+                if (hdr_gtpv1->type == _ND_GTP_G_PDU) {
+
+                    l2_len = (l4 - pkt_data) + sizeof(struct udphdr) + 8;
+
+                    if (hdr_gtpv1->flags.ext_hdr) l2_len += 1;
+                    if (hdr_gtpv1->flags.seq_num) l2_len += 4;
+                    if (hdr_gtpv1->flags.npdu_num) l2_len += 1;
+
+                    goto nd_process_ip;
+                }
+#if 0
+                else {
+                    nd_debug_printf("%s: unsupported GTPv1 message type: 0x%hhx (%hhu)\n",
+                        tag.c_str(), hdr_gtpv1->type, hdr_gtpv1->type);
+                }
+#endif
+            }
+            else if (hdr_gtpv1->flags.version == 2) {
+                // TODO: GTPv2...
+                hdr_gtpv2 = reinterpret_cast<const struct nd_gtpv2_header_t *>(
+                    l4 + sizeof(struct udphdr)
+                );
+                nd_debug_printf("%s: unimplemented GTP version (TODO): %u\n",
+                    tag.c_str(), hdr_gtpv1->flags.version);
+            }
+            else {
+                nd_debug_printf("%s: unsupported GTP version: %u\n",
+                    tag.c_str(), hdr_gtpv1->flags.version);
             }
         }
     }
-
+#endif
     switch (flow.ip_protocol) {
     case IPPROTO_TCP:
         if (l4_len >= 20) {
@@ -1019,14 +1178,40 @@ nd_process_ip:
         // Flow exists in map.
         nf = fi.first->second;
 
-        if (flow == *nf)
+        if (addr_cmp == nf->direction)
             id_src = nf->id_src, id_dst = nf->id_dst;
-        else
+        else {
             id_src = nf->id_dst, id_dst = nf->id_src;
+#if _ND_DISSECT_GTP
+            if (hdr_gtpv1 != NULL && hdr_gtpv1->flags.version == 1) {
+                if (flow.tunnel_type == ndFlow::TUNNEL_GTP) {
+                    switch (nf->origin) {
+                    case ndFlow::ORIGIN_LOWER:
+                        if (nf->gtp.upper_teid == 0)
+                            nf->gtp.upper_teid = hdr_gtpv1->teid;
+                        else if (hdr_gtpv1->teid != nf->gtp.upper_teid)
+                            nf->gtp.upper_teid = hdr_gtpv1->teid;
+                        break;
+                    case ndFlow::ORIGIN_UPPER:
+                        if (nf->gtp.lower_teid == 0)
+                            nf->gtp.lower_teid = hdr_gtpv1->teid;
+                        else if (hdr_gtpv1->teid != nf->gtp.lower_teid)
+                            nf->gtp.lower_teid = hdr_gtpv1->teid;
+                        break;
+                    }
+                }
+            }
+            else if (hdr_gtpv2 != NULL && hdr_gtpv2->flags.version == 2) {
+                // TODO: Implemented GTPv2.
+            }
+#endif
+        }
     }
     else {
         nf = new ndFlow(flow);
         if (nf == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
+
+        nf->direction = addr_cmp;
 
         fi = flows->insert(nd_flow_pair(flow_digest, nf));
 
@@ -1084,6 +1269,17 @@ nd_process_ip:
                 }
             }
         }
+
+        if (flow.tunnel_type == ndFlow::TUNNEL_GTP) {
+            switch (nf->origin) {
+            case ndFlow::ORIGIN_LOWER:
+                nf->gtp.lower_teid = hdr_gtpv1->teid;
+                break;
+            case ndFlow::ORIGIN_UPPER:
+                nf->gtp.upper_teid = hdr_gtpv1->teid;
+                break;
+            }
+        }
     }
 
     stats->pkt.wire_bytes += pkt_header->len + 24;
@@ -1118,9 +1314,9 @@ nd_process_ip:
 
     if (nf->ip_protocol == IPPROTO_TCP &&
         (hdr_tcp->th_flags & TH_FIN || hdr_tcp->th_flags & TH_RST))
-        nf->tcp_fin = true;
+        nf->flags.tcp_fin = true;
 
-    if (nf->detection_complete) return;
+    if (nf->flags.detection_complete) return;
 
     if (capture_unknown_flows) nf->push(pkt_header, pkt_data);
 
@@ -1147,7 +1343,7 @@ nd_process_ip:
         || (nf->ip_protocol == IPPROTO_TCP &&
             nf->total_packets > nd_config.max_tcp_pkts)) {
 
-        nf->detection_complete = true;
+        nf->flags.detection_complete = true;
 
 #ifdef _ND_USE_NETLINK
         if (ND_USE_NETLINK) {
@@ -1207,19 +1403,19 @@ nd_process_ip:
             string hostname;
 #ifdef _ND_USE_NETLINK
             if (nf->lower_type == ndNETLINK_ATYPE_UNKNOWN)
-                nf->dhc_hit = dhc->lookup(&nf->lower_addr, hostname);
+                nf->flags.dhc_hit = dhc->lookup(&nf->lower_addr, hostname);
             else if (nf->upper_type == ndNETLINK_ATYPE_UNKNOWN) {
-                nf->dhc_hit = dhc->lookup(&nf->upper_addr, hostname);
+                nf->flags.dhc_hit = dhc->lookup(&nf->upper_addr, hostname);
             }
 #endif
-            if (! nf->dhc_hit) {
+            if (! nf->flags.dhc_hit) {
                 if (nf->origin == ndFlow::ORIGIN_LOWER)
-                    nf->dhc_hit = dhc->lookup(&nf->upper_addr, hostname);
+                    nf->flags.dhc_hit = dhc->lookup(&nf->upper_addr, hostname);
                 else if (nf->origin == ndFlow::ORIGIN_UPPER)
-                    nf->dhc_hit = dhc->lookup(&nf->lower_addr, hostname);
+                    nf->flags.dhc_hit = dhc->lookup(&nf->lower_addr, hostname);
             }
 
-            if (nf->dhc_hit &&
+            if (nf->flags.dhc_hit &&
                 (nf->ndpi_flow->host_server_name[0] == '\0' ||
                 nd_is_ipaddr((const char *)nf->ndpi_flow->host_server_name))) {
                 snprintf(
@@ -1645,7 +1841,7 @@ nd_process_ip:
             j["established"] = false;
 
             json jf;
-            nf->json_encode(jf, ndpi, false);
+            nf->json_encode(jf, ndpi, ndFlow::ENCODE_METADATA);
             j["flow"] = jf;
 
             string json_string;
@@ -1655,19 +1851,47 @@ nd_process_ip:
             thread_socket->QueueWrite(json_string);
         }
 
-        if (ND_DEBUG || nd_config.h_flow != stderr)
+        if ((ND_DEBUG && ND_VERBOSE) || nd_config.h_flow != stderr)
             nf->print(tag.c_str(), ndpi);
     }
 
     if (ts_last_idle_scan + ND_TTL_IDLE_SCAN < ts_pkt_last) {
-        //uint64_t purged = 0;
+        uint64_t purged = 0;
         nd_flow_map::iterator i = flows->begin();
         while (i != flows->end()) {
             unsigned ttl = (
-                i->second->ip_protocol != IPPROTO_TCP || i->second->tcp_fin
+                i->second->ip_protocol != IPPROTO_TCP || i->second->flags.tcp_fin
             ) ? nd_config.ttl_idle_flow : nd_config.ttl_idle_tcp_flow;
 
             if (i->second->ts_last_seen + ttl < ts_pkt_last) {
+
+                if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
+                    i->second->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
+
+                    json j;
+
+                    j["type"] = "flow_purge";
+                    j["reason"] = (
+                        i->second->ip_protocol == IPPROTO_TCP &&
+                        i->second->flags.tcp_fin
+                    ) ? "closed" : "idle";
+                    j["interface"] = tag;
+                    j["internal"] = internal;
+                    j["established"] = false;
+
+                    json jf;
+                    i->second->json_encode(jf, ndpi, ndFlow::ENCODE_STATS | ndFlow::ENCODE_TUNNELS);
+                    j["flow"] = jf;
+
+                    string json_string;
+                    nd_json_to_string(j, json_string, false);
+                    json_string.append("\n");
+#if 0
+                    nd_debug_printf("%s: Purge %3u: %s\n", tag.c_str(), ++purged,
+                        jf["digest"].get<string>().c_str());
+#endif
+                    thread_socket->QueueWrite(json_string);
+                }
 
                 delete i->second;
                 i = flows->erase(i);

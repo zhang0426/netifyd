@@ -596,7 +596,7 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
 #endif
             if (memcmp(sa_orig_src, sa_repl_dst, sizeof(struct sockaddr_in)) ||
                 memcmp(sa_orig_dst, sa_repl_src, sizeof(struct sockaddr_in))) {
-                flow->ip_nat = true;
+                flow->flags.ip_nat = true;
 #ifdef _ND_USE_CONNTRACK
                 flow->ct_id = ct_flow->id;
                 flow->ct_mark = ct_flow->mark;
@@ -624,7 +624,7 @@ void ndConntrackThread::ClassifyFlow(ndFlow *flow)
 #endif
             if (memcmp(sa6_orig_src, sa6_repl_dst, sizeof(struct sockaddr_in6)) ||
                 memcmp(sa6_orig_dst, sa6_repl_src, sizeof(struct sockaddr_in6))) {
-                flow->ip_nat = true;
+                flow->flags.ip_nat = true;
 #ifdef _ND_USE_CONNTRACK
                 flow->ct_id = ct_flow->id;
                 flow->ct_mark = ct_flow->mark;

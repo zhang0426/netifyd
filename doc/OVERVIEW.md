@@ -16,7 +16,6 @@ Netify Technical Overview
         - libpcap (Packet capture library)
         - libmnl (optional; minimal Netlink library)
         - libnetfilter-conntrack (optional; connection tracking library for NAT gateways)
-        - libjson-c (JSON encoding of cloud payloads)
         - zlib (JSON payload compression)
         - libcurl (w/SSL: mTLS, OpenSSL, etc.)
 
