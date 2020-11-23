@@ -5,10 +5,10 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-EXTRA_DIST = BUGS.md BUILD-openwrt.md OVERVIEW.md netifyd.conf-sample
+EXTRA_DIST = BUGS.md BUILD-openwrt.md OVERVIEW.md netifyd.conf-sample README-JSON-socket-example.md json-socket-example.sh json-socket-filter.jq
 
 sharedatadir = $(datadir)/netifyd
-sharedata_DATA = netifyd.conf-sample
+sharedata_DATA = netifyd.conf-sample README-JSON-socket-example.md json-socket-example.sh json-socket-filter.jq
 
 dist_man_MANS = netifyd.8 netifyd.conf.5
 
