@@ -32,7 +32,8 @@ while true; do
         continue
     fi
 
-    echo "timestamp,digest,local_ip,local_port,other_ip,other_port,protocol,application"
+    echo "timestamp,digest,local_ip,local_port,other_ip,other_port,protocol,application" |\
+        tee json-socket-example.csv
     nc -U ${SOCKET_PATH} | jq -r -f ${BASE_PATH}/json-socket-filter.jq |\
     while read stamp digest local_ip local_port other_ip other_port protocol application; do
         printf "\"%s\",%s,%s:%s,%s:%s,%s,%s\n" \
@@ -40,7 +41,7 @@ while true; do
             $(echo ${digest} | cut -c-5) \
             ${local_ip} ${local_port} \
             ${other_ip} ${other_port} \
-            ${protocol} ${application}
+            ${protocol} ${application} | tee -a json-socket-example.csv
     done
 done
 
