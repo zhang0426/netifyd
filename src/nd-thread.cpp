@@ -95,26 +95,17 @@ ndThread::ndThread(const string &tag, long cpu, bool ipc)
         throw ndThreadSystemException(__PRETTY_FUNCTION__, "socketpair", errno);
 
     if (cpu == -1) return;
-#if defined(HAVE_PTHREAD_ATTR_SETAFFINITY_NP) && defined(CPU_ALLOC)
-    long cpus = sysconf(_SC_NPROCESSORS_ONLN);
+#if defined(HAVE_PTHREAD_ATTR_SETAFFINITY_NP)
+    cpu_set_t cpuset;
 
-    if (cpu >= cpus) cpu = 0;
-
-    cpu_set_t *cpuset = CPU_ALLOC(cpus);
-    if (cpuset == NULL) return;
-
-    size_t size = CPU_ALLOC_SIZE(cpus);
-
-    CPU_ZERO_S(size, cpuset);
-    CPU_SET_S(cpu, size, cpuset);
+    CPU_ZERO(&cpuset);
+    CPU_SET(cpu, &cpuset);
 
     rc = pthread_attr_setaffinity_np(
         &attr,
-        CPU_COUNT_S(size, cpuset),
-        cpuset
+        sizeof(cpuset),
+        &cpuset
     );
-
-    CPU_FREE(cpuset);
 #endif
 }
 

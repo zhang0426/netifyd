@@ -940,6 +940,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
         }
 #endif
 #endif
+#if 0
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
         if (! entry->flow->iface->first && thread_conntrack != NULL) {
             if ((entry->flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
@@ -950,6 +951,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 thread_conntrack->ClassifyFlow(entry->flow);
             }
         }
+#endif
 #endif
         for (vector<uint8_t *>::const_iterator i =
             nd_config.privacy_filter_mac.begin();
