@@ -91,7 +91,9 @@ using namespace std;
 #include "nd-conntrack.h"
 #endif
 #include "nd-dhc.h"
+#include "nd-fhc.h"
 #include "nd-detection.h"
+#include "nd-capture.h"
 #include "nd-socket.h"
 #include "nd-sink.h"
 #include "nd-base64.h"
@@ -107,7 +109,8 @@ static nd_ifaces ifaces;
 static nd_devices devices;
 static nd_flows flows;
 static nd_stats stats;
-static nd_threads threads;
+static nd_capture_threads capture_threads;
+static nd_detection_threads detection_threads;
 static nd_agent_stats nda_stats;
 static nd_packet_stats pkt_totals;
 static ostringstream *nd_stats_os = NULL;
@@ -579,11 +582,9 @@ static void nd_force_reset(void)
         fprintf(stdout, "Reset successful.\n");
 }
 
-static int nd_start_detection_threads(void)
+static int nd_start_capture_threads(void)
 {
-    if (threads.size() > 0) return 1;
-
-    ndpi_global_init();
+    if (capture_threads.size() > 0) return 1;
 
     for (nd_ifaces::iterator i = ifaces.begin();
         i != ifaces.end(); i++) {
@@ -603,8 +604,7 @@ static int nd_start_detection_threads(void)
     }
 
     try {
-        long cpu = 0;
-        nda_stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
+        int16_t cpu = 0;
         string netlink_dev;
         uint8_t private_addr = 0;
         uint8_t mac[ETH_ALEN];
@@ -617,29 +617,21 @@ static int nd_start_detection_threads(void)
             if (! nd_ifaddrs_get_mac(nd_interface_addrs, (*i).second, mac))
                 memset(mac, 0, ETH_ALEN);
 
-            threads[(*i).second] = new ndDetectionThread(
-                (*i).second,
+            capture_threads[(*i).second] = new ndCaptureThread(
+                (ifaces.size() > 1) ? cpu++ : -1,
+                i,
                 mac,
-                (*i).first,
-#ifdef _ND_USE_NETLINK
-                netlink,
-#endif
                 thread_socket,
-#ifdef _ND_USE_CONNTRACK
-                (i->first || ! ND_USE_CONNTRACK) ?
-                    NULL : thread_conntrack,
-#endif
+                detection_threads,
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
-                dns_hint_cache,
-                (i->first) ? 0 : ++private_addr,
-                (ifaces.size() > 1) ? cpu++ : -1
+                (i->first) ? 0 : ++private_addr
             );
 
-            threads[(*i).second]->Create();
+            capture_threads[(*i).second]->Create();
 
-            if (cpu == nda_stats.cpus) cpu = 0;
+            if (cpu == (int16_t)nda_stats.cpus) cpu = 0;
         }
     }
     catch (exception &e) {
@@ -650,13 +642,13 @@ static int nd_start_detection_threads(void)
     return 0;
 }
 
-static void nd_stop_detection_threads(void)
+static void nd_stop_capture_threads(void)
 {
-    if (threads.size() == 0) return;
+    if (capture_threads.size() == 0) return;
 
     for (nd_ifaces::iterator i = ifaces.begin(); i != ifaces.end(); i++) {
-        threads[(*i).second]->Terminate();
-        delete threads[(*i).second];
+        capture_threads[(*i).second]->Terminate();
+        delete capture_threads[(*i).second];
 
         for (nd_flow_map::iterator j = flows[(*i).second]->begin();
             j != flows[(*i).second]->end(); j++) {
@@ -670,19 +662,17 @@ static void nd_stop_detection_threads(void)
             delete devices[(*i).second];
     }
 
-    threads.clear();
+    capture_threads.clear();
     flows.clear();
     stats.clear();
     devices.clear();
-
-    ndpi_global_destroy();
 }
 
-static void nd_reap_detection_threads(void)
+static void nd_reap_capture_threads(void)
 {
-    if (threads.size() == 0) return;
+    if (capture_threads.size() == 0) return;
 
-    nd_threads::iterator thread_iter;
+    nd_capture_threads::iterator thread_iter;
     nd_flows::iterator flow_iter;
     nd_stats::iterator stat_iter;
     nd_devices::iterator device_iter;
@@ -690,8 +680,8 @@ static void nd_reap_detection_threads(void)
 
     while (iface_iter != ifaces.end()) {
 
-        thread_iter = threads.find(iface_iter->second);
-        if (thread_iter == threads.end() ||
+        thread_iter = capture_threads.find(iface_iter->second);
+        if (thread_iter == capture_threads.end() ||
             ! thread_iter->second->HasTerminated()) {
             iface_iter++;
             continue;
@@ -722,12 +712,117 @@ static void nd_reap_detection_threads(void)
         }
 
         delete thread_iter->second;
-        threads.erase(thread_iter);
+        capture_threads.erase(thread_iter);
+        iface_iter = ifaces.erase(iface_iter);
+    }
+}
+
+static int nd_start_detection_threads(void)
+{
+    if (detection_threads.size() > 0) return 1;
+
+    ndpi_global_init();
+
+    try {
+        int16_t cpu = 0;
+
+        for (cpu = 0; cpu < (int16_t)nda_stats.cpus; cpu++) {
+            ostringstream os;
+            os << "dpi" << cpu;
+
+            detection_threads[cpu] = new ndDetectionThread(
+                cpu,
+                os.str(),
+#ifdef _ND_USE_NETLINK
+                netlink,
+#endif
+                thread_socket,
+#ifdef _ND_USE_CONNTRACK
+                (! ND_USE_CONNTRACK) ?  NULL : thread_conntrack,
+#endif
+                devices,
+                dns_hint_cache,
+                (uint8_t)cpu
+            );
+
+            detection_threads[cpu]->Create();
+        }
+    }
+    catch (exception &e) {
+        nd_printf("Runtime error: %s\n", e.what());
+        throw;
+    }
+
+    return 0;
+}
+
+static void nd_stop_detection_threads(void)
+{
+    if (detection_threads.size() == 0) return;
+
+    uint16_t cpu = 0;
+
+    for (cpu = 0; cpu < (uint16_t)nda_stats.cpus; cpu++) {
+        detection_threads[cpu]->Terminate();
+        delete detection_threads[cpu];
+    }
+
+    detection_threads.clear();
+
+    ndpi_global_destroy();
+}
+#if 0
+static void nd_reap_detection_threads(void)
+{
+    if (detection_threads.size() == 0) return;
+
+    nd_detection_threads::iterator thread_iter;
+    nd_flows::iterator flow_iter;
+    nd_stats::iterator stat_iter;
+    nd_devices::iterator device_iter;
+    nd_ifaces::iterator iface_iter = ifaces.begin();
+
+    while (iface_iter != ifaces.end()) {
+
+        thread_iter = detection_threads.find(iface_iter->second);
+        if (thread_iter == detection_threads.end() ||
+            ! thread_iter->second->HasTerminated()) {
+            iface_iter++;
+            continue;
+        }
+
+        flow_iter = flows.find(iface_iter->second);
+        if (flow_iter != flows.end()) {
+            for (nd_flow_map::iterator f = flow_iter->second->begin();
+                f != flow_iter->second->end(); f++) {
+                f->second->release();
+                delete f->second;
+            }
+
+            delete flow_iter->second;
+            flows.erase(flow_iter);
+        }
+
+        stat_iter = stats.find(iface_iter->second);
+        if (stat_iter != stats.end()) {
+            delete stat_iter->second;
+            stats.erase(stat_iter);
+        }
+
+        device_iter = devices.find(iface_iter->second);
+        if (device_iter != devices.end()) {
+            delete device_iter->second;
+            devices.erase(device_iter);
+        }
+
+        delete thread_iter->second;
+        detection_threads.erase(thread_iter);
         iface_iter = ifaces.erase(iface_iter);
     }
 
-    if (threads.size() == 0) ndpi_global_destroy();
+    if (detection_threads.size() == 0) ndpi_global_destroy();
 }
+#endif
 
 #ifdef _ND_USE_PLUGINS
 
@@ -1551,8 +1646,8 @@ static void nd_dump_stats(void)
         j["devices"] = jd;
     }
 
-    for (nd_threads::iterator i = threads.begin();
-        i != threads.end(); i++) {
+    for (nd_capture_threads::iterator i = capture_threads.begin();
+        i != capture_threads.end(); i++) {
 
         i->second->Lock();
 
@@ -1570,8 +1665,9 @@ static void nd_dump_stats(void)
 
             nd_json_add_stats(js, stats[i->first], &lpc_stat);
             j["stats"][iface_name] = js;
-
+#if 0
             nd_json_add_flows(jf, i->second->GetDetectionModule(), flows[i->first]);
+#endif
             j["flows"][iface_name] = jf;
         }
 
@@ -2117,6 +2213,8 @@ int main(int argc, char *argv[])
     nd_printf_mutex = new pthread_mutex_t;
     pthread_mutex_init(nd_printf_mutex, NULL);
 
+    nd_seed_rng();
+
     static struct option options[] =
     {
         { "config", 1, 0, 'c' },
@@ -2522,7 +2620,12 @@ int main(int argc, char *argv[])
     }
 #endif
 
+    nda_stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
+    nd_debug_printf("Online CPU cores: %ld\n", nda_stats.cpus);
+
     if (nd_start_detection_threads() < 0)
+        return 1;
+    if (nd_start_capture_threads() < 0)
         return 1;
 
     try {
@@ -2614,12 +2717,12 @@ int main(int argc, char *argv[])
             if (dns_hint_cache)
                 dns_hint_cache->purge();
 
-            nd_reap_detection_threads();
+            nd_reap_capture_threads();
 
-            if (threads.size() == 0) {
+            if (capture_threads.size() == 0) {
                 if (thread_sink == NULL ||
                     thread_sink->QueuePendingSize() == 0) {
-                    nd_printf("Exiting, no remaining detection threads.\n");
+                    nd_printf("Exiting, no remaining capture threads.\n");
                     terminate = true;
                     continue;
                 }
@@ -2658,8 +2761,8 @@ int main(int argc, char *argv[])
         }
 
         if (sig == ND_SIG_CONNECT) {
-            for (nd_threads::const_iterator t = threads.begin();
-                t != threads.end(); t++) (*t).second->SendIPC(ND_SIG_CONNECT);
+            for (nd_capture_threads::const_iterator t = capture_threads.begin();
+                t != capture_threads.end(); t++) (*t).second->SendIPC(ND_SIG_CONNECT);
             continue;
         }
 
@@ -2684,6 +2787,7 @@ int main(int argc, char *argv[])
 
     timer_delete(timer_id);
 
+    nd_stop_capture_threads();
     nd_stop_detection_threads();
 
 #ifdef _ND_USE_PLUGINS

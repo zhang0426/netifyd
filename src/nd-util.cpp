@@ -474,15 +474,10 @@ bool nd_save_sink_url(const string &url)
     return true;
 }
 
-void nd_generate_uuid(string &uuid)
+void nd_seed_rng(void)
 {
-    int digit = 0;
-    deque<char> result;
-    uint64_t input = 623714775;
-    unsigned int seed = (unsigned int)time(NULL);
-    const char *clist = { "0123456789abcdefghijklmnpqrstuvwxyz" };
     FILE *fh = fopen("/dev/urandom", "r");
-    ostringstream os;
+    unsigned int seed = (unsigned int)time(NULL);
 
     if (fh == NULL)
         nd_printf("Error opening random device: %s\n", strerror(errno));
@@ -493,6 +488,16 @@ void nd_generate_uuid(string &uuid)
     }
 
     srand(seed);
+}
+
+void nd_generate_uuid(string &uuid)
+{
+    int digit = 0;
+    deque<char> result;
+    uint64_t input = 623714775;
+    const char *clist = { "0123456789abcdefghijklmnpqrstuvwxyz" };
+    ostringstream os;
+
     input = (uint64_t)rand();
     input += (uint64_t)rand() << 32;
 

@@ -59,134 +59,8 @@ using namespace std;
 extern nd_global_config nd_config;
 extern nd_device_ethers device_ethers;
 
-ndFlowHashCache::ndFlowHashCache(const string &device, size_t cache_size)
-    : device(device), cache_size(cache_size) { }
-
-void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
-{
-    nd_fhc_map::const_iterator i = lookup.find(lower_hash);
-
-    if (i != lookup.end()) {
-        nd_debug_printf("%s: WARNING: Found existing hash in flow hash cache on push.\n",
-            device.c_str());
-    }
-    else {
-        if (lookup.size() == cache_size) {
-//#if _ND_DEBUG_FHC
-            nd_debug_printf("%s: Purging old flow hash cache entries.\n", device.c_str());
-//#endif
-            for (size_t n = 0; n < cache_size / nd_config.fhc_purge_divisor; n++) {
-                pair<string, string> j = index.back();
-
-                nd_fhc_map::iterator k = lookup.find(j.first);
-                if (k == lookup.end()) {
-                    nd_debug_printf("%s: WARNING: flow hash cache index not found in map\n",
-                        device.c_str());
-                }
-                else
-                    lookup.erase(k);
-
-                index.pop_back();
-            }
-        }
-
-        index.push_front(make_pair(lower_hash, upper_hash));
-        lookup[lower_hash] = index.begin();
-#if _ND_DEBUG_FHC
-        nd_debug_printf("%s: Flow hash cache entries: %lu\n", device.c_str(), lookup.size());
-#endif
-    }
-}
-
-bool ndFlowHashCache::pop(const string &lower_hash, string &upper_hash)
-{
-    nd_fhc_map::iterator i = lookup.find(lower_hash);
-    if (i == lookup.end()) return false;
-
-    upper_hash = i->second->second;
-
-    index.erase(i->second);
-
-    index.push_front(make_pair(lower_hash, upper_hash));
-
-    i->second = index.begin();
-
-    return true;
-}
-
-void ndFlowHashCache::save(void)
-{
-    ostringstream os;
-
-    switch (nd_config.fhc_save) {
-    case ndFHC_PERSISTENT:
-        os << ND_PERSISTENT_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
-        break;
-    case ndFHC_VOLATILE:
-        os << ND_VOLATILE_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
-        break;
-    default:
-        return;
-    }
-
-    FILE *hf = fopen(os.str().c_str(), "wb");
-    if (hf == NULL) {
-        nd_printf("%s: WARNING: Error saving flow hash cache: %s: %s\n",
-            device.c_str(), os.str().c_str(), strerror(errno));
-        return;
-    }
-
-    nd_fhc_list::iterator i;
-    for (i = index.begin(); i != index.end(); i++) {
-        fwrite((*i).first.c_str(), 1, SHA1_DIGEST_LENGTH, hf);
-        fwrite((*i).second.c_str(), 1, SHA1_DIGEST_LENGTH, hf);
-    }
-    fclose(hf);
-
-    nd_debug_printf("%s: Saved %lu flow hash cache entries.\n",
-        device.c_str(), index.size ());
-}
-
-void ndFlowHashCache::load(void)
-{
-    ostringstream os;
-
-    switch (nd_config.fhc_save) {
-    case ndFHC_PERSISTENT:
-        os << ND_PERSISTENT_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
-        break;
-    case ndFHC_VOLATILE:
-        os << ND_VOLATILE_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
-        break;
-    default:
-        return;
-    }
-
-    FILE *hf = fopen(os.str().c_str(), "rb");
-    if (hf != NULL) {
-        do {
-            string digest_lower, digest_mdata;
-            uint8_t digest[SHA1_DIGEST_LENGTH * 2];
-
-            if (fread(digest, SHA1_DIGEST_LENGTH * 2, 1, hf) != 1) break;
-
-            digest_lower.assign((const char *)digest, SHA1_DIGEST_LENGTH);
-            digest_mdata.assign((const char *)&digest[SHA1_DIGEST_LENGTH],
-                SHA1_DIGEST_LENGTH);
-
-            push(digest_lower, digest_mdata);
-        }
-        while (! feof(hf));
-
-        fclose(hf);
-    }
-
-    nd_debug_printf("%s: Loaded %lu flow hash cache entries.\n",
-        device.c_str(), index.size());
-}
-
-ndFlow::ndFlow(bool internal)
-    : internal(internal), ip_version(0), ip_protocol(0), vlan_id(0),
+ndFlow::ndFlow(const nd_ifaces::iterator &iface)
+    : iface(iface), dpi_thread_id(-1), ip_version(0), ip_protocol(0), vlan_id(0),
 #ifdef _ND_USE_CONNTRACK
     ct_id(0), ct_mark(0),
 #endif
@@ -558,7 +432,7 @@ bool ndFlow::has_ssdp_headers(void)
     );
 }
 
-void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
+void ndFlow::print(struct ndpi_detection_module_struct *ndpi)
 {
     char *p = NULL, buffer[64];
     const char *lower_name = lower_ip, *upper_name = upper_ip;
@@ -593,8 +467,10 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 
     nd_flow_printf(
         "%s: [%c%c%c%c%c%c] %s %s:%hu %c%c%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
-        tag,
-        (internal) ? 'i' : 'e',
+        //iface->second.c_str(),
+        //(iface->first) ? 'i' : 'e',
+        "lo",
+        (true) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         flags.ip_nat ? 'n' : '-',
         (detection_guessed & ND_FLOW_GUESS_PROTO) ? 'g' : '-',
@@ -624,7 +500,7 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
     if (ND_DEBUG &&
         detected_protocol.master_protocol == NDPI_PROTOCOL_SSL &&
         ! (detection_guessed & ND_FLOW_GUESS_PROTO) && ssl.version == 0x0000) {
-        nd_debug_printf("%s: SSL with no SSL/TLS verison.\n", tag);
+        nd_debug_printf("%s: SSL with no SSL/TLS verison.\n", iface->second.c_str());
     }
 }
 

@@ -48,30 +48,6 @@
 #define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX.cap"
 #define ND_FLOW_CAPTURE_SUB_OFFSET  (sizeof(ND_FLOW_CAPTURE_TEMPLATE) - 8 - 4 - 1)
 
-// Hash cache filename
-#define ND_FLOW_HC_FILE_NAME        "/flow-hash-cache-"
-
-typedef list<pair<string, string>> nd_fhc_list;
-typedef unordered_map<string, nd_fhc_list::iterator> nd_fhc_map;
-
-class ndFlowHashCache
-{
-public:
-    ndFlowHashCache(const string &device, size_t cache_size = ND_MAX_FHC_ENTRIES);
-
-    void push(const string &lower_hash, const string &upper_hash);
-    bool pop(const string &lower_hash, string &upper_hash);
-
-    void save(void);
-    void load(void);
-
-protected:
-    string device;
-    size_t cache_size;
-    nd_fhc_list index;
-    nd_fhc_map lookup;
-};
-
 typedef pair<const struct pcap_pkthdr *, const uint8_t *> nd_flow_push;
 typedef vector<nd_flow_push> nd_flow_capture;
 
@@ -80,7 +56,12 @@ typedef unordered_map<string, string> nd_flow_kvmap;
 class ndFlow
 {
 public:
-    bool internal;
+    const nd_ifaces::iterator &iface;
+//    char iface_name[IFNAMSIZ];
+//    bool internal;
+
+    int16_t dpi_thread_id;
+
     uint8_t ip_version;
     uint8_t ip_protocol;
     uint16_t vlan_id;
@@ -266,7 +247,8 @@ public:
     nd_flow_capture capture;
     char capture_filename[sizeof(ND_FLOW_CAPTURE_TEMPLATE)];
 
-    ndFlow(bool internal = true);
+//    ndFlow(const ndFlow &flow) : ndFlow(flow.iface) {};
+    ndFlow(const nd_ifaces::iterator &iface);
     virtual ~ndFlow();
 
     void hash(const string &device, bool hash_mdata = false,
@@ -297,7 +279,7 @@ public:
     bool has_mdns_answer(void);
     bool has_ssdp_headers(void);
 
-    void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
+    void print(struct ndpi_detection_module_struct *ndpi);
 
     void get_lower_map(
 #ifdef _ND_USE_NETLINK

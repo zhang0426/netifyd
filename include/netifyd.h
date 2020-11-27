@@ -60,7 +60,7 @@
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
 #define ND_MAX_BACKLOG_KB       2048    // Maximum upload queue size in kB
 #define ND_DETECTION_TICKS      1000    // Ticks-per-second (1000 = milliseconds)
-#define ND_TTL_IDLE_SCAN        10      // Idle flow scan in milliseconds
+#define ND_TTL_IDLE_SCAN        1000    // Idle flow scan in milliseconds
 #define ND_TTL_IDLE_FLOW        30      // Purge idle flows older than this (30s)
 #define ND_TTL_IDLE_TCP_FLOW    300     // Purge idle TCP flows older than this (5m)
 #define ND_TTL_IDLE_DHC_ENTRY  (60 * 30)// Purge TTL for idle DNS cache entries.

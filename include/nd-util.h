@@ -59,6 +59,8 @@ bool nd_save_uuid(const string &uuid, const char *path, size_t length);
 bool nd_load_sink_url(string &url);
 bool nd_save_sink_url(const string &url);
 
+void nd_seed_rng(void);
+
 void nd_generate_uuid(string &uuid);
 
 string nd_get_version_and_features(void);
