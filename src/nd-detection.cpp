@@ -331,20 +331,20 @@ void ndDetectionThread::QueuePacket(ndFlow *flow, uint8_t *pkt_data, uint16_t pk
 {
     int rc;
 
-    Lock();
-
     ndDetectionQueueEntry *entry = new ndDetectionQueueEntry(
         flow, pkt_data, pkt_length, addr_cmp
     );
 
     if (entry == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
 
+    Lock();
+
     pkt_queue.push(entry);
+
+    Unlock();
 
     if ((rc = pthread_cond_broadcast(&pkt_queue_cond)) != 0)
         throw ndDetectionThreadException(strerror(rc));
-
-    Unlock();
 }
 
 void *ndDetectionThread::Entry(void)
@@ -363,6 +363,7 @@ void *ndDetectionThread::Entry(void)
         do {
 
             Lock();
+
             if (pkt_queue.size()) {
                 entry = pkt_queue.front();
                 pkt_queue.pop();
@@ -373,7 +374,8 @@ void *ndDetectionThread::Entry(void)
             Unlock();
 
             if (entry != NULL) {
-                ProcessPacket(entry);
+                if (! entry->flow->flags.detection_complete)
+                    ProcessPacket(entry);
                 delete entry;
             }
         } while (entry != NULL);

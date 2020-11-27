@@ -1278,7 +1278,7 @@ nd_process_ip:
                 i->second->ip_protocol != IPPROTO_TCP || i->second->flags.tcp_fin
             ) ? nd_config.ttl_idle_flow : nd_config.ttl_idle_tcp_flow;
 
-            if (false && i->second->flags.detection_complete &&
+            if (i->second->flags.detection_complete &&
                 i->second->ts_last_seen + ttl < ts_pkt_last) {
 #if 0
                 if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
