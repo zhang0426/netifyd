@@ -29,7 +29,7 @@ typedef deque<ndJsonResponse *> ndResponseQueue;
 class ndSinkThread : public ndThread
 {
 public:
-    ndSinkThread();
+    ndSinkThread(int16_t cpu = -1);
     virtual ~ndSinkThread();
 
     virtual void *Entry(void);

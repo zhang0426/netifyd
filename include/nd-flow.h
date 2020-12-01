@@ -56,9 +56,7 @@ typedef unordered_map<string, string> nd_flow_kvmap;
 class ndFlow
 {
 public:
-    const nd_ifaces::iterator &iface;
-//    char iface_name[IFNAMSIZ];
-//    bool internal;
+    nd_ifaces::iterator iface;
 
     int16_t dpi_thread_id;
 
@@ -247,8 +245,7 @@ public:
     nd_flow_capture capture;
     char capture_filename[sizeof(ND_FLOW_CAPTURE_TEMPLATE)];
 
-//    ndFlow(const ndFlow &flow) : ndFlow(flow.iface) {};
-    ndFlow(const nd_ifaces::iterator &iface);
+    ndFlow(nd_ifaces::iterator iface);
     virtual ~ndFlow();
 
     void hash(const string &device, bool hash_mdata = false,

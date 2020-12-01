@@ -89,7 +89,7 @@ typedef unordered_map<string, ndConntrackFlow *> nd_ct_flow_map;
 class ndConntrackThread : public ndThread
 {
 public:
-    ndConntrackThread();
+    ndConntrackThread(int16_t cpu = -1);
     virtual ~ndConntrackThread();
 
     virtual void *Entry(void);

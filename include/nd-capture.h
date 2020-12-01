@@ -32,14 +32,8 @@ typedef queue<nd_pkt_pair> nd_pkt_queue;
 class ndPacketQueue
 {
 public:
-    ndPacketQueue(const string &tag) : tag(tag), pkt_queue_size(0) { }
-    virtual ~ndPacketQueue() {
-        while (! pkt_queue.empty()) {
-            delete pkt_queue.front().first;
-            delete [] pkt_queue.front().second;
-            pkt_queue.pop();
-        }
-    }
+    ndPacketQueue(const string &tag);
+    virtual ~ndPacketQueue();
 
     bool empty(void) { return pkt_queue.empty(); }
     size_t size(void) { return pkt_queue.size(); }
@@ -59,7 +53,7 @@ class ndCaptureThread : public ndThread
 public:
     ndCaptureThread(
         int16_t cpu,
-        const nd_ifaces::iterator &iface,
+        nd_ifaces::iterator iface,
         const uint8_t *dev_mac,
         ndSocketThread *thread_socket,
         const nd_detection_threads &threads_dpi,
@@ -76,7 +70,7 @@ public:
     int GetCaptureStats(struct pcap_stat &stats);
 
 protected:
-    const nd_ifaces::iterator &iface;
+    nd_ifaces::iterator iface;
     uint8_t dev_mac[ETH_ALEN];
     ndSocketThread *thread_socket;
     bool capture_unknown_flows;

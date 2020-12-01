@@ -59,77 +59,34 @@ using namespace std;
 extern nd_global_config nd_config;
 extern nd_device_ethers device_ethers;
 
-ndFlow::ndFlow(const nd_ifaces::iterator &iface)
+ndFlow::ndFlow(nd_ifaces::iterator iface)
     : iface(iface), dpi_thread_id(-1), ip_version(0), ip_protocol(0), vlan_id(0),
+    flags{}, detection_guessed(0),
 #ifdef _ND_USE_CONNTRACK
     ct_id(0), ct_mark(0),
 #endif
     ts_first_seen(0), ts_first_update(0), ts_last_seen(0),
+    lower_type(ndNETLINK_ATYPE_UNKNOWN), upper_type(ndNETLINK_ATYPE_UNKNOWN),
+    lower_map(LOWER_UNKNOWN), other_type(OTHER_UNKNOWN),
+    lower_mac{}, upper_mac{}, lower_addr{}, upper_addr{},
+    lower_addr4(NULL), lower_addr6(NULL), upper_addr4(NULL), upper_addr6(NULL),
+    lower_ip{}, upper_ip{},
     lower_port(0), upper_port(0),
-    lower_map(LOWER_UNKNOWN), other_type(OTHER_UNKNOWN), tunnel_type(TUNNEL_NONE),
+    tunnel_type(TUNNEL_NONE), gtp{},
     lower_bytes(0), upper_bytes(0), total_bytes(0),
     lower_packets(0), upper_packets(0), total_packets(0),
-    detection_guessed(0),
-    ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
-    privacy_mask(0), origin(0), direction(0)
+    detected_protocol{}, ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
+    digest_lower{}, digest_mdata{},
+    host_server_name{}, ssl{},
+    privacy_mask(0), origin(0), direction(0),
+    capture_filename{}
 {
-    memset(&flags, 0, sizeof(flags));
-    memset(lower_mac, 0, ETH_ALEN);
-    memset(upper_mac, 0, ETH_ALEN);
-
-    memset(&lower_addr, 0, sizeof(struct sockaddr_storage));
-    memset(&upper_addr, 0, sizeof(struct sockaddr_storage));
-
     lower_addr4 = (struct sockaddr_in *)&lower_addr;
     lower_addr6 = (struct sockaddr_in6 *)&lower_addr;
     upper_addr4 = (struct sockaddr_in *)&upper_addr;
     upper_addr6 = (struct sockaddr_in6 *)&upper_addr;
 
-    memset(lower_ip, 0, INET6_ADDRSTRLEN);
-    memset(upper_ip, 0, INET6_ADDRSTRLEN);
-
     gtp.version = 0xFF;
-    gtp.ip_version = 0;
-    gtp.lower_teid = gtp.upper_teid = 0;
-    memset(&gtp.lower_addr, 0, sizeof(struct sockaddr_storage));
-    memset(&gtp.upper_addr, 0, sizeof(struct sockaddr_storage));
-    gtp.lower_port = gtp.upper_port = 0;
-    gtp.lower_map = LOWER_UNKNOWN;
-    gtp.other_type = OTHER_UNKNOWN;
-
-    memset(&detected_protocol, 0, sizeof(ndpi_protocol));
-
-    memset(digest_lower, 0, SHA1_DIGEST_LENGTH);
-    memset(digest_mdata, 0, SHA1_DIGEST_LENGTH);
-
-    memset(host_server_name, 0, ND_MAX_HOSTNAME);
-
-    memset(http.user_agent, 0, ND_FLOW_UA_LEN);
-    memset(http.url, 0, ND_FLOW_URL_LEN);
-
-    memset(dhcp.fingerprint, 0, ND_FLOW_DHCPFP_LEN);
-    memset(dhcp.class_ident, 0, ND_FLOW_DHCPCI_LEN);
-
-    memset(ssh.client_agent, 0, ND_FLOW_SSH_UALEN);
-    memset(ssh.server_agent, 0, ND_FLOW_SSH_UALEN);
-
-    ssl.version = 0;
-    ssl.cipher_suite = 0;
-    memset(ssl.client_sni, 0, ND_FLOW_SSL_CNLEN);
-    memset(ssl.server_cn, 0, ND_FLOW_SSL_CNLEN);
-    memset(ssl.server_organization, 0, ND_FLOW_SSL_ORGLEN);
-    memset(ssl.client_ja3, 0, ND_FLOW_SSL_JA3LEN);
-    memset(ssl.server_ja3, 0, ND_FLOW_SSL_JA3LEN);
-    memset(ssl.cert_fingerprint, 0, ND_FLOW_SSL_HASH_LEN);
-
-    smtp.tls = false;
-
-    bt.info_hash_valid = 0;
-    memset(bt.info_hash, 0, ND_FLOW_BTIHASH_LEN);
-
-    memset(mdns.answer, 0, ND_FLOW_MDNS_ANSLEN);
-
-    memset(capture_filename, 0, sizeof(ND_FLOW_CAPTURE_TEMPLATE));
 }
 
 ndFlow::~ndFlow()
@@ -467,10 +424,8 @@ void ndFlow::print(struct ndpi_detection_module_struct *ndpi)
 
     nd_flow_printf(
         "%s: [%c%c%c%c%c%c] %s %s:%hu %c%c%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
-        //iface->second.c_str(),
-        //(iface->first) ? 'i' : 'e',
-        "lo",
-        (true) ? 'i' : 'e',
+        iface->second.c_str(),
+        (iface->first) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         flags.ip_nat ? 'n' : '-',
         (detection_guessed & ND_FLOW_GUESS_PROTO) ? 'g' : '-',

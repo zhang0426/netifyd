@@ -353,6 +353,14 @@ void nd_iface_name(const string &iface, string &result)
         result = iface.substr(0, p);
 }
 
+void nd_capture_filename(const string &iface, string &result)
+{
+    result = iface;
+    size_t p = string::npos;
+    if ((p = iface.find_first_of(",")) != string::npos)
+        result = iface.substr(p + 1);
+}
+
 bool nd_is_ipaddr(const char *ip)
 {
     struct in_addr addr4;

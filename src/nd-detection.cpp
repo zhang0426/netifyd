@@ -383,80 +383,9 @@ void *ndDetectionThread::Entry(void)
     while (terminate == false);
 
     nd_debug_printf("%s: detection thread ended on CPU: %hu\n", tag.c_str(), cpu);
-#if 0
-    nd_flow_map::iterator i = flows->begin();
-    while (i != flows->end()) {
 
-        if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
-            i->second->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
-
-            json j;
-
-            j["type"] = "flow_purge";
-            j["reason"] = "terminate";
-            j["interface"] = tag;
-            j["internal"] = internal;
-            j["established"] = false;
-
-            json jf;
-            i->second->json_encode(jf, ndpi, ndFlow::ENCODE_STATS | ndFlow::ENCODE_TUNNELS);
-            j["flow"] = jf;
-
-            string json_string;
-            nd_json_to_string(j, json_string, false);
-            json_string.append("\n");
-#if 0
-            nd_debug_printf("%s: Purge %3u: %s\n", tag.c_str(), ++purged,
-                jf["digest"].get<string>().c_str());
-#endif
-            thread_socket->QueueWrite(json_string);
-        }
-
-        i++;
-    }
-#endif
     return NULL;
 }
-
-#if 0
-// XXX: Not thread-safe!
-// XXX: Ensure the object is locked before calling.
-void ndDetectionThread::DumpFlows(void)
-{
-    unsigned flow_count = 0;
-
-    if (! thread_socket) return;
-
-    for (nd_flow_map::const_iterator i = flows->begin(); i != flows->end(); i++) {
-
-        if (i->second->flags.detection_complete == false) continue;
-        if (! ND_FLOW_DUMP_UNKNOWN &&
-            i->second->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) continue;
-
-        json j;
-
-        j["type"] = "flow";
-        j["interface"] = tag;
-        j["internal"] = internal;
-        j["established"] = true;
-
-        json jf;
-        i->second->json_encode(jf, ndpi, ndFlow::ENCODE_METADATA);
-
-        j["flow"] = jf;
-
-        string json_string;
-        nd_json_to_string(j, json_string, false);
-        json_string.append("\n");
-
-        thread_socket->QueueWrite(json_string);
-
-        flow_count++;
-    }
-
-    nd_debug_printf("%s: dumped %lu flow(s).\n", tag.c_str(), flow_count);
-}
-#endif
 
 void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
 {
@@ -596,7 +525,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
         }
 
         // Sanitize host server name; RFC 952 plus underscore for SSDP.
-        for(int i = 0;
+        for(unsigned i = 0;
             i < ND_MAX_HOSTNAME &&
             i < sizeof(entry->flow->ndpi_flow->host_server_name); i++) {
 
@@ -811,7 +740,8 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
 #endif
         }
 
-        if (ND_USE_FHC && entry->flow->lower_port != 0 && entry->flow->upper_port != 0) {
+        if (ND_USE_FHC &&
+            entry->flow->lower_port != 0 && entry->flow->upper_port != 0) {
             if (! fhc->pop(flow_digest, flow_digest_mdata)) {
 
                 entry->flow->hash(tag, true);
@@ -842,28 +772,12 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 (const char *)entry->flow->digest_mdata, SHA1_DIGEST_LENGTH
             );
         }
+
         struct sockaddr_in *laddr4 = entry->flow->lower_addr4;
         struct sockaddr_in6 *laddr6 = entry->flow->lower_addr6;
         struct sockaddr_in *uaddr4 = entry->flow->upper_addr4;
         struct sockaddr_in6 *uaddr6 = entry->flow->upper_addr6;
-#if 0
-        if (ND_PRIVATE_EXTADDR &&
-            internal == false && pcap_datalink_type == DLT_EN10MB) {
 
-            if (! memcmp(dev_mac, entry->flow->lower_mac, ETH_ALEN)) {
-                if (entry->flow->ip_version == 4)
-                    laddr4 = (struct sockaddr_in *)&private_addrs.first;
-                else
-                    laddr6 = (struct sockaddr_in6 *)&private_addrs.second;
-            }
-            else if (! memcmp(dev_mac, entry->flow->upper_mac, ETH_ALEN)) {
-                if (entry->flow->ip_version == 4)
-                    uaddr4 = (struct sockaddr_in *)&private_addrs.first;
-                else
-                    uaddr6 = (struct sockaddr_in6 *)&private_addrs.second;
-            }
-        }
-#endif
         switch (entry->flow->ip_version) {
         case 4:
             inet_ntop(AF_INET, &laddr4->sin_addr.s_addr,
@@ -884,9 +798,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 tag.c_str(), entry->flow->ip_version);
             throw ndDetectionThreadException(strerror(EINVAL));
         }
-#if 0
 #ifdef _ND_USE_NETLINK
-        nd_debug_printf("device: %s\n", entry->flow->iface->second.c_str());
         nd_device_addrs *device_addrs = devices[entry->flow->iface->second];
         if (device_addrs != NULL) {
             for (int t = ndFlow::TYPE_LOWER; t < ndFlow::TYPE_MAX; t++) {
@@ -941,8 +853,6 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             }
         }
 #endif
-#endif
-#if 0
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
         if (! entry->flow->iface->first && thread_conntrack != NULL) {
             if ((entry->flow->lower_type == ndNETLINK_ATYPE_LOCALIP &&
@@ -953,7 +863,6 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 thread_conntrack->ClassifyFlow(entry->flow);
             }
         }
-#endif
 #endif
         for (vector<uint8_t *>::const_iterator i =
             nd_config.privacy_filter_mac.begin();

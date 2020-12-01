@@ -228,6 +228,20 @@ struct __attribute__((packed)) nd_gtpv2_header_t
 };
 #endif // _ND_DISSECT_GTP
 
+ndPacketQueue::ndPacketQueue(const string &tag) : pkt_queue_size(0)
+{
+    nd_iface_name(tag, this->tag);
+}
+
+ndPacketQueue::~ndPacketQueue()
+{
+    while (! pkt_queue.empty()) {
+        delete pkt_queue.front().first;
+        delete [] pkt_queue.front().second;
+        pkt_queue.pop();
+    }
+}
+
 size_t ndPacketQueue::push(struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data)
 {
     size_t dropped = 0;
@@ -298,7 +312,7 @@ void ndPacketQueue::pop(const string &oper)
 
 ndCaptureThread::ndCaptureThread(
     int16_t cpu,
-    const nd_ifaces::iterator &iface,
+    nd_ifaces::iterator iface,
     const uint8_t *dev_mac,
     ndSocketThread *thread_socket,
     const nd_detection_threads &threads_dpi,
@@ -317,12 +331,10 @@ ndCaptureThread::ndCaptureThread(
 {
     memset(stats, 0, sizeof(nd_packet_stats));
 
-    size_t p = string::npos;
-    if ((p = tag.find_first_of(",")) != string::npos) {
-        pcap_file = tag.substr(p + 1);
-        tag = tag.substr(0, p);
+    nd_iface_name(iface->second, tag);
+    nd_capture_filename(iface->second, pcap_file);
+    if (pcap_file.size())
         nd_debug_printf("%s: capture file: %s\n", tag.c_str(), pcap_file.c_str());
-    }
 
     private_addrs.first.ss_family = AF_INET;
     nd_private_ipaddr(private_addr, private_addrs.first);
@@ -333,7 +345,7 @@ ndCaptureThread::ndCaptureThread(
     memcpy(this->dev_mac, dev_mac, ETH_ALEN);
     nd_debug_printf(
         "%s: hwaddr: %02hhx:%02hhx:%02hhx:%02hhx:%02hx:%02hhx\n",
-        iface->second.c_str(),
+        tag.c_str(),
         dev_mac[0], dev_mac[1], dev_mac[2],
         dev_mac[3], dev_mac[4], dev_mac[5]
     );
@@ -545,7 +557,7 @@ pcap_t *ndCaptureThread::OpenCapture(void)
         if ((pcap_fd = pcap_get_selectable_fd(pcap_new)) < 0)
             nd_debug_printf("%s: pcap_get_selectable_fd: -1\n", tag.c_str());
 
-        nd_device_filter::const_iterator i = nd_config.device_filters.find(iface->second);
+        nd_device_filter::const_iterator i = nd_config.device_filters.find(tag);
 
         if (i != nd_config.device_filters.end()) {
 
@@ -622,8 +634,8 @@ int ndCaptureThread::GetCaptureStats(struct pcap_stat &stats)
 
 void ndCaptureThread::ProcessPacket(void)
 {
-    ndFlow *nf;
     nd_flow_insert fi;
+    ndFlow *nf, flow(iface);
 
     const struct ether_header *hdr_eth = NULL;
     const struct sll_header *hdr_sll = NULL;
@@ -637,14 +649,11 @@ void ndCaptureThread::ProcessPacket(void)
 #endif
     const uint8_t *l3 = NULL, *l4 = NULL, *pkt = NULL;
     uint16_t l2_len, l3_len, l4_len = 0, pkt_len = 0;
-
     uint16_t type = 0;
     uint16_t ppp_proto;
     uint16_t frag_off = 0;
     uint8_t vlan_packet = 0;
     int addr_cmp = 0;
-
-    ndFlow flow(iface);
 
     uint64_t ts_pkt = ((uint64_t)pkt_header->ts.tv_sec) *
             ND_DETECTION_TICKS +
@@ -1159,9 +1168,16 @@ nd_process_ip:
         }
     }
     else {
+        // TODO: Investigate this copy constructor!
         nf = new ndFlow(flow);
-
         if (nf == NULL) throw ndCaptureThreadException(strerror(ENOMEM));
+
+        nf->lower_addr4 = (struct sockaddr_in *)&nf->lower_addr;
+        nf->lower_addr6 = (struct sockaddr_in6 *)&nf->lower_addr;
+        nf->upper_addr4 = (struct sockaddr_in *)&nf->upper_addr;
+        nf->upper_addr6 = (struct sockaddr_in6 *)&nf->upper_addr;
+
+        nf->gtp.version = 0xFF;
 
         nf->direction = addr_cmp;
 
@@ -1248,7 +1264,14 @@ nd_process_ip:
         (hdr_tcp->th_flags & TH_FIN || hdr_tcp->th_flags & TH_RST))
         nf->flags.tcp_fin = true;
 
-    if (nf->flags.detection_complete) return;
+    if (nf->flags.detection_complete
+        || (nf->ip_protocol != IPPROTO_TCP &&
+            nf->ip_protocol != IPPROTO_UDP)
+        || (nf->ip_protocol == IPPROTO_UDP &&
+            nf->total_packets > nd_config.max_udp_pkts)
+        || (nf->ip_protocol == IPPROTO_TCP &&
+            nf->total_packets > nd_config.max_tcp_pkts))
+        return;
 
     if (nf->dpi_thread_id < 0) {
         nf->dpi_thread_id = dpi_thread_id;
@@ -1258,7 +1281,6 @@ nd_process_ip:
     nd_detection_threads::const_iterator idpi = threads_dpi.find(nf->dpi_thread_id);
 
     if (idpi != threads_dpi.end()) {
-        //nd_debug_printf("queue: %p, %hd\n", idpi->second, nf->dpi_thread_id);
         idpi->second->QueuePacket(
             nf,
             (nf->ip_version == 4) ?

@@ -210,6 +210,12 @@ static void nd_config_init(void)
     nd_config.ttl_idle_tcp_flow = ND_TTL_IDLE_TCP_FLOW * 1000;
     nd_config.update_interval = ND_STATS_INTERVAL;
     nd_config.update_imf = 1;
+    nd_config.ca_capture_base = 0;
+    nd_config.ca_conntrack = -1;
+    nd_config.ca_detection_base = 0;
+    nd_config.ca_detection_cores = -1;
+    nd_config.ca_sink = -1;
+    nd_config.ca_socket = -1;
 
     memset(nd_config.digest_sink_config, 0, SHA1_DIGEST_LENGTH);
 
@@ -328,6 +334,20 @@ static int nd_config_load(void)
 
     ND_GF_SET_FLAG(ndGF_CAPTURE_UNKNOWN_FLOWS,
         reader.GetBoolean("netifyd", "capture_unknown_flows", false));
+
+    // Threading section
+    nd_config.ca_capture_base = (int16_t)reader.GetInteger(
+        "threads", "capture_base", nd_config.ca_capture_base);
+    nd_config.ca_conntrack = (int16_t)reader.GetInteger(
+        "threads", "conntrack", nd_config.ca_conntrack);
+    nd_config.ca_detection_base = (int16_t)reader.GetInteger(
+        "threads", "detection_base", nd_config.ca_detection_base);
+    nd_config.ca_detection_cores = (int16_t)reader.GetInteger(
+        "threads", "detection_cores", nd_config.ca_detection_cores);
+    nd_config.ca_sink = (int16_t)reader.GetInteger(
+        "threads", "sink", nd_config.ca_sink);
+    nd_config.ca_socket = (int16_t)reader.GetInteger(
+        "threads", "socket", nd_config.ca_socket);
 
     // Flow Hash Cache section
     ND_GF_SET_FLAG(ndGF_USE_FHC,
@@ -496,9 +516,15 @@ static int nd_config_load(void)
     return 0;
 }
 
-#define _ND_LO_ENABLE_SINK      1
-#define _ND_LO_DISABLE_SINK     2
-#define _ND_LO_FORCE_RESET      3
+#define _ND_LO_ENABLE_SINK          1
+#define _ND_LO_DISABLE_SINK         2
+#define _ND_LO_FORCE_RESET          3
+#define _ND_LO_CA_CAPTURE_BASE      4
+#define _ND_LO_CA_CONNTRACK         5
+#define _ND_LO_CA_DETECTION_BASE    6
+#define _ND_LO_CA_DETECTION_CORES   7
+#define _ND_LO_CA_SINK              8
+#define _ND_LO_CA_SOCKET            9
 
 static int nd_config_set_option(int option)
 {
@@ -604,7 +630,10 @@ static int nd_start_capture_threads(void)
     }
 
     try {
-        int16_t cpu = 0;
+        int16_t cpu = (
+                nd_config.ca_capture_base > -1 &&
+                nd_config.ca_capture_base < (int16_t)nda_stats.cpus
+            ) ? nd_config.ca_capture_base : 0;
         string netlink_dev;
         uint8_t private_addr = 0;
         uint8_t mac[ETH_ALEN];
@@ -724,13 +753,22 @@ static int nd_start_detection_threads(void)
     ndpi_global_init();
 
     try {
-        int16_t cpu = 0;
+        int16_t cpu = (
+                nd_config.ca_detection_base > -1 &&
+                nd_config.ca_detection_base < (int16_t)nda_stats.cpus
+            ) ? nd_config.ca_detection_base : 0;
+        int16_t cpus = (
+                nd_config.ca_detection_cores > (int16_t)nda_stats.cpus ||
+                nd_config.ca_detection_cores <= 0
+            ) ? (int16_t)nda_stats.cpus : nd_config.ca_detection_cores;
 
-        for (cpu = 0; cpu < (int16_t)nda_stats.cpus; cpu++) {
+        nd_debug_printf("Creating %hd detection threads at offset: %hd\n", cpus, cpu);
+
+        for (int16_t i = 0; i < cpus; i++) {
             ostringstream os;
             os << "dpi" << cpu;
 
-            detection_threads[cpu] = new ndDetectionThread(
+            detection_threads[i] = new ndDetectionThread(
                 cpu,
                 os.str(),
 #ifdef _ND_USE_NETLINK
@@ -745,7 +783,9 @@ static int nd_start_detection_threads(void)
                 (uint8_t)cpu
             );
 
-            detection_threads[cpu]->Create();
+            detection_threads[i]->Create();
+
+            if (++cpu == cpus) cpu = 0;
         }
     }
     catch (exception &e) {
@@ -760,11 +800,10 @@ static void nd_stop_detection_threads(void)
 {
     if (detection_threads.size() == 0) return;
 
-    uint16_t cpu = 0;
-
-    for (cpu = 0; cpu < (uint16_t)nda_stats.cpus; cpu++) {
-        detection_threads[cpu]->Terminate();
-        delete detection_threads[cpu];
+    for (nd_detection_threads::iterator i = detection_threads.begin();
+        i != detection_threads.end(); i++) {
+        i->second->Terminate();
+        delete i->second;
     }
 
     detection_threads.clear();
@@ -2215,6 +2254,9 @@ int main(int argc, char *argv[])
 
     nd_seed_rng();
 
+    memset(&nda_stats, 0, sizeof(nd_agent_stats));
+    nda_stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
+
     static struct option options[] =
     {
         { "config", 1, 0, 'c' },
@@ -2244,10 +2286,17 @@ int main(int argc, char *argv[])
         { "verbose", 0, 0, 'v' },
         { "version", 0, 0, 'V' },
 
-        { "enable-sink", 0, NULL, _ND_LO_ENABLE_SINK },
-        { "disable-sink", 0, NULL, _ND_LO_DISABLE_SINK },
+        { "enable-sink", 0, 0, _ND_LO_ENABLE_SINK },
+        { "disable-sink", 0, 0, _ND_LO_DISABLE_SINK },
 
-        { "force-reset", 0, NULL, _ND_LO_FORCE_RESET },
+        { "force-reset", 0, 0, _ND_LO_FORCE_RESET },
+
+        { "thread-capture-base", 1, 0, _ND_LO_CA_CAPTURE_BASE },
+        { "thread-conntrack", 1, 0, _ND_LO_CA_CONNTRACK },
+        { "thread-detection-base", 1, 0, _ND_LO_CA_DETECTION_BASE },
+        { "thread-detection-cores", 1, 0, _ND_LO_CA_DETECTION_CORES },
+        { "thread-sink", 1, 0, _ND_LO_CA_SINK },
+        { "thread-socket", 1, 0, _ND_LO_CA_SOCKET },
 
         { NULL, 0, 0, 0 }
     };
@@ -2266,6 +2315,48 @@ int main(int argc, char *argv[])
         case _ND_LO_FORCE_RESET:
             nd_force_reset();
             exit(0);
+        case _ND_LO_CA_CAPTURE_BASE:
+            nd_config.ca_capture_base = (int16_t)atoi(optarg);
+            if (nd_config.ca_capture_base > nda_stats.cpus) {
+                fprintf(stderr, "Capture thread base greater than online cores.\n");
+                exit(1);
+            }
+            break;
+        case _ND_LO_CA_CONNTRACK:
+            nd_config.ca_conntrack = (int16_t)atoi(optarg);
+            if (nd_config.ca_conntrack > nda_stats.cpus) {
+                fprintf(stderr, "Conntrack thread ID greater than online cores.\n");
+                exit(1);
+            }
+            break;
+        case _ND_LO_CA_DETECTION_BASE:
+            nd_config.ca_detection_base = (int16_t)atoi(optarg);
+            if (nd_config.ca_detection_base > nda_stats.cpus) {
+                fprintf(stderr, "Detection thread base greater than online cores.\n");
+                exit(1);
+            }
+            break;
+        case _ND_LO_CA_DETECTION_CORES:
+            nd_config.ca_detection_cores = (int16_t)atoi(optarg);
+            if (nd_config.ca_detection_cores > nda_stats.cpus) {
+                fprintf(stderr, "Detection cores greater than online cores.\n");
+                exit(1);
+            }
+            break;
+        case _ND_LO_CA_SINK:
+            nd_config.ca_sink = (int16_t)atoi(optarg);
+            if (nd_config.ca_sink > nda_stats.cpus) {
+                fprintf(stderr, "Sink thread ID greater than online cores.\n");
+                exit(1);
+            }
+            break;
+        case _ND_LO_CA_SOCKET:
+            nd_config.ca_socket = (int16_t)atoi(optarg);
+            if (nd_config.ca_socket > nda_stats.cpus) {
+                fprintf(stderr, "Socket thread ID greater than online cores.\n");
+                exit(1);
+            }
+            break;
         case '?':
             fprintf(stderr, "Try `--help' for more information.\n");
             return 1;
@@ -2509,7 +2600,6 @@ int main(int argc, char *argv[])
         fclose(hpid);
     }
 
-    memset(&nda_stats, 0, sizeof(nd_agent_stats));
     memset(&pkt_totals, 0, sizeof(nd_packet_stats));
 
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &nda_stats.ts_epoch) != 0) {
@@ -2547,15 +2637,15 @@ int main(int argc, char *argv[])
     try {
 #ifdef _ND_USE_CONNTRACK
         if (ND_USE_CONNTRACK) {
-            thread_conntrack = new ndConntrackThread();
+            thread_conntrack = new ndConntrackThread(nd_config.ca_conntrack);
             thread_conntrack->Create();
         }
 #endif
         if (nd_config.socket_host.size() || nd_config.socket_path.size())
-            thread_socket = new ndSocketThread();
+            thread_socket = new ndSocketThread(nd_config.ca_socket);
 
         if (ND_USE_SINK) {
-            thread_sink = new ndSinkThread();
+            thread_sink = new ndSinkThread(nd_config.ca_sink);
             thread_sink->Create();
         }
     }
@@ -2620,7 +2710,6 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    nda_stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
     nd_debug_printf("Online CPU cores: %ld\n", nda_stats.cpus);
 
     if (nd_start_detection_threads() < 0)

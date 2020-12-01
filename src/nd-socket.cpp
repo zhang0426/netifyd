@@ -673,8 +673,8 @@ void ndSocketBuffer::Pop(size_t bytes)
         throw ndSocketSystemException(__PRETTY_FUNCTION__, "recv(short)", EINVAL);
 }
 
-ndSocketThread::ndSocketThread()
-    : ndThread("nd-socket", -1)
+ndSocketThread::ndSocketThread(int16_t cpu)
+    : ndThread("nd-socket", (long)cpu)
 {
     vector<pair<string, string> >::const_iterator i;
     for (i = nd_config.socket_host.begin();

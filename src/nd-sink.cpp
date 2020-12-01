@@ -134,8 +134,8 @@ static int ndSinkThread_progress(void *user,
     return 0;
 }
 
-ndSinkThread::ndSinkThread()
-    : ndThread("nd-sink", -1),
+ndSinkThread::ndSinkThread(int16_t cpu)
+    : ndThread("nd-sink", (long)cpu),
     headers(NULL), headers_gz(NULL), pending_size(0), post_errors(0),
     update_imf(1), update_count(0)
 {

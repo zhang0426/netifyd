@@ -227,7 +227,7 @@ typedef unordered_map<int, ndSocketBuffer *> ndSocketBufferMap;
 class ndSocketThread : public ndThread
 {
 public:
-    ndSocketThread();
+    ndSocketThread(int16_t cpu = -1);
     virtual ~ndSocketThread();
 
     virtual void Terminate(void) { terminate = true; }

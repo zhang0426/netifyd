@@ -276,6 +276,12 @@ typedef struct nd_global_config_t {
     unsigned ttl_idle_tcp_flow;
     unsigned update_interval;
     unsigned update_imf;
+    int16_t ca_capture_base;
+    int16_t ca_conntrack;
+    int16_t ca_detection_base;
+    int16_t ca_detection_cores;
+    int16_t ca_sink;
+    int16_t ca_socket;
     FILE *h_flow;
     enum nd_dhc_save dhc_save;
     enum nd_fhc_save fhc_save;
