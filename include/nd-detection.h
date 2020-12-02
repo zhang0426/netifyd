@@ -29,12 +29,12 @@ public:
 class ndDetectionQueueEntry
 {
 public:
-    ndDetectionQueueEntry(ndFlow *flow, uint8_t *pkt_data, uint16_t pkt_length, int addr_cmp);
+    ndDetectionQueueEntry(ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp);
     virtual ~ndDetectionQueueEntry();
 
     ndFlow *flow;
     uint8_t *pkt_data;
-    uint16_t pkt_length;
+    uint32_t pkt_length;
     int addr_cmp;
 };
 
@@ -56,7 +56,7 @@ public:
         uint8_t private_addr = 0);
     virtual ~ndDetectionThread();
 
-    void QueuePacket(ndFlow *flow, uint8_t *pkt_data, uint16_t pkt_length, int addr_cmp);
+    void QueuePacket(ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp);
 
     struct ndpi_detection_module_struct *GetDetectionModule(void) {
         return ndpi;
@@ -77,10 +77,8 @@ protected:
     nd_private_addr private_addrs;
 
     nd_devices &devices;
-    ns_msg ns_h;
 
     ndDNSHintCache *dhc;
-
     ndFlowHashCache *fhc;
 
     string flow_digest, flow_digest_mdata;
@@ -94,9 +92,6 @@ protected:
     void DumpFlows(void);
 #endif
     void ProcessPacket(ndDetectionQueueEntry *entry);
-
-    bool ProcessDNSResponse(
-        const char *host, const uint8_t *pkt, uint16_t length);
 };
 
 typedef map<int16_t, ndDetectionThread *> nd_detection_threads;

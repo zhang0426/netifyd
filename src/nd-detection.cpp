@@ -153,11 +153,8 @@ using namespace std;
 // Enable to log discarded packets
 //#define _ND_LOG_PKT_DISCARD     1
 
-// Enable DNS response debug logging
-//#define _ND_LOG_DNS_RESPONSE    1
-
 // Enable DNS hint cache debug logging
-//#define _ND_LOG_DHC             1
+#define _ND_LOG_DHC             1
 
 // Enable flow hash cache debug logging
 //#define _ND_LOG_FHC             1
@@ -231,7 +228,7 @@ struct __attribute__((packed)) nd_gtpv2_header_t
 #endif // _ND_DISSECT_GTP
 
 ndDetectionQueueEntry::ndDetectionQueueEntry(
-    ndFlow *flow, uint8_t *pkt_data, uint16_t pkt_length, int addr_cmp
+    ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp
 ) : flow(flow), pkt_data(NULL), pkt_length(pkt_length), addr_cmp(addr_cmp)
 {
     this->pkt_data = new uint8_t[pkt_length];
@@ -327,7 +324,7 @@ ndDetectionThread::~ndDetectionThread()
         tag.c_str(), flows);
 }
 
-void ndDetectionThread::QueuePacket(ndFlow *flow, uint8_t *pkt_data, uint16_t pkt_length, int addr_cmp)
+void ndDetectionThread::QueuePacket(ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp)
 {
     int rc;
 
@@ -378,9 +375,34 @@ void *ndDetectionThread::Entry(void)
                     ProcessPacket(entry);
                 delete entry;
             }
-        } while (entry != NULL);
+        } while (entry != NULL && terminate == false);
     }
     while (terminate == false);
+
+    if (pkt_queue.size() > 0) {
+        nd_debug_printf("%s: detection thread ending, flushing queued packets: %lu\n",
+            tag.c_str(), pkt_queue.size());
+
+        do {
+
+            Lock();
+
+            if (pkt_queue.size()) {
+                entry = pkt_queue.front();
+                pkt_queue.pop();
+            }
+            else
+                entry = NULL;
+
+            Unlock();
+
+            if (entry != NULL) {
+                if (! entry->flow->flags.detection_complete)
+                    ProcessPacket(entry);
+                delete entry;
+            }
+        } while (entry != NULL);
+    }
 
     nd_debug_printf("%s: detection thread ended on CPU: %hu\n", tag.c_str(), cpu);
 
@@ -697,49 +719,6 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             );
         }
 
-        if ((ndpi_proto == NDPI_PROTOCOL_DNS &&
-            dhc != NULL && entry->pkt_length > 12 &&
-            ProcessDNSResponse(entry->flow->host_server_name, entry->pkt_data, entry->pkt_length)) ||
-            ndpi_proto == NDPI_PROTOCOL_MDNS) {
-
-            // Rehash M/DNS flows:
-            // This is done to uniquely track queries that originate from
-            // the same local port.  Some devices re-use their local port
-            // which would cause additional queries to not be processed.
-            // Rehashing using the host_server_name as an additional key
-            // guarantees that we see all DNS queries/responses.
-#if 0
-            if (ndpi_proto == NDPI_PROTOCOL_DNS) {
-                entry->flow->hash(tag, false,
-                    (const uint8_t *)entry->flow->host_server_name,
-                    strnlen(entry->flow->host_server_name, ND_MAX_HOSTNAME));
-            }
-            else {
-                entry->flow->hash(tag, false,
-                    (const uint8_t *)entry->flow->mdns.answer,
-                    strnlen(entry->flow->mdns.answer, ND_FLOW_MDNS_ANSLEN));
-            }
-
-            flows->erase(fi.first);
-
-            memcpy(entry->flow->digest_mdata, entry->flow->digest_lower,
-                SHA1_DIGEST_LENGTH);
-            flow_digest.assign((const char *)entry->flow->digest_lower,
-                SHA1_DIGEST_LENGTH);
-
-            fi = flows->insert(nd_flow_pair(flow_digest, nf));
-
-            if (! fi.second) {
-                // Flow exists...  update stats and return.
-                *fi.first->second += *nf;
-
-                delete nf;
-
-                return;
-            }
-#endif
-        }
-
         if (ND_USE_FHC &&
             entry->flow->lower_port != 0 && entry->flow->upper_port != 0) {
             if (! fhc->pop(flow_digest, flow_digest_mdata)) {
@@ -928,85 +907,24 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
         }
 
 #endif
+        entry->flow->detected_protocol_name = strdup(
+            ndpi_get_proto_name(ndpi, entry->flow->detected_protocol.master_protocol)
+        );
+
+        if (entry->flow->detected_protocol.app_protocol != NDPI_PROTOCOL_UNKNOWN) {
+            entry->flow->detected_application_name = strdup(
+                ndpi_get_proto_name(
+                    ndpi, entry->flow->detected_protocol.app_protocol
+                )
+            );
+        }
+
         if ((ND_DEBUG && ND_VERBOSE) || nd_config.h_flow != stderr)
-            entry->flow->print(ndpi);
+            entry->flow->print();
 
         entry->flow->flags.detection_complete = true;
         entry->flow->release();
     }
-}
-
-bool ndDetectionThread::ProcessDNSResponse(
-    const char *host, const uint8_t *pkt, uint16_t length)
-{
-    ns_rr rr;
-    int rc = ns_initparse(pkt, length, &ns_h);
-
-    if (rc < 0) {
-#ifdef _ND_LOG_DHC
-        nd_debug_printf(
-            "%s: dns initparse error: %s\n", tag.c_str(), strerror(errno));
-#endif
-        return false;
-    }
-
-    if (ns_msg_getflag(ns_h, ns_f_rcode) != ns_r_noerror) {
-#ifdef _ND_LOG_DHC
-        nd_debug_printf(
-            "%s: dns response code: %hu\n", tag.c_str(),
-            ns_msg_getflag(ns_h, ns_f_rcode));
-#endif
-        return false;
-    }
-#ifdef _ND_LOG_DNS_RESPONSE
-    nd_debug_printf(
-        "%s: dns queries: %hu, answers: %hu\n",
-        tag.c_str(),
-        ns_msg_count(ns_h, ns_s_qd), ns_msg_count(ns_h, ns_s_an));
-#endif
-    for (uint16_t i = 0; i < ns_msg_count(ns_h, ns_s_an); i++) {
-        if (ns_parserr(&ns_h, ns_s_an, i, &rr)) {
-#ifdef _ND_LOG_DHC
-            nd_debug_printf(
-                "%s: dns error parsing RR %hu of %hu.\n", tag.c_str(),
-                i + 1, ns_msg_count(ns_h, ns_s_an));
-#endif
-            continue;
-        }
-
-        if (ns_rr_type(rr) != ns_t_a && ns_rr_type(rr) != ns_t_aaaa)
-            continue;
-
-        dhc->insert(
-            (ns_rr_type(rr) == ns_t_a) ? AF_INET : AF_INET6,
-            ns_rr_rdata(rr), host
-        );
-#ifdef _ND_LOG_DNS_RESPONSE
-        char addr[INET6_ADDRSTRLEN];
-        struct in_addr addr4;
-        struct in6_addr addr6;
-
-        if (ns_rr_type(rr) == ns_t_a) {
-            memcpy(&addr4, ns_rr_rdata(rr), sizeof(struct in_addr));
-            inet_ntop(AF_INET, &addr4, addr, INET_ADDRSTRLEN);
-        }
-        else {
-            memcpy(&addr6, ns_rr_rdata(rr), sizeof(struct in6_addr));
-            inet_ntop(AF_INET6, &addr6, addr, INET6_ADDRSTRLEN);
-        }
-
-#ifdef _ND_LOG_DHC
-        nd_debug_printf(
-            "%s: dns RR %s address: %s, ttl: %u, rlen: %hu: %s\n",
-            tag.c_str(), host,
-            (ns_rr_type(rr) == ns_t_a) ? "A" : "AAAA",
-            ns_rr_ttl(rr), ns_rr_rdlen(rr), addr);
-#endif // _ND_LOG_DHC
-
-#endif
-    }
-
-    return true;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

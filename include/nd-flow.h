@@ -158,6 +158,8 @@ public:
     uint32_t total_packets;
 
     ndpi_protocol detected_protocol;
+    char *detected_protocol_name;
+    char *detected_application_name;
 
     struct ndpi_flow_struct *ndpi_flow;
 
@@ -276,7 +278,7 @@ public:
     bool has_mdns_answer(void);
     bool has_ssdp_headers(void);
 
-    void print(struct ndpi_detection_module_struct *ndpi);
+    void print(void);
 
     void get_lower_map(
 #ifdef _ND_USE_NETLINK
@@ -293,8 +295,7 @@ public:
         ENCODE_ALL = (ENCODE_METADATA | ENCODE_TUNNELS | ENCODE_STATS)
     };
 
-    void json_encode(json &j,
-        struct ndpi_detection_module_struct *ndpi, uint8_t encode_includes = ENCODE_ALL);
+    void json_encode(json &j, uint8_t encode_includes = ENCODE_ALL);
 
     inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;

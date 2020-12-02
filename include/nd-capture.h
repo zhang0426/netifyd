@@ -59,6 +59,7 @@ public:
         const nd_detection_threads &threads_dpi,
         nd_flow_map *flow_map, nd_packet_stats *stats,
         nd_device_addrs *device_addrs = NULL,
+        ndDNSHintCache *dhc = NULL,
         uint8_t private_addr = 0);
     virtual ~ndCaptureThread();
 
@@ -93,6 +94,9 @@ protected:
 
     string flow_digest, flow_digest_mdata;
 
+    ns_msg ns_h;
+    ndDNSHintCache *dhc;
+
     ndPacketQueue pkt_queue;
 
     const nd_detection_threads &threads_dpi;
@@ -103,6 +107,9 @@ protected:
     void DumpFlows(void);
 #endif
     void ProcessPacket(void);
+
+    bool ProcessDNSResponse(
+        const char *host, const uint8_t *pkt, uint32_t length);
 };
 
 typedef map<string, ndCaptureThread *> nd_capture_threads;

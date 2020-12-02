@@ -655,6 +655,7 @@ static int nd_start_capture_threads(void)
                 flows[(*i).second],
                 stats[(*i).second],
                 devices[(*i).second],
+                dns_hint_cache,
                 (i->first) ? 0 : ++private_addr
             );
 
@@ -697,53 +698,16 @@ static void nd_stop_capture_threads(void)
     devices.clear();
 }
 
-static void nd_reap_capture_threads(void)
+static size_t nd_reap_capture_threads(void)
 {
-    if (capture_threads.size() == 0) return;
+    size_t threads = capture_threads.size();
 
-    nd_capture_threads::iterator thread_iter;
-    nd_flows::iterator flow_iter;
-    nd_stats::iterator stat_iter;
-    nd_devices::iterator device_iter;
-    nd_ifaces::iterator iface_iter = ifaces.begin();
-
-    while (iface_iter != ifaces.end()) {
-
-        thread_iter = capture_threads.find(iface_iter->second);
-        if (thread_iter == capture_threads.end() ||
-            ! thread_iter->second->HasTerminated()) {
-            iface_iter++;
-            continue;
-        }
-
-        flow_iter = flows.find(iface_iter->second);
-        if (flow_iter != flows.end()) {
-            for (nd_flow_map::iterator f = flow_iter->second->begin();
-                f != flow_iter->second->end(); f++) {
-                f->second->release();
-                delete f->second;
-            }
-
-            delete flow_iter->second;
-            flows.erase(flow_iter);
-        }
-
-        stat_iter = stats.find(iface_iter->second);
-        if (stat_iter != stats.end()) {
-            delete stat_iter->second;
-            stats.erase(stat_iter);
-        }
-
-        device_iter = devices.find(iface_iter->second);
-        if (device_iter != devices.end()) {
-            delete device_iter->second;
-            devices.erase(device_iter);
-        }
-
-        delete thread_iter->second;
-        capture_threads.erase(thread_iter);
-        iface_iter = ifaces.erase(iface_iter);
+    for (nd_capture_threads::iterator i = capture_threads.begin();
+        i != capture_threads.end(); i++) {
+        if (i->second->HasTerminated()) threads--;
     }
+
+    return threads;
 }
 
 static int nd_start_detection_threads(void)
@@ -1289,9 +1253,7 @@ static void nd_json_add_stats(json &parent,
     stats->pcap_last.ps_ifdrop = pcap->ps_ifdrop;
 }
 
-static void nd_json_add_flows(json &parent,
-    struct ndpi_detection_module_struct *ndpi,
-    const nd_flow_map *flows)
+static void nd_json_add_flows(json &parent, const nd_flow_map *flows)
 {
     for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
@@ -1300,7 +1262,7 @@ static void nd_json_add_flows(json &parent,
             || (! ND_UPLOAD_NAT_FLOWS && i->second->flags.ip_nat)) continue;
 
         json jf;
-        i->second->json_encode(jf, ndpi);
+        i->second->json_encode(jf);
 
         parent.push_back(jf);
 
@@ -1704,9 +1666,9 @@ static void nd_dump_stats(void)
 
             nd_json_add_stats(js, stats[i->first], &lpc_stat);
             j["stats"][iface_name] = js;
-#if 0
-            nd_json_add_flows(jf, i->second->GetDetectionModule(), flows[i->first]);
-#endif
+
+            nd_json_add_flows(jf, flows[i->first]);
+
             j["flows"][iface_name] = jf;
         }
 
@@ -2806,9 +2768,7 @@ int main(int argc, char *argv[])
             if (dns_hint_cache)
                 dns_hint_cache->purge();
 
-            nd_reap_capture_threads();
-
-            if (capture_threads.size() == 0) {
+            if (nd_reap_capture_threads() == 0) {
                 if (thread_sink == NULL ||
                     thread_sink->QueuePendingSize() == 0) {
                     nd_printf("Exiting, no remaining capture threads.\n");
@@ -2876,8 +2836,8 @@ int main(int argc, char *argv[])
 
     timer_delete(timer_id);
 
-    nd_stop_capture_threads();
     nd_stop_detection_threads();
+    nd_stop_capture_threads();
 
 #ifdef _ND_USE_PLUGINS
     nd_stop_services();

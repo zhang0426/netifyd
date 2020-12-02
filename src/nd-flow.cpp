@@ -75,7 +75,9 @@ ndFlow::ndFlow(nd_ifaces::iterator iface)
     tunnel_type(TUNNEL_NONE), gtp{},
     lower_bytes(0), upper_bytes(0), total_bytes(0),
     lower_packets(0), upper_packets(0), total_packets(0),
-    detected_protocol{}, ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
+    detected_protocol{},
+    detected_protocol_name(NULL), detected_application_name(NULL),
+    ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
     digest_lower{}, digest_mdata{},
     host_server_name{}, ssl{},
     privacy_mask(0), origin(0), direction(0),
@@ -92,6 +94,15 @@ ndFlow::ndFlow(nd_ifaces::iterator iface)
 ndFlow::~ndFlow()
 {
     release();
+
+    if (detected_protocol_name != NULL) {
+        free(detected_protocol_name);
+        detected_protocol_name = NULL;
+    }
+    if (detected_application_name != NULL) {
+        free(detected_application_name);
+        detected_application_name = NULL;
+    }
 }
 
 void ndFlow::hash(const string &device,
@@ -389,9 +400,8 @@ bool ndFlow::has_ssdp_headers(void)
     );
 }
 
-void ndFlow::print(struct ndpi_detection_module_struct *ndpi)
+void ndFlow::print(void)
 {
-    char *p = NULL, buffer[64];
     const char *lower_name = lower_ip, *upper_name = upper_ip;
 
     if (ND_DEBUG_WITH_ETHERS) {
@@ -411,20 +421,15 @@ void ndFlow::print(struct ndpi_detection_module_struct *ndpi)
             upper_name = i->second.c_str();
     }
 
-    if (detected_protocol.app_protocol) {
-        ndpi_protocol2name(ndpi,
-            detected_protocol, buffer, sizeof(buffer));
-        p = buffer;
-    }
-    else
-        p = ndpi_get_proto_name(ndpi, detected_protocol.master_protocol);
+    string iface_name;
+    nd_iface_name(iface->second, iface_name);
 
     string digest;
     nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
 
     nd_flow_printf(
-        "%s: [%c%c%c%c%c%c] %s %s:%hu %c%c%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
-        iface->second.c_str(),
+        "%s: [%c%c%c%c%c%c] %s%s%s %s:%hu %c%c%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
+        iface_name.c_str(),
         (iface->first) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         flags.ip_nat ? 'n' : '-',
@@ -434,7 +439,9 @@ void ndFlow::print(struct ndpi_detection_module_struct *ndpi)
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
             (privacy_mask & (PRIVATE_LOWER | PRIVATE_UPPER)) ? 'X' :
             '-',
-        p,
+        detected_protocol_name,
+        (detected_application_name != NULL) ? "." : "",
+        (detected_application_name != NULL) ? detected_application_name : "",
         lower_name, ntohs(lower_port),
         (origin == ORIGIN_LOWER || origin == ORIGIN_UNKNOWN) ? '-' : '<',
         (origin == ORIGIN_UNKNOWN) ? '?' : '-',
@@ -545,8 +552,7 @@ void ndFlow::get_lower_map(
     }
 }
 
-void ndFlow::json_encode(json &j,
-    struct ndpi_detection_module_struct *ndpi, uint8_t encode_includes)
+void ndFlow::json_encode(json &j, uint8_t encode_includes)
 {
     char mac_addr[ND_STR_ETHALEN + 1];
     string _other_type = "unknown";
@@ -705,13 +711,11 @@ void ndFlow::json_encode(json &j,
 
         j["detected_protocol"] =
             (unsigned)detected_protocol.master_protocol;
-        j["detected_protocol_name"] =
-            ndpi_get_proto_name(ndpi, detected_protocol.master_protocol);
+        j["detected_protocol_name"] = detected_protocol_name;
 
         j["detected_application"] =
             (unsigned)detected_protocol.app_protocol;
-        j["detected_application_name"] =
-            ndpi_get_proto_name(ndpi, detected_protocol.app_protocol);
+        j["detected_application_name"] = detected_protocol_name;
 
         j["detection_guessed"] = detection_guessed;
 
