@@ -41,62 +41,6 @@
 #include <sys/ioctl.h>
 
 #include <arpa/inet.h>
-#include <arpa/nameser.h>
-
-#include <net/if.h>
-#include <net/if_arp.h>
-#include <net/ethernet.h>
-#if HAVE_NET_PPP_DEFS_H
-#include <net/ppp_defs.h>
-#elif HAVE_LINUX_PPP_DEFS_H
-#include <linux/ppp_defs.h>
-#else
-#error Unable to find a usable ppp_defs include
-#endif
-
-#define __FAVOR_BSD 1
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/ip6.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-#undef __FAVOR_BSD
-
-#if !defined(ETHERTYPE_MPLS_UC)
- #if defined(ETHERTYPE_MPLS)
-  #define ETHERTYPE_MPLS_UC ETHERTYPE_MPLS
- #elif defined(ETH_P_MPLS_UC)
-  #define ETHERTYPE_MPLS_UC ETH_P_MPLS_UC
- #else
-  #error Unable to find suitable define for ETHERTYPE_MPLS_UC
- #endif
-#endif
-
-#if !defined(ETHERTYPE_MPLS_MC)
- #if defined(ETHERTYPE_MPLS_MCAST)
-  #define ETHERTYPE_MPLS_MC ETHERTYPE_MPLS_MCAST
- #elif defined(ETH_P_MPLS_MC)
-  #define ETHERTYPE_MPLS_MC ETH_P_MPLS_MC
- #else
-  #error Unable to find suitable define for ETHERTYPE_MPLS_MC
- #endif
-#endif
-
-#if !defined(ETHERTYPE_PPPOE)
- #if defined(ETH_P_PPP_SES)
-  #define ETHERTYPE_PPPOE ETH_P_PPP_SES
- #else
-  #error Unable to find suitable define for ETHERTYPE_PPPOE
- #endif
-#endif
-
-#if !defined(ETHERTYPE_PPPOEDISC)
- #if defined(ETH_P_PPP_DISC)
-  #define ETHERTYPE_PPPOEDISC ETH_P_PPP_DISC
- #else
-  #error Unable to find suitable define for ETHERTYPE_PPPOEDISC
- #endif
-#endif
 
 #include <unistd.h>
 #include <pthread.h>
@@ -124,11 +68,6 @@ using json = nlohmann::json;
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #endif
 
-#define _ND_PPP_PROTOCOL(p)	((((uint8_t *)(p))[0] << 8) + ((uint8_t *)(p))[1])
-
-#define _ND_GTP_U_PORT    2152
-#define _ND_GTP_G_PDU     0xff
-
 using namespace std;
 
 #include "netifyd.h"
@@ -150,82 +89,10 @@ using namespace std;
 #include "nd-signal.h"
 #include "nd-detection.h"
 
-// Enable to log discarded packets
-//#define _ND_LOG_PKT_DISCARD     1
-
-// Enable DNS hint cache debug logging
-#define _ND_LOG_DHC             1
-
 // Enable flow hash cache debug logging
 //#define _ND_LOG_FHC             1
 
-// Enable packet queue debug logging
-//#define _ND_LOG_PACKET_QUEUE    1
-
-// Enable GTP tunnel dissection
-#define _ND_DISSECT_GTP       1
-
 extern nd_global_config nd_config;
-
-struct __attribute__((packed)) nd_mpls_header_t
-{
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    uint32_t ttl:8, s:1, exp:3, label:20;
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    uint32_t label:20, exp:3, s:1, ttl:8;
-#else
-#error Endianess not defined (__BYTE_ORDER__).
-#endif
-};
-#ifdef _ND_DISSECT_GTP
-struct __attribute__((packed)) nd_gtpv1_header_t
-{
-    struct {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        uint8_t npdu_num:1;
-        uint8_t seq_num:1;
-        uint8_t ext_hdr:1;
-        uint8_t reserved:1;
-        uint8_t proto_type:1;
-        uint8_t version:3;
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-        uint8_t version:3;
-        uint8_t proto_type:1;
-        uint8_t reserved:1;
-        uint8_t ext_hdr:1;
-        uint8_t seq_num:1;
-        uint8_t npdu_num:1;
-#error Endianess not defined (__BYTE_ORDER__).
-#endif
-    } flags;
-
-    uint8_t type;
-    uint16_t length;
-    uint32_t teid;
-};
-
-struct __attribute__((packed)) nd_gtpv2_header_t
-{
-    struct {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        uint8_t reserved:3;
-        uint8_t teid:1;
-        uint8_t piggyback:1;
-        uint8_t version:3;
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-        uint8_t version:3;
-        uint8_t piggyback:1;
-        uint8_t teid:1;
-        uint8_t reserved:3;
-#error Endianess not defined (__BYTE_ORDER__).
-#endif
-    } flags;
-
-    uint8_t type;
-    uint16_t length;
-    uint32_t teid;
-};
-#endif // _ND_DISSECT_GTP
 
 ndDetectionQueueEntry::ndDetectionQueueEntry(
     ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp

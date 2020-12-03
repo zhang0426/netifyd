@@ -108,8 +108,7 @@ protected:
 #endif
     void ProcessPacket(void);
 
-    bool ProcessDNSResponse(
-        const char *host, const uint8_t *pkt, uint32_t length);
+    bool ProcessDNSPacket(const uint8_t *pkt, uint32_t length);
 };
 
 typedef map<string, ndCaptureThread *> nd_capture_threads;

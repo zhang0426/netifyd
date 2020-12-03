@@ -160,6 +160,9 @@ using namespace std;
 // Enable DNS hint cache debug logging
 //#define _ND_LOG_DHC             1
 
+// Enable DNS hint cache debug logging
+#define _ND_LOG_DHC             1
+
 // Enable flow hash cache debug logging
 //#define _ND_LOG_FHC             1
 
@@ -1187,8 +1190,6 @@ nd_process_ip:
         nf->upper_addr4 = (struct sockaddr_in *)&nf->upper_addr;
         nf->upper_addr6 = (struct sockaddr_in6 *)&nf->upper_addr;
 
-        nf->gtp.version = 0xFF;
-
         nf->direction = addr_cmp;
 
         fi = flows->insert(nd_flow_pair(flow_digest, nf));
@@ -1209,7 +1210,7 @@ nd_process_ip:
             nf->origin = ndFlow::ORIGIN_UPPER;
 
         // Try to refine flow origin for TCP flows using SYN/ACK flags
-        if (flow.ip_protocol == IPPROTO_TCP) {
+        if (nf->ip_protocol == IPPROTO_TCP) {
 
             if ((hdr_tcp->th_flags & TH_SYN)) {
 
@@ -1228,7 +1229,7 @@ nd_process_ip:
             }
         }
 
-        if (flow.tunnel_type == ndFlow::TUNNEL_GTP) {
+        if (nf->tunnel_type == ndFlow::TUNNEL_GTP) {
             switch (nf->origin) {
             case ndFlow::ORIGIN_LOWER:
                 nf->gtp.lower_teid = hdr_gtpv1->teid;
@@ -1273,11 +1274,19 @@ nd_process_ip:
     if (nf->ip_protocol == IPPROTO_TCP &&
         (hdr_tcp->th_flags & TH_FIN || hdr_tcp->th_flags & TH_RST))
         nf->flags.tcp_fin = true;
+
+    if (dhc != NULL && pkt != NULL && pkt_len > sizeof(struct nd_dns_header_t)) {
+        uint16_t lport = ntohs(nf->lower_port), uport = ntohs(nf->upper_port);
+
+        if (lport == 53 || uport == 53 || lport == 5355 || uport == 5355) {
+            if (ProcessDNSPacket(pkt, pkt_len)) {
+                nd_debug_printf("%s: DNS packet detected.\n", tag.c_str());
+            }
+        }
+    }
 #if 0
-    if ((ndpi_proto == NDPI_PROTOCOL_DNS &&
-        dhc != NULL && entry->pkt_length + entry->pkt_offset > 12 &&
-        ProcessDNSResponse(entry->flow->host_server_name, entry->pkt_data, entry->pkt_length + entry->pkt_offset)) ||
-        ndpi_proto == NDPI_PROTOCOL_MDNS) {
+        //ProcessDNSPacket(entry->flow->host_server_name, entry->pkt_data, entry->pkt_length + entry->pkt_offset)) ||
+        //ndpi_proto == NDPI_PROTOCOL_MDNS) {
 
         // Rehash M/DNS flows:
         // This is done to uniquely track queries that originate from
@@ -1407,8 +1416,7 @@ nd_process_ip:
     }
 }
 
-bool ndCaptureThread::ProcessDNSResponse(
-    const char *host, const uint8_t *pkt, uint32_t length)
+bool ndCaptureThread::ProcessDNSPacket(const uint8_t *pkt, uint32_t length)
 {
     ns_rr rr;
     int rc = ns_initparse(pkt, length, &ns_h);
@@ -1416,8 +1424,8 @@ bool ndCaptureThread::ProcessDNSResponse(
     if (rc < 0) {
 #ifdef _ND_LOG_DHC
         nd_debug_printf(
-            "%s: dns initparse error: %s, host: %s, length: %hu\n",
-            tag.c_str(), strerror(errno), host, length);
+            "%s: dns initparse error: %s, length: %hu\n",
+            tag.c_str(), strerror(errno), length);
 #endif
         return false;
     }
@@ -1430,12 +1438,13 @@ bool ndCaptureThread::ProcessDNSResponse(
 #endif
         return false;
     }
-#ifdef _ND_LOG_DNS_RESPONSE
+#ifdef _ND_LOG_DHC
     nd_debug_printf(
         "%s: dns queries: %hu, answers: %hu\n",
         tag.c_str(),
         ns_msg_count(ns_h, ns_s_qd), ns_msg_count(ns_h, ns_s_an));
 #endif
+#if 0
     for (uint16_t i = 0; i < ns_msg_count(ns_h, ns_s_an); i++) {
         if (ns_parserr(&ns_h, ns_s_an, i, &rr)) {
 #ifdef _ND_LOG_DHC
@@ -1474,7 +1483,7 @@ bool ndCaptureThread::ProcessDNSResponse(
             ns_rr_ttl(rr), ns_rr_rdlen(rr), addr);
 #endif // _ND_LOG_DHC
     }
-
+#endif
     return true;
 }
 
