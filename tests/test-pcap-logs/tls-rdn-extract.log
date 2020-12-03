@@ -1,1 +1,1 @@
-lo: [i4----] HTTPS.205.netify.office-365 10.0.0.1:31337 <-- 213.199.149.251:443 SSL S: *.officeapps.live.com
+lo: [i4----] HTTPS.205.netify.office-365 10.0.0.1:31337 --> 213.199.149.251:443 SSL C: ads1.msads.net S: *.officeapps.live.com

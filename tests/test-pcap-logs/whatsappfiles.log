@@ -1,2 +1,2 @@
-lo: [i4----] HTTPS.142.netify.whatsapp 185.60.216.53:443 <-- 192.168.2.29:49674 SSL C: mmg-fna.whatsapp.net S: *.whatsapp.net
-lo: [i4----] HTTPS.142.netify.whatsapp 185.60.216.53:443 <-- 192.168.2.29:49698 SSL C: mmg-fna.whatsapp.net
+lo: [i4-g--] HTTPS 185.60.216.53:443 <-- 192.168.2.29:49674
+lo: [i4-g--] HTTPS 185.60.216.53:443 <-- 192.168.2.29:49698

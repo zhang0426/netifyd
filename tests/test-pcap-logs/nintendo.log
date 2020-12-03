@@ -1,15 +1,13 @@
 lo: [i4----] Nintendo 91.8.243.35:49432 <-- 192.168.12.114:52119
 lo: [i4----] Nintendo 134.3.248.25:56955 <-- 192.168.12.114:52119
 lo: [i4----] Nintendo 109.21.255.11:50251 <-- 192.168.12.114:52119
-lo: [i4----] Nintendo 35.158.74.61:33335 <-- 192.168.12.114:52119
 lo: [i4-g--] HTTPS 54.187.10.185:443 --> 192.168.12.114:48328
+lo: [i4----] Nintendo 35.158.74.61:33335 <-- 192.168.12.114:52119
 lo: [i4----] DNS.10046.netify.nintendo 192.168.12.1:53 <-- 192.168.12.114:18874 H: e0d67c509fb203858ebcb2fe3f88c2aa.baas.nintendo.com
-lo: [i4--d-] HTTPS.10046.netify.nintendo 54.192.27.217:443 <-- 192.168.12.114:41517 H: e0d67c509fb203858ebcb2fe3f88c2aa.baas.nintendo.com SSL C: e0d67c509fb203858ebcb2fe3f88c2aa.baas.nintendo.com S: *.baas.nintendo.com
+lo: [i4-gd-] HTTPS.10263.netify.amazon-cloudfront 54.192.27.217:443 <-- 192.168.12.114:41517 H: d3fthpvv7fzx00.cloudfront.net
 lo: [i4-g--] Unknown 35.158.74.61:10025 <-- 192.168.12.114:55915
 lo: [i4----] DNS.10046.netify.nintendo 192.168.12.1:53 <-- 192.168.12.114:51035 H: e0d67c509fb203858ebcb2fe3f88c2aa.baas.nintendo.com
-lo: [i4--d-] HTTPS.10046.netify.nintendo 54.192.27.8:443 <-- 192.168.12.114:31329 H: e0d67c509fb203858ebcb2fe3f88c2aa.baas.nintendo.com SSL C: e0d67c509fb203858ebcb2fe3f88c2aa.baas.nintendo.com S: *.baas.nintendo.com
+lo: [i4-gd-] HTTPS.10263.netify.amazon-cloudfront 54.192.27.8:443 <-- 192.168.12.114:31329 H: d3fthpvv7fzx00.cloudfront.net
 lo: [i4----] Nintendo 185.118.169.65:27520 <-- 192.168.12.114:55915
-lo: [i4----] ICMP 151.6.184.100:0 --> 192.168.12.114:0
 lo: [i4----] Nintendo 93.237.131.235:56066 <-- 192.168.12.114:55915
 lo: [i4----] Nintendo 81.61.158.138:51769 <-- 192.168.12.114:55915
-lo: [i4----] ICMP 151.6.184.98:0 --> 192.168.12.114:0

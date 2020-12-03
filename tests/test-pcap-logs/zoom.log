@@ -1,26 +1,24 @@
 lo: [i4----] MDNS 192.168.1.117:5353 --> 224.0.0.251:5353
-lo: [i4----] SSL 167.99.215.164:4434 <-- 192.168.1.117:54863 SSL C: dati.ntop.org
+lo: [i4-g--] Unknown 167.99.215.164:4434 <-- 192.168.1.117:54863
 lo: [i4----] SSDP 192.168.1.117:57025 --> 239.255.255.250:1900
 lo: [i4----] NetBIOS 192.168.1.117:137 --> 192.168.1.255:137 H: workgroup
 lo: [i4----] DNS.10228.netify.zoom 192.168.1.1:53 <-- 192.168.1.117:64352 H: log.zoom.us
+lo: [i4-gd-] HTTPS.10228.netify.zoom 52.202.62.238:443 <-- 192.168.1.117:54864 H: log.zoom.us
 lo: [i4----] DNS.10036.netify.internal-network 192.168.1.1:53 <-- 192.168.1.117:65394 H: local
-lo: [i4----] ICMP 192.168.1.1:0 <-- 192.168.1.117:0
-lo: [i4--d-] HTTPS.10228.netify.zoom 52.202.62.238:443 <-- 192.168.1.117:54864 H: log.zoom.us SSL C: log.zoom.us S: *.zoom.us
 lo: [i4-g--] HTTPS 35.186.224.53:443 <-- 192.168.1.117:53872
-lo: [i4----] ICMP 162.255.38.14:0 <-- 192.168.1.117:0
 lo: [i4----] DHCP 192.168.0.1:68 --> 255.255.255.255:67 H: tl-sg116e
+lo: [i4-g--] HTTPS 52.202.62.196:443 <-- 192.168.1.117:54865
 lo: [i4----] DNS.10228.netify.zoom 192.168.1.1:53 <-- 192.168.1.117:62988 H: www3.zoom.us
-lo: [i4----] HTTPS.10228.netify.zoom 52.202.62.196:443 <-- 192.168.1.117:54865 SSL C: zoom.us S: *.zoom.us
-lo: [i4--d-] HTTPS.10228.netify.zoom 52.202.62.236:443 <-- 192.168.1.117:54866 H: www3.zoom.us SSL C: www3.zoom.us S: *.zoom.us
+lo: [i4-gd-] HTTPS.10228.netify.zoom 52.202.62.236:443 <-- 192.168.1.117:54866 H: www3.zoom.us
 lo: [i4----] Spotify.156.netify.spotify 192.168.1.117:57621 --> 192.168.1.255:57621
+lo: [i4-g--] HTTPS 192.168.1.117:54867 --> 213.19.144.105:443
+lo: [i4-g--] HTTPS 192.168.1.117:54868 --> 213.19.144.104:443
 lo: [i4----] DNS.10228.netify.zoom 192.168.1.1:53 <-- 192.168.1.117:62563 H: zoomfr85zc.zoom.us
+lo: [i4-gd-] HTTPS.10228.netify.zoom 192.168.1.117:54869 --> 213.244.140.85:443 H: zoomfr85zc.zoom.us
 lo: [i4----] DNS.10228.netify.zoom 192.168.1.1:53 <-- 192.168.1.117:58063 H: zoomfr84zc.zoom.us
-lo: [i4----] HTTPS.10228.netify.zoom 192.168.1.117:54867 --> 213.19.144.105:443 SSL C: zoomam105zc.zoom.us S: *.zoom.us
-lo: [i4--d-] HTTPS.10228.netify.zoom 192.168.1.117:54869 --> 213.244.140.85:443 H: zoomfr85zc.zoom.us SSL C: zoomfr85zc.zoom.us S: *.zoom.us
-lo: [i4----] HTTPS.10228.netify.zoom 192.168.1.117:54868 --> 213.19.144.104:443 SSL C: zoomam104zc.zoom.us S: *.zoom.us
-lo: [i4--d-] HTTPS.10228.netify.zoom 192.168.1.117:54870 --> 213.244.140.84:443 H: zoomfr84zc.zoom.us SSL C: zoomfr84zc.zoom.us S: *.zoom.us
+lo: [i4-gd-] HTTPS.10228.netify.zoom 192.168.1.117:54870 --> 213.244.140.84:443 H: zoomfr84zc.zoom.us
 lo: [i4----] DNS.10228.netify.zoom 192.168.1.1:53 <-- 192.168.1.117:51185 H: zoomfrn99mmr.zoom.us
-lo: [i4--d-] HTTPS.10228.netify.zoom 109.94.160.99:443 <-- 192.168.1.117:54871 H: zoomfrn99mmr.zoom.us SSL C: zoomfrn99mmr.zoom.us S: *.zoom.us
+lo: [i4-gd-] HTTPS.10228.netify.zoom 109.94.160.99:443 <-- 192.168.1.117:54871 H: zoomfrn99mmr.zoom.us
 lo: [i4--d-] Skype.10228.netify.zoom 109.94.160.99:8801 <-- 192.168.1.117:58327 H: zoomfrn99mmr.zoom.us
 lo: [i4--d-] Skype.10228.netify.zoom 109.94.160.99:8801 <-- 192.168.1.117:60620 H: zoomfrn99mmr.zoom.us
 lo: [i4--d-] Skype.10228.netify.zoom 109.94.160.99:8801 <-- 192.168.1.117:61731 H: zoomfrn99mmr.zoom.us

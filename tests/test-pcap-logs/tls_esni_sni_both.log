@@ -1,2 +1,2 @@
-lo: [i4----] HTTPS.206.netify.cloudflare 104.17.175.85:443 <-- 192.168.1.21:55500 SSL C: these-are-not-the-droids-youre-looking-for.com
-lo: [i4----] HTTPS.206.netify.cloudflare 104.17.175.85:443 <-- 192.168.1.21:55514 SSL C: you-think-thats-normal-tls-traffic-youre-seeing.com
+lo: [i4-g--] HTTPS.206.netify.cloudflare 104.17.175.85:443 <-- 192.168.1.21:55500
+lo: [i4-g--] HTTPS.206.netify.cloudflare 104.17.175.85:443 <-- 192.168.1.21:55514
