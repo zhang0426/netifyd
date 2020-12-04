@@ -1310,6 +1310,7 @@ nd_process_ip:
                     *fi.first->second += *nf;
 
                     delete nf;
+                    //nd_debug_printf("%s: delete flow.\n", tag.c_str());
 
                     return;
                 }
@@ -1317,39 +1318,37 @@ nd_process_ip:
         }
     }
 
-    if (nf->flags.detection_complete
-        || (nf->ip_protocol != IPPROTO_TCP &&
-            nf->ip_protocol != IPPROTO_UDP)
+    if (! nf->flags.detection_complete
         || (nf->ip_protocol == IPPROTO_UDP &&
-            nf->total_packets > nd_config.max_udp_pkts)
+            nf->total_packets <= nd_config.max_udp_pkts)
         || (nf->ip_protocol == IPPROTO_TCP &&
-            nf->total_packets > nd_config.max_tcp_pkts))
-        return;
+            nf->total_packets <= nd_config.max_tcp_pkts)) {
 
-    if (nf->dpi_thread_id < 0) {
-        nf->dpi_thread_id = dpi_thread_id;
-        if (++dpi_thread_id == (int16_t)threads_dpi.size()) dpi_thread_id = 0;
-    }
+        if (nf->dpi_thread_id < 0) {
+            nf->dpi_thread_id = dpi_thread_id;
+            if (++dpi_thread_id == (int16_t)threads_dpi.size()) dpi_thread_id = 0;
+        }
 
-    nd_detection_threads::const_iterator idpi = threads_dpi.find(nf->dpi_thread_id);
+        nd_detection_threads::const_iterator idpi = threads_dpi.find(nf->dpi_thread_id);
 
-    if (idpi != threads_dpi.end()) {
-        idpi->second->QueuePacket(
-            nf,
-            (nf->ip_version == 4) ?
-                (uint8_t *)hdr_ip : (uint8_t *)hdr_ip6,
-            pkt_header->caplen - l2_len, addr_cmp
-        );
-    }
-    else {
-        nd_debug_printf("ERROR: CPU thread ID not found: %hd\n", nf->dpi_thread_id);
-        throw ndCaptureThreadException("CPU thread ID not found!");
+        if (idpi != threads_dpi.end()) {
+            idpi->second->QueuePacket(
+                nf,
+                (nf->ip_version == 4) ?
+                    (uint8_t *)hdr_ip : (uint8_t *)hdr_ip6,
+                pkt_header->caplen - l2_len, addr_cmp
+            );
+        }
+        else {
+            nd_debug_printf("ERROR: CPU thread ID not found: %hd\n", nf->dpi_thread_id);
+            throw ndCaptureThreadException("CPU thread ID not found!");
+        }
     }
 
     if (capture_unknown_flows) nf->push(pkt_header, pkt_data);
 
     if (ts_last_idle_scan + ND_TTL_IDLE_SCAN < ts_pkt_last) {
-        uint64_t purged = 0;
+        //uint64_t purged = 0;
         nd_flow_map::iterator i = flows->begin();
         while (i != flows->end()) {
             unsigned ttl = (
@@ -1398,8 +1397,6 @@ nd_process_ip:
         if (purged > 0) {
             nd_debug_printf("%s: Purged %lu idle flows (%lu active)\n",
                 tag.c_str(), purged, flows->size());
-            //nd_debug_printf("%s: %llu + %d < %llu\n",
-            //    tag.c_str(), ts_last_idle_scan, ND_TTL_IDLE_SCAN, ts_pkt_last);
         }
 #endif
         ts_last_idle_scan = ts_pkt_last;

@@ -53,6 +53,7 @@ public:
 #endif
         nd_devices &devices,
         ndDNSHintCache *dhc = NULL,
+        ndFlowHashCache *fhc = NULL,
         uint8_t private_addr = 0);
     virtual ~ndDetectionThread();
 
@@ -64,7 +65,6 @@ public:
     virtual void *Entry(void);
 
 protected:
-    bool internal;
 #ifdef _ND_USE_NETLINK
     ndNetlink *netlink;
 #endif

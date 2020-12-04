@@ -92,7 +92,7 @@ protected:
     nd_packet_stats *stats;
     nd_device_addrs *device_addrs;
 
-    string flow_digest, flow_digest_mdata;
+    string flow_digest;
 
     ns_msg ns_h;
     ndDNSHintCache *dhc;

@@ -120,6 +120,7 @@ ndDetectionThread::ndDetectionThread(
 #endif
     nd_devices &devices,
     ndDNSHintCache *dhc,
+    ndFlowHashCache *fhc,
     uint8_t private_addr)
     : ndThread(tag, (long)cpu, true),
     netlink(netlink),
@@ -129,15 +130,10 @@ ndDetectionThread::ndDetectionThread(
 #endif
     ndpi(NULL), custom_proto_base(0),
     devices(devices),
-    dhc(dhc), fhc(NULL),
+    dhc(dhc), fhc(fhc),
     flows(0)
 {
     ndpi = nd_ndpi_init(tag, custom_proto_base);
-
-    if (ND_USE_FHC) {
-        fhc = new ndFlowHashCache(nd_config.max_fhc);
-        fhc->load();
-    }
 
     private_addrs.first.ss_family = AF_INET;
     nd_private_ipaddr(private_addr, private_addrs.first);
@@ -182,10 +178,6 @@ ndDetectionThread::~ndDetectionThread()
     // TODO: Free pkt_queue
 
     if (ndpi != NULL) nd_ndpi_free(ndpi);
-    if (fhc != NULL) {
-        fhc->save();
-        delete fhc;
-    }
 
     nd_debug_printf("%s: detection thread destroyed, %u flows processed.\n",
         tag.c_str(), flows);
@@ -586,8 +578,12 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             );
         }
 
-        if (ND_USE_FHC &&
+        if (fhc != NULL &&
             entry->flow->lower_port != 0 && entry->flow->upper_port != 0) {
+
+            flow_digest.assign(
+                (const char *)entry->flow->digest_lower, SHA1_DIGEST_LENGTH);
+
             if (! fhc->pop(flow_digest, flow_digest_mdata)) {
 
                 entry->flow->hash(tag, true);
@@ -612,12 +608,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 }
             }
         }
-        else {
-            entry->flow->hash(tag, true);
-            flow_digest_mdata.assign(
-                (const char *)entry->flow->digest_mdata, SHA1_DIGEST_LENGTH
-            );
-        }
+        else entry->flow->hash(tag, true);
 
         struct sockaddr_in *laddr4 = entry->flow->lower_addr4;
         struct sockaddr_in6 *laddr6 = entry->flow->lower_addr6;
@@ -647,6 +638,9 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
 #ifdef _ND_USE_NETLINK
         nd_device_addrs *device_addrs = devices[entry->flow->iface->second];
         if (device_addrs != NULL) {
+
+            Lock();
+
             for (int t = ndFlow::TYPE_LOWER; t < ndFlow::TYPE_MAX; t++) {
                 string ip;
                 const uint8_t *umac = NULL;
@@ -697,6 +691,8 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                     }
                 }
             }
+
+            Unlock();
         }
 #endif
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)
@@ -751,29 +747,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 break;
             }
         }
-#if 0
-        if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
-            entry->flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
 
-            json j;
-
-            j["type"] = "flow";
-            j["interface"] = tag;
-            j["internal"] = internal;
-            j["established"] = false;
-
-            json jf;
-            entry->flow->json_encode(jf, ndpi, ndFlow::ENCODE_METADATA);
-            j["flow"] = jf;
-
-            string json_string;
-            nd_json_to_string(j, json_string, false);
-            json_string.append("\n");
-
-            thread_socket->QueueWrite(json_string);
-        }
-
-#endif
         entry->flow->detected_protocol_name = strdup(
             ndpi_get_proto_name(ndpi, entry->flow->detected_protocol.master_protocol)
         );
@@ -784,6 +758,26 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                     ndpi, entry->flow->detected_protocol.app_protocol
                 )
             );
+        }
+
+        if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
+            entry->flow->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
+            json j;
+
+            j["type"] = "flow";
+            j["interface"] = entry->flow->iface->second;
+            j["internal"] = entry->flow->iface->first;
+            j["established"] = false;
+
+            json jf;
+            entry->flow->json_encode(jf, ndFlow::ENCODE_METADATA);
+            j["flow"] = jf;
+
+            string json_string;
+            nd_json_to_string(j, json_string, false);
+            json_string.append("\n");
+
+            thread_socket->QueueWrite(json_string);
         }
 
         if ((ND_DEBUG && ND_VERBOSE) || nd_config.h_flow != stderr)

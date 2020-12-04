@@ -79,7 +79,7 @@ ndFlow::ndFlow(nd_ifaces::iterator iface)
     detected_protocol_name(NULL), detected_application_name(NULL),
     ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
     digest_lower{}, digest_mdata{},
-    host_server_name{}, ssl{},
+    host_server_name{}, http{},
     privacy_mask(0), origin(0), direction(0),
     capture_filename{}
 {
@@ -715,7 +715,8 @@ void ndFlow::json_encode(json &j, uint8_t encode_includes)
 
         j["detected_application"] =
             (unsigned)detected_protocol.app_protocol;
-        j["detected_application_name"] = detected_protocol_name;
+        j["detected_application_name"] =
+            (detected_application_name != NULL) ? detected_application_name : "Unknown";
 
         j["detection_guessed"] = detection_guessed;
 

@@ -355,7 +355,7 @@ void nd_iface_name(const string &iface, string &result)
 
 void nd_capture_filename(const string &iface, string &result)
 {
-    result = iface;
+    result.clear();
     size_t p = string::npos;
     if ((p = iface.find_first_of(",")) != string::npos)
         result = iface.substr(p + 1);

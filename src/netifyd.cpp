@@ -135,6 +135,7 @@ nd_device_netlink device_netlink;
 static nd_device_filter device_filters;
 static bool nd_detection_stopped_by_signal = false;
 static ndDNSHintCache *dns_hint_cache = NULL;
+static ndFlowHashCache *flow_hash_cache = NULL;
 static time_t nd_ethers_mtime = 0;
 static nd_interface_addr_map nd_interface_addrs;
 
@@ -744,6 +745,7 @@ static int nd_start_detection_threads(void)
 #endif
                 devices,
                 dns_hint_cache,
+                flow_hash_cache,
                 (uint8_t)cpu
             );
 
@@ -773,6 +775,22 @@ static void nd_stop_detection_threads(void)
     detection_threads.clear();
 
     ndpi_global_destroy();
+}
+
+static void nd_lock_detection_threads(void)
+{
+    for (nd_detection_threads::iterator i = detection_threads.begin();
+        i != detection_threads.end(); i++) {
+        i->second->Lock();
+    }
+}
+
+static void nd_unlock_detection_threads(void)
+{
+    for (nd_detection_threads::iterator i = detection_threads.begin();
+        i != detection_threads.end(); i++) {
+        i->second->Unlock();
+    }
 }
 #if 0
 static void nd_reap_detection_threads(void)
@@ -1170,6 +1188,8 @@ static void nd_json_add_devices(json &parent)
 {
     nd_device_addrs device_addrs;
 
+    nd_lock_detection_threads();
+
     for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++) {
         if (i->second == NULL) continue;
 
@@ -1199,6 +1219,8 @@ static void nd_json_add_devices(json &parent)
 
         i->second->clear();
     }
+
+    nd_unlock_detection_threads();
 
     for (nd_device_addrs::const_iterator i = device_addrs.begin();
         i != device_addrs.end(); i++) {
@@ -1258,7 +1280,8 @@ static void nd_json_add_flows(json &parent, const nd_flow_map *flows)
     for (nd_flow_map::const_iterator i = flows->begin();
         i != flows->end(); i++) {
 
-        if (i->second->flags.detection_complete == false || ! i->second->ts_first_update
+        if (i->second->flags.detection_complete == false
+            || ! i->second->ts_first_update
             || (! ND_UPLOAD_NAT_FLOWS && i->second->flags.ip_nat)) continue;
 
         json jf;
@@ -2511,9 +2534,6 @@ int main(int argc, char *argv[])
         nd_config.fhc_save = ndFHC_DISABLED;
     }
 
-    if (ND_USE_DHC)
-        dns_hint_cache = new ndDNSHintCache();
-
     if (ifaces.size() == 0) {
         fprintf(stderr,
             "Required argument, (-I, --internal, or -E, --external) missing.\n");
@@ -2532,6 +2552,12 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
+
+    if (ND_USE_DHC)
+        dns_hint_cache = new ndDNSHintCache();
+
+    if (ND_USE_FHC)
+        flow_hash_cache = new ndFlowHashCache(nd_config.max_fhc);
 
     nd_printf("%s\n", nd_get_version_and_features().c_str());
 
@@ -2570,6 +2596,7 @@ int main(int argc, char *argv[])
     }
 
     if (dns_hint_cache) dns_hint_cache->load();
+    if (flow_hash_cache) flow_hash_cache->load();
 
     nd_sha1_file(
         nd_config.path_sink_config, nd_config.digest_sink_config
@@ -2866,6 +2893,11 @@ int main(int argc, char *argv[])
     if (dns_hint_cache) {
         dns_hint_cache->save();
         delete dns_hint_cache;
+    }
+
+    if (flow_hash_cache) {
+        flow_hash_cache->save();
+        delete flow_hash_cache;
     }
 
     nd_ifaddrs_free(nd_interface_addrs);
