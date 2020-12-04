@@ -711,7 +711,8 @@ void ndFlow::json_encode(json &j, uint8_t encode_includes)
 
         j["detected_protocol"] =
             (unsigned)detected_protocol.master_protocol;
-        j["detected_protocol_name"] = detected_protocol_name;
+        j["detected_protocol_name"] =
+            (detected_protocol_name != NULL) ? detected_protocol_name : "Unknown";
 
         j["detected_application"] =
             (unsigned)detected_protocol.app_protocol;
