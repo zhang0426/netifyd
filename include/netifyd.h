@@ -171,7 +171,7 @@
 #include "nd-sha1.h"
 
 typedef unordered_map<string, vector<string> > nd_device_addrs;
-typedef map<string, nd_device_addrs *> nd_devices;
+typedef map<string, pair<pthread_mutex_t *, nd_device_addrs *> > nd_devices;
 typedef unordered_map<string, string> nd_device_ethers;
 typedef vector<pair<bool, string> > nd_ifaces;
 typedef vector<pair<string, string> > nd_device_addr;

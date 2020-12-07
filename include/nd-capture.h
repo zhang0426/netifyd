@@ -58,7 +58,6 @@ public:
         ndSocketThread *thread_socket,
         const nd_detection_threads &threads_dpi,
         nd_flow_map *flow_map, nd_packet_stats *stats,
-        nd_device_addrs *device_addrs = NULL,
         ndDNSHintCache *dhc = NULL,
         uint8_t private_addr = 0);
     virtual ~ndCaptureThread();
@@ -90,7 +89,6 @@ protected:
 
     nd_flow_map *flows;
     nd_packet_stats *stats;
-    nd_device_addrs *device_addrs;
 
     string flow_digest;
 

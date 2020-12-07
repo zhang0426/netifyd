@@ -613,24 +613,43 @@ static int nd_start_capture_threads(void)
 {
     if (capture_threads.size() > 0) return 1;
 
-    for (nd_ifaces::iterator i = ifaces.begin();
-        i != ifaces.end(); i++) {
-
-        flows[(*i).second] = new nd_flow_map;
-#ifdef HAVE_CXX11
-        flows[(*i).second]->reserve(ND_HASH_BUCKETS_FLOWS);
-        nd_debug_printf("%s: flows_map, buckets: %lu, max_load: %f\n",
-            (*i).second.c_str(),
-            flows[(*i).second]->bucket_count(),
-            flows[(*i).second]->max_load_factor());
-#endif
-        stats[(*i).second] = new nd_packet_stats;
-
-        // XXX: Only collect device MAC/addresses on LAN interfaces.
-        devices[(*i).second] = ((*i).first) ? new nd_device_addrs : NULL;
-    }
-
     try {
+        for (nd_ifaces::iterator i = ifaces.begin();
+            i != ifaces.end(); i++) {
+
+            flows[(*i).second] = new nd_flow_map;
+#ifdef HAVE_CXX11
+            flows[(*i).second]->reserve(ND_HASH_BUCKETS_FLOWS);
+            nd_debug_printf("%s: flows_map, buckets: %lu, max_load: %f\n",
+                (*i).second.c_str(),
+                flows[(*i).second]->bucket_count(),
+                flows[(*i).second]->max_load_factor());
+#endif
+            stats[(*i).second] = new nd_packet_stats;
+            if (stats[(*i).second] == NULL)
+                throw ndSystemException(__PRETTY_FUNCTION__, "new nd_packet_stats", ENOMEM);
+
+            if (! (*i).first) {
+                // XXX: Only collect device MAC/addresses on LAN interfaces.
+                devices[(*i).second] = make_pair(
+                    (pthread_mutex_t *)NULL, (nd_device_addrs *)NULL
+                );
+            }
+            else {
+                int rc;
+
+                devices[(*i).second] = make_pair(
+                    new pthread_mutex_t, new nd_device_addrs
+                );
+                if (devices[(*i).second].first == NULL)
+                    throw ndSystemException(__PRETTY_FUNCTION__, "new pthread_mutex_t", ENOMEM);
+                if (devices[(*i).second].second == NULL)
+                    throw ndSystemException(__PRETTY_FUNCTION__, "new nd_device_addrs", ENOMEM);
+                if ((rc = pthread_mutex_init(devices[(*i).second].first, NULL)) != 0)
+                    throw ndSystemException(__PRETTY_FUNCTION__, "pthread_mutex_init", rc);
+            }
+        }
+
         int16_t cpu = (
                 nd_config.ca_capture_base > -1 &&
                 nd_config.ca_capture_base < (int16_t)nda_stats.cpus
@@ -655,7 +674,6 @@ static int nd_start_capture_threads(void)
                 detection_threads,
                 flows[(*i).second],
                 stats[(*i).second],
-                devices[(*i).second],
                 dns_hint_cache,
                 (i->first) ? 0 : ++private_addr
             );
@@ -689,8 +707,14 @@ static void nd_stop_capture_threads(void)
 
         delete flows[(*i).second];
         delete stats[(*i).second];
-        if (devices.find((*i).second) != devices.end())
-            delete devices[(*i).second];
+        if (devices.find((*i).second) != devices.end()) {
+            if (devices[(*i).second].first != NULL) {
+                pthread_mutex_destroy(devices[(*i).second].first);
+                delete devices[(*i).second].first;
+            }
+            if (devices[(*i).second].second != NULL)
+                delete devices[(*i).second].second;
+        }
     }
 
     capture_threads.clear();
@@ -776,74 +800,6 @@ static void nd_stop_detection_threads(void)
 
     ndpi_global_destroy();
 }
-
-static void nd_lock_detection_threads(void)
-{
-    for (nd_detection_threads::iterator i = detection_threads.begin();
-        i != detection_threads.end(); i++) {
-        i->second->Lock();
-    }
-}
-
-static void nd_unlock_detection_threads(void)
-{
-    for (nd_detection_threads::iterator i = detection_threads.begin();
-        i != detection_threads.end(); i++) {
-        i->second->Unlock();
-    }
-}
-#if 0
-static void nd_reap_detection_threads(void)
-{
-    if (detection_threads.size() == 0) return;
-
-    nd_detection_threads::iterator thread_iter;
-    nd_flows::iterator flow_iter;
-    nd_stats::iterator stat_iter;
-    nd_devices::iterator device_iter;
-    nd_ifaces::iterator iface_iter = ifaces.begin();
-
-    while (iface_iter != ifaces.end()) {
-
-        thread_iter = detection_threads.find(iface_iter->second);
-        if (thread_iter == detection_threads.end() ||
-            ! thread_iter->second->HasTerminated()) {
-            iface_iter++;
-            continue;
-        }
-
-        flow_iter = flows.find(iface_iter->second);
-        if (flow_iter != flows.end()) {
-            for (nd_flow_map::iterator f = flow_iter->second->begin();
-                f != flow_iter->second->end(); f++) {
-                f->second->release();
-                delete f->second;
-            }
-
-            delete flow_iter->second;
-            flows.erase(flow_iter);
-        }
-
-        stat_iter = stats.find(iface_iter->second);
-        if (stat_iter != stats.end()) {
-            delete stat_iter->second;
-            stats.erase(stat_iter);
-        }
-
-        device_iter = devices.find(iface_iter->second);
-        if (device_iter != devices.end()) {
-            delete device_iter->second;
-            devices.erase(device_iter);
-        }
-
-        delete thread_iter->second;
-        detection_threads.erase(thread_iter);
-        iface_iter = ifaces.erase(iface_iter);
-    }
-
-    if (detection_threads.size() == 0) ndpi_global_destroy();
-}
-#endif
 
 #ifdef _ND_USE_PLUGINS
 
@@ -1188,13 +1144,13 @@ static void nd_json_add_devices(json &parent)
 {
     nd_device_addrs device_addrs;
 
-    nd_lock_detection_threads();
-
     for (nd_devices::const_iterator i = devices.begin(); i != devices.end(); i++) {
-        if (i->second == NULL) continue;
+        if (i->second.first == NULL) continue;
 
-        for (nd_device_addrs::const_iterator j = i->second->begin();
-            j != i->second->end(); j++) {
+        pthread_mutex_lock(i->second.first);
+
+        for (nd_device_addrs::const_iterator j = i->second.second->begin();
+            j != i->second.second->end(); j++) {
 
             for (vector<string>::const_iterator k = j->second.begin();
                 k != j->second.end(); k++) {
@@ -1217,10 +1173,10 @@ static void nd_json_add_devices(json &parent)
             }
         }
 
-        i->second->clear();
-    }
+        i->second.second->clear();
 
-    nd_unlock_detection_threads();
+        pthread_mutex_unlock(i->second.first);
+    }
 
     for (nd_device_addrs::const_iterator i = device_addrs.begin();
         i != device_addrs.end(); i++) {

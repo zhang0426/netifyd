@@ -538,10 +538,19 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                     break;
                 }
             }
+
             snprintf(
                 entry->flow->http.user_agent, ND_FLOW_UA_LEN,
                 "%s", entry->flow->ndpi_flow->protos.http.user_agent
             );
+
+            if (entry->flow->ndpi_flow->http.url != NULL) {
+                snprintf(
+                    entry->flow->http.url, ND_FLOW_URL_LEN,
+                    "%s", entry->flow->ndpi_flow->http.url
+                );
+            }
+
             break;
         case NDPI_PROTOCOL_DHCP:
             snprintf(
@@ -569,13 +578,6 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 );
             }
             break;
-        }
-
-        if (entry->flow->ndpi_flow->http.url != NULL) {
-            snprintf(
-                entry->flow->http.url, ND_FLOW_URL_LEN,
-                "%s", entry->flow->ndpi_flow->http.url
-            );
         }
 
         if (fhc != NULL &&
@@ -636,10 +638,10 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             throw ndDetectionThreadException(strerror(EINVAL));
         }
 #ifdef _ND_USE_NETLINK
-        nd_device_addrs *device_addrs = devices[entry->flow->iface->second];
+        nd_device_addrs *device_addrs = devices[entry->flow->iface->second].second;
         if (device_addrs != NULL) {
 
-            Lock();
+            pthread_mutex_lock(devices[entry->flow->iface->second].first);
 
             for (int t = ndFlow::TYPE_LOWER; t < ndFlow::TYPE_MAX; t++) {
                 string ip;
@@ -692,7 +694,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 }
             }
 
-            Unlock();
+            pthread_mutex_unlock(devices[entry->flow->iface->second].first);
         }
 #endif
 #if defined(_ND_USE_CONNTRACK) && defined(_ND_USE_NETLINK)

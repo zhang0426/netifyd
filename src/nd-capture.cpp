@@ -326,7 +326,6 @@ ndCaptureThread::ndCaptureThread(
     ndSocketThread *thread_socket,
     const nd_detection_threads &threads_dpi,
     nd_flow_map *flow_map, nd_packet_stats *stats,
-    nd_device_addrs *device_addrs,
     ndDNSHintCache *dhc,
     uint8_t private_addr)
     : ndThread(iface->second, (long)cpu, true),
@@ -335,7 +334,7 @@ ndCaptureThread::ndCaptureThread(
     pcap(NULL), pcap_fd(-1), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL),
     ts_pkt_last(0), ts_last_idle_scan(0),
-    flows(flow_map), stats(stats), device_addrs(device_addrs), dhc(dhc),
+    flows(flow_map), stats(stats), dhc(dhc),
     pkt_queue(iface->second),
     threads_dpi(threads_dpi), dpi_thread_id(rand() % threads_dpi.size())
 {
@@ -1276,8 +1275,11 @@ nd_process_ip:
         uint16_t lport = ntohs(nf->lower_port), uport = ntohs(nf->upper_port);
 
         if (lport == 53 || uport == 53 || lport == 5355 || uport == 5355) {
+
             const char *host = NULL;
-            if (ProcessDNSPacket(&host, pkt, pkt_len)) {
+            bool is_query = ProcessDNSPacket(&host, pkt, pkt_len);
+#if 0
+            if (is_query) {
                 // Rehash M/DNS flows:
                 // This is done to uniquely track queries that originate from
                 // the same local port.  Some devices re-use their local port
@@ -1287,8 +1289,8 @@ nd_process_ip:
 
 //                if (ndpi_proto == NDPI_PROTOCOL_DNS) {
                     nf->hash(tag, false,
-                        (const uint8_t *)nf->host_server_name,
-                        strnlen(nf->host_server_name, ND_MAX_HOSTNAME));
+                        (const uint8_t *)host,
+                        strnlen(host, ND_MAX_HOSTNAME));
 //                }
 //                else {
 //                    nf->hash(tag, false,
@@ -1315,6 +1317,7 @@ nd_process_ip:
                     return;
                 }
             }
+#endif
         }
     }
 
@@ -1408,6 +1411,8 @@ bool ndCaptureThread::ProcessDNSPacket(const char **host, const uint8_t *pkt, ui
     ns_rr rr;
     int rc = ns_initparse(pkt, length, &ns_h);
 
+    *host = NULL;
+
     if (rc < 0) {
 #ifdef _ND_LOG_DHC
         nd_debug_printf(
@@ -1425,9 +1430,6 @@ bool ndCaptureThread::ProcessDNSPacket(const char **host, const uint8_t *pkt, ui
 #endif
         return false;
     }
-
-    if (ns_msg_getflag(ns_h, ns_f_qr) != 1)
-        return false;
 
 #ifdef _ND_LOG_DHC
     nd_debug_printf(
@@ -1461,8 +1463,15 @@ bool ndCaptureThread::ProcessDNSPacket(const char **host, const uint8_t *pkt, ui
         break;
     }
 
-    if (*host == NULL) return false;
+    // Is query?
+    if (*host != NULL && ns_msg_getflag(ns_h, ns_f_qr) == 0)
+        return true;
 
+    // If host wasn't found or this isn't a response, return.
+    if (*host == NULL || ns_msg_getflag(ns_h, ns_f_qr) != 1)
+        return false;
+
+    // Add responses to DHC...
     for (uint16_t i = 0; i < ns_msg_count(ns_h, ns_s_an); i++) {
         if (ns_parserr(&ns_h, ns_s_an, i, &rr)) {
 #ifdef _ND_LOG_DHC
@@ -1504,7 +1513,7 @@ bool ndCaptureThread::ProcessDNSPacket(const char **host, const uint8_t *pkt, ui
 #endif // _ND_LOG_DHC
     }
 
-    return true;
+    return false;
 }
 
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4
