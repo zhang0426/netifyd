@@ -271,7 +271,7 @@ void ndFlow::reset(void)
 
 void ndFlow::release(void)
 {
-    if (pkt != NULL) delete [] pkt;
+    if (pkt != NULL) { delete [] pkt; pkt = NULL; }
     if (ndpi_flow != NULL) { ndpi_free_flow(ndpi_flow); ndpi_flow = NULL; }
     if (id_src != NULL) { delete id_src; id_src = NULL; }
     if (id_dst != NULL) { delete id_dst; id_dst = NULL; }

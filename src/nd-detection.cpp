@@ -258,8 +258,8 @@ void ndDetectionThread::ProcessPacketQueue(bool flush)
         Unlock();
 
         if (entry != NULL) {
-            if (entry->flow->pkt != NULL && entry->pkt_data) {
-                delete [] entry->flow->pkt;
+            if (entry->pkt_data) {
+                if (entry->flow->pkt != NULL) delete [] entry->flow->pkt;
                 entry->flow->pkt = entry->pkt_data;
             }
             if (! entry->flow->flags.detection_complete) {
