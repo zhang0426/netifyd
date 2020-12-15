@@ -30,7 +30,6 @@ class ndDetectionQueueEntry
 {
 public:
     ndDetectionQueueEntry(ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp);
-    virtual ~ndDetectionQueueEntry();
 
     ndFlow *flow;
     uint8_t *pkt_data;
@@ -57,7 +56,11 @@ public:
         uint8_t private_addr = 0);
     virtual ~ndDetectionThread();
 
-    void QueuePacket(ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp);
+    // XXX: Not thread-safe!  Lock before calling...
+    virtual void Reload(void);
+
+    void QueuePacket(ndFlow *flow,
+        uint8_t *pkt_data = NULL, uint32_t pkt_length = 0, int addr_cmp = 0);
 
     struct ndpi_detection_module_struct *GetDetectionModule(void) {
         return ndpi;
@@ -91,6 +94,7 @@ protected:
 #if 0
     void DumpFlows(void);
 #endif
+    void ProcessPacketQueue(bool flush);
     void ProcessPacket(ndDetectionQueueEntry *entry);
 };
 

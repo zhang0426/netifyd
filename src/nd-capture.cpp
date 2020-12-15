@@ -333,7 +333,7 @@ ndCaptureThread::ndCaptureThread(
     capture_unknown_flows(ND_CAPTURE_UNKNOWN_FLOWS),
     pcap(NULL), pcap_fd(-1), pcap_snaplen(ND_PCAP_SNAPLEN),
     pcap_datalink_type(0), pkt_header(NULL), pkt_data(NULL),
-    ts_pkt_last(0), ts_last_idle_scan(0),
+    ts_pkt_last(0),
     flows(flow_map), stats(stats), dhc(dhc),
     pkt_queue(iface->second),
     threads_dpi(threads_dpi), dpi_thread_id(rand() % threads_dpi.size())
@@ -440,14 +440,12 @@ void *ndCaptureThread::Entry(void)
                 if (rc == -1)
                     throw ndCaptureThreadException(strerror(errno));
 
-#if 0
                 if (dump_flows && pthread_mutex_trylock(&lock) == 0) {
                     if (ND_FLOW_DUMP_ESTABLISHED)
                         DumpFlows();
                     dump_flows = false;
                     pthread_mutex_unlock(&lock);
                 }
-#endif
 
                 if (rc == 0) continue;
 
@@ -500,7 +498,8 @@ void *ndCaptureThread::Entry(void)
                 pcap_fd = -1;
                 break;
             case -2:
-                nd_debug_printf("%s: end of capture file: %s, flushing queued packets: %lu\n",
+                nd_debug_printf(
+                    "%s: end of capture file: %s, flushing queued packets: %lu\n",
                     tag.c_str(), pcap_file.c_str(), pkt_queue.size());
                 pcap_close(pcap);
                 pcap = NULL;
@@ -512,9 +511,38 @@ void *ndCaptureThread::Entry(void)
     }
     while (terminate == false || ! pkt_queue.empty());
 
-    nd_debug_printf("%s: capture ended on CPU: %lu\n",
-        tag.c_str(), cpu >= 0 ? cpu : 0);
+    nd_debug_printf(
+        "%s: capture ended on CPU: %lu\n", tag.c_str(), cpu >= 0 ? cpu : 0);
+#if 0
+    nd_flow_map::iterator i = flows->begin();
 
+    while (i != flows->end()) {
+
+        if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
+            i->second->detected_protocol.master_protocol > 0)) {
+
+            json j;
+
+            j["type"] = "flow_purge";
+            j["reason"] = "terminate";
+            j["interface"] = tag;
+            j["internal"] = iface->first;
+            j["established"] = false;
+
+            json jf;
+            i->second->json_encode(jf, ndFlow::ENCODE_STATS | ndFlow::ENCODE_TUNNELS);
+            j["flow"] = jf;
+
+            string json_string;
+            nd_json_to_string(j, json_string, false);
+            json_string.append("\n");
+
+            thread_socket->QueueWrite(json_string);
+        }
+
+        i++;
+    }
+#endif
     return NULL;
 }
 
@@ -590,7 +618,6 @@ pcap_t *ndCaptureThread::OpenCapture(void)
     return pcap_new;
 }
 
-#if 0
 // XXX: Not thread-safe!
 // XXX: Ensure the object is locked before calling.
 void ndCaptureThread::DumpFlows(void)
@@ -609,11 +636,12 @@ void ndCaptureThread::DumpFlows(void)
 
         j["type"] = "flow";
         j["interface"] = tag;
-        j["internal"] = internal;
+        j["interface"] = tag;
+        j["internal"] = iface->first;
         j["established"] = true;
 
         json jf;
-        i->second->json_encode(jf, ndpi, ndFlow::ENCODE_METADATA);
+        i->second->json_encode(jf, ndFlow::ENCODE_METADATA);
 
         j["flow"] = jf;
 
@@ -628,7 +656,6 @@ void ndCaptureThread::DumpFlows(void)
 
     nd_debug_printf("%s: dumped %lu flow(s).\n", tag.c_str(), flow_count);
 }
-#endif
 
 // XXX: Not thread-safe!
 // XXX: Ensure the object is locked before calling.
@@ -1153,7 +1180,7 @@ nd_process_ip:
         if (addr_cmp != nf->direction) {
 #if _ND_DISSECT_GTP
             if (hdr_gtpv1 != NULL && hdr_gtpv1->flags.version == 1) {
-                if (flow.tunnel_type == ndFlow::TUNNEL_GTP) {
+                if (nf->tunnel_type == ndFlow::TUNNEL_GTP) {
                     switch (nf->origin) {
                     case ndFlow::ORIGIN_LOWER:
                         if (nf->gtp.upper_teid == 0)
@@ -1177,14 +1204,8 @@ nd_process_ip:
         }
     }
     else {
-        // TODO: Investigate this copy constructor!
         nf = new ndFlow(flow);
         if (nf == NULL) throw ndCaptureThreadException(strerror(ENOMEM));
-
-        nf->lower_addr4 = (struct sockaddr_in *)&nf->lower_addr;
-        nf->lower_addr6 = (struct sockaddr_in6 *)&nf->lower_addr;
-        nf->upper_addr4 = (struct sockaddr_in *)&nf->upper_addr;
-        nf->upper_addr6 = (struct sockaddr_in6 *)&nf->upper_addr;
 
         nf->direction = addr_cmp;
 
@@ -1298,21 +1319,23 @@ nd_process_ip:
 //                        strnlen(nf->mdns.answer, ND_FLOW_MDNS_ANSLEN));
 //                }
 
-                flows->erase(fi.first);
+                if (memcmp(nf->digest_mdata, nf->digest_lower, SHA1_DIGEST_LENGTH)) {
+                    flows->erase(fi.first);
 
-                memcpy(nf->digest_mdata, nf->digest_lower,
-                    SHA1_DIGEST_LENGTH);
-                flow_digest.assign((const char *)nf->digest_lower,
-                    SHA1_DIGEST_LENGTH);
+                    memcpy(nf->digest_mdata, nf->digest_lower,
+                        SHA1_DIGEST_LENGTH);
+                    flow_digest.assign((const char *)nf->digest_lower,
+                        SHA1_DIGEST_LENGTH);
 
-                fi = flows->insert(nd_flow_pair(flow_digest, nf));
+                    fi = flows->insert(nd_flow_pair(flow_digest, nf));
 
                 if (! fi.second) {
                     // Flow exists...  update stats and return.
                     *fi.first->second += *nf;
 
+                    nd_debug_printf("%s: delete rehashed DNS flow: %lu packets, detection complete: %s\n",
+                        tag.c_str(), nf->total_packets, (nf->flags.detection_complete) ? "yes" : "no");
                     delete nf;
-                    //nd_debug_printf("%s: delete flow.\n", tag.c_str());
 
                     return;
                 }
@@ -1321,11 +1344,12 @@ nd_process_ip:
         }
     }
 
-    if (! nf->flags.detection_complete
-        || (nf->ip_protocol == IPPROTO_UDP &&
-            nf->total_packets <= nd_config.max_udp_pkts)
-        || (nf->ip_protocol == IPPROTO_TCP &&
-            nf->total_packets <= nd_config.max_tcp_pkts)) {
+//    if (! nf->flags.detection_complete
+//        || (nf->ip_protocol == IPPROTO_UDP &&
+//            nf->total_packets <= nd_config.max_udp_pkts)
+//        || (nf->ip_protocol == IPPROTO_TCP &&
+//            nf->total_packets <= nd_config.max_tcp_pkts)) {
+    if (! nf->flags.detection_complete) {
 
         if (nf->dpi_thread_id < 0) {
             nf->dpi_thread_id = dpi_thread_id;
@@ -1349,61 +1373,6 @@ nd_process_ip:
     }
 
     if (capture_unknown_flows) nf->push(pkt_header, pkt_data);
-
-    if (ts_last_idle_scan + ND_TTL_IDLE_SCAN < ts_pkt_last) {
-        //uint64_t purged = 0;
-        nd_flow_map::iterator i = flows->begin();
-        while (i != flows->end()) {
-            unsigned ttl = (
-                i->second->ip_protocol != IPPROTO_TCP || i->second->flags.tcp_fin
-            ) ? nd_config.ttl_idle_flow : nd_config.ttl_idle_tcp_flow;
-
-            if (i->second->flags.detection_complete &&
-                i->second->ts_last_seen + ttl < ts_pkt_last) {
-
-                if (thread_socket && (ND_FLOW_DUMP_UNKNOWN ||
-                    i->second->detected_protocol.master_protocol != NDPI_PROTOCOL_UNKNOWN)) {
-
-                    json j;
-
-                    j["type"] = "flow_purge";
-                    j["reason"] = (
-                        i->second->ip_protocol == IPPROTO_TCP &&
-                        i->second->flags.tcp_fin
-                    ) ? "closed" : "idle";
-                    j["interface"] = tag;
-                    j["internal"] = iface->first;
-                    j["established"] = false;
-
-                    json jf;
-                    i->second->json_encode(jf, ndFlow::ENCODE_STATS | ndFlow::ENCODE_TUNNELS);
-                    j["flow"] = jf;
-
-                    string json_string;
-                    nd_json_to_string(j, json_string, false);
-                    json_string.append("\n");
-#if 0
-                    nd_debug_printf("%s: Purge %3u: %s\n", tag.c_str(), ++purged,
-                        jf["digest"].get<string>().c_str());
-#endif
-                    thread_socket->QueueWrite(json_string);
-                }
-
-                delete i->second;
-                i = flows->erase(i);
-                //purged++;
-            }
-            else
-                i++;
-        }
-#if 0
-        if (purged > 0) {
-            nd_debug_printf("%s: Purged %lu idle flows (%lu active)\n",
-                tag.c_str(), purged, flows->size());
-        }
-#endif
-        ts_last_idle_scan = ts_pkt_last;
-    }
 }
 
 bool ndCaptureThread::ProcessDNSPacket(const char **host, const uint8_t *pkt, uint32_t length)

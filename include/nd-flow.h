@@ -39,11 +39,6 @@
 // SSL certificate fingerprint hash length
 #define ND_FLOW_SSL_HASH_LEN    SHA1_DIGEST_LENGTH
 
-// Bits for detection guess types
-#define ND_FLOW_GUESS_NONE  0x00    // No guesses made
-#define ND_FLOW_GUESS_PROTO 0x01    // Protocol guesses (ports)
-#define ND_FLOW_GUESS_DNS   0x02    // Application guessed by DNS cache hint
-
 // Capture filename template
 #define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX.cap"
 #define ND_FLOW_CAPTURE_SUB_OFFSET  (sizeof(ND_FLOW_CAPTURE_TEMPLATE) - 8 - 4 - 1)
@@ -60,17 +55,31 @@ public:
 
     int16_t dpi_thread_id;
 
+    uint8_t *pkt;
+
     uint8_t ip_version;
     uint8_t ip_protocol;
     uint16_t vlan_id;
 
     struct {
+#ifdef HAVE_ATOMIC
+        atomic<uint8_t> ip_nat;
+        atomic<uint8_t> tcp_fin;
+        atomic<uint8_t> dhc_hit;
+        atomic<uint8_t> detection_complete;
+        atomic<uint8_t> detection_expiring;
+        atomic<uint8_t> detection_expired;
+        atomic<uint8_t> detection_guessed;
+#else
         uint8_t ip_nat:1;
         uint8_t tcp_fin:1;
         uint8_t dhc_hit:1;
         uint8_t detection_complete:1;
+        uint8_t detection_expiring:1;
+        uint8_t detection_expired:1;
+        uint8_t detection_guessed:1;
+#endif
     } flags;
-    uint8_t detection_guessed;
 
 #ifdef _ND_USE_CONNTRACK
     uint32_t ct_id;
@@ -248,6 +257,7 @@ public:
     char capture_filename[sizeof(ND_FLOW_CAPTURE_TEMPLATE)];
 
     ndFlow(nd_ifaces::iterator iface);
+    ndFlow(const ndFlow &flow);
     virtual ~ndFlow();
 
     void hash(const string &device, bool hash_mdata = false,

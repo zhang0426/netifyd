@@ -98,14 +98,11 @@ ndDetectionQueueEntry::ndDetectionQueueEntry(
     ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp
 ) : flow(flow), pkt_data(NULL), pkt_length(pkt_length), addr_cmp(addr_cmp)
 {
-    this->pkt_data = new uint8_t[pkt_length];
-    if (this->pkt_data == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
-    memcpy(this->pkt_data, pkt_data, pkt_length);
-}
-
-ndDetectionQueueEntry::~ndDetectionQueueEntry()
-{
-    delete [] pkt_data;
+    if (pkt_data != NULL && pkt_length > 0) {
+        this->pkt_data = new uint8_t[pkt_length];
+        if (this->pkt_data == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
+        memcpy(this->pkt_data, pkt_data, pkt_length);
+    }
 }
 
 ndDetectionThread::ndDetectionThread(
@@ -175,12 +172,24 @@ ndDetectionThread::~ndDetectionThread()
     pthread_cond_destroy(&pkt_queue_cond);
     pthread_mutex_destroy(&pkt_queue_cond_mutex);
 
-    // TODO: Free pkt_queue
+    while (pkt_queue.size()) {
+        ndDetectionQueueEntry *entry = pkt_queue.front();
+        pkt_queue.pop();
+        delete entry;
+    }
 
     if (ndpi != NULL) nd_ndpi_free(ndpi);
 
     nd_debug_printf("%s: detection thread destroyed, %u flows processed.\n",
         tag.c_str(), flows);
+}
+
+void ndDetectionThread::Reload(void)
+{
+    if (ndpi != NULL) nd_ndpi_free(ndpi);
+    ndpi = nd_ndpi_init(tag, custom_proto_base);
+
+    if (ndpi == NULL) throw ndDetectionThreadException(strerror(ENOMEM));
 }
 
 void ndDetectionThread::QueuePacket(ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp)
@@ -206,7 +215,6 @@ void ndDetectionThread::QueuePacket(ndFlow *flow, uint8_t *pkt_data, uint32_t pk
 void *ndDetectionThread::Entry(void)
 {
     int rc;
-    ndDetectionQueueEntry *entry;
 
     do {
         if ((rc = pthread_mutex_lock(&pkt_queue_cond_mutex)) != 0)
@@ -216,25 +224,7 @@ void *ndDetectionThread::Entry(void)
         if ((rc = pthread_mutex_unlock(&pkt_queue_cond_mutex)) != 0)
             throw ndDetectionThreadException(strerror(rc));
 
-        do {
-
-            Lock();
-
-            if (pkt_queue.size()) {
-                entry = pkt_queue.front();
-                pkt_queue.pop();
-            }
-            else
-                entry = NULL;
-
-            Unlock();
-
-            if (entry != NULL) {
-                if (! entry->flow->flags.detection_complete)
-                    ProcessPacket(entry);
-                delete entry;
-            }
-        } while (entry != NULL && terminate == false);
+        ProcessPacketQueue(! terminate);
     }
     while (terminate == false);
 
@@ -242,30 +232,42 @@ void *ndDetectionThread::Entry(void)
         nd_debug_printf("%s: detection thread ending, flushing queued packets: %lu\n",
             tag.c_str(), pkt_queue.size());
 
-        do {
-
-            Lock();
-
-            if (pkt_queue.size()) {
-                entry = pkt_queue.front();
-                pkt_queue.pop();
-            }
-            else
-                entry = NULL;
-
-            Unlock();
-
-            if (entry != NULL) {
-                if (! entry->flow->flags.detection_complete)
-                    ProcessPacket(entry);
-                delete entry;
-            }
-        } while (entry != NULL);
+        ProcessPacketQueue(terminate);
     }
 
     nd_debug_printf("%s: detection thread ended on CPU: %hu\n", tag.c_str(), cpu);
 
     return NULL;
+}
+
+void ndDetectionThread::ProcessPacketQueue(bool flush)
+{
+    ndDetectionQueueEntry *entry;
+
+    do {
+
+        Lock();
+
+        if (pkt_queue.size()) {
+            entry = pkt_queue.front();
+            pkt_queue.pop();
+        }
+        else
+            entry = NULL;
+
+        Unlock();
+
+        if (entry != NULL) {
+            if (entry->flow->pkt != NULL && entry->pkt_data) {
+                delete [] entry->flow->pkt;
+                entry->flow->pkt = entry->pkt_data;
+            }
+            if (! entry->flow->flags.detection_complete) {
+                ProcessPacket(entry);
+            }
+            delete entry;
+        }
+    } while (entry != NULL && flush);
 }
 
 void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
@@ -282,6 +284,13 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
     }
     else {
         flows++;
+
+        if (entry->flow->flags.detection_expired) {
+            nd_debug_printf("%s: ERROR: Asked to process expired flow!\n", tag.c_str());
+            throw ndDetectionThreadException("Asked to process expired flow");
+            return;
+        }
+
         entry->flow->ndpi_flow = (ndpi_flow_struct *)ndpi_malloc(sizeof(ndpi_flow_struct));
         if (entry->flow->ndpi_flow == NULL)
             throw ndDetectionThreadException(strerror(ENOMEM));
@@ -302,15 +311,17 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
         id_dst = entry->flow->id_dst;
     }
 
-    entry->flow->detected_protocol = ndpi_detection_process_packet(
-        ndpi,
-        entry->flow->ndpi_flow,
-        (const uint8_t *)entry->pkt_data,
-        entry->pkt_length,
-        entry->flow->ts_last_seen,
-        id_src,
-        id_dst
-    );
+    if (! entry->flow->flags.detection_expired) {
+        entry->flow->detected_protocol = ndpi_detection_process_packet(
+            ndpi,
+            entry->flow->ndpi_flow,
+            (const uint8_t *)entry->pkt_data,
+            entry->pkt_length,
+            entry->flow->ts_last_seen,
+            id_src,
+            id_dst
+        );
+    }
 
 //    nd_debug_printf("%s: %hhu.%hhu\n", tag.c_str(),
 //        entry->flow->detected_protocol.master_protocol,
@@ -320,9 +331,10 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
         || (entry->flow->ip_protocol != IPPROTO_TCP &&
             entry->flow->ip_protocol != IPPROTO_UDP)
         || (entry->flow->ip_protocol == IPPROTO_UDP &&
-            entry->flow->total_packets > nd_config.max_udp_pkts)
+            entry->flow->total_packets >= nd_config.max_udp_pkts)
         || (entry->flow->ip_protocol == IPPROTO_TCP &&
-            entry->flow->total_packets > nd_config.max_tcp_pkts)) {
+            entry->flow->total_packets >= nd_config.max_tcp_pkts)
+        || entry->flow->flags.detection_expired) {
 
 #ifdef _ND_USE_NETLINK
         if (ND_USE_NETLINK) {
@@ -332,7 +344,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
 #endif
         if (entry->flow->detected_protocol.master_protocol == NDPI_PROTOCOL_UNKNOWN) {
 
-            entry->flow->detection_guessed |= ND_FLOW_GUESS_PROTO;
+            entry->flow->flags.detection_guessed = true;
 
             entry->flow->detected_protocol.master_protocol =
                 ndpi_guess_undetected_protocol(
@@ -785,8 +797,8 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
         if ((ND_DEBUG && ND_VERBOSE) || nd_config.h_flow != stderr)
             entry->flow->print();
 
-        entry->flow->flags.detection_complete = true;
         entry->flow->release();
+        entry->flow->flags.detection_complete = true;
     }
 }
 

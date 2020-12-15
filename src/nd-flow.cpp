@@ -23,6 +23,9 @@
 #include <map>
 #include <list>
 #include <vector>
+#ifdef HAVE_ATOMIC
+#include <atomic>
+#endif
 #include <unordered_map>
 #include <sstream>
 #include <regex>
@@ -60,8 +63,9 @@ extern nd_global_config nd_config;
 extern nd_device_ethers device_ethers;
 
 ndFlow::ndFlow(nd_ifaces::iterator iface)
-    : iface(iface), dpi_thread_id(-1), ip_version(0), ip_protocol(0), vlan_id(0),
-    flags{}, detection_guessed(0),
+    : iface(iface), dpi_thread_id(-1), pkt(NULL),
+    ip_version(0), ip_protocol(0), vlan_id(0),
+    flags{},
 #ifdef _ND_USE_CONNTRACK
     ct_id(0), ct_mark(0),
 #endif
@@ -89,6 +93,43 @@ ndFlow::ndFlow(nd_ifaces::iterator iface)
     upper_addr6 = (struct sockaddr_in6 *)&upper_addr;
 
     gtp.version = 0xFF;
+}
+
+ndFlow::ndFlow(const ndFlow &flow)
+    : iface(flow.iface), dpi_thread_id(-1), pkt(NULL),
+    ip_version(flow.ip_version), ip_protocol(flow.ip_protocol),
+    vlan_id(flow.vlan_id),
+    flags{},
+#ifdef _ND_USE_CONNTRACK
+    ct_id(0), ct_mark(0),
+#endif
+    ts_first_seen(flow.ts_first_seen), ts_first_update(flow.ts_first_update),
+    ts_last_seen(flow.ts_last_seen),
+    lower_type(ndNETLINK_ATYPE_UNKNOWN), upper_type(ndNETLINK_ATYPE_UNKNOWN),
+    lower_map(LOWER_UNKNOWN), other_type(OTHER_UNKNOWN),
+    lower_addr(flow.lower_addr), upper_addr(flow.upper_addr),
+    lower_ip{}, upper_ip{},
+    lower_port(flow.lower_port), upper_port(flow.upper_port),
+    tunnel_type(flow.tunnel_type), gtp(flow.gtp),
+    lower_bytes(0), upper_bytes(0), total_bytes(0),
+    lower_packets(0), upper_packets(0), total_packets(0),
+    detected_protocol{},
+    detected_protocol_name(NULL), detected_application_name(NULL),
+    ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
+    host_server_name{}, http{},
+    privacy_mask(0), origin(0), direction(0),
+    capture_filename{}
+{
+    memcpy(lower_mac, flow.lower_mac, ETH_ALEN);
+    memcpy(upper_mac, flow.upper_mac, ETH_ALEN);
+
+    memcpy(digest_lower, flow.digest_lower, SHA1_DIGEST_LENGTH);
+    memset(digest_mdata, 0, SHA1_DIGEST_LENGTH);
+
+    lower_addr4 = (struct sockaddr_in *)&lower_addr;
+    lower_addr6 = (struct sockaddr_in6 *)&lower_addr;
+    upper_addr4 = (struct sockaddr_in *)&upper_addr;
+    upper_addr6 = (struct sockaddr_in6 *)&upper_addr;
 }
 
 ndFlow::~ndFlow()
@@ -147,8 +188,6 @@ void ndFlow::hash(const string &device,
 //        lower_port, upper_port);
 
     if (hash_mdata) {
-        sha1_write(&ctx,
-            (const char *)&detection_guessed, sizeof(detection_guessed));
         sha1_write(&ctx,
             (const char *)&detected_protocol, sizeof(ndpi_protocol));
 
@@ -232,6 +271,7 @@ void ndFlow::reset(void)
 
 void ndFlow::release(void)
 {
+    if (pkt != NULL) delete [] pkt;
     if (ndpi_flow != NULL) { ndpi_free_flow(ndpi_flow); ndpi_flow = NULL; }
     if (id_src != NULL) { delete id_src; id_src = NULL; }
     if (id_dst != NULL) { delete id_dst; id_dst = NULL; }
@@ -433,7 +473,7 @@ void ndFlow::print(void)
         (iface->first) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         flags.ip_nat ? 'n' : '-',
-        (detection_guessed & ND_FLOW_GUESS_PROTO) ? 'g' : '-',
+        (flags.detection_guessed) ? 'g' : '-',
         (flags.dhc_hit) ? 'd' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
@@ -461,7 +501,7 @@ void ndFlow::print(void)
 
     if (ND_DEBUG &&
         detected_protocol.master_protocol == NDPI_PROTOCOL_SSL &&
-        ! (detection_guessed & ND_FLOW_GUESS_PROTO) && ssl.version == 0x0000) {
+        flags.detection_guessed == false && ssl.version == 0x0000) {
         nd_debug_printf("%s: SSL with no SSL/TLS verison.\n", iface->second.c_str());
     }
 }
@@ -719,7 +759,7 @@ void ndFlow::json_encode(json &j, uint8_t encode_includes)
         j["detected_application_name"] =
             (detected_application_name != NULL) ? detected_application_name : "Unknown";
 
-        j["detection_guessed"] = detection_guessed;
+        j["detection_guessed"] = (unsigned)flags.detection_guessed;
 
         if (host_server_name[0] != '\0')
             j["host_server_name"] = host_server_name;

@@ -234,6 +234,8 @@ public:
 
     void QueueWrite(const string &data);
 
+    size_t GetClientCount(void);
+
     virtual void *Entry(void);
 
 protected:

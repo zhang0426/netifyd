@@ -105,6 +105,7 @@ using namespace std;
 
 #define ND_STR_ETHALEN     (ETH_ALEN * 2 + ETH_ALEN - 1)
 
+static bool nd_terminate = false;
 static nd_ifaces ifaces;
 static nd_devices devices;
 static nd_flows flows;
@@ -133,7 +134,7 @@ static ndNetlink *netlink = NULL;
 nd_device_netlink device_netlink;
 #endif
 static nd_device_filter device_filters;
-static bool nd_detection_stopped_by_signal = false;
+static bool nd_capture_stopped_by_signal = false;
 static ndDNSHintCache *dns_hint_cache = NULL;
 static ndFlowHashCache *flow_hash_cache = NULL;
 static time_t nd_ethers_mtime = 0;
@@ -526,6 +527,7 @@ static int nd_config_load(void)
 #define _ND_LO_CA_DETECTION_CORES   7
 #define _ND_LO_CA_SINK              8
 #define _ND_LO_CA_SOCKET            9
+#define _ND_LO_WAIT_FOR_CLIENT      10
 
 static int nd_config_set_option(int option)
 {
@@ -609,47 +611,79 @@ static void nd_force_reset(void)
         fprintf(stdout, "Reset successful.\n");
 }
 
+static void nd_init(void)
+{
+    for (nd_ifaces::iterator i = ifaces.begin();
+        i != ifaces.end(); i++) {
+
+        flows[(*i).second] = new nd_flow_map;
+#ifdef HAVE_CXX11
+        flows[(*i).second]->reserve(ND_HASH_BUCKETS_FLOWS);
+        nd_debug_printf("%s: flows_map, buckets: %lu, max_load: %f\n",
+            (*i).second.c_str(),
+            flows[(*i).second]->bucket_count(),
+            flows[(*i).second]->max_load_factor());
+#endif
+        stats[(*i).second] = new nd_packet_stats;
+        if (stats[(*i).second] == NULL)
+            throw ndSystemException(__PRETTY_FUNCTION__, "new nd_packet_stats", ENOMEM);
+
+        if (! (*i).first) {
+            // XXX: Only collect device MAC/addresses on LAN interfaces.
+            devices[(*i).second] = make_pair(
+                (pthread_mutex_t *)NULL, (nd_device_addrs *)NULL
+            );
+        }
+        else {
+            int rc;
+
+            devices[(*i).second] = make_pair(
+                new pthread_mutex_t, new nd_device_addrs
+            );
+            if (devices[(*i).second].first == NULL)
+                throw ndSystemException(__PRETTY_FUNCTION__, "new pthread_mutex_t", ENOMEM);
+            if (devices[(*i).second].second == NULL)
+                throw ndSystemException(__PRETTY_FUNCTION__, "new nd_device_addrs", ENOMEM);
+            if ((rc = pthread_mutex_init(devices[(*i).second].first, NULL)) != 0)
+                throw ndSystemException(__PRETTY_FUNCTION__, "pthread_mutex_init", rc);
+        }
+    }
+
+    nd_ifaddrs_update(nd_interface_addrs);
+}
+
+static void nd_destroy(void)
+{
+    for (nd_ifaces::iterator i = ifaces.begin(); i != ifaces.end(); i++) {
+
+        for (nd_flow_map::iterator j = flows[(*i).second]->begin();
+            j != flows[(*i).second]->end(); j++) {
+            j->second->release();
+            delete j->second;
+        }
+
+        delete flows[(*i).second];
+        delete stats[(*i).second];
+        if (devices.find((*i).second) != devices.end()) {
+            if (devices[(*i).second].first != NULL) {
+                pthread_mutex_destroy(devices[(*i).second].first);
+                delete devices[(*i).second].first;
+            }
+            if (devices[(*i).second].second != NULL)
+                delete devices[(*i).second].second;
+        }
+    }
+
+    flows.clear();
+    stats.clear();
+    devices.clear();
+}
+
 static int nd_start_capture_threads(void)
 {
     if (capture_threads.size() > 0) return 1;
 
     try {
-        for (nd_ifaces::iterator i = ifaces.begin();
-            i != ifaces.end(); i++) {
-
-            flows[(*i).second] = new nd_flow_map;
-#ifdef HAVE_CXX11
-            flows[(*i).second]->reserve(ND_HASH_BUCKETS_FLOWS);
-            nd_debug_printf("%s: flows_map, buckets: %lu, max_load: %f\n",
-                (*i).second.c_str(),
-                flows[(*i).second]->bucket_count(),
-                flows[(*i).second]->max_load_factor());
-#endif
-            stats[(*i).second] = new nd_packet_stats;
-            if (stats[(*i).second] == NULL)
-                throw ndSystemException(__PRETTY_FUNCTION__, "new nd_packet_stats", ENOMEM);
-
-            if (! (*i).first) {
-                // XXX: Only collect device MAC/addresses on LAN interfaces.
-                devices[(*i).second] = make_pair(
-                    (pthread_mutex_t *)NULL, (nd_device_addrs *)NULL
-                );
-            }
-            else {
-                int rc;
-
-                devices[(*i).second] = make_pair(
-                    new pthread_mutex_t, new nd_device_addrs
-                );
-                if (devices[(*i).second].first == NULL)
-                    throw ndSystemException(__PRETTY_FUNCTION__, "new pthread_mutex_t", ENOMEM);
-                if (devices[(*i).second].second == NULL)
-                    throw ndSystemException(__PRETTY_FUNCTION__, "new nd_device_addrs", ENOMEM);
-                if ((rc = pthread_mutex_init(devices[(*i).second].first, NULL)) != 0)
-                    throw ndSystemException(__PRETTY_FUNCTION__, "pthread_mutex_init", rc);
-            }
-        }
-
         int16_t cpu = (
                 nd_config.ca_capture_base > -1 &&
                 nd_config.ca_capture_base < (int16_t)nda_stats.cpus
@@ -657,8 +691,6 @@ static int nd_start_capture_threads(void)
         string netlink_dev;
         uint8_t private_addr = 0;
         uint8_t mac[ETH_ALEN];
-
-        nd_ifaddrs_update(nd_interface_addrs);
 
         for (nd_ifaces::iterator i = ifaces.begin();
             i != ifaces.end(); i++) {
@@ -698,29 +730,9 @@ static void nd_stop_capture_threads(void)
     for (nd_ifaces::iterator i = ifaces.begin(); i != ifaces.end(); i++) {
         capture_threads[(*i).second]->Terminate();
         delete capture_threads[(*i).second];
-
-        for (nd_flow_map::iterator j = flows[(*i).second]->begin();
-            j != flows[(*i).second]->end(); j++) {
-            j->second->release();
-            delete j->second;
-        }
-
-        delete flows[(*i).second];
-        delete stats[(*i).second];
-        if (devices.find((*i).second) != devices.end()) {
-            if (devices[(*i).second].first != NULL) {
-                pthread_mutex_destroy(devices[(*i).second].first);
-                delete devices[(*i).second].first;
-            }
-            if (devices[(*i).second].second != NULL)
-                delete devices[(*i).second].second;
-        }
     }
 
     capture_threads.clear();
-    flows.clear();
-    stats.clear();
-    devices.clear();
 }
 
 static size_t nd_reap_capture_threads(void)
@@ -799,6 +811,25 @@ static void nd_stop_detection_threads(void)
     detection_threads.clear();
 
     ndpi_global_destroy();
+}
+
+static int nd_reload_detection_threads(void)
+{
+    for (nd_detection_threads::iterator i = detection_threads.begin();
+        i != detection_threads.end(); i++) {
+        i->second->Lock();
+    }
+
+    ndpi_global_destroy();
+    ndpi_global_init();
+
+    for (nd_detection_threads::iterator i = detection_threads.begin();
+        i != detection_threads.end(); i++) {
+        i->second->Reload();
+        i->second->Unlock();
+    }
+
+    return 0;
 }
 
 #ifdef _ND_USE_PLUGINS
@@ -973,9 +1004,8 @@ static int nd_sink_process_responses(void)
 
                 if (! reloaded && i->first == ND_CONF_SINK_BASE) {
 
-                    if (! nd_detection_stopped_by_signal) {
-                        nd_stop_detection_threads();
-                        if (nd_start_detection_threads() < 0) return -1;
+                    if (! nd_capture_stopped_by_signal) {
+                        nd_reload_detection_threads();
                     }
 
                     if (thread_socket) {
@@ -1045,11 +1075,9 @@ void nd_json_agent_hello(string &json_string)
     json_string.append("\n");
 }
 
-void nd_json_agent_status(string &json_string)
+void nd_json_agent_status(json &j)
 {
-    json j;
-
-    j["type"] = "agent_status";
+    j["version"] = (double)ND_JSON_VERSION;
     j["timestamp"] = time(NULL);
     j["update_interval"] = nd_config.update_interval;
     j["update_imf"] = nd_config.update_imf;
@@ -1060,8 +1088,8 @@ void nd_json_agent_status(string &json_string)
     j["cpu_user_prev"] = nda_stats.cpu_user_prev;
     j["cpu_system"] = nda_stats.cpu_system;
     j["cpu_system_prev"] = nda_stats.cpu_system_prev;
-    j["flows"] = nda_stats.flows;
-    j["flows_prev"] = nda_stats.flows_prev;
+    j["flow_count"] = nda_stats.flows;
+    j["flow_count_prev"] = nda_stats.flows_prev;
     j["maxrss_kb"] = nda_stats.maxrss_kb;
     j["maxrss_kb_prev"] = nda_stats.maxrss_kb_prev;
 #if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
@@ -1078,16 +1106,6 @@ void nd_json_agent_status(string &json_string)
         j["sink_queue_size_kb"] = nda_stats.sink_queue_size / 1024;
         j["sink_queue_max_size_kb"] = nd_config.max_backlog / 1024;
         j["sink_resp_code"] = nda_stats.sink_resp_code;
-    }
-
-    try {
-        nd_json_to_string(j, json_string);
-        json_string.append("\n");
-        nd_json_save_to_file(json_string, ND_JSON_FILE_STATUS);
-    }
-    catch (runtime_error &e) {
-        nd_printf("Error saving Agent status to file: %s\n",
-            e.what());
     }
 }
 
@@ -1231,22 +1249,134 @@ static void nd_json_add_stats(json &parent,
     stats->pcap_last.ps_ifdrop = pcap->ps_ifdrop;
 }
 
-static void nd_json_add_flows(json &parent, const nd_flow_map *flows)
+static void nd_json_process_flows(
+    const string &tag, json &parent, nd_flow_map *flows, bool add_flows)
 {
-    for (nd_flow_map::const_iterator i = flows->begin();
-        i != flows->end(); i++) {
+    time_t now = time(NULL) * 1000;
+    size_t purged = 0, expired = 0, detection_complete = 0, total = 0;
 
-        if (i->second->flags.detection_complete == false
-            || ! i->second->ts_first_update
-            || (! ND_UPLOAD_NAT_FLOWS && i->second->flags.ip_nat)) continue;
+    bool socket_queue = (thread_socket && thread_socket->GetClientCount());
 
-        json jf;
-        i->second->json_encode(jf);
+    nd_flow_map::const_iterator i = flows->begin();
 
-        parent.push_back(jf);
+    while (i != flows->end()) {
 
-        i->second->reset();
+        bool added = false;
+
+        total++;
+
+        if (i->second->flags.detection_complete) {
+
+            if (add_flows && i->second->ts_first_update &&
+                (ND_UPLOAD_NAT_FLOWS || i->second->flags.ip_nat == false)) {
+
+                json jf;
+                i->second->json_encode(jf);
+
+                parent.push_back(jf);
+
+                added = true;
+            }
+
+            i->second->reset();
+
+            detection_complete++;
+        }
+
+        time_t ttl = (
+            i->second->ip_protocol != IPPROTO_TCP || i->second->flags.tcp_fin
+        ) ? nd_config.ttl_idle_flow : nd_config.ttl_idle_tcp_flow;
+
+        if (i->second->ts_last_seen + ttl < now) {
+
+//            nd_debug_printf("%s: Purge flow, %llus old, ttl: %llu.\n",
+//                i->second->iface->second.c_str(), now - i->second->ts_last_seen, ttl);
+
+            if (i->second->flags.detection_complete == false &&
+                i->second->flags.detection_expired == false) {
+
+                i->second->flags.detection_expired = true;
+                detection_threads[i->second->dpi_thread_id]->QueuePacket(i->second);
+
+                expired++;
+                i++;
+
+                continue;
+            }
+
+            if (add_flows && added == false &&
+                i->second->detected_protocol.master_protocol == 0 &&
+                (ND_UPLOAD_NAT_FLOWS || i->second->flags.ip_nat == false)) {
+
+                json jf;
+                i->second->json_encode(jf);
+
+                parent.push_back(jf);
+            }
+
+            if (socket_queue) {
+
+                if (ND_FLOW_DUMP_UNKNOWN &&
+                    i->second->detected_protocol.master_protocol == 0) {
+
+                    json j, jf;
+
+                    j["type"] = "flow";
+                    j["interface"] = i->second->iface->second;
+                    j["internal"] = i->second->iface->first;
+                    j["established"] = false;
+
+                    i->second->json_encode(
+                        jf, ndFlow::ENCODE_METADATA
+                    );
+                    j["flow"] = jf;
+
+                    string json_string;
+                    nd_json_to_string(j, json_string, false);
+                    json_string.append("\n");
+
+                    thread_socket->QueueWrite(json_string);
+                }
+
+                if (ND_FLOW_DUMP_UNKNOWN ||
+                    i->second->detected_protocol.master_protocol > 0) {
+
+                    json j, jf;
+
+                    j["type"] = "flow_purge";
+                    j["reason"] = (
+                        i->second->ip_protocol == IPPROTO_TCP &&
+                        i->second->flags.tcp_fin
+                    ) ? "closed" : (nd_terminate) ? "terminated" : "expired";
+                    j["interface"] = i->second->iface->second;
+                    j["internal"] = i->second->iface->first;
+                    j["established"] = false;
+
+                    i->second->json_encode(
+                        jf, ndFlow::ENCODE_STATS | ndFlow::ENCODE_TUNNELS
+                    );
+                    j["flow"] = jf;
+
+                    string json_string;
+                    nd_json_to_string(j, json_string, false);
+                    json_string.append("\n");
+
+                    thread_socket->QueueWrite(json_string);
+                }
+            }
+
+            delete i->second;
+            i = flows->erase(i);
+
+            purged++;
+        }
+        else i++;
     }
+
+    nd_debug_printf(
+        "%s: Purged %llu of %llu flow(s), expired: %llu, in progress: %llu\n",
+        tag.c_str(), purged, total, expired, total - detection_complete
+    );
 }
 
 static void nd_json_add_file(
@@ -1601,30 +1731,19 @@ static void nd_dump_stats(void)
         nda_stats.sink_queue_size = thread_sink->QueuePendingSize();
     }
 
-    json j;
+    json j_status;
+    string json_string;
+    nd_json_agent_status(j_status);
 
-    if (ND_USE_SINK || ND_JSON_SAVE) {
-        j["version"] = (double)ND_JSON_VERSION;
-        j["timestamp"] = time(NULL);
-        j["uptime"] = nda_stats.ts_now.tv_sec - nda_stats.ts_epoch.tv_sec;
-        j["cpu_cores"] = (unsigned)nda_stats.cpus;
-        j["cpu_user"] = nda_stats.cpu_user;
-        j["cpu_user_prev"] = nda_stats.cpu_user_prev;
-        j["cpu_system"] = nda_stats.cpu_system;
-        j["cpu_system_prev"] = nda_stats.cpu_system_prev;
-        j["maxrss_kb"] = nda_stats.maxrss_kb;
-#if defined(_ND_USE_LIBTCMALLOC) && defined(HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
-        j["tcm_kb"] = nda_stats.tcm_alloc_kb;
-#endif // _ND_USE_LIBTCMALLOC
+    json ji, jd;
 
-        json ji, jd;
+    nd_json_add_interfaces(ji);
+    j_status["interfaces"] = ji;
 
-        nd_json_add_interfaces(ji);
-        j["interfaces"] = ji;
+    nd_json_add_devices(jd);
+    j_status["devices"] = jd;
 
-        nd_json_add_devices(jd);
-        j["devices"] = jd;
-    }
+    unordered_map<string, json> json_flows;
 
     for (nd_capture_threads::iterator i = capture_threads.begin();
         i != capture_threads.end(); i++) {
@@ -1634,32 +1753,57 @@ static void nd_dump_stats(void)
         pkt_totals += *stats[i->first];
         nda_stats.flows += flows[i->first]->size();
 
-        if (ND_USE_SINK || ND_JSON_SAVE) {
-            struct pcap_stat lpc_stat;
-            i->second->GetCaptureStats(lpc_stat);
+        struct pcap_stat lpc_stat;
+        i->second->GetCaptureStats(lpc_stat);
 
-            json js, jf;
+        json js, jf;
 
-            string iface_name;
-            nd_iface_name(i->first, iface_name);
+        string iface_name;
+        nd_iface_name(i->first, iface_name);
 
-            nd_json_add_stats(js, stats[i->first], &lpc_stat);
-            j["stats"][iface_name] = js;
+        nd_json_add_stats(js, stats[i->first], &lpc_stat);
+        j_status["stats"][iface_name] = js;
 
-            nd_json_add_flows(jf, flows[i->first]);
+        nd_json_process_flows(
+            iface_name,
+            jf, flows[i->first],
+            (ND_USE_SINK || ND_JSON_SAVE)
+        );
 
-            j["flows"][iface_name] = jf;
-        }
+        if (jf.size()) json_flows[iface_name] = jf;
 
         stats[i->first]->reset();
 
         i->second->Unlock();
     }
 
-#ifdef _ND_USE_PLUGINS
-    json jsr, jtr, jpd;
+    j_status["flow_count"] = nda_stats.flows;
+    j_status["flow_count_prev"] = nda_stats.flows_prev;
 
+    json j = j_status;
+
+    try {
+        j_status["type"] = "agent_status";
+
+        nd_json_to_string(j_status, json_string);
+
+        if (thread_socket)
+            thread_socket->QueueWrite(json_string);
+
+        json_string.append("\n");
+        nd_json_save_to_file(json_string, ND_JSON_FILE_STATUS);
+    }
+    catch (runtime_error &e) {
+        nd_printf("Error saving Agent status to file: %s\n",
+            e.what());
+    }
+
+    if (ND_USE_SINK || ND_JSON_SAVE) j["flows"] = json_flows;
+
+#ifdef _ND_USE_PLUGINS
     if (ND_USE_SINK) {
+        json jsr, jtr, jpd;
+
         nd_json_add_plugin_replies(jsr, jtr, jpd);
 
         j["service_replies"] = jsr;
@@ -1668,7 +1812,6 @@ static void nd_dump_stats(void)
     }
 #endif
 
-    string json_string;
     if (ND_USE_SINK || ND_JSON_SAVE)
         nd_json_to_string(j, json_string, ND_DEBUG);
 
@@ -2164,7 +2307,6 @@ static int nd_check_agent_uuid(void)
 int main(int argc, char *argv[])
 {
     int rc = 0;
-    bool terminate = false;
     sigset_t sigset;
     struct sigevent sigev;
     timer_t timer_id;
@@ -2239,6 +2381,8 @@ int main(int argc, char *argv[])
         { "thread-sink", 1, 0, _ND_LO_CA_SINK },
         { "thread-socket", 1, 0, _ND_LO_CA_SOCKET },
 
+        { "wait-for-client", 0, 0, _ND_LO_WAIT_FOR_CLIENT },
+
         { NULL, 0, 0, 0 }
     };
 
@@ -2298,6 +2442,10 @@ int main(int argc, char *argv[])
                 exit(1);
             }
             break;
+        case _ND_LO_WAIT_FOR_CLIENT:
+            nd_config.flags |= ndGF_WAIT_FOR_CLIENT;
+            break;
+
         case '?':
             fprintf(stderr, "Try `--help' for more information.\n");
             return 1;
@@ -2657,11 +2805,6 @@ int main(int argc, char *argv[])
 
     nd_debug_printf("Online CPU cores: %ld\n", nda_stats.cpus);
 
-    if (nd_start_detection_threads() < 0)
-        return 1;
-    if (nd_start_capture_threads() < 0)
-        return 1;
-
     try {
         if (thread_socket != NULL)
             thread_socket->Create();
@@ -2669,6 +2812,25 @@ int main(int argc, char *argv[])
     catch (ndThreadException &e) {
         nd_printf("Error starting socket thread: %s\n", e.what());
         return 1;
+    }
+
+    nd_init();
+
+    if (nd_start_detection_threads() < 0)
+        return 1;
+
+    if (thread_socket == NULL || ! ND_WAIT_FOR_CLIENT) {
+        if (nd_start_capture_threads() < 0)
+            return 1;
+    }
+    else if (thread_socket != NULL && ND_WAIT_FOR_CLIENT) {
+        do {
+            nd_debug_printf("Waiting for a client to connect...\n");
+            sleep(1);
+        } while(thread_socket->GetClientCount() == 0);
+
+        if (nd_start_capture_threads() < 0)
+            return 1;
     }
 
 #ifdef _ND_USE_PLUGINS
@@ -2702,14 +2864,15 @@ int main(int argc, char *argv[])
     tspec_sigwait.tv_sec = 1;
     tspec_sigwait.tv_nsec = 0;
 
-    while (! terminate) {
+    while (! nd_terminate || nda_stats.flows > 0) {
         int sig;
         siginfo_t si;
 
         if ((sig = sigtimedwait(&sigset, &si, &tspec_sigwait)) < 0) {
             if (errno == EAGAIN || errno == EINTR) continue;
             rc = -1;
-            terminate = true;
+            nd_terminate = true;
+            nd_stop_capture_threads();
             nd_printf("sigwaitinfo: %s\n", strerror(errno));
             continue;
         }
@@ -2729,7 +2892,8 @@ int main(int argc, char *argv[])
 
         if (sig == SIGINT || sig == SIGTERM) {
             rc = 0;
-            terminate = true;
+            nd_terminate = true;
+            nd_stop_capture_threads();
             nd_printf("Exiting...\n");
             continue;
         }
@@ -2742,20 +2906,15 @@ int main(int argc, char *argv[])
 #ifdef _ND_USE_PLUGINS
             nd_reap_tasks();
 #endif
-            if (thread_socket) {
-                string json;
-                nd_json_agent_status(json);
-                thread_socket->QueueWrite(json);
-            }
-
             if (dns_hint_cache)
                 dns_hint_cache->purge();
 
             if (nd_reap_capture_threads() == 0) {
+                nd_stop_capture_threads();
                 if (thread_sink == NULL ||
                     thread_sink->QueuePendingSize() == 0) {
                     nd_printf("Exiting, no remaining capture threads.\n");
-                    terminate = true;
+                    nd_terminate = true;
                     continue;
                 }
             }
@@ -2803,14 +2962,14 @@ int main(int argc, char *argv[])
         }
 
         if (sig == SIGUSR1) {
-            nd_start_detection_threads();
-            nd_detection_stopped_by_signal = false;
+            nd_start_capture_threads();
+            nd_capture_stopped_by_signal = false;
             continue;
         }
 
         if (sig == SIGUSR2) {
-            nd_stop_detection_threads();
-            nd_detection_stopped_by_signal = true;
+            nd_stop_capture_threads();
+            nd_capture_stopped_by_signal = true;
             continue;
         }
 
@@ -2820,7 +2979,8 @@ int main(int argc, char *argv[])
     timer_delete(timer_id);
 
     nd_stop_detection_threads();
-    nd_stop_capture_threads();
+
+    nd_destroy();
 
 #ifdef _ND_USE_PLUGINS
     nd_stop_services();

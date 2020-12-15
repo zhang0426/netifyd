@@ -60,7 +60,6 @@
 #define ND_STATS_INTERVAL       15      // Collect stats every N seconds
 #define ND_MAX_BACKLOG_KB       2048    // Maximum upload queue size in kB
 #define ND_DETECTION_TICKS      1000    // Ticks-per-second (1000 = milliseconds)
-#define ND_TTL_IDLE_SCAN        1000    // Idle flow scan in milliseconds
 #define ND_TTL_IDLE_FLOW        30      // Purge idle flows older than this (30s)
 #define ND_TTL_IDLE_TCP_FLOW    300     // Purge idle TCP flows older than this (5m)
 #define ND_TTL_IDLE_DHC_ENTRY  (60 * 30)// Purge TTL for idle DNS cache entries.
@@ -219,7 +218,8 @@ enum nd_global_flags {
     ndGF_FLOW_DUMP_ESTABLISHED = 0x80000,
     ndGF_FLOW_DUMP_UNKNOWN = 0x100000,
     ndGF_UPLOAD_ENABLED = 0x200000,
-    ndGF_UPLOAD_NAT_FLOWS = 0x400000
+    ndGF_UPLOAD_NAT_FLOWS = 0x400000,
+    ndGF_WAIT_FOR_CLIENT = 0x800000
 };
 
 #define ND_DEBUG (nd_config.flags & ndGF_DEBUG)
@@ -243,6 +243,7 @@ enum nd_global_flags {
 #define ND_FLOW_DUMP_UNKNOWN (nd_config.flags & ndGF_FLOW_DUMP_UNKNOWN)
 #define ND_UPLOAD_ENABLED (nd_config.flags & ndGF_UPLOAD_ENABLED)
 #define ND_UPLOAD_NAT_FLOWS (nd_config.flags & ndGF_UPLOAD_NAT_FLOWS)
+#define ND_WAIT_FOR_CLIENT (nd_config.flags & ndGF_WAIT_FOR_CLIENT)
 
 #define ND_GF_SET_FLAG(flag, value) \
 { \
@@ -395,7 +396,7 @@ typedef struct nd_packet_stats_t
 typedef map<string, nd_packet_stats *> nd_stats;
 
 void nd_json_agent_hello(string &json_string);
-void nd_json_agent_status(string &json_string);
+void nd_json_agent_status(json &j);
 void nd_json_protocols(string &json_string);
 
 struct ndInterfaceAddress

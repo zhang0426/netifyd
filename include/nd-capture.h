@@ -66,7 +66,7 @@ public:
 
     nd_flow_map *GetFlows(void) { return flows; }
 
-    // XXX: Not thread-safe!
+    // XXX: Not thread-safe!  Lock before calling...
     int GetCaptureStats(struct pcap_stat &stats);
 
 protected:
@@ -84,7 +84,6 @@ protected:
     struct pcap_pkthdr *pkt_header;
     const uint8_t *pkt_data;
     uint64_t ts_pkt_last;
-    uint64_t ts_last_idle_scan;
     nd_private_addr private_addrs;
 
     nd_flow_map *flows;
@@ -101,9 +100,9 @@ protected:
     int16_t dpi_thread_id;
 
     pcap_t *OpenCapture(void);
-#if 0
+
     void DumpFlows(void);
-#endif
+
     void ProcessPacket(void);
 
     bool ProcessDNSPacket(const char **host, const uint8_t *pkt, uint32_t length);
