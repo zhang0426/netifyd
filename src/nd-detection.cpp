@@ -262,10 +262,8 @@ void ndDetectionThread::ProcessPacketQueue(bool flush)
                 if (entry->flow->pkt != NULL) delete [] entry->flow->pkt;
                 entry->flow->pkt = entry->pkt_data;
             }
-            if (! entry->flow->flags.detection_complete &&
-                ! entry->flow->flags.detection_expired) {
+            if (! entry->flow->flags.detection_complete)
                 ProcessPacket(entry);
-            }
             delete entry;
         }
     } while (entry != NULL && flush);
@@ -287,8 +285,8 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
         flows++;
 
         if (entry->flow->flags.detection_expired) {
-            nd_debug_printf("%s: ERROR: Asked to process expired flow!\n", tag.c_str());
-            throw ndDetectionThreadException("Asked to process expired flow");
+            nd_debug_printf("%s: TODO: Asked to process expired flow!\n", tag.c_str());
+            //throw ndDetectionThreadException("Asked to process expired flow");
             return;
         }
 
