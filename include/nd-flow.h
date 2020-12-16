@@ -166,6 +166,8 @@ public:
     uint32_t upper_packets;
     uint32_t total_packets;
 
+    uint8_t detection_packets;
+
     ndpi_protocol detected_protocol;
     char *detected_protocol_name;
     char *detected_application_name;

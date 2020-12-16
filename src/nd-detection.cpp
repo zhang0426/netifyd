@@ -262,7 +262,8 @@ void ndDetectionThread::ProcessPacketQueue(bool flush)
                 if (entry->flow->pkt != NULL) delete [] entry->flow->pkt;
                 entry->flow->pkt = entry->pkt_data;
             }
-            if (! entry->flow->flags.detection_complete) {
+            if (! entry->flow->flags.detection_complete &&
+                ! entry->flow->flags.detection_expired) {
                 ProcessPacket(entry);
             }
             delete entry;
@@ -321,6 +322,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             id_src,
             id_dst
         );
+        entry->flow->detection_packets++;
     }
 
 //    nd_debug_printf("%s: %hhu.%hhu\n", tag.c_str(),

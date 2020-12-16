@@ -79,7 +79,7 @@ ndFlow::ndFlow(nd_ifaces::iterator iface)
     tunnel_type(TUNNEL_NONE), gtp{},
     lower_bytes(0), upper_bytes(0), total_bytes(0),
     lower_packets(0), upper_packets(0), total_packets(0),
-    detected_protocol{},
+    detection_packets(0), detected_protocol{},
     detected_protocol_name(NULL), detected_application_name(NULL),
     ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
     digest_lower{}, digest_mdata{},
@@ -113,7 +113,7 @@ ndFlow::ndFlow(const ndFlow &flow)
     tunnel_type(flow.tunnel_type), gtp(flow.gtp),
     lower_bytes(0), upper_bytes(0), total_bytes(0),
     lower_packets(0), upper_packets(0), total_packets(0),
-    detected_protocol{},
+    detection_packets(0), detected_protocol{},
     detected_protocol_name(NULL), detected_application_name(NULL),
     ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
     host_server_name{}, http{},
@@ -906,6 +906,7 @@ void ndFlow::json_encode(json &j, uint8_t encode_includes)
         j[_upper_packets] = upper_packets;
         j["total_packets"] = total_packets;
         j["total_bytes"] = total_bytes;
+        j["detection_packets"] = detection_packets;
     }
 }
 
