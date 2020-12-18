@@ -478,6 +478,11 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             entry->flow->detected_protocol.app_protocol = ndpi_get_protocol_id(ndpi, "netify.spotify");
             break;
 
+        case NDPI_PROTOCOL_SKYPE:
+        case NDPI_PROTOCOL_SKYPE_CALL:
+            entry->flow->detected_protocol.app_protocol = ndpi_get_protocol_id(ndpi, "netify.skype");
+            break;
+
         case NDPI_PROTOCOL_MDNS:
             if (entry->flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
                     entry->flow->ndpi_flow->protos.mdns.answer[0] != '\0') {
