@@ -44,6 +44,6 @@ if (! defined('NETIFYD_VERSION')) {
 if (! defined('NETIFYD_CONFFILE'))
     define('NETIFYD_CONFFILE', NETIFY_PREFIX . 'etc/netifyd.conf');
 
-if (! define('NETIFYD_JSON_STATUS'))
+if (! defined('NETIFYD_JSON_STATUS'))
     define('NETIFYD_JSON_STATUS', '/var/run/netifyd/status.json');
 ?>
