@@ -1,39 +1,30 @@
-lo: [i4----] IGMP 10.0.0.1:0 --> 224.0.0.1:0
-lo: [i6----] ICMPV6 fe80::2e7e:81ff:feb0:4aa1:0 --> ff02::1:0
-lo: [i4----] IGMP 10.0.0.149:0 --> 224.0.0.251:0
-lo: [i4----] IGMP 10.0.0.149:0 --> 239.255.3.22:0
-lo: [i4----] IGMP 10.0.0.149:0 --> 239.255.255.250:0
 lo: [i4----] DNS 10.0.0.227:52879 --> 75.75.76.76:53 H: vco.pandion.viasat.com
 lo: [i4----] DNS 10.0.0.227:61387 --> 75.75.75.75:53 H: vco.pandion.viasat.com
 lo: [i4----] DNS 10.0.0.227:62322 --> 75.75.76.76:53 H: vco.pandion.viasat.com
-lo: [i4--d-] HTTPS 8.37.102.91:443 <-- 10.0.0.227:56918 H: vco.pandion.viasat.com
-lo: [i4--d-] HTTPS 8.37.102.91:443 <-- 10.0.0.227:56919 H: vco.pandion.viasat.com
+lo: [i4-gd-] HTTPS 8.37.102.91:443 <-- 10.0.0.227:56918 H: vco.pandion.viasat.com
+lo: [i4-g--] HTTPS 10.0.0.227:56915 --> 52.37.243.173:443
+lo: [i4-g--] HTTPS 10.0.0.227:56914 --> 52.37.243.173:443
+lo: [i4-gd-] HTTPS 8.37.102.91:443 <-- 10.0.0.227:56919 H: vco.pandion.viasat.com
+lo: [i4-g--] AJP 10.0.0.149:8009 <-- 10.0.0.227:56320
 lo: [i4----] DNS.10036.netify.internal-network 10.0.0.227:63107 --> 75.75.76.76:53 H: local
-lo: [i4----] ICMP 10.0.0.227:0 --> 75.75.76.76:0
 lo: [i4----] MDNS 10.0.0.213:5353 --> 224.0.0.251:5353
 lo: [i6----] MDNS fe80::408:3e45:3abc:1552:5353 --> ff02::fb:5353
-lo: [i4----] IGMP 10.0.0.213:0 --> 224.0.0.2:0
-lo: [i4----] IGMP 10.0.0.213:0 --> 224.0.0.251:0
 lo: [i4----] MDNS.10036.netify.internal-network 10.0.0.213:5353 <-- 10.0.0.227:5353 H: _companion-link._tcp.local
-lo: [i6----] ICMPV6 fe80::408:3e45:3abc:1552:0 --> ff02::16:0
+lo: [i4-g--] HTTP.10011.netify.akamai 10.0.0.227:56884 --> 184.25.56.77:80
 lo: [i4----] DNS 10.0.0.227:54851 --> 75.75.76.76:53 H: print.viasat.com
 lo: [i4----] DNS.10227.netify.slack 10.0.0.227:58155 --> 75.75.76.76:53 H: slack.com
-lo: [i4--d-] HTTPS.10227.netify.slack 10.0.0.227:56920 --> 99.86.34.156:443 H: slack.com SSL C: slack.com
-lo: [i4-g--] AJP 10.0.0.149:8009 <-- 10.0.0.227:56320
-lo: [i4----] SSL 8.37.96.194:4287 <-- 10.0.0.227:56921
+lo: [i4-gd-] HTTPS.10227.netify.slack 10.0.0.227:56920 --> 99.86.34.156:443 H: slack.com
+lo: [i4-g--] Unknown 8.37.96.194:4287 <-- 10.0.0.227:56921
 lo: [i4----] DNS 10.0.0.227:57261 --> 75.75.75.75:53 H: vcacrashplan01.hq.corp.viasat.com
 lo: [i4----] DNS 10.0.0.227:52879 --> 75.75.75.75:53 H: vcacrashplan01.hq.corp.viasat.com
 lo: [i4----] DNS.10337.netify.xfinity 10.0.0.227:59222 --> 75.75.75.75:53 H: lp-rkerur-osx.hsd1.ca.comcast.net
 lo: [i4----] DNS.10337.netify.xfinity 10.0.0.227:57017 --> 75.75.75.75:53 H: lp-rkerur-osx.hsd1.ca.comcast.net
 lo: [i4-g--] HTTPS 10.0.0.227:56881 --> 162.222.43.153:443
-lo: [i4-g--] HTTPS 10.0.0.227:56915 --> 52.37.243.173:443
-lo: [i4-g--] HTTPS 10.0.0.227:56914 --> 52.37.243.173:443
-lo: [i4--d-] HTTPS 8.37.102.91:443 <-- 10.0.0.227:56929 H: vco.pandion.viasat.com
-lo: [i4----] HTTP.10080.netify.firefox 10.0.0.227:56884 --> 184.25.56.77:80 H: detectportal.firefox.com
+lo: [i4-gd-] HTTPS 8.37.102.91:443 <-- 10.0.0.227:56929 H: vco.pandion.viasat.com
 lo: [i4----] HTTP.10080.netify.firefox 10.0.0.227:56917 --> 184.25.56.77:80 H: detectportal.firefox.com
 lo: [i4----] DNS.10080.netify.firefox 10.0.0.227:57253 --> 75.75.75.75:53 H: mozilla.org
 lo: [i4----] DNS.10080.netify.firefox 10.0.0.227:62427 --> 75.75.75.75:53 H: detectportal.firefox.com
-lo: [i4----] ApplePush.140.netify.apple 10.0.0.227:56886 --> 17.57.144.116:5223
+lo: [i4--d-] ApplePush.140.netify.apple 10.0.0.227:56886 --> 17.57.144.116:5223 H: us-sw-courier-4.push-apple.com.akadns.net
 lo: [i4----] DNS.140.netify.apple 10.0.0.227:60341 --> 75.75.75.75:53 H: www.apple.com
 lo: [i4----] DNS.140.netify.apple 10.0.0.227:59582 --> 75.75.75.75:53 H: 1-courier.sandbox.push.apple.com
 lo: [i4----] DNS.140.netify.apple 10.0.0.227:51060 --> 75.75.75.75:53 H: 1-courier.push.apple.com
@@ -44,9 +35,8 @@ lo: [i4----] DNS.10017.netify.outlook 10.0.0.227:58074 --> 75.75.75.75:53 H: www
 lo: [i4----] SSDP 10.0.0.227:61328 --> 239.255.255.250:1900
 lo: [i4----] SSDP 10.0.0.227:57547 --> 239.255.255.250:1900
 lo: [i4-gd-] QUIC 8.37.102.91:443 <-- 10.0.0.227:54107 H: vco.pandion.viasat.com
-lo: [i4----] HTTP 10.0.0.149:8008 <-- 10.0.0.227:56954 H: 10.0.0.149
-lo: [i4----] HTTP 10.0.0.151:8060 <-- 10.0.0.227:56955 H: 10.0.0.151
-lo: [i4----] NetBIOS 10.0.0.227:137 --> 10.0.0.255:137 H: lp-rkerur-osx
 lo: [i4-g--] Unknown 10.0.0.1:192 <-- 10.0.0.227:52595
+lo: [i4-g--] Unknown 10.0.0.151:8060 <-- 10.0.0.227:56955
+lo: [i4----] HTTP 10.0.0.149:8008 <-- 10.0.0.227:56954 H: 10.0.0.149
+lo: [i4----] NetBIOS 10.0.0.227:137 --> 10.0.0.255:137 H: lp-rkerur-osx
 lo: [i4----] MDNS 10.0.0.149:5353 --> 224.0.0.251:5353
-lo: [i4----] ICMP 10.0.0.1:0 --> 224.0.0.1:0

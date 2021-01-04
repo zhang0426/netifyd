@@ -1,17 +1,16 @@
 lo: [i4----] DHCP 0.0.0.0:68 --> 255.255.255.255:67 H: lucas-imac
+lo: [i4-gd-] HTTPS.10240.netify.signal 34.225.240.173:443 <-- 192.168.2.17:49226 H: textsecure-service.whispersystems.org
+lo: [i4-gd-] HTTPS.10011.netify.akamai 23.57.24.16:443 <-- 192.168.2.17:57018 H: e673.dsce9.akamaiedge.net
+lo: [i4-gd-] HTTPS.10240.netify.signal 34.225.240.173:443 <-- 192.168.2.17:57019 H: textsecure-service.whispersystems.org
+lo: [i4-gd-] HTTPS.10240.netify.signal 34.225.240.173:443 <-- 192.168.2.17:57020 H: textsecure-service.whispersystems.org
+lo: [i4-gd-] HTTPS.10240.netify.signal 34.225.240.173:443 <-- 192.168.2.17:57021 H: textsecure-service.whispersystems.org
 lo: [i4----] DNS.10011.netify.akamai 192.168.2.1:53 <-- 192.168.2.17:60793 H: e673.dsce9.akamaiedge.net
-lo: [i4--d-] HTTPS.10011.netify.akamai 23.57.24.16:443 <-- 192.168.2.17:57018 H: e673.dsce9.akamaiedge.net SSL C: itunes.apple.com
-lo: [i4----] HTTPS.10240.netify.signal 34.225.240.173:443 <-- 192.168.2.17:49226 SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
-lo: [i4----] HTTPS.10240.netify.signal 34.225.240.173:443 <-- 192.168.2.17:57019 SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
-lo: [i4----] HTTPS.10240.netify.signal 34.225.240.173:443 <-- 192.168.2.17:57021 SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
-lo: [i4----] HTTPS.10240.netify.signal 34.225.240.173:443 <-- 192.168.2.17:57020 SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
+lo: [i4-gd-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:49227 H: textsecure-service.whispersystems.org
+lo: [i4-gd-] HTTPS.10011.netify.akamai 23.57.24.16:443 <-- 192.168.2.17:57022 H: e673.dsce9.akamaiedge.net
+lo: [i4-gd-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:57023 H: textsecure-service.whispersystems.org
+lo: [i4-gd-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:57024 H: textsecure-service.whispersystems.org
+lo: [i4-gd-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:57025 H: textsecure-service.whispersystems.org
 lo: [i4----] DNS.10240.netify.signal 192.168.2.1:53 <-- 192.168.2.17:56263 H: textsecure-service.whispersystems.org
-lo: [i4----] ICMP 192.168.2.1:0 <-- 192.168.2.17:0
-lo: [i4--d-] HTTPS.10011.netify.akamai 23.57.24.16:443 <-- 192.168.2.17:57022 H: e673.dsce9.akamaiedge.net SSL C: itunes.apple.com
-lo: [i4--d-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:49227 H: textsecure-service.whispersystems.org SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
-lo: [i4--d-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:57023 H: textsecure-service.whispersystems.org SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
-lo: [i4--d-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:57025 H: textsecure-service.whispersystems.org SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
-lo: [i4--d-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:57024 H: textsecure-service.whispersystems.org SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
-lo: [i4--d-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:57026 H: textsecure-service.whispersystems.org SSL C: textsecure-service.whispersystems.org S: textsecure-service.whispersystems.org
+lo: [i4-gd-] HTTPS.10240.netify.signal 35.169.3.40:443 <-- 192.168.2.17:57026 H: textsecure-service.whispersystems.org
 lo: [i4-gd-] HTTPS.10011.netify.akamai 23.57.24.16:443 --> 192.168.2.17:57016 H: e673.dsce9.akamaiedge.net
-lo: [i4----] HTTPS.10240.netify.signal 13.35.253.42:443 <-- 192.168.2.17:57027 SSL C: cdn.signal.org S: cdn.signal.org
+lo: [i4-g--] HTTPS 13.35.253.42:443 <-- 192.168.2.17:57027

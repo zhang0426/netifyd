@@ -48,6 +48,7 @@ int nd_sha1_file(const string &filename, uint8_t *digest);
 void nd_sha1_to_string(const uint8_t *digest_bin, string &digest_str);
 
 void nd_iface_name(const string &iface, string &result);
+void nd_capture_filename(const string &iface, string &result);
 
 bool nd_is_ipaddr(const char *ip);
 
@@ -58,6 +59,8 @@ bool nd_save_uuid(const string &uuid, const char *path, size_t length);
 
 bool nd_load_sink_url(string &url);
 bool nd_save_sink_url(const string &url);
+
+void nd_seed_rng(void);
 
 void nd_generate_uuid(string &uuid);
 

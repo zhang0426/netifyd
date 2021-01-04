@@ -114,8 +114,8 @@ static int nd_ct_netlink_callback(const struct nlmsghdr *nlh, void *data)
     return MNL_CB_OK;
 }
 
-ndConntrackThread::ndConntrackThread()
-    : ndThread("nd-conntrack", -1),
+ndConntrackThread::ndConntrackThread(int16_t cpu)
+    : ndThread("nd-conntrack", (long)cpu),
     ctfd(-1), cth(NULL), cb_registered(-1)
 {
     cth = nfct_open(NFNL_SUBSYS_CTNETLINK, NFCT_ALL_CT_GROUPS);

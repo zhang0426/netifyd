@@ -6,7 +6,7 @@ m4_include([m4/ax_cxx_compile_stdcxx_0x.m4])
 m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
 
 AC_PREREQ([2.63])
-AC_INIT([Netify Agent], [3.06],
+AC_INIT([Netify Agent], [3.07],
     [https://gitlab.com/netify.ai/public/netify-agent/issues],
     [netifyd], [http://www.netify.ai/])
 AM_INIT_AUTOMAKE([1.9 tar-pax])
@@ -34,6 +34,10 @@ AS_IF([test "x$ac_cv_path_bash" != "xfalse"], [
 ], [
     AC_MSG_ERROR([bash not found.])
 ])
+
+# Check compiler flags (gnu++11)
+AX_CXX_COMPILE_STDCXX_11([ext], [optional])
+AS_IF([test "$HAVE_CXX11" = "0"], [AX_CXX_COMPILE_STDCXX_0X])
 
 # Checks for libraries.
 AC_CHECK_LIB([pcap],
@@ -243,10 +247,6 @@ AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC
 # Check for optional header files.
 AC_CHECK_HEADERS([atomic linux/ppp_defs.h net/ppp_defs.h stdalign.h])
 AC_CHECK_HEADERS([pcap/sll.h pcap/vlan.h])
-
-# Check compiler flags (gnu++11)
-AX_CXX_COMPILE_STDCXX_11([ext], [optional])
-AS_IF([test "$HAVE_CXX11" = "0"], [AX_CXX_COMPILE_STDCXX_0X])
 
 # Convience substitutions
 AC_SUBST([persistentstatedir], [$sysconfdir/netify.d])

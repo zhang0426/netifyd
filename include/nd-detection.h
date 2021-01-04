@@ -26,41 +26,23 @@ public:
         : runtime_error(what_arg) { }
 };
 
-typedef pair<struct pcap_pkthdr *, const uint8_t *> nd_pkt_pair;
-typedef queue<nd_pkt_pair> nd_pkt_queue;
-
-class ndPacketQueue
+class ndDetectionQueueEntry
 {
 public:
-    ndPacketQueue(const string &tag) : tag(tag), pkt_queue_size(0) { }
-    virtual ~ndPacketQueue() {
-        while (! pkt_queue.empty()) {
-            delete pkt_queue.front().first;
-            delete [] pkt_queue.front().second;
-            pkt_queue.pop();
-        }
-    }
+    ndDetectionQueueEntry(ndFlow *flow, uint8_t *pkt_data, uint32_t pkt_length, int addr_cmp);
 
-    bool empty(void) { return pkt_queue.empty(); }
-    size_t size(void) { return pkt_queue.size(); }
-
-    size_t push(struct pcap_pkthdr *pkt_header, const uint8_t *pkt_data);
-    bool front(struct pcap_pkthdr **pkt_header, const uint8_t **pkt_data);
-    void pop(const string &oper = "pop");
-
-protected:
-    string tag;
-    size_t pkt_queue_size;
-    nd_pkt_queue pkt_queue;
+    ndFlow *flow;
+    uint8_t *pkt_data;
+    uint32_t pkt_length;
+    int addr_cmp;
 };
 
 class ndDetectionThread : public ndThread
 {
 public:
     ndDetectionThread(
-        const string &dev,
-        const uint8_t *dev_mac,
-        bool internal,
+        int16_t cpu,
+        const string &tag,
 #ifdef _ND_USE_NETLINK
         ndNetlink *netlink,
 #endif
@@ -68,28 +50,24 @@ public:
 #ifdef _ND_USE_CONNTRACK
         ndConntrackThread *thread_conntrack,
 #endif
-        nd_flow_map *flow_map, nd_packet_stats *stats,
-        nd_device_addrs *device_addrs = NULL,
+        nd_devices &devices,
         ndDNSHintCache *dhc = NULL,
-        uint8_t private_addr = 0,
-        long cpu = -1);
+        ndFlowHashCache *fhc = NULL,
+        uint8_t private_addr = 0);
     virtual ~ndDetectionThread();
+
+    // XXX: Not thread-safe!  Lock before calling...
+    virtual void Reload(void);
+
+    void QueuePacket(ndFlow *flow,
+        uint8_t *pkt_data = NULL, uint32_t pkt_length = 0, int addr_cmp = 0);
 
     struct ndpi_detection_module_struct *GetDetectionModule(void) {
         return ndpi;
     }
     virtual void *Entry(void);
 
-    nd_flow_map *GetFlows(void) { return flows; }
-
-    // XXX: Not thread-safe!
-    int GetCaptureStats(struct pcap_stat &stats);
-
 protected:
-    string dev;
-    uint8_t dev_mac[ETH_ALEN];
-    bool internal;
-    bool capture_unknown_flows;
 #ifdef _ND_USE_NETLINK
     ndNetlink *netlink;
 #endif
@@ -97,44 +75,30 @@ protected:
 #ifdef _ND_USE_CONNTRACK
     ndConntrackThread *thread_conntrack;
 #endif
-    pcap_t *pcap;
-    int pcap_fd;
-    string pcap_file;
-    struct bpf_program pcap_filter;
-    char pcap_errbuf[PCAP_ERRBUF_SIZE];
-    int pcap_snaplen;
-    int pcap_datalink_type;
-    struct pcap_pkthdr *pkt_header;
-    const uint8_t *pkt_data;
-    uint64_t ts_pkt_last;
-    uint64_t ts_last_idle_scan;
     struct ndpi_detection_module_struct *ndpi;
     uint32_t custom_proto_base;
     nd_private_addr private_addrs;
 
-    nd_flow_map *flows;
-    nd_packet_stats *stats;
-    nd_device_addrs *device_addrs;
-    ns_msg ns_h;
+    nd_devices &devices;
 
     ndDNSHintCache *dhc;
-
     ndFlowHashCache *fhc;
+
     string flow_digest, flow_digest_mdata;
 
-    ndPacketQueue pkt_queue;
+    queue<ndDetectionQueueEntry *> pkt_queue;
+    pthread_cond_t pkt_queue_cond;
+    pthread_mutex_t pkt_queue_cond_mutex;
 
-    pcap_t *OpenCapture(void);
-
+    unsigned flows;
+#if 0
     void DumpFlows(void);
-
-    void ProcessPacket(void);
-
-    bool ProcessDNSResponse(
-        const char *host, const uint8_t *pkt, uint16_t length);
+#endif
+    void ProcessPacketQueue(bool flush);
+    void ProcessPacket(ndDetectionQueueEntry *entry);
 };
 
-typedef map<string, ndDetectionThread *> nd_threads;
+typedef map<int16_t, ndDetectionThread *> nd_detection_threads;
 
 #endif // _ND_DETECTION_THREAD_H
 // vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

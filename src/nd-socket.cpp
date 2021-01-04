@@ -673,8 +673,8 @@ void ndSocketBuffer::Pop(size_t bytes)
         throw ndSocketSystemException(__PRETTY_FUNCTION__, "recv(short)", EINVAL);
 }
 
-ndSocketThread::ndSocketThread()
-    : ndThread("nd-socket", -1)
+ndSocketThread::ndSocketThread(int16_t cpu)
+    : ndThread("nd-socket", (long)cpu)
 {
     vector<pair<string, string> >::const_iterator i;
     for (i = nd_config.socket_host.begin();
@@ -750,13 +750,19 @@ void ndSocketThread::ClientAccept(ndSocketServerMap::iterator &si)
     clients[client->GetDescriptor()] = client;
 
     try {
-        string json;
-        nd_json_agent_hello(json);
-        buffer->Push(json);
-        nd_json_agent_status(json);
-        buffer->Push(json);
-        nd_json_protocols(json);
-        buffer->Push(json);
+        json js;
+        string json_string;
+
+        nd_json_agent_hello(json_string);
+        buffer->Push(json_string);
+
+        js["type"] = "agent_status";
+        nd_json_agent_status(js);
+        nd_json_to_string(js, json_string);
+        buffer->Push(json_string);
+
+        nd_json_protocols(json_string);
+        buffer->Push(json_string);
     }
     catch (exception &e) {
         Unlock();
@@ -796,6 +802,17 @@ void ndSocketThread::ClientHangup(ndSocketClientMap::iterator &ci)
 
         Unlock();
     }
+}
+
+size_t ndSocketThread::GetClientCount(void)
+{
+    size_t client_count = 0;
+
+    Lock();
+    client_count = clients.size();
+    Unlock();
+
+    return client_count;
 }
 
 void *ndSocketThread::Entry(void)

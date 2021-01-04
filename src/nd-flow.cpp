@@ -23,6 +23,9 @@
 #include <map>
 #include <list>
 #include <vector>
+#ifdef HAVE_ATOMIC
+#include <atomic>
+#endif
 #include <unordered_map>
 #include <sstream>
 #include <regex>
@@ -59,208 +62,88 @@ using namespace std;
 extern nd_global_config nd_config;
 extern nd_device_ethers device_ethers;
 
-ndFlowHashCache::ndFlowHashCache(const string &device, size_t cache_size)
-    : device(device), cache_size(cache_size) { }
-
-void ndFlowHashCache::push(const string &lower_hash, const string &upper_hash)
-{
-    nd_fhc_map::const_iterator i = lookup.find(lower_hash);
-
-    if (i != lookup.end()) {
-        nd_debug_printf("%s: WARNING: Found existing hash in flow hash cache on push.\n",
-            device.c_str());
-    }
-    else {
-        if (lookup.size() == cache_size) {
-//#if _ND_DEBUG_FHC
-            nd_debug_printf("%s: Purging old flow hash cache entries.\n", device.c_str());
-//#endif
-            for (size_t n = 0; n < cache_size / nd_config.fhc_purge_divisor; n++) {
-                pair<string, string> j = index.back();
-
-                nd_fhc_map::iterator k = lookup.find(j.first);
-                if (k == lookup.end()) {
-                    nd_debug_printf("%s: WARNING: flow hash cache index not found in map\n",
-                        device.c_str());
-                }
-                else
-                    lookup.erase(k);
-
-                index.pop_back();
-            }
-        }
-
-        index.push_front(make_pair(lower_hash, upper_hash));
-        lookup[lower_hash] = index.begin();
-#if _ND_DEBUG_FHC
-        nd_debug_printf("%s: Flow hash cache entries: %lu\n", device.c_str(), lookup.size());
-#endif
-    }
-}
-
-bool ndFlowHashCache::pop(const string &lower_hash, string &upper_hash)
-{
-    nd_fhc_map::iterator i = lookup.find(lower_hash);
-    if (i == lookup.end()) return false;
-
-    upper_hash = i->second->second;
-
-    index.erase(i->second);
-
-    index.push_front(make_pair(lower_hash, upper_hash));
-
-    i->second = index.begin();
-
-    return true;
-}
-
-void ndFlowHashCache::save(void)
-{
-    ostringstream os;
-
-    switch (nd_config.fhc_save) {
-    case ndFHC_PERSISTENT:
-        os << ND_PERSISTENT_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
-        break;
-    case ndFHC_VOLATILE:
-        os << ND_VOLATILE_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
-        break;
-    default:
-        return;
-    }
-
-    FILE *hf = fopen(os.str().c_str(), "wb");
-    if (hf == NULL) {
-        nd_printf("%s: WARNING: Error saving flow hash cache: %s: %s\n",
-            device.c_str(), os.str().c_str(), strerror(errno));
-        return;
-    }
-
-    nd_fhc_list::iterator i;
-    for (i = index.begin(); i != index.end(); i++) {
-        fwrite((*i).first.c_str(), 1, SHA1_DIGEST_LENGTH, hf);
-        fwrite((*i).second.c_str(), 1, SHA1_DIGEST_LENGTH, hf);
-    }
-    fclose(hf);
-
-    nd_debug_printf("%s: Saved %lu flow hash cache entries.\n",
-        device.c_str(), index.size ());
-}
-
-void ndFlowHashCache::load(void)
-{
-    ostringstream os;
-
-    switch (nd_config.fhc_save) {
-    case ndFHC_PERSISTENT:
-        os << ND_PERSISTENT_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
-        break;
-    case ndFHC_VOLATILE:
-        os << ND_VOLATILE_STATEDIR << ND_FLOW_HC_FILE_NAME << device << ".dat";
-        break;
-    default:
-        return;
-    }
-
-    FILE *hf = fopen(os.str().c_str(), "rb");
-    if (hf != NULL) {
-        do {
-            string digest_lower, digest_mdata;
-            uint8_t digest[SHA1_DIGEST_LENGTH * 2];
-
-            if (fread(digest, SHA1_DIGEST_LENGTH * 2, 1, hf) != 1) break;
-
-            digest_lower.assign((const char *)digest, SHA1_DIGEST_LENGTH);
-            digest_mdata.assign((const char *)&digest[SHA1_DIGEST_LENGTH],
-                SHA1_DIGEST_LENGTH);
-
-            push(digest_lower, digest_mdata);
-        }
-        while (! feof(hf));
-
-        fclose(hf);
-    }
-
-    nd_debug_printf("%s: Loaded %lu flow hash cache entries.\n",
-        device.c_str(), index.size());
-}
-
-ndFlow::ndFlow(bool internal)
-    : internal(internal), ip_version(0), ip_protocol(0), vlan_id(0),
+ndFlow::ndFlow(nd_ifaces::iterator iface)
+    : iface(iface), dpi_thread_id(-1), pkt(NULL),
+    ip_version(0), ip_protocol(0), vlan_id(0),
+    flags{},
 #ifdef _ND_USE_CONNTRACK
     ct_id(0), ct_mark(0),
 #endif
     ts_first_seen(0), ts_first_update(0), ts_last_seen(0),
+    lower_type(ndNETLINK_ATYPE_UNKNOWN), upper_type(ndNETLINK_ATYPE_UNKNOWN),
+    lower_map(LOWER_UNKNOWN), other_type(OTHER_UNKNOWN),
+    lower_mac{}, upper_mac{}, lower_addr{}, upper_addr{},
+    lower_addr4(NULL), lower_addr6(NULL), upper_addr4(NULL), upper_addr6(NULL),
+    lower_ip{}, upper_ip{},
     lower_port(0), upper_port(0),
-    lower_map(LOWER_UNKNOWN), other_type(OTHER_UNKNOWN), tunnel_type(TUNNEL_NONE),
+    tunnel_type(TUNNEL_NONE), gtp{},
     lower_bytes(0), upper_bytes(0), total_bytes(0),
     lower_packets(0), upper_packets(0), total_packets(0),
-    detection_guessed(0),
+    detection_packets(0), detected_protocol{},
+    detected_protocol_name(NULL), detected_application_name(NULL),
     ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
-    privacy_mask(0), origin(0), direction(0)
+    digest_lower{}, digest_mdata{},
+    host_server_name{}, http{},
+    privacy_mask(0), origin(0), direction(0),
+    capture_filename{}
 {
-    memset(&flags, 0, sizeof(flags));
-    memset(lower_mac, 0, ETH_ALEN);
-    memset(upper_mac, 0, ETH_ALEN);
-
-    memset(&lower_addr, 0, sizeof(struct sockaddr_storage));
-    memset(&upper_addr, 0, sizeof(struct sockaddr_storage));
-
     lower_addr4 = (struct sockaddr_in *)&lower_addr;
     lower_addr6 = (struct sockaddr_in6 *)&lower_addr;
     upper_addr4 = (struct sockaddr_in *)&upper_addr;
     upper_addr6 = (struct sockaddr_in6 *)&upper_addr;
 
-    memset(lower_ip, 0, INET6_ADDRSTRLEN);
-    memset(upper_ip, 0, INET6_ADDRSTRLEN);
-
     gtp.version = 0xFF;
-    gtp.ip_version = 0;
-    gtp.lower_teid = gtp.upper_teid = 0;
-    memset(&gtp.lower_addr, 0, sizeof(struct sockaddr_storage));
-    memset(&gtp.upper_addr, 0, sizeof(struct sockaddr_storage));
-    gtp.lower_port = gtp.upper_port = 0;
-    gtp.lower_map = LOWER_UNKNOWN;
-    gtp.other_type = OTHER_UNKNOWN;
+}
 
-    memset(&detected_protocol, 0, sizeof(ndpi_protocol));
+ndFlow::ndFlow(const ndFlow &flow)
+    : iface(flow.iface), dpi_thread_id(-1), pkt(NULL),
+    ip_version(flow.ip_version), ip_protocol(flow.ip_protocol),
+    vlan_id(flow.vlan_id),
+    flags{},
+#ifdef _ND_USE_CONNTRACK
+    ct_id(0), ct_mark(0),
+#endif
+    ts_first_seen(flow.ts_first_seen), ts_first_update(flow.ts_first_update),
+    ts_last_seen(flow.ts_last_seen),
+    lower_type(ndNETLINK_ATYPE_UNKNOWN), upper_type(ndNETLINK_ATYPE_UNKNOWN),
+    lower_map(LOWER_UNKNOWN), other_type(OTHER_UNKNOWN),
+    lower_addr(flow.lower_addr), upper_addr(flow.upper_addr),
+    lower_ip{}, upper_ip{},
+    lower_port(flow.lower_port), upper_port(flow.upper_port),
+    tunnel_type(flow.tunnel_type), gtp(flow.gtp),
+    lower_bytes(0), upper_bytes(0), total_bytes(0),
+    lower_packets(0), upper_packets(0), total_packets(0),
+    detection_packets(0), detected_protocol{},
+    detected_protocol_name(NULL), detected_application_name(NULL),
+    ndpi_flow(NULL), id_src(NULL), id_dst(NULL),
+    host_server_name{}, http{},
+    privacy_mask(0), origin(0), direction(0),
+    capture_filename{}
+{
+    memcpy(lower_mac, flow.lower_mac, ETH_ALEN);
+    memcpy(upper_mac, flow.upper_mac, ETH_ALEN);
 
-    memset(digest_lower, 0, SHA1_DIGEST_LENGTH);
+    memcpy(digest_lower, flow.digest_lower, SHA1_DIGEST_LENGTH);
     memset(digest_mdata, 0, SHA1_DIGEST_LENGTH);
 
-    memset(host_server_name, 0, ND_MAX_HOSTNAME);
-
-    memset(http.user_agent, 0, ND_FLOW_UA_LEN);
-    memset(http.url, 0, ND_FLOW_URL_LEN);
-
-    memset(dhcp.fingerprint, 0, ND_FLOW_DHCPFP_LEN);
-    memset(dhcp.class_ident, 0, ND_FLOW_DHCPCI_LEN);
-
-    memset(ssh.client_agent, 0, ND_FLOW_SSH_UALEN);
-    memset(ssh.server_agent, 0, ND_FLOW_SSH_UALEN);
-
-    ssl.version = 0;
-    ssl.cipher_suite = 0;
-    memset(ssl.client_sni, 0, ND_FLOW_SSL_CNLEN);
-    memset(ssl.server_cn, 0, ND_FLOW_SSL_CNLEN);
-    memset(ssl.server_organization, 0, ND_FLOW_SSL_ORGLEN);
-    memset(ssl.client_ja3, 0, ND_FLOW_SSL_JA3LEN);
-    memset(ssl.server_ja3, 0, ND_FLOW_SSL_JA3LEN);
-    memset(ssl.cert_fingerprint, 0, ND_FLOW_SSL_HASH_LEN);
-
-    smtp.tls = false;
-
-    bt.info_hash_valid = 0;
-    memset(bt.info_hash, 0, ND_FLOW_BTIHASH_LEN);
-
-    memset(mdns.answer, 0, ND_FLOW_MDNS_ANSLEN);
-
-    memset(capture_filename, 0, sizeof(ND_FLOW_CAPTURE_TEMPLATE));
+    lower_addr4 = (struct sockaddr_in *)&lower_addr;
+    lower_addr6 = (struct sockaddr_in6 *)&lower_addr;
+    upper_addr4 = (struct sockaddr_in *)&upper_addr;
+    upper_addr6 = (struct sockaddr_in6 *)&upper_addr;
 }
 
 ndFlow::~ndFlow()
 {
     release();
+
+    if (detected_protocol_name != NULL) {
+        free(detected_protocol_name);
+        detected_protocol_name = NULL;
+    }
+    if (detected_application_name != NULL) {
+        free(detected_application_name);
+        detected_application_name = NULL;
+    }
 }
 
 void ndFlow::hash(const string &device,
@@ -305,8 +188,6 @@ void ndFlow::hash(const string &device,
 //        lower_port, upper_port);
 
     if (hash_mdata) {
-        sha1_write(&ctx,
-            (const char *)&detection_guessed, sizeof(detection_guessed));
         sha1_write(&ctx,
             (const char *)&detected_protocol, sizeof(ndpi_protocol));
 
@@ -390,6 +271,7 @@ void ndFlow::reset(void)
 
 void ndFlow::release(void)
 {
+    if (pkt != NULL) { delete [] pkt; pkt = NULL; }
     if (ndpi_flow != NULL) { ndpi_free_flow(ndpi_flow); ndpi_flow = NULL; }
     if (id_src != NULL) { delete id_src; id_src = NULL; }
     if (id_dst != NULL) { delete id_dst; id_dst = NULL; }
@@ -558,9 +440,8 @@ bool ndFlow::has_ssdp_headers(void)
     );
 }
 
-void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
+void ndFlow::print(void)
 {
-    char *p = NULL, buffer[64];
     const char *lower_name = lower_ip, *upper_name = upper_ip;
 
     if (ND_DEBUG_WITH_ETHERS) {
@@ -580,30 +461,27 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
             upper_name = i->second.c_str();
     }
 
-    if (detected_protocol.app_protocol) {
-        ndpi_protocol2name(ndpi,
-            detected_protocol, buffer, sizeof(buffer));
-        p = buffer;
-    }
-    else
-        p = ndpi_get_proto_name(ndpi, detected_protocol.master_protocol);
+    string iface_name;
+    nd_iface_name(iface->second, iface_name);
 
     string digest;
     nd_sha1_to_string((const uint8_t *)bt.info_hash, digest);
 
     nd_flow_printf(
-        "%s: [%c%c%c%c%c%c] %s %s:%hu %c%c%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
-        tag,
-        (internal) ? 'i' : 'e',
+        "%s: [%c%c%c%c%c%c] %s%s%s %s:%hu %c%c%c %s:%hu%s%s%s%s%s%s%s%s%s\n",
+        iface_name.c_str(),
+        (iface->first) ? 'i' : 'e',
         (ip_version == 4) ? '4' : (ip_version == 6) ? '6' : '-',
         flags.ip_nat ? 'n' : '-',
-        (detection_guessed & ND_FLOW_GUESS_PROTO) ? 'g' : '-',
+        (flags.detection_guessed) ? 'g' : '-',
         (flags.dhc_hit) ? 'd' : '-',
         (privacy_mask & PRIVATE_LOWER) ? 'p' :
             (privacy_mask & PRIVATE_UPPER) ? 'P' :
             (privacy_mask & (PRIVATE_LOWER | PRIVATE_UPPER)) ? 'X' :
             '-',
-        p,
+        detected_protocol_name,
+        (detected_application_name != NULL) ? "." : "",
+        (detected_application_name != NULL) ? detected_application_name : "",
         lower_name, ntohs(lower_port),
         (origin == ORIGIN_LOWER || origin == ORIGIN_UNKNOWN) ? '-' : '<',
         (origin == ORIGIN_UNKNOWN) ? '?' : '-',
@@ -623,8 +501,8 @@ void ndFlow::print(const char *tag, struct ndpi_detection_module_struct *ndpi)
 
     if (ND_DEBUG &&
         detected_protocol.master_protocol == NDPI_PROTOCOL_SSL &&
-        ! (detection_guessed & ND_FLOW_GUESS_PROTO) && ssl.version == 0x0000) {
-        nd_debug_printf("%s: SSL with no SSL/TLS verison.\n", tag);
+        flags.detection_guessed == false && ssl.version == 0x0000) {
+        nd_debug_printf("%s: SSL with no SSL/TLS verison.\n", iface->second.c_str());
     }
 }
 
@@ -714,8 +592,7 @@ void ndFlow::get_lower_map(
     }
 }
 
-void ndFlow::json_encode(json &j,
-    struct ndpi_detection_module_struct *ndpi, uint8_t encode_includes)
+void ndFlow::json_encode(json &j, uint8_t encode_includes)
 {
     char mac_addr[ND_STR_ETHALEN + 1];
     string _other_type = "unknown";
@@ -875,14 +752,14 @@ void ndFlow::json_encode(json &j,
         j["detected_protocol"] =
             (unsigned)detected_protocol.master_protocol;
         j["detected_protocol_name"] =
-            ndpi_get_proto_name(ndpi, detected_protocol.master_protocol);
+            (detected_protocol_name != NULL) ? detected_protocol_name : "Unknown";
 
         j["detected_application"] =
             (unsigned)detected_protocol.app_protocol;
         j["detected_application_name"] =
-            ndpi_get_proto_name(ndpi, detected_protocol.app_protocol);
+            (detected_application_name != NULL) ? detected_application_name : "Unknown";
 
-        j["detection_guessed"] = detection_guessed;
+        j["detection_guessed"] = (unsigned)flags.detection_guessed;
 
         if (host_server_name[0] != '\0')
             j["host_server_name"] = host_server_name;
@@ -1029,6 +906,7 @@ void ndFlow::json_encode(json &j,
         j[_upper_packets] = upper_packets;
         j["total_packets"] = total_packets;
         j["total_bytes"] = total_bytes;
+        j["detection_packets"] = detection_packets;
     }
 }
 

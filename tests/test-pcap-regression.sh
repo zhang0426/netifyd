@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 ND_PCAPS=$(find "${TESTDIR}/pcap/" -name '*.cap.gz' | sort)
 NDPI_PCAPS=$(sort "${TESTDIR}/ndpi-pcap-files.txt" | egrep -v '^#' | xargs -n 1 -i find "${TESTDIR}/../libs/ndpi/tests/pcap" -name '{}*cap' | egrep -v -- '-test.cap$')
@@ -22,7 +22,9 @@ for PCAP in $PCAPS; do
         cat $PCAP > ${BASE}-test.cap || exit $?
     fi
     echo $(basename "${BASE}")
-    sudo LD_LIBRARY_PATH="${TESTDIR}/../src/.libs/" ../src/.libs/netifyd -t -c $CONF -f $SINK_CONF -I lo,${BASE}-test.cap -A $NETWORK -T ${LOG} || exit $?
+    sudo LD_LIBRARY_PATH="${TESTDIR}/../src/.libs/" \
+        ../src/.libs/netifyd -t -c $CONF -f $SINK_CONF \
+        --thread-detection-cores=1 -I lo,${BASE}-test.cap -A $NETWORK -T ${LOG} || exit $?
     rm -f ${BASE}-test.cap
     echo
 done

@@ -96,8 +96,8 @@ void ndJsonStatus::Parse(const string &json_string)
         update_interval = j["update_interval"].get<unsigned>();
         update_imf = j["update_imf"].get<unsigned>();
 
-        stats.flows = j["flows"].get<unsigned>();
-        stats.flows_prev = j["flows_prev"].get<unsigned>();
+        stats.flows = j["flow_count"].get<unsigned>();
+        stats.flows_prev = j["flow_count_prev"].get<unsigned>();
 
         stats.cpus = (long)j["cpu_cores"].get<unsigned>();
 

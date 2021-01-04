@@ -39,38 +39,9 @@
 // SSL certificate fingerprint hash length
 #define ND_FLOW_SSL_HASH_LEN    SHA1_DIGEST_LENGTH
 
-// Bits for detection guess types
-#define ND_FLOW_GUESS_NONE  0x00    // No guesses made
-#define ND_FLOW_GUESS_PROTO 0x01    // Protocol guesses (ports)
-#define ND_FLOW_GUESS_DNS   0x02    // Application guessed by DNS cache hint
-
 // Capture filename template
 #define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX.cap"
 #define ND_FLOW_CAPTURE_SUB_OFFSET  (sizeof(ND_FLOW_CAPTURE_TEMPLATE) - 8 - 4 - 1)
-
-// Hash cache filename
-#define ND_FLOW_HC_FILE_NAME        "/flow-hash-cache-"
-
-typedef list<pair<string, string>> nd_fhc_list;
-typedef unordered_map<string, nd_fhc_list::iterator> nd_fhc_map;
-
-class ndFlowHashCache
-{
-public:
-    ndFlowHashCache(const string &device, size_t cache_size = ND_MAX_FHC_ENTRIES);
-
-    void push(const string &lower_hash, const string &upper_hash);
-    bool pop(const string &lower_hash, string &upper_hash);
-
-    void save(void);
-    void load(void);
-
-protected:
-    string device;
-    size_t cache_size;
-    nd_fhc_list index;
-    nd_fhc_map lookup;
-};
 
 typedef pair<const struct pcap_pkthdr *, const uint8_t *> nd_flow_push;
 typedef vector<nd_flow_push> nd_flow_capture;
@@ -80,18 +51,35 @@ typedef unordered_map<string, string> nd_flow_kvmap;
 class ndFlow
 {
 public:
-    bool internal;
+    nd_ifaces::iterator iface;
+
+    int16_t dpi_thread_id;
+
+    uint8_t *pkt;
+
     uint8_t ip_version;
     uint8_t ip_protocol;
     uint16_t vlan_id;
 
     struct {
+#ifdef HAVE_ATOMIC
+        atomic<uint8_t> ip_nat;
+        atomic<uint8_t> tcp_fin;
+        atomic<uint8_t> dhc_hit;
+        atomic<uint8_t> detection_complete;
+        atomic<uint8_t> detection_expiring;
+        atomic<uint8_t> detection_expired;
+        atomic<uint8_t> detection_guessed;
+#else
         uint8_t ip_nat:1;
         uint8_t tcp_fin:1;
         uint8_t dhc_hit:1;
         uint8_t detection_complete:1;
+        uint8_t detection_expiring:1;
+        uint8_t detection_expired:1;
+        uint8_t detection_guessed:1;
+#endif
     } flags;
-    uint8_t detection_guessed;
 
 #ifdef _ND_USE_CONNTRACK
     uint32_t ct_id;
@@ -178,7 +166,11 @@ public:
     uint32_t upper_packets;
     uint32_t total_packets;
 
+    uint8_t detection_packets;
+
     ndpi_protocol detected_protocol;
+    char *detected_protocol_name;
+    char *detected_application_name;
 
     struct ndpi_flow_struct *ndpi_flow;
 
@@ -266,7 +258,8 @@ public:
     nd_flow_capture capture;
     char capture_filename[sizeof(ND_FLOW_CAPTURE_TEMPLATE)];
 
-    ndFlow(bool internal = true);
+    ndFlow(nd_ifaces::iterator iface);
+    ndFlow(const ndFlow &flow);
     virtual ~ndFlow();
 
     void hash(const string &device, bool hash_mdata = false,
@@ -297,7 +290,7 @@ public:
     bool has_mdns_answer(void);
     bool has_ssdp_headers(void);
 
-    void print(const char *tag, struct ndpi_detection_module_struct *ndpi);
+    void print(void);
 
     void get_lower_map(
 #ifdef _ND_USE_NETLINK
@@ -314,8 +307,7 @@ public:
         ENCODE_ALL = (ENCODE_METADATA | ENCODE_TUNNELS | ENCODE_STATS)
     };
 
-    void json_encode(json &j,
-        struct ndpi_detection_module_struct *ndpi, uint8_t encode_includes = ENCODE_ALL);
+    void json_encode(json &j, uint8_t encode_includes = ENCODE_ALL);
 
     inline bool operator==(const ndFlow &f) const {
         if (lower_port != f.lower_port || upper_port != f.upper_port) return false;
