@@ -434,18 +434,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             }
         }
 
-        // Determine application protocol
-        if (entry->flow->host_server_name[0] != '\0') {
-            entry->flow->detected_protocol.app_protocol = ndpi_match_host_app_proto(
-                ndpi,
-                entry->flow->ndpi_flow,
-                (char *)entry->flow->host_server_name,
-                strlen((const char *)entry->flow->host_server_name),
-                &npmr
-            );
-        }
-
-        // Determine application protocol based on master protocol
+        // Determine application based on master protocol metadata
         switch (entry->flow->detected_protocol.master_protocol) {
         case NDPI_PROTOCOL_HTTPS:
         case NDPI_PROTOCOL_SSL:
@@ -454,8 +443,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
         case NDPI_PROTOCOL_MAIL_POPS:
         case NDPI_PROTOCOL_SSL_NO_CERT:
         case NDPI_PROTOCOL_OSCAR:
-            if (entry->flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
-                entry->flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
+            if (entry->flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate[0] != '\0') {
                 entry->flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
                     ndpi,
                     entry->flow->ndpi_flow,
@@ -484,8 +472,7 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             break;
 
         case NDPI_PROTOCOL_MDNS:
-            if (entry->flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN &&
-                    entry->flow->ndpi_flow->protos.mdns.answer[0] != '\0') {
+            if (entry->flow->ndpi_flow->protos.mdns.answer[0] != '\0') {
                 entry->flow->detected_protocol.app_protocol = (uint16_t)ndpi_match_host_app_proto(
                     ndpi, entry->flow->ndpi_flow,
                     (char *)entry->flow->ndpi_flow->protos.mdns.answer,
@@ -494,6 +481,19 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
                 );
             }
             break;
+        }
+
+        // Determine application by host_server_name if still unknown.
+        if (entry->flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
+            if (entry->flow->host_server_name[0] != '\0') {
+                entry->flow->detected_protocol.app_protocol = ndpi_match_host_app_proto(
+                    ndpi,
+                    entry->flow->ndpi_flow,
+                    (char *)entry->flow->host_server_name,
+                    strlen((const char *)entry->flow->host_server_name),
+                    &npmr
+                );
+            }
         }
 
         if (entry->flow->detected_protocol.app_protocol == NDPI_PROTOCOL_UNKNOWN) {
