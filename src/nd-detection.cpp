@@ -527,21 +527,21 @@ void ndDetectionThread::ProcessPacket(ndDetectionQueueEntry *entry)
             entry->flow->ssl.cipher_suite =
                 entry->flow->ndpi_flow->protos.stun_ssl.ssl.server_cipher;
 
-            snprintf(entry->flow->ssl.client_sni, ND_FLOW_SSL_CNLEN,
+            snprintf(entry->flow->ssl.client_sni, ND_FLOW_TLS_CNLEN,
                 "%s", entry->flow->ndpi_flow->protos.stun_ssl.ssl.client_certificate);
-            snprintf(entry->flow->ssl.server_cn, ND_FLOW_SSL_CNLEN,
+            snprintf(entry->flow->ssl.server_cn, ND_FLOW_TLS_CNLEN,
                 "%s", entry->flow->ndpi_flow->protos.stun_ssl.ssl.server_certificate);
-            snprintf(entry->flow->ssl.server_organization, ND_FLOW_SSL_ORGLEN,
+            snprintf(entry->flow->ssl.server_organization, ND_FLOW_TLS_ORGLEN,
                 "%s", entry->flow->ndpi_flow->protos.stun_ssl.ssl.server_organization);
-            snprintf(entry->flow->ssl.client_ja3, ND_FLOW_SSL_JA3LEN,
+            snprintf(entry->flow->ssl.client_ja3, ND_FLOW_TLS_JA3LEN,
                 "%s", entry->flow->ndpi_flow->protos.stun_ssl.ssl.ja3_client);
-            snprintf(entry->flow->ssl.server_ja3, ND_FLOW_SSL_JA3LEN,
+            snprintf(entry->flow->ssl.server_ja3, ND_FLOW_TLS_JA3LEN,
                 "%s", entry->flow->ndpi_flow->protos.stun_ssl.ssl.ja3_server);
 
             if (entry->flow->ndpi_flow->l4.tcp.tls_fingerprint_len) {
                 memcpy(entry->flow->ssl.cert_fingerprint,
                     entry->flow->ndpi_flow->l4.tcp.tls_sha1_certificate_fingerprint,
-                    ND_FLOW_SSL_HASH_LEN);
+                    ND_FLOW_TLS_HASH_LEN);
                 entry->flow->ssl.cert_fingerprint_found = true;
             }
 

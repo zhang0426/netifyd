@@ -197,11 +197,11 @@ void ndFlow::hash(const string &device,
         }
         if (has_ssl_client_sni()) {
             sha1_write(&ctx,
-                ssl.client_sni, strnlen(ssl.client_sni, ND_FLOW_SSL_CNLEN));
+                ssl.client_sni, strnlen(ssl.client_sni, ND_FLOW_TLS_CNLEN));
         }
         if (has_ssl_server_cn()) {
             sha1_write(&ctx,
-                ssl.server_cn, strnlen(ssl.server_cn, ND_FLOW_SSL_CNLEN));
+                ssl.server_cn, strnlen(ssl.server_cn, ND_FLOW_TLS_CNLEN));
         }
         if (has_bt_info_hash()) {
             sha1_write(&ctx, bt.info_hash, ND_FLOW_BTIHASH_LEN);

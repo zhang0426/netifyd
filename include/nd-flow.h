@@ -26,9 +26,10 @@
 #define ND_FLOW_UA_LEN      512     // User agent length
 #define ND_FLOW_URL_LEN     512     // HTTP URL length
 #define ND_FLOW_SSH_UALEN   48      // SSH user-agent (signature) length
-#define ND_FLOW_SSL_CNLEN   64      // SSL certificate SNI/common-name length
-#define ND_FLOW_SSL_ORGLEN  64      // SSL certificate organization name length
-#define ND_FLOW_SSL_JA3LEN  33      // SSL JA3 hash length (MD5)
+#define ND_FLOW_TLS_CNLEN   256     // TLS SNI hostname/common-name length
+                                    // Reference: RFC 4366
+#define ND_FLOW_TLS_ORGLEN  64      // TLS certificate organization name length
+#define ND_FLOW_TLS_JA3LEN  33      // TLS JA3 hash length (MD5)
 #define ND_FLOW_DHCPFP_LEN  48      // DHCP fingerprint length
 #define ND_FLOW_DHCPCI_LEN  96      // DHCP class identifier
 #define ND_FLOW_MDNS_ANSLEN 96      // MDNS answer length
@@ -37,7 +38,7 @@
 #define ND_FLOW_BTIHASH_LEN     SHA1_DIGEST_LENGTH
 
 // SSL certificate fingerprint hash length
-#define ND_FLOW_SSL_HASH_LEN    SHA1_DIGEST_LENGTH
+#define ND_FLOW_TLS_HASH_LEN    SHA1_DIGEST_LENGTH
 
 // Capture filename template
 #define ND_FLOW_CAPTURE_TEMPLATE    ND_VOLATILE_STATEDIR "/nd-flow-XXXXXXXX.cap"
@@ -201,13 +202,13 @@ public:
         struct {
             uint16_t version;
             uint16_t cipher_suite;
-            char client_sni[ND_FLOW_SSL_CNLEN];
-            char server_cn[ND_FLOW_SSL_CNLEN];
-            char server_organization[ND_FLOW_SSL_ORGLEN];
-            char client_ja3[ND_FLOW_SSL_JA3LEN];
-            char server_ja3[ND_FLOW_SSL_JA3LEN];
+            char client_sni[ND_FLOW_TLS_CNLEN];
+            char server_cn[ND_FLOW_TLS_CNLEN];
+            char server_organization[ND_FLOW_TLS_ORGLEN];
+            char client_ja3[ND_FLOW_TLS_JA3LEN];
+            char server_ja3[ND_FLOW_TLS_JA3LEN];
             bool cert_fingerprint_found;
-            char cert_fingerprint[ND_FLOW_SSL_HASH_LEN];
+            char cert_fingerprint[ND_FLOW_TLS_HASH_LEN];
         } ssl;
 
         struct {
