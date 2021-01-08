@@ -39,6 +39,8 @@
 #define __USE_BSD
 #endif
 
+#include <endian.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
