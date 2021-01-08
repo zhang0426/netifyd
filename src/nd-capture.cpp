@@ -35,10 +35,6 @@
 #include <regex>
 #include <algorithm>
 
-#ifndef __USE_BSD
-#define __USE_BSD
-#endif
-
 #include <endian.h>
 
 #include <sys/types.h>
@@ -202,6 +198,7 @@ struct __attribute__((packed)) nd_gtpv1_header_t
         uint8_t ext_hdr:1;
         uint8_t seq_num:1;
         uint8_t npdu_num:1;
+#else
 #error Endianess not defined (__BYTE_ORDER__).
 #endif
     } flags;
@@ -224,6 +221,7 @@ struct __attribute__((packed)) nd_gtpv2_header_t
         uint8_t piggyback:1;
         uint8_t teid:1;
         uint8_t reserved:3;
+#else
 #error Endianess not defined (__BYTE_ORDER__).
 #endif
     } flags;
