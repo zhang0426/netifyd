@@ -35,6 +35,10 @@
 #include <regex>
 #include <algorithm>
 
+#ifndef __USE_BSD
+#define __USE_BSD
+#endif
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
