@@ -1,6 +1,6 @@
 #!/bin/sh /etc/rc.common
 #
-# Copyright (C) 2016-2020 eGloo, Incorporated
+# Copyright (C) 2016-2021 eGloo, Incorporated
 #
 # This is free software, licensed under the GNU General Public License v2.
 
@@ -9,20 +9,38 @@ STOP=50
 
 USE_PROCD=1
 PROG=/usr/sbin/@PACKAGE_TARNAME@
-NETIFYD_AUTODETECT=yes
 
-start_service() {
-    mkdir -p /etc/netify.d
-    mkdir -p /var/run/@PACKAGE_TARNAME@
+start_@PACKAGE_TARNAME@() {
+    local instance enabled autoconfig internal_if external_if
 
-    source /usr/share/@PACKAGE_TARNAME@/functions.sh
-    NETIFYD_OPTS=$(auto_detect_options)
+    instance="$1"
 
-    load_modules
+    config_get_bool enabled "$instance" enabled 0
+    [ "$enabled" -eq 0 ] && return 0
+
+    [ ! -d /var/run/@PACKAGE_TARNAME@ ] && mkdir -p /var/run/@PACKAGE_TARNAME@
+
+    config_get_bool autoconfig "$instance" autoconfig 1
+
+    if [ "$autoconfig" -gt 0 ] ; then
+        source /usr/share/@PACKAGE_TARNAME@/functions.sh
+        load_modules
+        NETIFYD_AUTODETECT=yes
+        NETIFYD_OPTS=$(auto_detect_options)
+    else
+        config_get internal_if "$instance" internal_if "br-lan"
+        config_get external_if "$instance" external_if "eth1"
+        NETIFYD_OPTS="-E $external_if -I $internal_if"
+    fi
 
     procd_open_instance
     procd_set_param command $PROG -R $NETIFYD_OPTS
     procd_set_param file /etc/@PACKAGE_TARNAME@.conf
     procd_set_param respawn
     procd_close_instance
+}
+
+start_service() {
+    config_load @PACKAGE_TARNAME@
+    config_foreach start_@PACKAGE_TARNAME@ @PACKAGE_TARNAME@
 }
