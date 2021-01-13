@@ -1,5 +1,6 @@
 config @PACKAGE_TARNAME@
 	option enabled 1
 	option autoconfig 1
+#	option options '-t'
 #	option internal_if 'eth0'
 #	option external_if 'eth1'
