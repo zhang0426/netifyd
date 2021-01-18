@@ -1348,12 +1348,11 @@ nd_process_ip:
         }
     }
 
-//    if (! nf->flags.detection_complete
-//        || (nf->ip_protocol == IPPROTO_UDP &&
-//            nf->total_packets <= nd_config.max_udp_pkts)
-//        || (nf->ip_protocol == IPPROTO_TCP &&
-//            nf->total_packets <= nd_config.max_tcp_pkts)) {
-    if (! nf->flags.detection_complete) {
+    if (! nf->flags.detection_complete
+        || (nf->ip_protocol == IPPROTO_UDP &&
+            nf->total_packets <= nd_config.max_udp_pkts)
+        || (nf->ip_protocol == IPPROTO_TCP &&
+            nf->total_packets <= nd_config.max_tcp_pkts)) {
 
         if (nf->dpi_thread_id < 0) {
             nf->dpi_thread_id = dpi_thread_id;

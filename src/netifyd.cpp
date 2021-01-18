@@ -2891,10 +2891,10 @@ int main(int argc, char *argv[])
         }
 
         if (sig == SIGINT || sig == SIGTERM) {
+            nd_printf("Shutdown requested, waiting for threads to exit...\n");
             rc = 0;
             nd_terminate = true;
             nd_stop_capture_threads();
-            nd_printf("Exiting...\n");
             continue;
         }
 
