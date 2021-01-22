@@ -41,6 +41,7 @@
 #include <sys/ioctl.h>
 
 #define __FAVOR_BSD 1
+#include <netinet/in.h>
 #include <netinet/tcp.h>
 #undef __FAVOR_BSD
 

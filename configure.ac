@@ -245,7 +245,7 @@ AC_CHECK_HEADERS([netinet/in.h netinet/ip.h netinet/tcp.h netinet/udp.h], [], AC
 ]])
 
 # Check for optional header files.
-AC_CHECK_HEADERS([atomic linux/ppp_defs.h net/ppp_defs.h stdalign.h])
+AC_CHECK_HEADERS([atomic endian.h pthread_np.h sys/cpuset.h sys/endian.h linux/ppp_defs.h net/ppp_defs.h stdalign.h])
 AC_CHECK_HEADERS([pcap/sll.h pcap/vlan.h])
 
 # Convience substitutions
