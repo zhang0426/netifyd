@@ -40,6 +40,10 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
+#define __FAVOR_BSD 1
+#include <netinet/tcp.h>
+#undef __FAVOR_BSD
+
 #include <arpa/inet.h>
 
 #include <unistd.h>

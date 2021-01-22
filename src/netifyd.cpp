@@ -55,6 +55,10 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
+#define __FAVOR_BSD 1
+#include <netinet/tcp.h>
+#undef __FAVOR_BSD
+
 #include <curl/curl.h>
 #include <pcap/pcap.h>
 #include <pthread.h>

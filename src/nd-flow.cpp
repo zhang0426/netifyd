@@ -34,6 +34,10 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 
+#define __FAVOR_BSD 1
+#include <netinet/tcp.h>
+#undef __FAVOR_BSD
+
 #include <errno.h>
 
 #include <arpa/inet.h>

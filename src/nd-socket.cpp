@@ -41,10 +41,6 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <net/if.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
@@ -59,6 +55,14 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <sys/param.h>
+
+#define __FAVOR_BSD 1
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#undef __FAVOR_BSD
 
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX 104

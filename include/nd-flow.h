@@ -60,6 +60,7 @@ public:
 
     uint8_t ip_version;
     uint8_t ip_protocol;
+
     uint16_t vlan_id;
 
     struct {
@@ -81,6 +82,8 @@ public:
         uint8_t detection_guessed:1;
 #endif
     } flags;
+
+    tcp_seq tcp_last_seq;
 
 #ifdef _ND_USE_CONNTRACK
     uint32_t ct_id;

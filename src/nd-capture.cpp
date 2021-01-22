@@ -1293,8 +1293,13 @@ nd_process_ip:
         nf->ts_first_update = ts_pkt;
 
     if (nf->ip_protocol == IPPROTO_TCP &&
-        (hdr_tcp->th_flags & TH_FIN || hdr_tcp->th_flags & TH_RST))
+        (hdr_tcp->th_flags & TH_FIN || hdr_tcp->th_flags & TH_RST)) {
+        if (hdr_tcp->th_seq <= nf->tcp_last_seq) {
+            stats->pkt.tcp_seq_error++;
+            nf->tcp_last_seq = hdr_tcp->th_seq;
+        }
         nf->flags.tcp_fin = true;
+    }
 
     if (dhc != NULL && pkt != NULL && pkt_len > sizeof(struct nd_dns_header_t)) {
         uint16_t lport = ntohs(nf->lower_port), uport = ntohs(nf->upper_port);

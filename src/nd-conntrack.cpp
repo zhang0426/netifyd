@@ -47,6 +47,10 @@
 #include <linux/netlink.h>
 #endif
 
+#define __FAVOR_BSD 1
+#include <netinet/tcp.h>
+#undef __FAVOR_BSD
+
 #include <pcap/pcap.h>
 
 #include <libmnl/libmnl.h>

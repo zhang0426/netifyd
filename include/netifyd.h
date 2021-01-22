@@ -348,6 +348,7 @@ typedef struct nd_packet_stats_t
         uint64_t icmp;
         uint64_t igmp;
         uint64_t tcp;
+        uint64_t tcp_seq_error;
         uint64_t udp;
         uint64_t ip_bytes;
         uint64_t ip4_bytes;
