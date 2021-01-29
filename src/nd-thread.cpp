@@ -31,12 +31,18 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
 #include <string.h>
 #include <errno.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#ifdef HAVE_SYS_CPUSET_H
+#include <sys/cpuset.h>
+#endif
 
 #include <pcap/pcap.h>
 
@@ -96,6 +102,9 @@ ndThread::ndThread(const string &tag, long cpu, bool ipc)
 
     if (cpu == -1) return;
 #if defined(HAVE_PTHREAD_ATTR_SETAFFINITY_NP)
+#ifdef HAVE_SYS_CPUSET_H
+    typedef cpuset_t cpu_set_t;
+#endif
     cpu_set_t cpuset;
 
     CPU_ZERO(&cpuset);

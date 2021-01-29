@@ -35,7 +35,20 @@
 #include <regex>
 #include <algorithm>
 
+#ifdef HAVE_ENDIAN_H
 #include <endian.h>
+#elif HAVE_SYS_ENDIAN_H
+ #include <sys/endian.h>
+ #if ! defined(__BYTE_ORDER__)
+  #define __BYTE_ORDER__ _BYTE_ORDER
+ #endif
+ #if ! defined(__ORDER_LITTLE_ENDIAN__)
+  #define __ORDER_LITTLE_ENDIAN__ _LITTLE_ENDIAN
+ #endif
+ #if ! defined(__ORDER_BIG_ENDIAN__)
+  #define __ORDER_BIG_ENDIAN__ _BIG_ENDIAN
+ #endif
+#endif
 
 #include <sys/types.h>
 #include <sys/socket.h>
