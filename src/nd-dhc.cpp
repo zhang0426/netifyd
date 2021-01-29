@@ -196,7 +196,7 @@ size_t ndDNSHintCache::purge(void)
 void ndDNSHintCache::load(void)
 {
     int rc;
-    time_t ttl;
+    long ttl;
     char header[1024], *host, *digest;
     size_t loaded = 0, line = 1;
     const char *filename = NULL;
