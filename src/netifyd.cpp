@@ -152,8 +152,6 @@ pthread_mutex_t *nd_printf_mutex = NULL;
 static void nd_usage(int rc = 0, bool version = false)
 {
     fprintf(stderr, "%s\n", nd_get_version_and_features().c_str());
-    fprintf(stderr, "Copyright (C) 2015-2020 eGloo Incorporated\n"
-            "[%s %s]\n", GIT_RELEASE, GIT_DATE);
     if (version) {
         fprintf(stderr, "\nThis application uses nDPI v%s\n"
             "http://www.ntop.org/products/deep-packet-inspection/ndpi/\n", ndpi_revision());
