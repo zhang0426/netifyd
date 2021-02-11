@@ -1,0 +1,13 @@
+NETIFYD_VERSION = @PACKAGE_VERSION@
+NETIFYD_SOURCE = https://gitlab.com/netify.ai/public/netify-agent/-/archive/v$(NETIFYD_VERSION)/netify-agent-$(NETIFYD_VERSION).tar.gz
+NETIFYD_SITE = http://download.netify.ai/netify/
+NETIFYD_LICENSE = GPLv3
+NETIFYD_DEPENDENCIES = host-pkgconf
+
+define NETIFYD_POST_INSTALL_TARGET_CLEANUP
+	echo "TODO: Clean-up/delete Netify Agent installed files: $(TARGET_DIR)"
+endef
+
+NETIFYD_POST_INSTALL_TARGET_HOOKS += NETIFYD_POST_INSTALL_TARGET_CLEANUP
+
+$(eval $(autotools-package))
